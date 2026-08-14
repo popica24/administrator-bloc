@@ -1,0 +1,16 @@
+/* Reset la nivel de document. Restul stilurilor traiesc in BASE_CSS,
+   in interiorul componentei, ca sa ramana portabile catre React Native. */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: #e3e5de;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
