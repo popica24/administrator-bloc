@@ -479,9 +479,22 @@ const STATISTICI = (() => {
 
 /* Reset minim si cele doua efecte permise: un fade si un slide.
    Blocul acesta dispare la portare, React Native nu foloseste CSS. */
+
+/* Inaltimea si zona sigura de jos, tratate doar in CSS.
+   Pe iOS Safari 100vh este inaltimea cu barele browserului retrase, deci
+   ultimii pixeli ai aplicatiei ajung sub bara de jos. 100dvh urmareste
+   inaltimea reala, iar 100vh ramane ca rezerva pentru browserele vechi.
+   env(safe-area-inset-bottom) tine tab bar-ul deasupra indicatorului de
+   home, necesar pentru ca index.html cere viewport-fit=cover.
+   La portare aceste doua reguli dispar, in React Native echivalentul este
+   useSafeAreaInsets din react-native-safe-area-context. */
 const BASE_CSS = `
   .ab-root *, .ab-root *::before, .ab-root *::after { box-sizing: border-box; }
-  .ab-root { margin: 0; }
+  .ab-root { margin: 0; min-height: 100vh; min-height: 100dvh; }
+  .ab-shell { height: 100vh; height: 100dvh; }
+  .ab-tabbar { padding-bottom: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .ab-toast { bottom: 84px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .ab-sheet-pad { padding-bottom: ${S.xxl}px; padding-bottom: calc(${S.xxl}px + env(safe-area-inset-bottom, 0px)); }
   .ab-press { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
   .ab-press:active { opacity: .85; }
   .ab-press:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
@@ -792,7 +805,7 @@ function Sheet({ open, onClose, titlu, children }) {
           </Box>
           <Line />
         </Box>
-        <Box style={{ padding: S.lg, paddingBottom: S.xxl }} gap={S.md}>
+        <Box className="ab-sheet-pad" style={{ paddingTop: S.lg, paddingLeft: S.lg, paddingRight: S.lg }} gap={S.md}>
           {children}
         </Box>
       </div>
@@ -804,9 +817,9 @@ function Toast({ mesaj }) {
   if (!mesaj) return null;
   return (
     <div
-      className="ab-fade"
+      className="ab-fade ab-toast"
       style={{
-        position: "absolute", left: S.lg, right: S.lg, bottom: 84, zIndex: 60,
+        position: "absolute", left: S.lg, right: S.lg, zIndex: 60,
         backgroundColor: C.ink, borderRadius: R.md, padding: "11px 14px",
       }}
     >
@@ -2348,10 +2361,10 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
   return (
     <Box
       row
+      className="ab-tabbar"
       style={{
         borderTop: `1px solid ${C.line}`,
         backgroundColor: C.surface,
-        paddingBottom: 6,
       }}
     >
       {taburi.map((t) => {
@@ -2523,13 +2536,13 @@ export default function AdminBloc() {
 
   return (
     <AppCtx.Provider value={api}>
-      <div className="ab-root" style={{ fontFamily: F.ui, backgroundColor: C.paperDeep, minHeight: "100vh", display: "flex", justifyContent: "center" }}>
+      <div className="ab-root" style={{ fontFamily: F.ui, backgroundColor: C.paperDeep, display: "flex", justifyContent: "center" }}>
         <style>{BASE_CSS}</style>
         <Box
+          className="ab-shell"
           style={{
             width: "100%",
             maxWidth: 520,
-            height: "100vh",
             backgroundColor: C.paper,
             borderLeft: `1px solid ${C.line}`,
             borderRight: `1px solid ${C.line}`,
