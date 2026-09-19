@@ -1,0 +1,99 @@
+# Verificarile care tin aplicatia in picioare, rulate la fiecare push si la
+# fiecare pull request (audit 2026-09-20, X11: pana acum nu exista niciun CI,
+# deci suitele treceau doar daca isi amintea cineva sa le ruleze).
+#
+# Doua joburi:
+#   - "aplicatie": ce merge fara baza de date (lint, teste unitare, teste Deno);
+#   - "baza": stiva Supabase locala in Docker, migratiile rulate de la zero,
+#     datele demo incarcate prin comenzile reale, apoi pgTAP si integrarea.
+# Al doilea e lent, deci e separat: daca pica lint-ul, se vede in doua minute.
+
+name: Verificari
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# O singura rulare pe ramura: un push nou anuleaza rularea inceputa
+concurrency:
+  group: verificari-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  aplicatie:
+    name: Lint, teste unitare, teste Edge Functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instaleaza dependintele exact ca in package-lock.json
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Teste unitare (vitest)
+        run: npm test
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Teste Edge Functions, cu pragul de acoperire 100%
+        run: npm run test:functii
+
+  baza:
+    name: Migratii, date demo, pgTAP, integrare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Porneste stiva locala
+        run: supabase start
+
+      - name: Reia toate migratiile de la zero, pe o baza goala
+        run: supabase db reset
+
+      - name: Incarca blocul demonstrativ (D14) prin comenzile reale
+        run: npm run seed
+
+      - name: Teste pgTAP
+        run: npm run test:db
+
+      - name: Teste de integrare (sursa-supabase contra stivei)
+        run: npm run test:integrare
+
+      - name: Teste Edge Functions contra stivei pornite
+        # SUPABASE_URL_LOCAL cere testelor de integrare Deno sa ruleze; fara ea
+        # se sar, iar aici nu avem voie sa le sarim.
+        env:
+          SUPABASE_URL_LOCAL: http://127.0.0.1:54321
+        run: npm run test:functii
+
+      - name: Acoperirea obiectelor SQL
+        run: node scripts/acoperire-sql.mjs
+
+      - name: Jurnalele stivei, cand ceva a picat
+        if: failure()
+        run: supabase status && docker ps -a

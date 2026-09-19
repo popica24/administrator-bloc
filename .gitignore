@@ -38,3 +38,8 @@ build
 *.njsproj
 *.sln
 *.sw?
+coverage/
+
+# Conturi de test locale: parole si reteta de escaladare. Nu ajung in git (X10).
+conturi-test.txt
+test-results/

@@ -1,0 +1,143 @@
+/* [F1] Dublul apasat: nicio comanda nu porneste de doua ori.
+   Protectia sta in cmd() (sectiunea 11), deci niciun ecran nu o poate ocoli. */
+import { describe, it, expect, vi } from "vitest";
+import { act, fireEvent, screen } from "@testing-library/react";
+
+vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
+import { pornesteApp, ADMIN, LOCATAR } from "./ajutor.jsx";
+import { apasa, scrie, tab } from "./ui-baza-ajutor.jsx";
+
+/* O promisiune pe care testul o rezolva cand vrea, ca sa tina comanda in aer */
+function amanat() {
+  let rezolva;
+  const promisiune = new Promise((r) => { rezolva = r; });
+  return { promisiune, rezolva: (v) => rezolva(v) };
+}
+
+/* Apasa de doua ori la rand, inainte ca prima comanda sa apuce sa raspunda */
+async function apasaDeDouaOri(nume) {
+  const b = screen.getAllByRole("button").find((x) => x.textContent === nume || x.getAttribute("aria-label") === nume);
+  if (!b) throw new Error(`Butonul "${nume}" nu exista`);
+  await act(async () => {
+    fireEvent.click(b);
+    fireEvent.click(b);
+  });
+}
+
+/* Porneste aplicatia, opreste o metoda a sursei in aer si intoarce spionul */
+async function cuComandaBlocata(email, metoda, valoare) {
+  const { sursa, ...rest } = await pornesteApp({ email });
+  const aman = amanat();
+  const spion = vi.spyOn(sursa, metoda).mockImplementation(() => aman.promisiune);
+  return { sursa, spion, termina: async () => { await act(async () => { aman.rezolva(valoare); }); }, ...rest };
+}
+
+describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
+  it("publicarea listei de plata", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "publicaLista");
+    await tab("Facturi");
+    await apasa("Publica lista");
+    await apasaDeDouaOri("Da, publica lista");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("publicarea unui anunt", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "publicaAnunt");
+    await tab("Comunicare");
+    await apasa("Scrie un anunt");
+    await scrie("Titlu", "Curatenie generala");
+    await scrie("Continut", "Sambata la ora 10");
+    await apasaDeDouaOri("Publica anuntul");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("generarea codului de invitatie", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "invitaLocatar", "ABCD2345");
+    await tab("Apartamente");
+    await apasa("Apartament 17");
+    await apasa("Invita un locatar in aplicatie");
+    await apasaDeDouaOri("Genereaza codul");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("deschiderea unui vot", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "deschideVot");
+    await tab("Comunicare");
+    await apasa("Vot si AG");
+    await apasa("Deschide un vot nou");
+    await scrie("Ce se voteaza", "Schimbam usa");
+    await scrie("Varianta 1", "Da");
+    await scrie("Varianta 2", "Nu");
+    await scrie("Votul se inchide pe", "2026-10-30");
+    await apasaDeDouaOri("Deschide votul");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("convocarea adunarii generale", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "convoacaAdunare", { destinatari: 3 });
+    await tab("Comunicare");
+    await apasa("Vot si AG");
+    await apasa("Convoaca adunarea");
+    await scrie("Data", "2026-10-30");
+    await scrie("Locul", "La parter");
+    await scrie("Ordinea de zi", "Bugetul pe 2027");
+    await apasaDeDouaOri("Trimite convocarea");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("incarcarea unui document", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "incarcaDocument");
+    await tab("Comunicare");
+    await apasa("Acte");
+    await apasa("Incarca un document");
+    await scrie("Titlu", "Proces verbal");
+    const fisier = screen.getAllByLabelText("Alege fisierul").find((x) => x.tagName === "INPUT");
+    await act(async () => { fireEvent.change(fisier, { target: { files: [new File(["x"], "pv.pdf", { type: "" })] } }); });
+    await apasaDeDouaOri("Incarca documentul");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("trimiterea indexului de la contoare", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:contor");
+    const { spion, termina } = await cuComandaBlocata(LOCATAR, "transmiteCitire");
+    await tab("Contoare");
+    await scrie("Apa rece, index anterior 244,5", "250");
+    await scrie("Apa calda, index anterior 133,7", "140");
+    const poza = screen.getAllByLabelText("Fotografiaza contoarele").find((x) => x.tagName === "INPUT");
+    await act(async () => { fireEvent.change(poza, { target: { files: [new File(["x"], "c.jpg", { type: "" })] } }); });
+    await apasaDeDouaOri("Trimite indexul");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("adaugarea unei sesizari", async () => {
+    const { spion, termina } = await cuComandaBlocata(LOCATAR, "adaugaSesizare");
+    await tab("Sesizari");
+    await apasa("Sesizare noua");
+    await apasa("Bec ars pe scara");
+    await apasaDeDouaOri("Trimite sesizarea");
+    expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  it("dupa ce comanda se termina, aceeasi comanda se poate relua", async () => {
+    const { sursa } = await pornesteApp({ email: ADMIN });
+    const spion = vi.spyOn(sursa, "publicaAnunt");
+    await tab("Comunicare");
+    await apasa("Scrie un anunt");
+    await scrie("Titlu", "Primul anunt");
+    await scrie("Continut", "Text");
+    await apasa("Publica anuntul");
+    await apasa("Scrie un anunt");
+    await scrie("Titlu", "Al doilea anunt");
+    await scrie("Continut", "Text");
+    await apasa("Publica anuntul");
+    expect(spion).toHaveBeenCalledTimes(2);
+  });
+});
