@@ -14,7 +14,7 @@
 -- validata.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(15);
 
 create or replace function private.este_serviciu()
 returns boolean
@@ -50,7 +50,7 @@ begin
   v_bloc := (v_r ->> 'bloc_id')::uuid;
 
   insert into organizare.apartamente (bloc_id, numar, etaj, proprietar_nume, cota_indiviza)
-  values (v_bloc, '3', 2, 'Dan Trei', 100) returning id into v_ap;
+  values (v_bloc, '3', 2, 'Dan Trei', 40) returning id into v_ap;
   insert into organizare.apartamente_persoane (apartament_id, valabil_din, numar_persoane)
   values (v_ap, pg_temp.luna(-5), 1);
 
@@ -59,6 +59,53 @@ begin
   -- Pornire, validata, luna -5: indexul 100.
   insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
   values (v_c1, 'rece', v_bloc, v_ap, pg_temp.luna(-5), 100, 100, 'pornire', 'validata');
+
+  -- Scenariul 2 (validare in afara ordinii cronologice): apartamentul 4, cu
+  -- propriul contor si aceeasi pornire, luna -5, indexul 100.
+  declare
+    v_ap2 uuid;
+    v_c2 uuid;
+    v_ap3 uuid;
+    v_c3 uuid;
+  begin
+    insert into organizare.apartamente (bloc_id, numar, etaj, proprietar_nume, cota_indiviza)
+    values (v_bloc, '4', 2, 'Dan Patru', 30) returning id into v_ap2;
+    insert into organizare.apartamente_persoane (apartament_id, valabil_din, numar_persoane)
+    values (v_ap2, pg_temp.luna(-5), 1);
+    insert into contorizare.contoare (bloc_id, apartament_id, tip) values (v_bloc, v_ap2, 'rece') returning id into v_c2;
+    insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+    values (v_c2, 'rece', v_bloc, v_ap2, pg_temp.luna(-5), 100, 100, 'pornire', 'validata');
+
+    -- Luna A (luna -2): trimisa, anterior corect = 100.
+    insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+    values (v_c2, 'rece', v_bloc, v_ap2, pg_temp.luna(-2), 100, 130, 'locatar', 'trimisa');
+    -- Luna B (luna -1): trimisa cat A era inca netransmisa/nevalidata; index_anterior()
+    -- ignora luna A (inca "trimisa") si ia pornirea (100), exact ca in scenariul 1.
+    insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+    values (v_c2, 'rece', v_bloc, v_ap2, pg_temp.luna(-1), 100, 190, 'locatar', 'trimisa');
+
+    -- Scenariul 3 (estimare fara cascada): apartamentul 5, pornire luna -5, indexul 100.
+    insert into organizare.apartamente (bloc_id, numar, etaj, proprietar_nume, cota_indiviza)
+    values (v_bloc, '5', 2, 'Dan Cinci', 30) returning id into v_ap3;
+    insert into organizare.apartamente_persoane (apartament_id, valabil_din, numar_persoane)
+    values (v_ap3, pg_temp.luna(-5), 1);
+    insert into contorizare.contoare (bloc_id, apartament_id, tip) values (v_bloc, v_ap3, 'rece') returning id into v_c3;
+    insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+    values (v_c3, 'rece', v_bloc, v_ap3, pg_temp.luna(-5), 100, 100, 'pornire', 'validata');
+    -- Luna A (luna -3): transmisa si validata normal, consum adevarat 30.
+    insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+    values (v_c3, 'rece', v_bloc, v_ap3, pg_temp.luna(-3), 100, 130, 'locatar', 'validata');
+    -- Luna B (luna -2): lipseste; va fi estimata mai tarziu, dupa ce C e deja validata.
+    -- Luna C (luna -1): transmisa si validata cat B lipsea; index_anterior() sare
+    -- peste B (inexistenta) si ia luna A (130) drept anterior — corect doar daca B
+    -- va avea consum 0, ceea ce nu e cazul odata ce B se estimeaza cu medie > 0.
+    insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+    values (v_c3, 'rece', v_bloc, v_ap3, pg_temp.luna(-1), 130, 190, 'locatar', 'validata');
+
+    perform set_config('fx.c2', v_c2::text, true);
+    perform set_config('fx.c3', v_c3::text, true);
+    perform set_config('fx.bloc', v_bloc::text, true);
+  end;
 
   perform organizare.activeaza_bloc(v_bloc);
 
@@ -120,6 +167,63 @@ select is(
   (select consum from contorizare.citiri where contor_id = current_setting('fx.c1')::uuid and luna = pg_temp.luna(-1)),
   60.000::numeric,
   'valideaza_citire: consumul validat final al lunii B este 60, nu dublat');
+
+-- Scenariile 2 si 3 de mai jos exercita contorizare.recalculeaza_viitorul(),
+-- cascada comuna apelata din valideaza_citire, valideaza_citiri_apartament
+-- si estimeaza_citiri (J1).
+
+-- Scenariul 2: validare in afara ordinii cronologice. Administratorul valideaza
+-- mai intai luna B (-1), apoi luna A (-2) — exact ce invita ecranul AdminCitiri,
+-- care se deschide pe luna curenta. Cascada trebuie sa corecteze index_anterior
+-- al lunii B chiar daca B e deja "validata" (nu doar "trimisa") in acel moment.
+select lives_ok(
+  $$select contorizare.valideaza_citire(
+      (select id from contorizare.citiri where contor_id = current_setting('fx.c2')::uuid and luna = pg_temp.luna(-1)), true)$$,
+  'valideaza_citire: administratorul valideaza intai luna B (in afara ordinii)');
+
+select is(
+  (select consum from contorizare.citiri where contor_id = current_setting('fx.c2')::uuid and luna = pg_temp.luna(-1)),
+  90.000::numeric,
+  'valideaza_citire: luna B validata cu indexul anterior inghetat gresit (consum 90, dubleaza luna A)');
+
+select lives_ok(
+  $$select contorizare.valideaza_citire(
+      (select id from contorizare.citiri where contor_id = current_setting('fx.c2')::uuid and luna = pg_temp.luna(-2)), true)$$,
+  'valideaza_citire: administratorul valideaza apoi luna A');
+
+select is(
+  (select index_anterior from contorizare.citiri where contor_id = current_setting('fx.c2')::uuid and luna = pg_temp.luna(-1)),
+  130.000::numeric,
+  'valideaza_citire: cascada recalculeaza index_anterior al lunii B desi B e deja validata, nu doar trimisa');
+
+select is(
+  (select consum from contorizare.citiri where contor_id = current_setting('fx.c2')::uuid and luna = pg_temp.luna(-1)),
+  60.000::numeric,
+  'valideaza_citire: consumul lunii B ajunge la valoarea adevarata (60), nu ramane dublat la 90');
+
+-- Scenariul 3: estimarea unei luni lipsa dupa ce luna urmatoare e deja
+-- validata — flux normal, fara nicio greseala a administratorului. Luna C
+-- (-1) e deja validata cu index_anterior inghetat la 130 (sarind peste luna
+-- B, inexistenta la acel moment). Estimarea lunii B trebuie sa recalculeze
+-- si index_anterior/consumul lunii C.
+select lives_ok(
+  $$select contorizare.estimeaza_citiri(current_setting('fx.bloc')::uuid, pg_temp.luna(-2))$$,
+  'estimeaza_citiri: administratorul estimeaza luna B, lipsa, dupa ce C e deja validata');
+
+select is(
+  (select index_curent from contorizare.citiri where contor_id = current_setting('fx.c3')::uuid and luna = pg_temp.luna(-2) and sursa = 'estimat'),
+  160.000::numeric,
+  'estimeaza_citiri: luna B estimata cu media (30) peste anteriorul corect (130)');
+
+select is(
+  (select index_anterior from contorizare.citiri where contor_id = current_setting('fx.c3')::uuid and luna = pg_temp.luna(-1)),
+  160.000::numeric,
+  'estimeaza_citiri: cascada recalculeaza index_anterior al lunii C dupa ce B a fost estimata');
+
+select is(
+  (select consum from contorizare.citiri where contor_id = current_setting('fx.c3')::uuid and luna = pg_temp.luna(-1)),
+  30.000::numeric,
+  'estimeaza_citiri: consumul lunii C ajunge la valoarea adevarata (30), nu ramane dublat la 60');
 
 select * from finish();
 rollback;
