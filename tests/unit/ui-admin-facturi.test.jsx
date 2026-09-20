@@ -111,14 +111,21 @@ describe("AdminFacturi, lista in lucru", () => {
     expect(screen.queryByText("Total repartizat")).toBeNull();
   });
 
-  it.fails("[L10] previzualizarea se sterge cand se schimba facturile", async () => {
-    const { sursa } = await deschideFacturi();
+  it("[L10] previzualizarea se sterge cand se schimba facturile", async () => {
+    /* [R3] randul de fond nu mai are buton de stergere, deci adaugam si
+       stergem o factura, ca in "sterge o cheltuiala doar dupa confirmare" */
+    const sursa = sursaDemo();
+    await sursa.intra(ADMIN, PAROLA);
+    const listaId = await idLista(sursa, "2026-09");
+    const idFactura = await sursa.salveazaCheltuiala({ listaId, furnizorNou: "Salubris", categorie: "Salubritate", cod: "C5", suma: 300, metoda: "apartamente" });
+    await deschideFacturi({ sursa });
     vi.spyOn(window, "confirm").mockReturnValue(true);
     await apasa("Calculeaza lista pe apartamente");
     expect(screen.getByText("Total repartizat")).toBeTruthy();
-    await apasa(randFactura("Fond de reparatii").getByRole("button", { name: "Sterge" }));
+    await apasa(randFactura("Salubritate").getByRole("button", { name: "Sterge" }));
     expect(toast().textContent).toBe("Cheltuiala a fost stearsa");
     expect(await sursa.incarca()).toBeTruthy();
+    expect((await sursa.incarca()).cheltuieli.some((c) => c.id === idFactura)).toBe(false);
     expect(screen.queryByText("Total repartizat")).toBeNull();
   });
 

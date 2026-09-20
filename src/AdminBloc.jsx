@@ -3562,6 +3562,14 @@ function AdminFacturi() {
   const [eroare, setEroare] = useState(null);
   const [lucreaza, setLucreaza] = useState(false);
 
+  /* [L10] Previzualizarea ramanea veche dupa ce o factura se adauga, se
+     modifica sau se sterge: totalul repartizat aratat langa totalul
+     facturilor nu se mai potriveste. Orice comanda care schimba
+     cheltuielile reincarca datele si schimba referinta date.cheltuieli;
+     previzualizarea se sterge atunci, ca omul sa apese din nou "Calculeaza
+     lista pe apartamente" pe datele proaspete. */
+  useEffect(() => { setPreviz(null); }, [date.cheltuieli]);
+
   const lista = listaId ? listaDupaId(date, listaId) : null;
   const ultima = date.liste[0];
   const lunaNoua = ultima ? lunaUrmatoare(ultima.luna) : lunaDe(date.azi);
