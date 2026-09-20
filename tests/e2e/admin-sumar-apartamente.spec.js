@@ -1,0 +1,348 @@
+/* Administrator: Sumar si Apartamente (harta functiilor §4.1 si §4.2) */
+
+import { test, expect } from "@playwright/test";
+import {
+  buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
+  creeazaCont, stergeCont, legaDeApartament, datorieDeTest, soldApartament,
+  asteaptaToast, textEcran, CUVINTE_TEHNICE,
+} from "./ajutor.js";
+
+const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
+
+async function statistici() {
+  const b = await blocD14();
+  const sb = serviciu();
+  const azi = new Date().toISOString().slice(0, 10);
+  const { data: datorii } = await sb.schema("financiar").from("datorii_rest")
+    .select("apartament_id, rest, scadenta, tip").eq("bloc_id", b.id).gt("rest", 0);
+  const restante = datorii.filter((d) => d.scadenta < azi);
+  const { count: sesizariDeschise } = await sb.schema("sesizari").from("sesizari")
+    .select("id", { count: "exact", head: true }).eq("bloc_id", b.id).neq("stare", "rezolvata");
+  const { count: citiriTrimise } = await sb.schema("contorizare").from("citiri")
+    .select("id", { count: "exact", head: true }).eq("bloc_id", b.id).eq("stare", "trimisa");
+  return {
+    restante: Math.round(restante.reduce((s, d) => s + Number(d.rest), 0) * 100) / 100,
+    apCuRestanta: new Set(restante.map((d) => d.apartament_id)).size,
+    penalizari: Math.round(datorii.filter((d) => d.tip === "penalizare").reduce((s, d) => s + Number(d.rest), 0) * 100) / 100,
+    sesizariDeschise, citiriTrimise,
+  };
+}
+
+test.describe("Sumar", () => {
+  test("KPI-urile de pe panou sunt cele din registru", async ({ page }) => {
+    const st = await statistici();
+    await intraCa(page, "admin");
+    const t = await textEcran(page);
+    expect(t).toContain("RESTANTE");
+    expect(t).toContain(lei(st.restante));
+    expect(t).toContain(`${st.apCuRestanta} apartamente in urma`);
+    expect(t).toContain(lei(st.penalizari));
+    expect(t).toContain("CITIRI DE VERIFICAT");
+    expect(t).toContain("ASOCIATIA DE PROPRIETARI NR. 118 · 20 APARTAMENTE");
+    for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
+  });
+
+  test("lista curenta arata incasarile si procentul", async ({ page }) => {
+    await intraCa(page, "admin");
+    await expect(page.getByText("LISTA DE PLATA AUGUST 2026")).toBeVisible();
+    await expect(page.getByText(/Incasat pana acum [\d.]+,\d\d lei/)).toBeVisible();
+    await expect(page.getByText(/Au platit integral \d+ din 20 apartamente\./)).toBeVisible();
+    await expect(page.getByText(/Publicata \d+ \w+ 2026/)).toBeVisible();
+  });
+
+  test("restantierii sunt in ordine, cel mai vechi primul", async ({ page }) => {
+    await intraCa(page, "admin");
+    const zile = await page.getByText(/^\d+ (de )?zile intarziere/).allInnerTexts();
+    const numere = zile.map((t) => Number(t.match(/^\d+/)[0]));
+    expect(numere.length).toBeGreaterThan(0);
+    expect([...numere].sort((a, b) => b - a)).toEqual(numere);
+  });
+
+  test("lista in lucru duce la Facturi", async ({ page }) => {
+    await intraCa(page, "admin");
+    await expect(page.getByText("Lista pe septembrie 2026 este in lucru")).toBeVisible();
+    await page.getByText("Lista pe septembrie 2026 este in lucru").click();
+    await expect(page.getByText("Facturi si liste")).toBeVisible();
+  });
+
+  test("reminderul de plata spune catre cati a plecat", async ({ page }) => {
+    await intraCa(page, "admin");
+    await buton(page, "Trimite reminder de plata").click();
+    await asteaptaToast(page, "Reminder trimis catre");
+    const mesaj = await page.locator(".ab-toast").innerText();
+    expect(mesaj).toMatch(/Reminder trimis catre .*, din .* cu sold/);
+  });
+
+  test("instiintarea unui restantier raporteaza rezultatul", async ({ page }) => {
+    await intraCa(page, "admin");
+    await buton(page, "Instiintare").first().click();
+    await expect(page.locator(".ab-toast")).toContainText(/Instiintare trimisa in aplicatie|nu are cont in aplicatie/, { timeout: 20000 });
+  });
+
+  test("exportul listei de plata da un PDF", async ({ page }) => {
+    await intraCa(page, "admin");
+    const descarcare = page.waitForEvent("download");
+    await buton(page, "Exporta lista PDF").click();
+    const f = await descarcare;
+    expect(f.suggestedFilename()).toBe("lista-plata-2026-08.pdf");
+    const flux = await f.createReadStream();
+    const bucati = [];
+    for await (const b of flux) bucati.push(b);
+    expect(Buffer.concat(bucati).subarray(0, 5).toString()).toBe("%PDF-");
+  });
+
+  test("actiunile rapide si KPI-urile navigheaza acolo unde scrie", async ({ page }) => {
+    await intraCa(page, "admin");
+    await page.getByText("RESTANTE").click();
+    await expect(page.getByText(/^Restante \d+$/)).toBeVisible();
+    await mergiLaTab(page, "Sumar");
+    await page.getByText("CITIRI DE VERIFICAT").click();
+    await expect(page.getByText("Contorul general al blocului")).toBeVisible();
+    await mergiLaTab(page, "Sumar");
+    await buton(page, "Scrie un anunt").click();
+    await expect(buton(page, "Scrie un anunt")).toBeVisible();
+    await mergiLaTab(page, "Sumar");
+    await buton(page, "Deschide un vot").click();
+    await expect(buton(page, "Deschide un vot nou")).toBeVisible();
+  });
+});
+
+test.describe("Apartamente: lista", () => {
+  test("cautarea dupa nume si dupa numar", async ({ page }) => {
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await expect(page.getByText("20 apartamente,")).toBeVisible();
+    await page.getByLabel("Cauta dupa nume sau numar").fill("Marinescu");
+    await expect(page.getByRole("button", { name: /^Apartament \d+$/ })).toHaveCount(1);
+    await expect(page.getByText("Elena Marinescu")).toBeVisible();
+    await page.getByLabel("Cauta dupa nume sau numar").fill("3");
+    await expect(page.getByRole("button", { name: "Apartament 3" })).toHaveCount(1);
+    await page.getByLabel("Cauta dupa nume sau numar").fill("zzz");
+    await expect(page.getByText("Niciun rezultat")).toBeVisible();
+  });
+
+  test("filtrele numara corect si arata doar ce trebuie", async ({ page }) => {
+    const b = await blocD14();
+    const azi = new Date().toISOString().slice(0, 10);
+    const { data } = await serviciu().schema("financiar").from("datorii_rest")
+      .select("apartament_id, rest, scadenta").eq("bloc_id", b.id).gt("rest", 0);
+    const cuSold = new Set(data.map((d) => d.apartament_id)).size;
+    const cuRestanta = new Set(data.filter((d) => d.scadenta < azi).map((d) => d.apartament_id)).size;
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await expect(page.getByRole("button", { name: `Cu sold ${cuSold}` })).toBeVisible();
+    await expect(page.getByRole("button", { name: `Restante ${cuRestanta}` })).toBeVisible();
+    await page.getByRole("button", { name: `Restante ${cuRestanta}` }).click();
+    await expect(page.getByRole("button", { name: /^Apartament / })).toHaveCount(cuRestanta);
+  });
+
+  test("apartamentele sunt in ordinea de pe usa", async ({ page }) => {
+    const toate = await apartamente();
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    const nume = await page.getByRole("button", { name: /^Apartament / }).evaluateAll(
+      (el) => el.map((x) => x.getAttribute("aria-label").replace("Apartament ", ""))
+    );
+    expect(nume).toEqual(toate.map((a) => a.numar));
+  });
+});
+
+test.describe("Fisa apartamentului", () => {
+  test("fisa arata datele, soldul si defalcarea lunii", async ({ page }) => {
+    const ap = await apartamentulNumarul(3);
+    const sold = await soldApartament(ap.id);
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 3" }).click();
+    const dialog = page.getByRole("dialog", { name: "Apartament 3" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Familia Ilie");
+    await expect(dialog).toContainText("Sold la zi");
+    await expect(dialog).toContainText(lei(sold));
+    await expect(dialog).toContainText("Intretinere iunie 2026");
+    await expect(dialog).toContainText("Penalizare");
+    await expect(dialog).toContainText("Defalcarea intretinerii");
+    await expect(dialog).toContainText("Istoricul persoanelor");
+    await expect(dialog).toContainText("Consum apa");
+  });
+
+  test("instiintarea este blocata pe un apartament fara restanta", async ({ page }) => {
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 2", exact: true }).click();
+    await expect(buton(page, "Trimite instiintare de plata")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  test("incasarea cash emite chitanta si stinge datoria", async ({ page }) => {
+    const ap = await apartamentulNumarul(16);
+    await datorieDeTest(ap.id, 25.5, "Test incasare cash");
+    const sold = await soldApartament(ap.id);
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 16" }).click();
+    await buton(page, "Inregistreaza incasare cash").click();
+    await expect(page.getByLabel("Suma primita")).toHaveValue(lei(sold));
+    await buton(page, "Emite chitanta").click();
+    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
+    await expect(page.getByText(`Incasare inregistrata: ${lei(sold)} lei`)).toBeVisible();
+    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible();
+
+    const { data: plata } = await serviciu().schema("financiar").from("plati")
+      .select("id, suma, metoda, stare").eq("apartament_id", ap.id).eq("metoda", "numerar")
+      .order("creat_la", { ascending: false }).limit(1).single();
+    expect(Number(plata.suma)).toBeCloseTo(sold, 2);
+    expect(plata.stare).toBe("confirmata");
+    expect(await soldApartament(ap.id)).toBe(0);
+
+    const descarcare = page.waitForEvent("download");
+    await buton(page, "Descarca chitanta").click();
+    expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
+  });
+
+  test("suma scrisa cu punct de mii este citita ca mii", async ({ page }) => {
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 15" }).click();
+    await buton(page, "Inregistreaza incasare cash").click();
+    await page.getByLabel("Suma primita").fill("1.500");
+    /* Butonul ramane activ: 1.500 inseamna o mie cinci sute, nu 1,50 lei */
+    await expect(buton(page, "Emite chitanta")).not.toHaveAttribute("aria-disabled", "true");
+    await buton(page, "Renunta").click();
+    await expect(buton(page, "Inregistreaza incasare cash")).toBeVisible();
+  });
+
+  test("dublul apasat pe Emite chitanta emite o singura chitanta", async ({ page }) => {
+    const ap = await apartamentulNumarul(14);
+    await datorieDeTest(ap.id, 7.77, "Test dublu apasat cash");
+    const { count: inainte } = await serviciu().schema("financiar").from("chitante")
+      .select("id", { count: "exact", head: true });
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 14" }).click();
+    await buton(page, "Inregistreaza incasare cash").click();
+    await buton(page, "Emite chitanta").dblclick();
+    await asteaptaToast(page, "Incasare inregistrata");
+
+    const { count: dupa } = await serviciu().schema("financiar").from("chitante")
+      .select("id", { count: "exact", head: true });
+    expect(dupa - inainte).toBe(1);
+  });
+
+  test("numarul de persoane se schimba de la o luna viitoare", async ({ page }) => {
+    const ap = await apartamentulNumarul(12);
+    await serviciu().schema("organizare").from("apartamente_persoane")
+      .delete().eq("apartament_id", ap.id).eq("motiv", "Test e2e");
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 12" }).click();
+    await buton(page, "Modifica numarul de persoane").click();
+    await page.getByLabel("Numar nou de persoane").fill("5");
+    await page.getByLabel("Motivul").fill("Test e2e");
+    const luna = await page.getByLabel("Incepand cu luna").inputValue();
+    await buton(page, "Salveaza").click();
+    await asteaptaToast(page, "se calculeaza 5 persoane");
+
+    const { data } = await serviciu().schema("organizare").from("apartamente_persoane")
+      .select("valabil_din, numar_persoane, motiv").eq("apartament_id", ap.id).eq("motiv", "Test e2e").single();
+    expect(data.numar_persoane).toBe(5);
+    expect(data.valabil_din.slice(0, 7)).toBe(luna);
+
+    await serviciu().schema("organizare").from("apartamente_persoane")
+      .delete().eq("apartament_id", ap.id).eq("motiv", "Test e2e");
+  });
+
+  test("codul de invitatie se genereaza si apare in fisa", async ({ page }) => {
+    const ap = await apartamentulNumarul(11);
+    await serviciu().schema("identitate").from("invitatii").delete().eq("apartament_id", ap.id).is("folosita_la", null);
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 11" }).click();
+    await buton(page, "Invita un locatar in aplicatie").click();
+    await page.getByLabel("Ce este pentru apartament").selectOption("chirias");
+    await buton(page, "Genereaza codul").click();
+    await asteaptaToast(page, "Codul de invitatie a fost generat");
+
+    const { data } = await serviciu().schema("identitate").from("invitatii")
+      .select("cod, calitate, expira_la").eq("apartament_id", ap.id).is("folosita_la", null).single();
+    expect(data.cod).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    expect(data.calitate).toBe("chirias");
+    await expect(page.getByText(data.cod, { exact: true })).toBeVisible();
+
+    await buton(page, "Gata").click();
+    await expect(page.getByText(`Cod nefolosit ${data.cod} (chirias), expira pe`)).toBeVisible();
+    await serviciu().schema("identitate").from("invitatii").delete().eq("cod", data.cod);
+  });
+
+  test("inchiderea accesului scoate locatarul din aplicatie", async ({ page }) => {
+    const EMAIL = "e2e-acces-inchis@adminbloc.test";
+    const ap = await apartamentulNumarul(10);
+    await stergeCont(EMAIL);
+    const pid = await creeazaCont(EMAIL, "Sanda Croitoru");
+    await legaDeApartament(pid, ap.id);
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 10" }).click();
+    const fisa = page.getByRole("dialog", { name: "Apartament 10" });
+    await expect(fisa.getByText("Sanda Croitoru").first()).toBeVisible();
+    page.once("dialog", (d) => d.accept());
+    await buton(page, "Inchide accesul").click();
+    await asteaptaToast(page, "Accesul a fost inchis");
+    await expect(page.getByText(/Sanda Croitoru, acces inchis pe/)).toBeVisible();
+
+    const { data } = await serviciu().schema("identitate").from("locatari")
+      .select("activ_pana").eq("profil_id", pid).single();
+    expect(data.activ_pana).not.toBeNull();
+
+    /* Fostul locatar nu mai are acces la datele blocului */
+    await fisa.getByRole("button", { name: "Inchide" }).click();
+    await buton(page, "Iesi").click();
+    await intra(page, EMAIL);
+    await expect(page.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
+    await stergeCont(EMAIL);
+  });
+});
+
+test.describe("comenzi fara ecran", () => {
+  /* Auditul 2 (X06, D1) a cerut o comanda de corectare a fisei apartamentului.
+     Comanda exista in baza (organizare.schimba_fisa_apartament) si in ambele
+     surse de date (sursa-supabase.js:489, sursa-mock.js:918), dar niciun ecran
+     nu o cheama, deci pentru administrator nimic nu s-a schimbat: numele
+     fostului proprietar si o cota gresita raman pe vecie. */
+  test.fixme("[E4] fisa apartamentului se poate corecta din aplicatie", async ({ page }) => {
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 5" }).click();
+    await expect(buton(page, "Modifica datele apartamentului")).toBeVisible();
+  });
+
+  /* Auditul 2 (X05, D5): iesirea din fondul de reparatii. Comanda exista
+     (financiar.inregistreaza_iesire_fond, sursa-supabase.js:500), dar
+     administratorul nu are niciun ecran de fonduri, deci soldul fondului
+     creste la nesfarsit si nu se poate cheltui nimic din el. */
+  test.fixme("[E5] iesirea din fondul de reparatii se inregistreaza din aplicatie", async ({ page }) => {
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Sumar");
+    await page.getByText("FOND DE REPARATII").click();
+    await expect(buton(page, "Inregistreaza o iesire din fond")).toBeVisible();
+  });
+});
+
+test.describe("locatar fara datorii", () => {
+  test("apartamentul achitat vede Achitat si ultima chitanta", async ({ page }) => {
+    const ap = await apartamentulNumarul(1);
+    expect(await soldApartament(ap.id)).toBe(0);
+    await intraCa(page, "voicu");
+    await expect(page.getByText("Totul este platit")).toBeVisible();
+    await expect(page.getByText("Achitat").first()).toBeVisible();
+    await expect(buton(page, "Plateste acum")).toHaveCount(0);
+    const descarcare = page.waitForEvent("download");
+    await buton(page, "Descarca ultima chitanta").click();
+    expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
+  });
+});
