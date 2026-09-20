@@ -4601,11 +4601,17 @@ function EcranFaraAcces() {
           <Txt size={13} color={C.inkSoft}>Verificam atestatul si te legam de asociatia pe care o administrezi. Pana atunci contul nu vede datele niciunei asociatii. Te anuntam pe email.</Txt>
         </Card>
       )}
+      {/* [K19] "Pentru detalii, scrie-ne la adresa de suport." contrazicea
+          formularul de retrimitere ([J4]) chiar de sub el, iar motivul
+          respingerii - exact ce omul are nevoie ca sa corecteze cererea -
+          nu se arata niciodata. Acum mesajul arata motivul, cand exista, si
+          indruma spre acelasi loc unde duce si formularul de mai jos. */}
       {rol === "respins" && (
         <Card gap={S.sm}>
           <Badge label="Respins" tone="danger" />
           <Txt size={15} weight={700}>Cererea de administrator a fost respinsa</Txt>
-          <Txt size={13} color={C.inkSoft}>Pentru detalii, scrie-ne la adresa de suport.</Txt>
+          {date.eu.motivRespingere && <Txt size={13} color={C.danger}>{date.eu.motivRespingere}</Txt>}
+          <Txt size={13} color={C.inkSoft}>Poti retrimite cererea mai jos, cu atestatul corectat.</Txt>
         </Card>
       )}
       {rol === "fara_apartament" && (

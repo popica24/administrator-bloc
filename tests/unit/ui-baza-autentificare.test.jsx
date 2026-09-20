@@ -338,7 +338,10 @@ describe("EcranFaraAcces", () => {
     await pornesteApp({ sursa: s });
     await screen.findByText("Cererea de administrator a fost respinsa");
     expect(screen.getByText("Respins")).toBeTruthy();
-    expect(screen.getByText("Pentru detalii, scrie-ne la adresa de suport.")).toBeTruthy();
+    /* [K19] "scrie-ne la suport" contrazicea formularul de retrimitere de
+       mai jos: mesajul spune acum acelasi lucru ca formularul. */
+    expect(screen.getByText("Poti retrimite cererea mai jos, cu atestatul corectat.")).toBeTruthy();
+    expect(screen.queryByText(/scrie-ne la/)).toBeNull();
     expect(screen.queryByText("Contul de administrator asteapta verificarea")).toBeNull();
 
     expect(screen.getByText("Esti administrator de bloc?")).toBeTruthy();
@@ -347,6 +350,26 @@ describe("EcranFaraAcces", () => {
     await scrie("Numarul atestatului", "AT-77 corectat");
     await apasa("Trimite cererea de administrator");
     expect(cerere).toHaveBeenCalledWith({ numarAtestat: "AT-77 corectat", fisier: null });
+  });
+
+  /* [K19] motiv_respingere este exact ce omul are nevoie sa vada, ca sa
+     stie ce sa corecteze inainte sa retrimita cererea; ecranul nu-l arata
+     deloc, desi exista in registru. */
+  it("[K19] cerere respinsa cu motiv: motivul se vede pe ecran", async () => {
+    const s = sursaDemo((d) => { d.eu.rol = "respins"; d.eu.email = null; d.eu.motivRespingere = "Atestatul din poza nu se poate citi."; });
+    await s.intra("admin.nou@adminbloc.test", PAROLA);
+    await pornesteApp({ sursa: s });
+    await screen.findByText("Cererea de administrator a fost respinsa");
+    expect(screen.getByText("Atestatul din poza nu se poate citi.")).toBeTruthy();
+    expect(screen.getByText("Poti retrimite cererea mai jos, cu atestatul corectat.")).toBeTruthy();
+  });
+
+  it("[K19] cerere respinsa fara motiv salvat: nu arata un rand gol", async () => {
+    const s = sursaDemo((d) => { d.eu.rol = "respins"; d.eu.email = null; d.eu.motivRespingere = null; });
+    await s.intra("admin.nou@adminbloc.test", PAROLA);
+    await pornesteApp({ sursa: s });
+    await screen.findByText("Cererea de administrator a fost respinsa");
+    expect(screen.getByText("Poti retrimite cererea mai jos, cu atestatul corectat.")).toBeTruthy();
   });
 
   it("cont fara apartament: codul se scrie cu majuscule si leaga contul", async () => {
