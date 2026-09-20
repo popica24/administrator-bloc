@@ -242,7 +242,6 @@ select results_eq(
      where tip = 'plata' and profil_id = pg_temp.id('loc1') $$,
   $$ values ('Plata a fost inregistrata'::text, pg_temp.id('asoc'), pg_temp.id('plata')::text, true) $$,
   'la_plata_confirmata: seria si numarul chitantei, asociatia din chitanta');
-select todo('[NOU-1] suma din notificare se formateaza cu locale-ul serverului (1,234.50), nu romaneste ca in aplicatie', 1);
 select is((select corp from comunicare.notificari where tip = 'plata' and profil_id = pg_temp.id('loc1')),
   'Am primit 1.234,50 lei. Chitanta AP nr. 000001 este in aplicatie, la Platile mele.',
   '[NOU-1] la_plata_confirmata: suma scrisa romaneste, 1.234,50 lei');
