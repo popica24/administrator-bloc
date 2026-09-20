@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(111);
+select plan(115);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -742,6 +742,60 @@ set local role authenticated;
 select set_eq($$select profil_id from identitate.membri_asociatie$$, array[pg_temp.id('adminNou')],
   'politica "Mandatele se vad in asociatie": administratorul neaprobat isi vede doar mandatul');
 reset role;
+
+-- -----------------------------------------------------------------------------
+-- [H9] inchide_acces_locatar revoca doar codurile emise inainte de inchidere
+-- -----------------------------------------------------------------------------
+-- Ordinea fireasca la o vanzare: administratorul da cumparatorului un cod
+-- nou, apoi inchide accesul vanzatorului, cu data reala de plecare (in
+-- trecut, de multe ori mai devreme decat ziua in care se face hartia).
+-- Inainte de reparatie, inchiderea revoca toate codurile nefolosite ale
+-- apartamentului, inclusiv codul proaspat al cumparatorului. Dupa reparatie,
+-- se revoca doar codurile emise pana la data la care se inchide legatura
+-- (aici, acum 5 zile); codul cumparatorului, emis azi, ramane valabil.
+do $$
+declare
+  v_ap uuid;
+  v_vanzator uuid;
+  v_leg uuid;
+begin
+  insert into organizare.apartamente (bloc_id, numar, etaj, proprietar_nume, cota_indiviza)
+  values (pg_temp.id('blocA'), 'H9', 3, 'Vanzator H9', 1) returning id into v_ap;
+  insert into organizare.apartamente_persoane (apartament_id, valabil_din, numar_persoane)
+  values (v_ap, '2026-01-01', 1);
+  v_vanzator := pg_temp.utilizator('vanzatorH9');
+  insert into identitate.locatari (apartament_id, bloc_id, profil_id, calitate, activ_din)
+  values (v_ap, pg_temp.id('blocA'), v_vanzator, 'proprietar', current_date - 400)
+  returning id into v_leg;
+
+  -- Un cod vechi, emis cu 10 zile inainte de data reala de plecare (acum 5
+  -- zile): trebuie revocat.
+  insert into identitate.invitatii (apartament_id, cod, calitate, creat_de, expira_la, creat_la)
+  values (v_ap, 'H9VECH29', 'chirias', pg_temp.id('adminA'), now() + interval '20 days', now() - interval '15 days');
+
+  insert into pg_temp.t_id values ('apH9', v_ap);
+  insert into pg_temp.t_id values ('legH9', v_leg);
+end;
+$$;
+
+select pg_temp.ca('adminA');
+set local role authenticated;
+-- Codul cumparatorului, dat azi, inainte de inchiderea accesului vanzatorului.
+insert into t_cod values ('h9cumparator', identitate.invita_locatar(pg_temp.id('apH9')));
+select lives_ok(
+  format('select identitate.inchide_acces_locatar(%L, %L)', pg_temp.id('legH9'), current_date - 5),
+  '[H9] inchide_acces_locatar: inchide accesul vanzatorului cu data reala de plecare, in trecut');
+reset role;
+
+select isnt(
+  (select revocata_la from identitate.invitatii where cod = 'H9VECH29'), null,
+  '[H9] codul emis inainte de data de inchidere este revocat');
+select is(
+  (select revocata_la from identitate.invitatii where cod = pg_temp.cod('h9cumparator')), null,
+  '[H9] codul cumparatorului, emis dupa data de inchidere, nu este revocat');
+select is(
+  (select folosita_la from identitate.invitatii where cod = pg_temp.cod('h9cumparator')), null,
+  '[H9] codul cumparatorului ramane utilizabil (nefolosit, nerevocat)');
 
 select * from finish();
 rollback;
