@@ -6,7 +6,7 @@
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(80);
+select plan(81);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -222,7 +222,21 @@ select throws_like($$insert into financiar.datorii (apartament_id, bloc_id, tip,
   '%datorii_suma_check%', 'datorii: o datorie obisnuita este pozitiva');
 select throws_like($$insert into financiar.datorii (apartament_id, bloc_id, tip, suma, scadenta, descriere) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 'corectie', 0, current_date, 'X')$$,
   '%datorii_suma_check%', 'datorii: o corectie nu este zero');
-select lives_ok($$insert into financiar.datorii (apartament_id, bloc_id, tip, suma, scadenta, descriere) values (pg_temp.fx('ap21'), pg_temp.fx('bloc2'), 'corectie', -5, current_date, 'Corectie test')$$,
+-- J12: o corectie negativa are nevoie de o datorie de intretinere sora,
+-- aceeasi lista_id (nu doar amandoua fara ea: null = null nu se potriveste
+-- niciodata) si acelasi apartament — o lista dedicata, ca sa nu interfereze
+-- cu lista pe luna(-4) folosita mai jos pentru testul de unicitate.
+insert into intretinere.liste_lunare (bloc_id, luna, stare, scadenta, publicata_la, total_repartizat)
+values (pg_temp.fx('bloc2'), pg_temp.luna(-6), 'publicata', current_date, now(), 5);
+select lives_ok(
+  $$insert into financiar.datorii (apartament_id, bloc_id, tip, luna, lista_id, versiune, suma, scadenta, descriere)
+    select pg_temp.fx('ap21'), pg_temp.fx('bloc2'), 'intretinere', pg_temp.luna(-6), id, 1, 5, current_date, 'Intretinere sora, pentru corectie test'
+    from intretinere.liste_lunare where bloc_id = pg_temp.fx('bloc2') and luna = pg_temp.luna(-6)$$,
+  'datorii: pregatire, datoria de intretinere sora a corectiei de mai jos');
+select lives_ok(
+  $$insert into financiar.datorii (apartament_id, bloc_id, tip, luna, lista_id, versiune, suma, scadenta, descriere)
+    select pg_temp.fx('ap21'), pg_temp.fx('bloc2'), 'corectie', pg_temp.luna(-6), id, 1, -5, current_date, 'Corectie test'
+    from intretinere.liste_lunare where bloc_id = pg_temp.fx('bloc2') and luna = pg_temp.luna(-6)$$,
   'datorii: o corectie poate fi negativa');
 select throws_like($$insert into financiar.datorii (apartament_id, bloc_id, tip, suma, scadenta, descriere) values (pg_temp.fx('ap21'), pg_temp.fx('bloc'), 'intretinere', 10, current_date, 'X')$$,
   '%datorii_cont_fk%', 'datorii: contul si blocul trebuie sa se potriveasca');
