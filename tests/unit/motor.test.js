@@ -87,6 +87,24 @@ describe("rotunjirea", () => {
     expect(r2.repartizari.map((x) => x.rotunjire)).toEqual([0, 0, -0.01]);
     expect(r2.repartizari[2].suma).toBe(66.66);
   });
+
+  it("[K3] la egalitate de suma, restul merge la apartamentul cu numarul cel mai mic (numeric), nu la primul din lista", () => {
+    /* Trei apartamente cu aceeasi pondere (metoda "apartamente" da mereu parti
+       egale): o egalitate garantata, nu accidentala. Numerele "2", "10", "11"
+       sunt alese ca in intretinere.date_pentru_motor (order by numar ca text,
+       unde "10" si "11" vin inaintea lui "2") fata de sursa demo (ordinea ei
+       naturala, unde "2" vine primul): daca corecteazaRotunjirea desparte
+       egalitatea dupa pozitia din array, cele doua ordini dau castigatori
+       diferiti. Trebuie sa castige mereu acelasi apartament, dupa numar. */
+    const facApartamente = (ordine) => ordine.map((numar) => ({ id: numar, numar, persoane: 1, cota: 1, scutitLift: false }));
+    const dupaOrdine = (ordine) => calculeazaLista({ apartamente: facApartamente(ordine), cheltuieli: [cheltuiala("apartamente", 100)] });
+    const sumaDupaNumar = (r) => Object.fromEntries(r.repartizari.map((x) => [x.apartamentId, x.suma]));
+
+    const ordineDemo = sumaDupaNumar(dupaOrdine(["2", "10", "11"]));
+    const ordineSupabase = sumaDupaNumar(dupaOrdine(["10", "11", "2"]));
+    expect(ordineDemo).toEqual(ordineSupabase);
+    expect(ordineDemo).toEqual({ "2": 33.34, "10": 33.33, "11": 33.33 });
+  });
 });
 
 describe("apa pe consum", () => {

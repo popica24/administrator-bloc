@@ -134,14 +134,26 @@ function repartizeazaSimplu(cheltuiala, apartamente, totaluri) {
 
 /* Rotunjirea la ban lasa cativa bani in plus sau in minus fata de factura.
    Restul se adauga apartamentului cu partea cea mai mare, ca totalul
-   repartizat sa fie egal la ban cu factura. Restul ramane vizibil pe rand. */
-function corecteazaRotunjirea(parti, suma) {
+   repartizat sa fie egal la ban cu factura. Restul ramane vizibil pe rand.
+   [K3] La egalitate de suma (metoda "apartamente" sau "cota" cu cote egale
+   dau mereu parti identice pentru apartamente identice) primul index cu
+   maximul din array nu e o cheie stabila: ordinea nu e aceeasi intre surse
+   (sursa demo isi are ordinea ei naturala, intretinere.date_pentru_motor
+   ordoneaza dupa numar ca text, unde "10" vine inaintea lui "2"), deci acelasi
+   bloc primea castigatori diferiti. Egalitatea se desparte dupa `chei`
+   (numarul apartamentului, comparat numeric), exact ca la distribuieExact. */
+function corecteazaRotunjirea(parti, suma, chei) {
   const total = round2(parti.reduce((s, p) => s + p.suma, 0));
   const rest = round2(suma - total);
   const cuRotunjire = parti.map((p) => ({ ...p, rotunjire: 0 }));
   if (rest === 0 || cuRotunjire.length === 0) return cuRotunjire;
   let iMax = 0;
-  cuRotunjire.forEach((p, i) => { if (p.suma > cuRotunjire[iMax].suma) iMax = i; });
+  cuRotunjire.forEach((p, i) => {
+    const maiMare = p.suma > cuRotunjire[iMax].suma;
+    const egalitate = p.suma === cuRotunjire[iMax].suma
+      && String(chei[i]).localeCompare(String(chei[iMax]), "ro", { numeric: true }) < 0;
+    if (maiMare || egalitate) iMax = i;
+  });
   cuRotunjire[iMax] = { ...cuRotunjire[iMax], suma: round2(cuRotunjire[iMax].suma + rest), rotunjire: rest };
   return cuRotunjire;
 }
@@ -240,7 +252,8 @@ export function calculeazaLista(date) {
     const parti = c.metoda === "consum"
       ? repartizeazaApa(c, apartamente, consum, contorGeneral, totaluri)
       : repartizeazaSimplu(c, apartamente, totaluri);
-    corecteazaRotunjirea(parti, c.suma).forEach((p) => repartizari.push({ cheltuialaId: c.id, ...p }));
+    const chei = apartamente.map((a) => a.numar ?? a.id);
+    corecteazaRotunjirea(parti, c.suma, chei).forEach((p) => repartizari.push({ cheltuialaId: c.id, ...p }));
   });
 
   const totalCheltuieli = round2(cheltuieli.reduce((s, c) => s + c.suma, 0));
