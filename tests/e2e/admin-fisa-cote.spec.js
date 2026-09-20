@@ -133,7 +133,7 @@ test.describe("corectarea fisei apartamentului", () => {
     }
   });
 
-  test.fixme("[F2] refuzul cotei scrie numarul romaneste, nu asa cum il da baza", async ({ page }) => {
+  test("[F2] refuzul cotei scrie numarul romaneste, nu asa cum il da baza", async ({ page }) => {
     /* [F2] Mesajul refuzului vine direct din `raise exception` si tipareste
        numericul Postgres: "Cotele blocului ar ajunge la 102.9800 din 100".
        Punctul zecimal si cele patru zecimale sunt limbajul bazei, nu al

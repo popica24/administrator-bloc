@@ -202,7 +202,7 @@ test.describe("administrator nou cu atestat", () => {
 });
 
 test.describe("mesajul de confirmare care ajunge la om", () => {
-  test.fixme("[F1] mesajul de confirmare este scris pe romaneste", async ({ page }) => {
+  test("[F1] mesajul de confirmare este scris pe romaneste", async ({ page }) => {
     /* [F1] Singurul text al aplicatiei pe care il vede orice utilizator nou,
        inainte de orice ecran, pleaca in engleza: "Confirm your email address /
        Follow the link below to confirm this email address and finish signing
