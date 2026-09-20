@@ -62,6 +62,17 @@ describe("incarcarea", () => {
     expect(toast().textContent).toBe("Blocul este arhivat.");
   });
 
+  /* [C2] sesiunea expira intre timp (sesiuni cu durata acum limitata): a doua
+     incarcare intoarce null, nu o eroare. Fara reparatie, "sesiune" ramane
+     setat si omul ramane blocat pe "Se incarca..." la nesfarsit. */
+  it("[C2] daca sesiunea a expirat intre timp, o comanda care reincarca duce la ecranul de intrare", async () => {
+    const { sursa } = await pornesteApp({ email: LOCATAR });
+    vi.spyOn(sursa, "incarca").mockResolvedValue(null);
+    await apasa("Am citit");
+    expect(screen.getByText("Intra in cont")).toBeTruthy();
+    expect(screen.queryByText("Se incarca...")).toBeNull();
+  });
+
   /* Audit S3: dupa o prima incarcare esuata nu exista buton de iesire sau de reincercare */
   it("[S3] daca prima incarcare cade, omul poate iesi sau reincerca", async () => {
     const s = sursaDemo();

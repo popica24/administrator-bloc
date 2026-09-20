@@ -4137,6 +4137,10 @@ export default function AdminBloc() {
       const d = await sursa.incarca();
       setDate(d);
       setEroareIncarcare(null);
+      /* [C2] incarca() intoarce null cand sesiunea a expirat intre timp (nu o
+         eroare): fara asta "sesiune" ar ramane setat si omul ar ramane blocat
+         pe "Se incarca..." la nesfarsit, fara nicio cale de a intra din nou. */
+      if (!d) setSesiune(null);
       return d;
     } catch (e) {
       const mesajEroare = e.message || "Datele nu au putut fi incarcate.";
