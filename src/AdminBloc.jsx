@@ -4258,8 +4258,12 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
               marginTop: -1,
             }}
           >
-            <Box row gap={4} style={{ alignItems: "center" }}>
-              <Txt size={11.5} weight={esteActiv ? 700 : 500} color={esteActiv ? C.accent : C.muted}>
+            <Box row gap={4} style={{ alignItems: "center", maxWidth: "100%" }}>
+              {/* [R3] Eticheta se taie in loc sa impinga tabul in afara
+                  ecranului: la 200% zoom, "Apartamente" si "Comunicare" nu
+                  incap intregi. Pe React Native, randuri={1} devine
+                  numberOfLines={1}. */}
+              <Txt size={11.5} weight={esteActiv ? 700 : 500} color={esteActiv ? C.accent : C.muted} randuri={1}>
                 {t.label}
               </Txt>
               {b ? (

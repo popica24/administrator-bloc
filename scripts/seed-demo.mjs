@@ -324,12 +324,15 @@ async function main() {
 
   /* Notificarile generate de handlere poarta data rejucarii; le aducem la data
      evenimentului, iar pe cele mai vechi de doua saptamani le marcam citite. */
-  const notificari = await ok(db.schema("comunicare").from("notificari").select("id, referinta, tip"), "notificari");
+  const notificari = await ok(db.schema("comunicare").from("notificari").select("id, referinta, tip, trimisa_la"), "notificari");
   const liste = await ok(db.schema("intretinere").from("liste_lunare").select("id, publicata_la").eq("bloc_id", bloc), "liste");
   const plati = await ok(db.schema("financiar").from("plati").select("id, confirmata_la").eq("bloc_id", bloc), "plati");
   const acum = Date.now();
   for (const n of notificari) {
-    let la = null;
+    /* Notificarile scrise direct (instiintarea de restanta) nu au referinta,
+       dar au data lor: si ele intra sub regula celor doua saptamani, ca in
+       sursa demonstrativa. */
+    let la = n.trimisa_la;
     if (n.referinta && n.referinta.lista_id) la = (liste.find((l) => l.id === n.referinta.lista_id) || {}).publicata_la;
     if (n.referinta && n.referinta.plata_id) la = (plati.find((p) => p.id === n.referinta.plata_id) || {}).confirmata_la;
     if (!la) continue;
