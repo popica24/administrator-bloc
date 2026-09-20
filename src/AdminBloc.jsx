@@ -113,6 +113,20 @@ function num(n, d = 2) {
   return Number(n).toFixed(d).replace(".", ",");
 }
 
+/* [G5] Cota indiviza e numeric(7,4) in baza. Precompletarea unui camp de
+   corectie cu num() (2 zecimale) ar rotunji-o, iar o corectie care nu
+   atinge cota ar retrimite valoarea rotunjita: dupa mai multe apartamente
+   suma blocului se departeaza de 100%, fara ca nimeni sa fi umblat la vreo
+   cota. Foloseste cele mai putine zecimale (2-4) care nu pierd nimic. */
+function numCotaEd(n) {
+  const x = Number(n);
+  const patru = x.toFixed(4);
+  for (let d = 2; d < 4; d += 1) {
+    if (Number(x.toFixed(d)) === Number(patru)) return num(x, d);
+  }
+  return num(x, 4);
+}
+
 /* Citeste un numar scris romaneste ("1.234,5" sau "1234.5"). Punctul este
    separator zecimal daca nu exista virgula: asa scriu oamenii indexul
    contorului ("192.62" = 192,62 mc). */
@@ -3097,7 +3111,7 @@ function FisaApartament({ apId, onClose }) {
             variant="quiet"
             full
             onPress={() => {
-              setCoteBloc(Object.fromEntries(apOrdine.map((a) => [a.id, num(a.cota)])));
+              setCoteBloc(Object.fromEntries(apOrdine.map((a) => [a.id, numCotaEd(a.cota)])));
               setActiune("cote-bloc");
             }}
           />
@@ -3147,7 +3161,7 @@ function FisaApartament({ apId, onClose }) {
             full
             onPress={() => {
               setProprietarEd(ap.proprietar); setEtajEd(String(ap.etaj)); setMpEd(ap.mp != null ? num(ap.mp, 1) : "");
-              setCotaEd(num(ap.cota)); setScutitLiftEd(ap.scutitLift); setActiune("fisa");
+              setCotaEd(numCotaEd(ap.cota)); setScutitLiftEd(ap.scutitLift); setActiune("fisa");
             }}
           />
         </Box>

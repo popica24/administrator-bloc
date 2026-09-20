@@ -459,6 +459,29 @@ describe("FisaApartament, corectarea fisei (C3/E4)", () => {
     expect(screen.queryByLabelText("Proprietar")).toBeNull();
   });
 
+  it("[G5] o cota cu 4 zecimale (numeric(7,4)) nu se rotunjeste la precompletare", async () => {
+    const { sursa } = await pornesteAdmin({
+      tab: "Apartamente",
+      modifica: (d) => {
+        const a1 = d.apartamente.find((a) => a.numar === "1");
+        const a2 = d.apartamente.find((a) => a.numar === "2");
+        /* Suma blocului ramane 100%, dar ap. 1 are nevoie de 4 zecimale */
+        a1.cota = 4.0067;
+        a2.cota = 4.6333;
+      },
+    });
+    const spion = vi.spyOn(sursa, "schimbaFisaApartament");
+    const ap = await apDupaNumar(sursa, "1");
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    expect(screen.getByLabelText("Cota indiviza").value).toBe("4,0067");
+
+    /* Corectarea doar a numelui nu are voie sa retrimita o cota rotunjita */
+    await act(async () => { scrie("Proprietar", "Ion Constantinescu"); });
+    await apasa("Salveaza corectia");
+    expect(spion).toHaveBeenCalledWith(ap.id, expect.objectContaining({ cota: 4.0067 }));
+  });
+
   it("un apartament fara suprafata declarata precompleteaza campul gol", async () => {
     await pornesteAdmin({ tab: "Apartamente", modifica: (d) => { d.apartamente.find((a) => a.numar === "2").mp = null; } });
     await deschideFisa("2");
@@ -547,6 +570,26 @@ describe("FisaApartament, redistribuirea cotelor blocului (C3/E4)", () => {
     expect(trimise.find((c) => c.apartamentId === ap2.id).cota).toBe(3.63);
     expect(toast().textContent).toBe("Cotele blocului au fost actualizate");
     expect(screen.queryByLabelText("Ap. 1, Gheorghe Voicu")).toBeNull();
+  });
+
+  it("[G5] cotele cu 4 zecimale nu ajung 99,99% la precompletare, cu Salveaza dezactivat", async () => {
+    await pornesteAdmin({
+      tab: "Apartamente",
+      modifica: (d) => {
+        const a1 = d.apartamente.find((a) => a.numar === "1");
+        const a2 = d.apartamente.find((a) => a.numar === "2");
+        a1.cota = 4.0067;
+        a2.cota = 4.6333;
+      },
+    });
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await apasa("Redistribuie cotele intregului bloc");
+
+    expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu").value).toBe("4,0067");
+    expect(screen.getByLabelText("Ap. 2, Ana Petrescu").value).toBe("4,6333");
+    expect(screen.getByText("100,00% din 100%")).toBeTruthy();
+    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(false);
   });
 
   it("renunta inchide editorul de cote fara sa salveze", async () => {
