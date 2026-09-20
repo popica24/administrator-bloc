@@ -5,7 +5,7 @@
 --     tinuta in identitate.incercari_invitatii.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(44);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-* si d-*; anulat la rollback).
@@ -373,6 +373,28 @@ select throws_ok(
   '42501', null,
   'incercari_invitatii: tabela nu se citeste din API');
 reset role;
+
+-- [minor] anonimizeaza_profil inchidea legatura cu
+-- greatest(current_date, activ_din + 1), formula pe care reparatia S11 a
+-- corectat-o deja in identitate.inchide_acces_locatar (fara +1): o legatura
+-- facuta chiar azi si anonimizata azi ramanea, din formula veche, activa
+-- pana maine.
+select pg_temp.serviciu();
+do $$
+declare
+  v_azi uuid;
+begin
+  v_azi := pg_temp.utilizator('Mutat Azi G');
+  insert into identitate.locatari (apartament_id, bloc_id, profil_id, calitate, activ_din)
+  values (pg_temp.fx('ap1'), pg_temp.fx('bloc'), v_azi, 'chirias', current_date);
+  perform set_config('fx.azi', v_azi::text, true);
+end;
+$$;
+select identitate.anonimizeaza_profil(pg_temp.fx('azi'));
+select is(
+  (select activ_pana from identitate.locatari where profil_id = pg_temp.fx('azi')),
+  current_date,
+  '[minor] anonimizeaza_profil: o legatura facuta si stearsa azi se inchide azi, nu maine');
 
 select * from finish();
 rollback;
