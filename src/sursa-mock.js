@@ -584,7 +584,9 @@ function proiecteaza(db, profilId) {
     const complet = esteAdmin || aMea;
     return {
       id: s.id, aMea, titlu: s.titlu, categorie: s.categorie, stare: s.stare, creataLa: s.creatLa,
-      preluataLa: s.preluataLa, rezolvataLa: s.rezolvataLa, descriere: s.descriere,
+      preluataLa: s.preluataLa, rezolvataLa: s.rezolvataLa,
+      /* [K10] descrierea nu apare in vederea anonima (autorul se poate deduce). */
+      descriere: complet ? s.descriere : null,
       apartamentId: complet ? s.apartamentId : null, apartamentNumar: complet ? numarAp(s.apartamentId) : null,
       mesaje: complet ? db.mesaje.filter((m) => m.sesizareId === s.id).sort((a, b) => (a.creatLa < b.creatLa ? -1 : 1)).map((m) => ({
         id: m.id, text: m.text, la: m.creatLa, dinAdministratie: m.dinAdministratie,

@@ -424,7 +424,7 @@ describe("bloc de test: ramurile maparii", () => {
     const vecin = loc1.sesizari.find((s) => s.id === ids.sVecin);
     expect(vecin).toEqual({
       id: ids.sVecin, aMea: false, titlu: "Usa scartaie", categorie: "altele", stare: "noua", creataLa: expect.any(String), preluataLa: null,
-      rezolvataLa: null, descriere: "Usa scartaie, detalii", apartamentId: null, apartamentNumar: null, mesaje: [], poze: [],
+      rezolvataLa: null, descriere: null, apartamentId: null, apartamentNumar: null, mesaje: [], poze: [],
     });
     expect(loc1.sesizari.find((s) => s.id === ids.sLoc1)).toMatchObject({ aMea: true, apartamentNumar: "1" });
     expect(loc1.notificari.find((n) => n.id === ids.notificare)).toEqual({ id: ids.notificare, tip: "anunt", titlu: "Salut", corp: "Bun venit", trimisaLa: expect.any(String), cititaLa: null });

@@ -296,8 +296,10 @@ export function creeazaSursaSupabase(url, cheie) {
           poze: poze.filter((p) => p.sesizare_id === s.id).map((p) => ({ id: p.id, cale: p.cale })),
         })),
         ...sesizariBloc.map((s) => ({
+          /* [K10] Vederea anonima (sesizari_bloc) nu mai aduce descrierea:
+             autorul se putea deduce din detaliile scrise acolo. */
           id: s.id, aMea: false, titlu: s.titlu, categorie: s.categorie, stare: s.stare, creataLa: s.creat_la, preluataLa: s.preluata_la,
-          rezolvataLa: s.rezolvata_la, descriere: s.descriere, apartamentId: null, apartamentNumar: null, mesaje: [], poze: [],
+          rezolvataLa: s.rezolvata_la, descriere: null, apartamentId: null, apartamentNumar: null, mesaje: [], poze: [],
         })),
       ].sort((a, b) => (a.creataLa < b.creataLa ? 1 : -1)),
       anunturi: anunturi.filter((a) => !a.bloc_id || a.bloc_id === bloc).map((a) => ({

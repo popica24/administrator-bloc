@@ -409,7 +409,6 @@ select ok(
    from pg_proc where oid = 'sesizari.sesizari_bloc(uuid)'::regprocedure),
   'sesizari_bloc: rezultatul nu are apartamentul sau autorul');
 
-select todo('[K10] vederea anonima nu trebuie sa includa descrierea (autorul se poate deduce)', 1);
 select ok(
   (select not ('descriere' = any (proargnames)) from pg_proc where oid = 'sesizari.sesizari_bloc(uuid)'::regprocedure),
   '[K10] sesizari_bloc nu intoarce descrierea');
