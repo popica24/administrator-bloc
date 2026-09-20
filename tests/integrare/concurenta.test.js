@@ -171,6 +171,71 @@ describe("fondul de reparatii: doua iesiri simultane nu il duc pe minus (G1)", (
   });
 });
 
+describe("cotele blocului: o redistribuire si o inrolare noua nu duc suma peste 100 (G8)", () => {
+  /* organizare.schimba_cotele_blocului numara apartamentele si scrie cotele
+     noi fara niciun lock: daca intre numarare si scriere se confirma o
+     inrolare noua (organizare.confirma_inrolare, singura cale prin care apar
+     apartamente noi pe un bloc), verificarea "lista acopera exact
+     apartamentele blocului" lucreaza pe numarul vechi, iar blocul ramane cu
+     apartamentul nou, in afara redistribuirii, si suma cotelor trece de 100. */
+  let f8;
+  let adm8;
+
+  beforeAll(async () => {
+    f8 = await creeazaBloc();
+    adm8 = (await intraCa(f8.adminEmail)).s;
+  });
+
+  it("schimbaCoteleBlocului asteapta inrolarea in curs si vede apartamentul nou aparut", async () => {
+    const inainte = await adm8.incarca();
+    const cote = inainte.apartamente.map((ap) => ({ apartamentId: ap.id, cota: ap.cota }));
+
+    const randInrolare = await ok(db("organizare").from("inrolare_apartamente").insert({
+      bloc_id: f8.blocId, numar: "99", sursa: "operator",
+      date: { etaj: 0, proprietar: "Proprietar Nou G8", persoane: 1, cota: 10 },
+    }).select().single());
+
+    const a = sesiune();
+    let inchisa = false;
+    try {
+      const pidA = await pidSesiune(a);
+      a.scrie("begin;");
+      a.scrie(`select organizare.confirma_inrolare('${randInrolare.id}');`);
+      const aTerminat = await pana(async () => (await psql(
+        `select state from pg_stat_activity where pid = ${pidA}`)) === "idle in transaction");
+      expect(aTerminat).toBe(true);
+
+      /* B redistribuie cotele celor 4 apartamente vechi, fara sa stie de
+         apartamentul nou aparut sub A. */
+      const b = adm8.schimbaCoteleBlocului(cote).then((v) => ({ ok: true, v }), (e) => ({ ok: false, e }));
+      const bAsteapta = await pana(async () => (await psql(
+        `select count(*) from pg_stat_activity
+          where wait_event_type = 'Lock' and query like '%schimba_cotele_blocului%' and pid <> ${pidA}`)) !== "0");
+      expect(bAsteapta).toBe(true);
+
+      a.scrie("commit;");
+      inchisa = true;
+      await a.inchide();
+
+      const rezultatB = await b;
+      expect(rezultatB.ok).toBe(false);
+      expect(rezultatB.e.message).toBe(
+        "Lista trebuie sa contina o singura cota pentru fiecare apartament din bloc, fara lipsuri sau duplicate.");
+
+      const dupa = await adm8.incarca();
+      expect(dupa.apartamente.length).toBe(inainte.apartamente.length + 1);
+      for (const ap of inainte.apartamente) {
+        expect(dupa.apartamente.find((x) => x.id === ap.id).cota).toBe(ap.cota);
+      }
+    } finally {
+      if (!inchisa) {
+        a.scrie("rollback;");
+        await a.inchide();
+      }
+    }
+  });
+});
+
 describe("evenimente: doi consumatori pe acelasi rand", () => {
   let idEveniment;
 
