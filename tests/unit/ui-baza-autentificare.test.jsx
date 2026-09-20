@@ -51,13 +51,14 @@ describe("EcranAutentificare, intrarea in cont", () => {
     expect(dezactivat("Intra")).toBe(true);
   });
 
-  it("parola gresita: mesaj clar si ramane pe ecran", async () => {
+  /* [R4] Mesajul spunea doar ce e gresit, nu si ce sa faca omul in continuare. */
+  it("[R4] parola gresita: mesaj clar, cu pasul urmator, si ramane pe ecran", async () => {
     await pornesteApp();
     await screen.findByText("Intra in cont");
     await scrie("Email", LOCATAR);
     await scrie("Parola", "gresita");
     await apasa("Intra");
-    expect(toast().textContent).toBe("Emailul sau parola nu sunt corecte.");
+    expect(toast().textContent).toBe("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
     expect(screen.getByText("Intra in cont")).toBeTruthy();
     expect(buton("Intra")).toBeTruthy();
   });

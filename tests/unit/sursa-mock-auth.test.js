@@ -43,8 +43,8 @@ describe("sesiunea", () => {
 
   it("parola gresita sau email necunoscut: acelasi mesaj", async () => {
     const s = creeazaSursaMock();
-    await expect(s.intra(LOCATAR, "gresit")).rejects.toThrow("Emailul sau parola nu sunt corecte.");
-    await expect(s.intra("nimeni@x.ro", PAROLA)).rejects.toThrow("Emailul sau parola nu sunt corecte.");
+    await expect(s.intra(LOCATAR, "gresit")).rejects.toThrow("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
+    await expect(s.intra("nimeni@x.ro", PAROLA)).rejects.toThrow("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
     expect(await s.sesiuneCurenta()).toBeNull();
   });
 

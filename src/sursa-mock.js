@@ -756,9 +756,14 @@ export function creeazaSursaMock() {
 
     async sesiuneCurenta() { return sesiune; },
 
+    /* [R4] Mesajul spunea doar ce e gresit ("Emailul sau parola nu sunt
+       corecte."), fara niciun pas urmator. sursa-supabase.js:55 (traduce(),
+       in afara ariei acestei reparatii) intoarce acelasi text tradus din
+       eroarea Auth "Invalid login credentials" si are nevoie de aceeasi
+       actualizare, ca cele doua surse sa ramana la fel. */
     async intra(email, parola) {
       const a = db.autentificari.find((x) => x.email.toLowerCase() === String(email).trim().toLowerCase());
-      if (!a || a.parola !== parola) eroare("Emailul sau parola nu sunt corecte.");
+      if (!a || a.parola !== parola) eroare("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
       sesiune = { profilId: a.profilId, email: a.email };
       return sesiune;
     },
