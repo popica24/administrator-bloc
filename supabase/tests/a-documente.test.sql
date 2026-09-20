@@ -367,7 +367,6 @@ select lives_ok($$insert into storage.objects (bucket_id, name) values ('poze', 
   'politica "Poze: incarcare pentru apartamentul propriu": locatarul incarca pentru apartamentul lui');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA2', 'vecin.jpg'))$$,
   '42501', null, 'politica "Poze: incarcare pentru apartamentul propriu": nu pentru apartamentul vecinului');
-select todo('[A7] politica de upload pe poze nu leaga blocul de apartament', 1);
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('poze', gen_random_uuid()::text || '/' || pg_temp.id('apA1')::text || '/alt-bloc.jpg')$$,
   '42501', null, '[A7] prefixul trebuie sa fie <blocul apartamentului>/<apartament>/');
 reset role;

@@ -5,7 +5,7 @@
 -- scrise pentru comportamentul corect si marcate todo.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(84);
+select plan(85);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -298,8 +298,14 @@ select lives_ok(
   $$select contorizare.transmite_citire(pg_temp.fx('ap1'), pg_temp.luna(),
       jsonb_build_array(jsonb_build_object('contor_id', pg_temp.fx('c1'), 'index', 110),
                         jsonb_build_object('contor_id', pg_temp.fx('c1c'), 'index', 55)),
-      'bloc/ap1/poza.jpg')$$,
+      pg_temp.fx('bloc')::text || '/' || pg_temp.fx('ap1')::text || '/poza.jpg')$$,
   'transmite_citire: locatarul transmite ambele contoare');
+select throws_ok(
+  $$select contorizare.transmite_citire(pg_temp.fx('ap1'), pg_temp.luna(),
+      jsonb_build_array(jsonb_build_object('contor_id', pg_temp.fx('c1'), 'index', 111)),
+      pg_temp.fx('bloc')::text || '/' || pg_temp.fx('ap2')::text || '/imprumutata.jpg')$$,
+  'Poza contorului trebuie sa fie a acestui apartament.',
+  '[A7] transmite_citire refuza ca dovada poza altui apartament');
 select lives_ok(
   $$select contorizare.transmite_citire(pg_temp.fx('ap1'), pg_temp.luna(),
       jsonb_build_array(jsonb_build_object('contor_id', pg_temp.fx('c1'), 'index', 112)))$$,
