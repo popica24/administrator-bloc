@@ -2775,8 +2775,9 @@ function AdminFonduri() {
   const [descriere, setDescriere] = useState("");
   const [data, setData] = useState(date.azi);
   const [fisier, setFisier] = useState(null);
+  const [eroare, setEroare] = useState(null);
 
-  const deschide = (fondId) => { setIes(fondId); setSuma(""); setDescriere(""); setData(date.azi); setFisier(null); };
+  const deschide = (fondId) => { setIes(fondId); setSuma(""); setDescriere(""); setData(date.azi); setFisier(null); setEroare(null); };
   const inchide = () => setIes(null);
   const s = sumaDin(suma);
   const valid = s > 0 && descriere.trim() && data && fisier;
@@ -2817,14 +2818,16 @@ function AdminFonduri() {
           <AlegeFisier label={fisier ? "Alt document" : "Ataseaza documentul"} accept="application/pdf,image/*" onAles={async (f2) => setFisier(await micsoreazaPoza(f2))} size="sm" />
           {fisier && <Txt size={12} color={C.ok} weight={600}>{fisier.name}</Txt>}
         </Box>
+        <Eroare mesaj={eroare} />
         <Btn
           label="Inregistreaza iesirea"
           full
           size="lg"
           disabled={!valid}
           onPress={async () => {
+            setEroare(null);
             const r = await inregistreazaIesireFond({ fondId: ies, suma: -s, descriere: descriere.trim(), data, fisier });
-            if (r.ok) inchide();
+            if (r.ok) inchide(); else setEroare(r.mesaj);
           }}
         />
       </Sheet>

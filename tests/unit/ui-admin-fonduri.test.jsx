@@ -101,6 +101,21 @@ describe("AdminFonduri, inregistrarea unei iesiri (C3/E5)", () => {
     expect(screen.getByLabelText("Suma iesita").value).toBe("50000");
   });
 
+  it("[F6] un refuz al sursei ramane vizibil in panou, nu doar in mesajul zburator", async () => {
+    const { sursa } = await deschideFonduri();
+    vi.spyOn(sursa, "inregistreazaIesireFond").mockRejectedValue(new Error("Fondul are 19.228,60 lei; o iesire de 50.000,00 lei l-ar duce pe minus."));
+    await apasa("Inregistreaza o iesire", 0);
+    await act(async () => {
+      scrie("Suma iesita", "50000");
+      scrie("Pentru ce", "Ceva mare");
+      ataseaza();
+    });
+    await apasa("Inregistreaza iesirea");
+    /* Mesajul trebuie sa ramana in panou (nu doar in toast-ul care dispare
+       singur dupa 3,4 secunde) — ca la orice alta comanda de bani. */
+    expect(inDialog("Iesire din fond").getByText("Fondul are 19.228,60 lei; o iesire de 50.000,00 lei l-ar duce pe minus.")).toBeTruthy();
+  });
+
   it("fiecare fond are propriul buton de iesire", async () => {
     const { sursa } = await deschideFonduri();
     const spion = vi.spyOn(sursa, "inregistreazaIesireFond");
