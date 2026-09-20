@@ -5,7 +5,7 @@
 -- scrise pentru comportamentul corect si marcate todo.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(87);
+select plan(100);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -667,6 +667,124 @@ select is(
   contorizare.consum_validat(pg_temp.fx('bloc'), pg_temp.luna()) -> 'consum' -> (pg_temp.fx('ap2')::text) -> 'rece',
   '11.000'::jsonb,
   '[L5] dupa validarea celui de-al doilea contor, consumul ap2 aduna ambele contoare (4 + 7)');
+
+-- =============================================================================
+-- [A5-backend] contorizare.valideaza_citiri_apartament: un singur apel
+-- valideaza sau respinge, dintr-o data, toate citirile "trimise" ale unui
+-- apartament, pe o luna (ap9: rece + calda, ap10: rece + calda).
+-- =============================================================================
+
+reset role;
+select pg_temp.serviciu();
+create function pg_temp.fixtureA5()
+returns void
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  insert into organizare.apartamente (bloc_id, numar, etaj, scutit_lift, proprietar_nume, cota_indiviza)
+    values (pg_temp.fx('bloc'), '9', 0, false, 'Ap Noua Noua', 1) returning id into v_id;
+  perform set_config('fx.ap9', v_id::text, true);
+  insert into contorizare.contoare (bloc_id, apartament_id, tip, serie) values (pg_temp.fx('bloc'), pg_temp.fx('ap9'), 'rece', 'A5-R9') returning id into v_id;
+  perform set_config('fx.c9r', v_id::text, true);
+  insert into contorizare.contoare (bloc_id, apartament_id, tip, serie) values (pg_temp.fx('bloc'), pg_temp.fx('ap9'), 'calda', 'A5-C9') returning id into v_id;
+  perform set_config('fx.c9c', v_id::text, true);
+  insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+  values (pg_temp.fx('c9r'), 'rece', pg_temp.fx('bloc'), pg_temp.fx('ap9'), pg_temp.luna(), 0, 10, 'locatar', 'trimisa'),
+         (pg_temp.fx('c9c'), 'calda', pg_temp.fx('bloc'), pg_temp.fx('ap9'), pg_temp.luna(), 0, 5, 'locatar', 'trimisa'),
+         (pg_temp.fx('c9r'), 'rece', pg_temp.fx('bloc'), pg_temp.fx('ap9'), pg_temp.luna(-3), 0, 3, 'locatar', 'trimisa');
+
+  insert into organizare.apartamente (bloc_id, numar, etaj, scutit_lift, proprietar_nume, cota_indiviza)
+    values (pg_temp.fx('bloc'), '10', 1, false, 'Ap Zece', 1) returning id into v_id;
+  perform set_config('fx.ap10', v_id::text, true);
+  insert into contorizare.contoare (bloc_id, apartament_id, tip, serie) values (pg_temp.fx('bloc'), pg_temp.fx('ap10'), 'rece', 'A5-R10') returning id into v_id;
+  perform set_config('fx.c10r', v_id::text, true);
+  insert into contorizare.contoare (bloc_id, apartament_id, tip, serie) values (pg_temp.fx('bloc'), pg_temp.fx('ap10'), 'calda', 'A5-C10') returning id into v_id;
+  perform set_config('fx.c10c', v_id::text, true);
+  insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
+  values (pg_temp.fx('c10r'), 'rece', pg_temp.fx('bloc'), pg_temp.fx('ap10'), pg_temp.luna(), 0, 20, 'locatar', 'trimisa'),
+         (pg_temp.fx('c10c'), 'calda', pg_temp.fx('bloc'), pg_temp.fx('ap10'), pg_temp.luna(), 0, 8, 'locatar', 'trimisa');
+end;
+$$;
+select pg_temp.fixtureA5();
+set local role authenticated;
+
+select pg_temp.ca('loc1');
+select throws_ok(
+  format('select contorizare.valideaza_citiri_apartament(%L, pg_temp.luna(), true)', pg_temp.fx('ap9')),
+  'Apartamentul nu exista sau nu este din blocul tau.',
+  'valideaza_citiri_apartament: locatarul nu valideaza');
+
+select pg_temp.ca('admin2');
+select throws_ok(
+  format('select contorizare.valideaza_citiri_apartament(%L, pg_temp.luna(), true)', pg_temp.fx('ap9')),
+  'Apartamentul nu exista sau nu este din blocul tau.',
+  'valideaza_citiri_apartament: administratorul altui bloc nu valideaza');
+
+select pg_temp.ca('admin');
+select throws_ok(
+  $$select contorizare.valideaza_citiri_apartament(gen_random_uuid(), pg_temp.luna(), true)$$,
+  'Apartamentul nu exista sau nu este din blocul tau.',
+  'valideaza_citiri_apartament: apartament inexistent');
+
+select throws_ok(
+  format('select contorizare.valideaza_citiri_apartament(%L, pg_temp.luna(-3), true)', pg_temp.fx('ap9')),
+  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; citirile nu se mai pot verifica.',
+  '[A5-backend] valideaza_citiri_apartament: refuza o luna a carei lista e deja publicata');
+
+select throws_ok(
+  format('select contorizare.valideaza_citiri_apartament(%L, pg_temp.luna(), false, %L)', pg_temp.fx('ap9'), '   '),
+  'Scrie motivul, ca locatarul sa stie ce sa corecteze.',
+  'valideaza_citiri_apartament: respingerea cere motiv');
+
+-- Niciun apel esuat de mai sus nu a schimbat vreo citire: ap9 ramane cu
+-- ambele citiri "trimisa" pe luna curenta, nimic pe jumatate validat.
+select results_eq(
+  $$select tip, stare, verificata_de from contorizare.citiri
+    where apartament_id = pg_temp.fx('ap9') and luna = pg_temp.luna() order by tip$$,
+  $$values ('calda', 'trimisa', null::uuid), ('rece', 'trimisa', null::uuid)$$,
+  '[A5-backend] valideaza_citiri_apartament: un apel refuzat nu lasa nimic pe jumatate validat');
+
+select is(
+  contorizare.valideaza_citiri_apartament(pg_temp.fx('ap9'), pg_temp.luna(), true),
+  '{"validate": 2}'::jsonb,
+  'valideaza_citiri_apartament: administratorul accepta ambele citiri (rece si calda) dintr-un singur apel');
+select results_eq(
+  $$select tip, stare, motiv_respingere, verificata_de, verificata_la is not null
+    from contorizare.citiri where apartament_id = pg_temp.fx('ap9') and luna = pg_temp.luna() order by tip$$,
+  $$values ('calda', 'validata', null, pg_temp.fx('admin'), true),
+           ('rece', 'validata', null, pg_temp.fx('admin'), true)$$,
+  'valideaza_citiri_apartament: ambele citiri validate, cu cine si cand a verificat');
+
+select throws_ok(
+  format('select contorizare.valideaza_citiri_apartament(%L, pg_temp.luna(), true)', pg_temp.fx('ap9')),
+  'Nu mai sunt citiri de verificat pentru acest apartament si aceasta luna.',
+  'valideaza_citiri_apartament: nimic de validat a doua oara');
+
+select is(
+  contorizare.valideaza_citiri_apartament(pg_temp.fx('ap10'), pg_temp.luna(), false, '  Poza neclara '),
+  '{"validate": 2}'::jsonb,
+  'valideaza_citiri_apartament: administratorul respinge ambele citiri dintr-un singur apel, cu motiv');
+select results_eq(
+  $$select tip, stare, motiv_respingere, verificata_de from contorizare.citiri
+    where apartament_id = pg_temp.fx('ap10') and luna = pg_temp.luna() order by tip$$,
+  $$values ('calda', 'respinsa', 'Poza neclara', pg_temp.fx('admin')),
+           ('rece', 'respinsa', 'Poza neclara', pg_temp.fx('admin'))$$,
+  'valideaza_citiri_apartament: respingerea curata motivul (btrim) pe ambele citiri');
+
+reset role;
+select pg_temp.serviciu();
+select is(
+  (select count(*)::int from evenimente.coada where tip = 'CitireRespinsa' and date ->> 'apartament_id' = pg_temp.fx('ap10')::text),
+  2,
+  'valideaza_citiri_apartament: respingerea inregistreaza un eveniment CitireRespinsa pe fiecare citire');
+select is(
+  (select count(distinct date ->> 'citire_id')::int from evenimente.coada where tip = 'CitireRespinsa' and date ->> 'apartament_id' = pg_temp.fx('ap10')::text),
+  2,
+  'valideaza_citiri_apartament: fiecare eveniment CitireRespinsa poarta citire_id-ul ei');
+set local role authenticated;
+select pg_temp.ca('admin');
 
 select * from finish();
 rollback;

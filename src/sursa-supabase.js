@@ -568,6 +568,12 @@ export function creeazaSursaSupabase(url, cheie) {
     invitaLocatar: (apartamentId, calitate) => ok(id.rpc("invita_locatar", { p_apartament_id: apartamentId, p_calitate: calitate })),
     inchideAcces: (locatarId) => ok(id.rpc("inchide_acces_locatar", { p_locatar_id: locatarId })),
     valideazaCitire: (citireId, accepta, motiv) => ok(cont.rpc("valideaza_citire", { p_citire_id: citireId, p_accepta: accepta, p_motiv: motiv })),
+    /* [A5] Un singur apel valideaza sau respinge, dintr-o data, toate citirile
+       "trimise" ale apartamentului pe acea luna: nu ramane nimic pe jumatate
+       validat daca reteaua pica intre doua apeluri pe contor. */
+    valideazaCitiriApartament: (apartamentId, l, accepta, motiv) => ok(cont.rpc("valideaza_citiri_apartament", {
+      p_apartament_id: apartamentId, p_luna: zi1(l), p_accepta: accepta, p_motiv: motiv,
+    })),
     citesteContorGeneral: (l, tip, index) => ok(cont.rpc("citeste_contor_general", { p_bloc_id: cerCtx().blocId, p_luna: zi1(l), p_tip: tip, p_index: index })),
 
     async estimeazaCitiri(l) {
