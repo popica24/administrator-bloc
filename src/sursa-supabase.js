@@ -200,8 +200,12 @@ export function creeazaSursaSupabase(url, cheie) {
       toate(() => com.from("anunturi").select("*").eq("asociatie_id", asoc)),
       toate(() => com.from("anunturi_citiri").select("*, a:anunturi!inner(asociatie_id)").eq("a.asociatie_id", asoc)),
       toate(() => com.from("documente").select("*").eq("asociatie_id", asoc)),
-      ok(guv.rpc("situatie_voturi", { p_asociatie_id: asoc })),
-      ok(guv.rpc("situatie_adunari", { p_asociatie_id: asoc })),
+      /* [J6] p_apartament_id: apartamentul activ, ca votulMeu/prezentaMea sa
+         raspunda pentru el, nu pentru orice apartament al meu, gasit primul
+         (un locatar cu doua apartamente in bloc putea vedea votul/prezenta
+         celuilalt apartament pe ecranul apartamentului ales). */
+      ok(guv.rpc("situatie_voturi", { p_asociatie_id: asoc, p_apartament_id: euUi.apartamentId || null })),
+      ok(guv.rpc("situatie_adunari", { p_asociatie_id: asoc, p_apartament_id: euUi.apartamentId || null })),
       esteAdmin ? ok(com.from("remindere_setari").select("*").eq("asociatie_id", asoc)) : Promise.resolve([]),
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? ok(id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
