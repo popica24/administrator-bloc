@@ -178,26 +178,23 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     expect(spion).toHaveBeenCalledTimes(2);
   });
 
-  /* [G10] Deschiderea avizierului marcheaza fiecare anunt necitit ca citit
-     (LocatarBloc, useEffect). Cu al doilea anunt inca in curs cand primul
-     se termina si reincarca datele, efectul reporneste (alta referinta la
-     date.anunturi) si incearca sa marcheze din nou acelasi anunt, inca
-     "in curs" - o reintrare fireasca, de fundal, nu o apasare dubla a
-     omului. Ea nu are voie sa arate avertismentul de reintrare. */
-  it("[G10] al doilea anunt necitit din avizier nu declanseaza avertismentul de reintrare", async () => {
-    const { sursa } = await pornesteApp({
-      email: LOCATAR,
-      modifica: (d) => { d.anunturi[1].citit = false; },
-    });
-    const necitite = (await sursa.incarca()).anunturi.filter((a) => !a.citit);
-    expect(necitite.length).toBeGreaterThanOrEqual(2);
-    const idBlocat = necitite[1].id;
-
+  /* [G10, K1] marcheazaAnunturiCitite este o comanda de fundal (LocatarBloc,
+     useEffect, marcheaza tot lotul de anunturi necitite intr-un singur
+     apel). O reintrare cu aceleasi argumente, cat timp prima e inca in
+     curs, e fireasca (nu o apasare dubla a omului) si nu are voie sa arate
+     avertismentul de reintrare. */
+  it("[G10] o comanda de fundal repetata cu aceleasi argumente nu declanseaza avertismentul de reintrare", async () => {
+    const { sursa, container } = await pornesteApp({ email: LOCATAR });
+    const ctx = () => contextApp(container);
+    const necitit = (await sursa.incarca()).anunturi.find((a) => !a.citit);
     const hang = amanat();
-    const original = sursa.marcheazaAnuntCitit.bind(sursa);
-    vi.spyOn(sursa, "marcheazaAnuntCitit").mockImplementation((id) => (id === idBlocat ? hang.promisiune : original(id)));
+    const spion = vi.spyOn(sursa, "marcheazaAnuntCitit").mockReturnValue(hang.promisiune);
 
-    await tab("Bloc");
+    await act(async () => {
+      ctx().marcheazaAnunturiCitite([necitit.id]);
+      ctx().marcheazaAnunturiCitite([necitit.id]);
+    });
+    expect(spion).toHaveBeenCalledTimes(1);
     await asteapta();
 
     expect(toast()).toBeNull();

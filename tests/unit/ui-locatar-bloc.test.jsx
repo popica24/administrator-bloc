@@ -197,6 +197,20 @@ describe("Bloc: adunarea generala", () => {
     expect(screen.getByText("Au confirmat 4 din 20 apartamente.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Confirm ca particip" })).toBeNull();
   });
+
+  /* [K8] sursa trimite adunarile descrescator dupa data; lista trebuie
+     afisata crescator, cea mai apropiata prima. */
+  it("doua adunari viitoare apar in ordine crescatoare dupa data", async () => {
+    await laBloc({
+      email: ELENA,
+      modifica: (d) => {
+        const a = d.adunari[0];
+        d.adunari = [{ ...a, id: "adu-departe", dataOra: "2026-11-20T18:00:00+02:00" }, a];
+      },
+    }, "Vot si adunare");
+    const titluri = screen.getAllByText(/^Adunarea generala din/).map((el) => el.textContent);
+    expect(titluri).toEqual(["Adunarea generala din 3 octombrie 2026", "Adunarea generala din 20 noiembrie 2026"]);
+  });
 });
 
 describe("Bloc: acte", () => {

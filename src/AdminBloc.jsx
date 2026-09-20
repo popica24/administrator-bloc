@@ -401,10 +401,11 @@ function consumApartament(date, apId, luna, tip) {
 
 /* [A9] Persoanele apartamentului valabile intr-o anumita luna, nu cele de
    azi: istoricPersoane vine sortat descrescator (cel mai recent prim), deci
-   prima intrare valabila la sau inainte de luna ceruta e cea corecta. */
+   prima intrare valabila la sau inainte de luna ceruta e cea corecta. Fiecare
+   apartament are cel putin intrarea de la crearea lui, deci exista mereu una
+   valabila pentru orice luna cu citiri. */
 function persoaneInLuna(ap, luna) {
-  const intrare = (ap.istoricPersoane || []).find((p) => p.valabilDin <= luna);
-  return intrare ? intrare.numar : ap.persoane;
+  return ap.istoricPersoane.find((p) => p.valabilDin <= luna).numar;
 }
 
 /* Lunile cu consum validat, de la intrarea in aplicatie */

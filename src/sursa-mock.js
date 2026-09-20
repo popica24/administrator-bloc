@@ -807,7 +807,7 @@ export function creeazaSursaMock() {
            netrimis inca la verificare devine punctul de plecare al lunii
            urmatoare, iar o respingere ulterioara lasa luna urmatoare
            calculata pe o valoare pe care nimeni n-a validat-o. */
-        const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare === "validata").sort((a, b) => (a.luna < b.luna ? 1 : -1));
+        const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare === "validata").sort((a, b) => b.luna.localeCompare(a.luna));
         let anterior = anterioare.length ? anterioare[0].indexCurent : 0;
         /* Sub o estimare prea mare se accepta indexul real, dar nu sub ultima
            citire reala [A2]. Cand nu exista nicio citire reala (toate cele

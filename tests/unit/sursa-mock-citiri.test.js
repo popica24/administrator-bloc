@@ -160,6 +160,40 @@ describe("valideazaCitire", () => {
   });
 });
 
+describe("valideazaCitiriApartament", () => {
+  it("[A5] valideaza dintr-o data ambele contoare ale apartamentului", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap9 = apNr(d, "9").id;
+    await s.valideazaCitiriApartament(ap9, "2026-09", true, null);
+    const dupa = (await s.incarca()).citiri.filter((x) => x.apartamentId === ap9 && x.luna === "2026-09");
+    expect(dupa.every((x) => x.stare === "validata")).toBe(true);
+  });
+
+  it("[A5] respinge dintr-o data ambele contoare, cu notificare", async () => {
+    const { s, d } = await ca(LOCATAR);
+    const { rece, calda, aug } = contoare(d, d.eu.apartamentId);
+    await s.transmiteCitire({ apartamentId: d.eu.apartamentId, luna: "2026-09", indexuri: [{ contorId: rece.id, index: aug.rece + 4 }, { contorId: calda.id, index: aug.calda + 2 }] });
+    await s.intra(ADMIN, PAROLA);
+    const ap = (await s.incarca()).apartamente.find((a) => a.id === d.eu.apartamentId).id;
+    const r = await s.valideazaCitiriApartament(ap, "2026-09", false, "  Poza neclara.  ");
+    expect(r).toEqual({ validate: 2 });
+    const respinse = (await s.incarca()).citiri.filter((x) => x.apartamentId === ap && x.luna === "2026-09");
+    expect(respinse.every((x) => x.stare === "respinsa" && x.motivRespingere === "Poza neclara.")).toBe(true);
+    await s.intra(LOCATAR, PAROLA);
+    expect((await s.incarca()).notificari[0]).toMatchObject({ tip: "citire", titlu: "Indexul trimis a fost respins" });
+  });
+
+  it("refuza fara motiv la respingere; refuza un apartament inexistent sau fara nimic de verificat", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap9 = apNr(d, "9").id;
+    await expect(s.valideazaCitiriApartament(ap9, "2026-09", false)).rejects.toThrow("Scrie motivul, ca locatarul sa stie ce sa corecteze.");
+    await expect(s.valideazaCitiriApartament("apa-0", "2026-09", true, null)).rejects.toThrow("Apartamentul nu exista.");
+    await s.valideazaCitiriApartament(ap9, "2026-09", true, null);
+    await expect(s.valideazaCitiriApartament(ap9, "2026-09", true, null))
+      .rejects.toThrow("Nu mai sunt citiri de verificat pentru acest apartament si aceasta luna.");
+  });
+});
+
 describe("citesteContorGeneral", () => {
   it("adauga citirea lunii si o inlocuieste la corectare", async () => {
     const { s, d } = await ca(ADMIN);
@@ -188,6 +222,22 @@ describe("citesteContorGeneral", () => {
   it("[A3] corectarea unei luni publicate este refuzata", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.citesteContorGeneral("2026-06", "rece", 99999)).rejects.toThrow();
+  });
+
+  it("[A3] o luna viitoare este refuzata", async () => {
+    const { s } = await ca(ADMIN);
+    await expect(s.citesteContorGeneral("2027-03", "rece", 1)).rejects.toThrow("Nu poti citi contorul general pe o luna viitoare.");
+  });
+
+  it("[A3] un index peste indexul de pornire al lunii urmatoare este refuzat", async () => {
+    ceasDemo(new Date("2026-10-05T09:00:00"));
+    const { s, d } = await ca(ADMIN);
+    const gen = d.contoare.find((c) => !c.apartamentId && c.tip === "rece");
+    const aug = d.citiri.find((x) => x.contorId === gen.id && x.luna === "2026-08").indexCurent;
+    await s.citesteContorGeneral("2026-09", "rece", aug + 100);
+    await s.citesteContorGeneral("2026-10", "rece", aug + 150);
+    await expect(s.citesteContorGeneral("2026-09", "rece", aug + 200))
+      .rejects.toThrow("nu poate fi mai mare decat indexul de pornire al lunii urmatoare");
   });
 
   it.fails("[§8] un tip fara contor general da un mesaj clar", async () => {
