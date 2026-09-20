@@ -6,7 +6,7 @@
 -- singura data suma lor, apoi le scrie pe toate intr-o singura actualizare.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(25);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in d-comenzi-fisa-fond.test.sql).
@@ -270,6 +270,12 @@ reset role;
 select is(public.numar_ro(102.98), '102,98', 'numar_ro: doua zecimale, cu virgula');
 select is(public.numar_ro(105), '105,00', 'numar_ro: un numar intreg capata doua zecimale');
 select is(public.numar_ro(105.4, 0), '105', 'numar_ro: zero zecimale, fara virgula');
+
+-- [minor] numar_ro nu grupa miile ("1234,50" in loc de "1.234,50" cum arata
+-- restul aplicatiei): fara punct la fiecare trei cifre.
+select is(public.numar_ro(1234.5), '1.234,50', 'numar_ro: grupeaza miile cu punct');
+select is(public.numar_ro(1234567.89), '1.234.567,89', 'numar_ro: grupeaza fiecare grup de trei cifre');
+select is(public.numar_ro(-2345.6), '-2.345,60', 'numar_ro: grupeaza si la un numar negativ');
 
 select * from finish();
 rollback;

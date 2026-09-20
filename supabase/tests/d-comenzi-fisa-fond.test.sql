@@ -313,7 +313,7 @@ select throws_ok(
 -- ar merge pe -50.50 si e refuzata, fara sa scrie nimic.
 select throws_ok(
   $$select financiar.inregistreaza_iesire_fond(pg_temp.fx('fond'), -800, 'Prea mult', current_date, pg_temp.fx('doc'))$$,
-  'Fondul are 749.50 lei; o iesire de 800.00 lei l-ar duce pe minus.',
+  'Fondul are 749,50 lei; o iesire de 800,00 lei l-ar duce pe minus.',
   'inregistreaza_iesire_fond: o iesire mai mare decat soldul fondului este refuzata (C5)');
 select is(
   (select sold from financiar.fonduri_solduri where id = pg_temp.fx('fond')),
