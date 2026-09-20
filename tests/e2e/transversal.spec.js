@@ -90,7 +90,7 @@ test.describe("navigare si reincarcare", () => {
     expect(count).toBe(0);
   });
 
-  test.fixme("[E3] butonul Inapoi al browserului se intoarce la tabul anterior", async ({ page }) => {
+  test("[E3] butonul Inapoi al browserului se intoarce la tabul anterior", async ({ page }) => {
     /* Taburile nu lasa nicio urma in istoricul browserului: pe telefon, butonul
        hardware Inapoi iese din aplicatie in loc sa urce un nivel. */
     await intraCa(page, "elena");
@@ -314,7 +314,7 @@ test.describe("doua actiuni diferite, una dupa alta", () => {
   /* Protectia la dublu apasat blocheaza comanda dupa nume, nu dupa butonul
      apasat: cat timp o comanda este in aer, aceeasi comanda pe alt rand este
      aruncata in tacere, fara toast si fara efect. */
-  test.fixme("[E6] doua notificari marcate citite una dupa alta raman amandoua citite", async ({ page }) => {
+  test("[E6] doua notificari marcate citite una dupa alta raman amandoua citite", async ({ page }) => {
     const sb = serviciu();
     const { data: profil } = await sb.schema("identitate").from("profiluri")
       .select("id").eq("email", CONTURI.elena).single();

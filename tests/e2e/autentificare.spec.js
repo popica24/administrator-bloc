@@ -180,7 +180,7 @@ test.describe("cont nou", () => {
     await stergeCont(email);
   });
 
-  test.fixme("[E1] dupa inregistrare aplicatia arata ecranul de confirmare si pastreaza codul", async ({ page }) => {
+  test("[E1] dupa inregistrare aplicatia arata ecranul de confirmare si pastreaza codul", async ({ page }) => {
     const email = `e2e-conf-${Date.now()}@adminbloc.test`;
     const ap = await apartamentulNumarul(18);
     const cod = `EF${String(Date.now()).slice(-6)}`.replace(/[01IO]/g, "4").toUpperCase();
@@ -207,7 +207,7 @@ test.describe("cont nou", () => {
     await stergeCont(email);
   });
 
-  test.fixme("[E1] administrator nou cu atestat: ecranul de confirmare aminteste atestatul", async ({ page }) => {
+  test("[E1] administrator nou cu atestat: ecranul de confirmare aminteste atestatul", async ({ page }) => {
     const email = `e2e-adm-${Date.now()}@adminbloc.test`;
     await page.goto("/");
     await buton(page, "Sunt administrator si vreau cont").click();

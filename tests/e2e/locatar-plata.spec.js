@@ -39,7 +39,7 @@ test.describe("Acasa", () => {
     await expect(page.getByText("De plata acum")).toBeVisible();
   });
 
-  test.fixme("[E2] restantierul nu este anuntat ca mai are zile pana la scadenta", async ({ page }) => {
+  test("[E2] restantierul nu este anuntat ca mai are zile pana la scadenta", async ({ page }) => {
     /* Ap. 3 are intretinerea pe iunie si iulie scadenta si nepatita, plus
        penalizare. Badge-ul se calculeaza doar din scadenta listei curente, deci
        cel mai vechi datornic al blocului citeste "Mai ai 5 zile". */

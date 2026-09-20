@@ -308,28 +308,48 @@ test.describe("Fisa apartamentului", () => {
   });
 });
 
-test.describe("comenzi fara ecran", () => {
-  /* Auditul 2 (X06, D1) a cerut o comanda de corectare a fisei apartamentului.
-     Comanda exista in baza (organizare.schimba_fisa_apartament) si in ambele
-     surse de date (sursa-supabase.js:489, sursa-mock.js:918), dar niciun ecran
-     nu o cheama, deci pentru administrator nimic nu s-a schimbat: numele
-     fostului proprietar si o cota gresita raman pe vecie. */
-  test.fixme("[E4] fisa apartamentului se poate corecta din aplicatie", async ({ page }) => {
+test.describe("corectarea fisei si banii din fond", () => {
+  /* Auditul 2 (X06, D1): fisa apartamentului trebuie sa se poata corecta din
+     aplicatie, altfel numele fostului proprietar si o cota gresita raman pe
+     vecie. Comanda existase in baza si in surse inainte sa aiba ecran. */
+  test("[E4] fisa apartamentului se corecteaza si ramane schimbata in baza", async ({ page }) => {
+    const ap = await apartamentulNumarul(5);
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 5" }).click();
-    await expect(buton(page, "Modifica datele apartamentului")).toBeVisible();
+    await buton(page, "Corecteaza datele apartamentului").click();
+
+    const nume = `Proprietar Nou ${Date.now()}`;
+    await page.getByLabel("Proprietar").fill(nume);
+    await buton(page, "Salveaza corectia").click();
+    await expect(page.getByText(nume).first()).toBeVisible();
+
+    const dupa = await apartamentulNumarul(5);
+    expect(dupa.proprietar_nume).toBe(nume);
+    /* restul fisei ramane neatins */
+    expect(Number(dupa.cota_indiviza)).toBe(Number(ap.cota_indiviza));
+    expect(dupa.etaj).toBe(ap.etaj);
   });
 
-  /* Auditul 2 (X05, D5): iesirea din fondul de reparatii. Comanda exista
-     (financiar.inregistreaza_iesire_fond, sursa-supabase.js:500), dar
-     administratorul nu are niciun ecran de fonduri, deci soldul fondului
-     creste la nesfarsit si nu se poate cheltui nimic din el. */
-  test.fixme("[E5] iesirea din fondul de reparatii se inregistreaza din aplicatie", async ({ page }) => {
+  /* Auditul 2 (X05, D5): fara iesiri, soldul fondului pe care il vad toti
+     locatarii creste la nesfarsit. Documentul justificativ este obligatoriu,
+     iar soldul nu are voie sa treaca sub zero. */
+  test("[E5] iesirea din fond cere document si nu duce soldul sub zero", async ({ page }) => {
     await intraCa(page, "admin");
-    await mergiLaTab(page, "Sumar");
-    await page.getByText("FOND DE REPARATII").click();
-    await expect(buton(page, "Inregistreaza o iesire din fond")).toBeVisible();
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Fonduri" }).click();
+    await page.getByRole("button", { name: "Inregistreaza o iesire" }).first().click();
+
+    await page.getByLabel("Suma iesita").fill("250");
+    await page.getByLabel("Pentru ce").fill("Reparatie hidrofor");
+    /* fara document, salvarea nu e disponibila */
+    await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
+
+    await page.setInputFiles("input[type=file]", {
+      name: "factura-hidrofor.jpg", mimeType: "image/jpeg", buffer: Buffer.from("jpeg-de-test"),
+    });
+    await buton(page, "Inregistreaza iesirea").click();
+    await expect(page.getByText("Reparatie hidrofor").first()).toBeVisible();
   });
 });
 
