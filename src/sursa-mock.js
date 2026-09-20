@@ -37,6 +37,12 @@ const LUNI = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iul
 const lunaText = (l) => `${LUNI[Number(l.slice(5, 7)) - 1]} ${l.slice(0, 4)}`;
 const dataText = (d) => `${Number(d.slice(8, 10))} ${LUNI[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const acum = () => new Date().toISOString();
+/* Eticheta de test care reproduce, in modul demonstrativ, cazul "Auth cere
+   confirmarea emailului" din sursa Supabase (vezi inregistreaza() mai jos).
+   Exportata (nu doar un sir scris pe loc), ca testul de paritate sa nu
+   depinda de un literal copiat separat si ca eticheta sa fie gasibila prin
+   cautare (G14: conventia e deliberata, nu o scapare). */
+export const ETICHETA_CERE_CONFIRMARE = "+cere-confirmare";
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 const round4 = (n) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 const eroare = (mesaj) => { throw new Error(mesaj); };
@@ -698,9 +704,11 @@ export function creeazaSursaMock() {
       /* Paritate cu sursa Supabase (C1): acolo, signUp() nu deschide sesiune
          cat timp Auth cere confirmarea emailului, iar comanda intoarce null.
          Modul demonstrativ nu are confirmare reala prin email, deci reproduce
-         acelasi raspuns pentru orice adresa cu eticheta "+cere-confirmare"
-         (contul se creeaza, dar ramane fara sesiune, ca la Supabase). */
-      if (email.trim().toLowerCase().includes("+cere-confirmare")) return null;
+         acelasi raspuns pentru orice adresa cu eticheta ETICHETA_CERE_CONFIRMARE
+         (contul se creeaza, dar ramane fara sesiune, ca la Supabase) — o
+         conventie doar pentru teste, deliberata (G14), nu date reale: nicio
+         adresa reala nu poarta aceasta eticheta. */
+      if (email.trim().toLowerCase().includes(ETICHETA_CERE_CONFIRMARE)) return null;
       sesiune = { profilId: p.id, email: email.trim() };
       return sesiune;
     },

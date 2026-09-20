@@ -4,7 +4,7 @@
    comenzi prin sursa Supabase — este in acelasi director; mock-ul insa nu are
    nevoie de server, asa ca testele de aici ruleaza si cu stack-ul oprit. */
 import { beforeEach, describe, expect, it } from "vitest";
-import { creeazaSursaMock } from "../../src/sursa-mock.js";
+import { creeazaSursaMock, ETICHETA_CERE_CONFIRMARE } from "../../src/sursa-mock.js";
 import { PAROLA_DEMO } from "../../src/date-demo.js";
 
 const ADMIN = "administrator@adminbloc.test";
@@ -27,14 +27,15 @@ describe("inregistreaza() in sursa demonstrativa (C1)", () => {
     expect(await s.sesiuneCurenta()).toEqual(r);
   });
 
-  it("un email cu eticheta +cere-confirmare reproduce cazul din Supabase: contul se creeaza, dar fara sesiune", async () => {
+  it("un email cu eticheta ETICHETA_CERE_CONFIRMARE reproduce cazul din Supabase: contul se creeaza, dar fara sesiune", async () => {
+    const email = `cont-nou${ETICHETA_CERE_CONFIRMARE}@adminbloc.test`;
     const s = creeazaSursaMock();
-    const r = await s.inregistreaza({ email: "cont-nou+cere-confirmare@adminbloc.test", parola: "Parola12345", nume: "Cont Fara Sesiune" });
+    const r = await s.inregistreaza({ email, parola: "Parola12345", nume: "Cont Fara Sesiune" });
     expect(r).toBeNull();
     expect(await s.sesiuneCurenta()).toBeNull();
     /* Contul exista totusi si poate intra normal dupa aceea */
-    const dupa = await s.intra("cont-nou+cere-confirmare@adminbloc.test", "Parola12345");
-    expect(dupa.email).toBe("cont-nou+cere-confirmare@adminbloc.test");
+    const dupa = await s.intra(email, "Parola12345");
+    expect(dupa.email).toBe(email);
   });
 });
 
