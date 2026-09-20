@@ -861,6 +861,9 @@ export function creeazaSursaMock() {
       const s = db.sesizari.find((x) => x.id === sesizareId) || eroare("Sesizarea nu exista.");
       const esteAdmin = rolul(db, eu().id).rol === "administrator";
       if (!esteAdmin) cerLocatarPe(s.apartamentId);
+      /* [paritate] sesizari.scrie_mesaj refuza un mesaj pe o sesizare deja
+         rezolvata: conversatia se reia intr-o sesizare noua, daca problema revine. */
+      if (s.stare === "rezolvata") eroare("Sesizarea este rezolvata. Scrie o sesizare noua daca problema a revenit.");
       db.adauga("mesaje", { sesizareId, autorId: eu().id, dinAdministratie: esteAdmin, text: text.trim() });
       if (esteAdmin && s.stare === "noua") { s.stare = "in_lucru"; s.preluataLa = acum(); }
       if (esteAdmin) {
@@ -1189,6 +1192,8 @@ export function creeazaSursaMock() {
     async rezolvaSesizare(id) {
       const { bloc } = cerAdmin();
       const s = db.sesizari.find((x) => x.id === id) || eroare("Sesizarea nu exista.");
+      /* [paritate] sesizari.rezolva_sesizare refuza o sesizare deja rezolvata. */
+      if (s.stare === "rezolvata") eroare("Sesizarea este deja rezolvata.");
       s.stare = "rezolvata";
       s.preluataLa = s.preluataLa || acum();
       s.rezolvataLa = acum();

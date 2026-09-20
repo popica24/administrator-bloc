@@ -86,7 +86,7 @@ describe("scrieMesaj", () => {
     await expect(s.scrieMesaj(alta.id, "x")).rejects.toThrow("Nu ai acces la acest apartament.");
   });
 
-  it.fails("[§8] un mesaj pe o sesizare rezolvata este refuzat", async () => {
+  it("[§8] un mesaj pe o sesizare rezolvata este refuzat", async () => {
     const { s, d } = await ca(LOCATAR);
     const rezolvata = dupaTitlu(d, "Interfon defect");
     await expect(s.scrieMesaj(rezolvata.id, "Iar nu merge")).rejects.toThrow();
@@ -126,7 +126,7 @@ describe("preiaSesizare si rezolvaSesizare", () => {
     await expect(s.rezolvaSesizare(bec.id)).rejects.toThrow("Doar administratorul poate face asta.");
   });
 
-  it.fails("[§8] rezolvarea unei sesizari deja rezolvate este refuzata", async () => {
+  it("[§8] rezolvarea unei sesizari deja rezolvate este refuzata", async () => {
     const { s, d } = await ca(ADMIN);
     await expect(s.rezolvaSesizare(dupaTitlu(d, "Interfon defect").id)).rejects.toThrow();
   });
