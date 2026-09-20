@@ -25,6 +25,16 @@ export function latimeText(text, marime, bold = false) {
 
 const escape = (t) => String(t).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 
+/* [F9] Numele oamenilor pot avea diacritice, chiar daca restul aplicatiei nu
+   are. `charCodeAt & 0xff` le trunchia la un octet oarecare (litere straine
+   sau semne de punctuatie), deci se transliteraza in ASCII inainte de a
+   scrie octetii. */
+const DIACRITICE = {
+  ă: "a", â: "a", î: "i", ș: "s", ş: "s", ț: "t", ţ: "t",
+  Ă: "A", Â: "A", Î: "I", Ș: "S", Ş: "S", Ț: "T", Ţ: "T",
+};
+const transliteraza = (t) => String(t).replace(/[ăâîșşțţĂÂÎȘŞȚŢ]/g, (c) => DIACRITICE[c]);
+
 /* Rupe un cuvant mai lung decat randul in bucati care incap [F29] */
 function rupeCuvant(cuvant, latime, marime, bold) {
   const bucati = [];
@@ -107,6 +117,7 @@ function scriePdf(pagini, latimePagina, inaltimePagina, titlu) {
   pozitii.forEach((p) => { out += `${String(p).padStart(10, "0")} 00000 n \n`; });
   out += `trailer\n<< /Size ${obiecte.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF`;
 
+  out = transliteraza(out);
   const bytes = new Uint8Array(out.length);
   for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
   return bytes;

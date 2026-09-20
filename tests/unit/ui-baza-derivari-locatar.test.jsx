@@ -232,7 +232,7 @@ describe("descriereAlocari si chitanta", () => {
   });
 
   /* Audit F9: pdf.js pastreaza doar octetul de jos, deci diacriticele devin alte litere */
-  it.fails("[F9] numele cu diacritice apare lizibil pe chitanta", async () => {
+  it("[F9] numele cu diacritice apare lizibil pe chitanta", async () => {
     await plata((d) => { d.apartamente[0].proprietar = "Ștefan Țăranu"; });
     await apasa("Platile mele");
     const pdf = prindePdf();

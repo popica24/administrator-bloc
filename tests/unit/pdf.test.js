@@ -194,7 +194,7 @@ describe("documentPdf: paginarea", () => {
     expect(s.match(/Td \(cuvant/g).length).toBeGreaterThan(5);
   });
 
-  it.fails("[F9] diacriticele din nume se transliteraza, nu se strica", () => {
+  it("[F9] diacriticele din nume se transliteraza, nu se strica", () => {
     const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Știrbu Țăranu" }] }));
     expect(s).toContain("(Stirbu Taranu)");
   });
