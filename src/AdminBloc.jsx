@@ -1622,23 +1622,46 @@ function SheetPlataCard({ open, onClose, apartamentId, sumaDePlata }) {
   const [lucreaza, setLucreaza] = useState(false);
   const [eroare, setEroare] = useState(null);
   const [plataId, setPlataId] = useState(null);
+  /* [H7/F8] O plata "in asteptare" (202) nu este confirmata inca de banca,
+     dar nici un esec: nu apare in date.plati (doar platile confirmate se
+     incarca), deci fara aceasta stare separata formularul ar reveni singur
+     la "Plata cu cardul" si l-ar lasa pe om sa plateasca a doua oara. */
+  const [asteptare, setAsteptare] = useState(null);
 
   const cifre = numar.replace(/\D/g, "");
   const valid = cifre.length >= 13 && /^\d{2}\/\d{2}$/.test(expira.trim()) && /^\d{3,4}$/.test(cvc.trim()) && nume.trim().length > 2;
   const plata = plataId ? date.plati.find((p) => p.id === plataId) : null;
 
-  const inchide = () => { setNumar(""); setExpira(""); setCvc(""); setNume(""); setEroare(null); setPlataId(null); onClose(); };
+  const inchide = () => { setNumar(""); setExpira(""); setCvc(""); setNume(""); setEroare(null); setPlataId(null); setAsteptare(null); onClose(); };
   const plateste = async () => {
     setLucreaza(true);
     setEroare(null);
     const r = await platesteCard({ apartamentId, suma: sumaDePlata, card: { numar: cifre, expira: expira.trim(), cvc: cvc.trim(), nume: nume.trim() } });
     setLucreaza(false);
-    if (r.ok) setPlataId(r.rezultat.plataId); else setEroare(r.mesaj);
+    if (!r.ok) { setEroare(r.mesaj); return; }
+    if (r.rezultat.inAsteptare) { setAsteptare(r.rezultat.mesaj); return; }
+    setPlataId(r.rezultat.plataId);
   };
 
   return (
-    <Sheet open={open} onClose={inchide} titlu={plata ? "Plata a reusit" : "Plata cu cardul"} pazit={areText(numar, expira, cvc, nume)}>
-      {plata ? (
+    <Sheet
+      open={open}
+      onClose={inchide}
+      titlu={plata ? "Plata a reusit" : asteptare ? "Plata asteapta confirmarea" : "Plata cu cardul"}
+      pazit={areText(numar, expira, cvc, nume)}
+    >
+      {asteptare ? (
+        <>
+          <Card gap={S.sm} style={{ backgroundColor: C.infoSoft, borderColor: C.infoSoft }}>
+            <Badge label="In asteptare" tone="info" />
+            <Txt size={14} weight={600} color={C.info}>{asteptare}</Txt>
+            <Txt size={13} color={C.inkSoft}>
+              Nu plati din nou: cand banca confirma plata, ea apare automat la Platile mele, cu chitanta.
+            </Txt>
+          </Card>
+          <Btn label="Am inteles" variant="secondary" full onPress={inchide} />
+        </>
+      ) : plata ? (
         <>
           <Card gap={S.sm} style={{ backgroundColor: C.okSoft, borderColor: C.okLine }}>
             <Badge label="Platit" tone="ok" />
@@ -4587,7 +4610,7 @@ export default function AdminBloc() {
         setTab(null);
       },
 
-      platesteCard: cmd((x) => sursa.platesteCard(x), "Plata a fost confirmata de banca"),
+      platesteCard: cmd((x) => sursa.platesteCard(x), (r) => (r.inAsteptare ? r.mesaj : "Plata a fost confirmata de banca")),
       transmiteCitire: cmd((x) => sursa.transmiteCitire(x), "Indexul a fost trimis administratorului"),
       adaugaSesizare: cmd((x) => sursa.adaugaSesizare(x), "Sesizarea a ajuns la administrator"),
       scrieMesaj: cmd((id, t) => sursa.scrieMesaj(id, t), "Mesajul a fost trimis"),

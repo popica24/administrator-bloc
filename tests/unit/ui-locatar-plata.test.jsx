@@ -380,6 +380,24 @@ describe("Plata cu cardul", () => {
     expect(text(screen.getByRole("dialog", { name: "Plata a reusit" }))).toContain("Chitanta a fost emisa pe 19 septembrie 2026.");
   });
 
+  it("[H7/F8] plata in asteptare: mesajul bancii, fara Plata a reusit, si nu se poate plati din nou fara sa inchida", async () => {
+    const { sursa } = await laPlata({ email: ELENA });
+    vi.spyOn(sursa, "platesteCard").mockResolvedValue({
+      plataId: "p1", inAsteptare: true, mesaj: "Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma.",
+    });
+    await apasaButon("Plateste 718,09 lei cu cardul");
+    completeaza();
+    await apasaButon("Plateste 718,09 lei");
+    expect(screen.queryByRole("dialog", { name: "Plata a reusit" })).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "Plata asteapta confirmarea" });
+    expect(text(dialog)).toContain("Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma.");
+    expect(text(dialog)).toContain("Nu plati din nou");
+    expect(screen.queryByRole("button", { name: "Plateste 718,09 lei" })).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma.");
+    await apasaButon("Am inteles");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("inchiderea cu X goleste formularul", async () => {
     await laPlata({ email: ELENA });
     await apasaButon("Plateste 718,09 lei cu cardul");

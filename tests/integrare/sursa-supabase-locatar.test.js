@@ -58,10 +58,11 @@ describe("platesteCard()", () => {
     });
   });
 
-  it.fails("[F8] plata in asteptare (202) nu este aratata ca esec", async () => {
+  it("[F8] plata in asteptare (202) nu este aratata ca esec", async () => {
     const asteptare = { plataId: "p1", stare: "in_asteptare", mesaj: "Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma." };
     await cuFetch((url) => (url.includes("/functions/v1/plata-card") ? json(asteptare, 202) : undefined), async () => {
-      await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 10, card: CARD_BUN })).resolves.toMatchObject({ plataId: "p1" });
+      await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 10, card: CARD_BUN }))
+        .resolves.toEqual({ plataId: "p1", inAsteptare: true, mesaj: asteptare.mesaj });
     });
   });
 });
