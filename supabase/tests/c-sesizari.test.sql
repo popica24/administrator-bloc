@@ -2,7 +2,7 @@
 -- Toate datele sunt create aici si se anuleaza la rollback.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(69);
+select plan(70);
 
 -- -----------------------------------------------------------------------------
 -- Ajutoare si date proprii testului (pg_temp: dispar odata cu sesiunea; totul
@@ -429,6 +429,15 @@ select is((select count(*)::int from sesizari.sesizari where id = pg_temp.id('s6
   '[K4] locatarul nou nu vede sesizarea fostului locatar');
 select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id = pg_temp.id('s6')), 0,
   '[K4] locatarul nou nu vede conversatia fostului locatar');
+
+-- [H6] scrie_mesaj verifica doar ca apartamentul e al meu azi, fara conditia
+-- de perioada pe care K4 a adaugat-o politicii de citire: proprietarul nou
+-- nu trebuie sa poata scrie in conversatia mostenita de la predecesor, pe
+-- care oricum nu o poate citi.
+select throws_ok(
+  $$ select sesizari.scrie_mesaj(pg_temp.id('s6'), 'Scriu peste conversatia veche') $$,
+  'Nu poti scrie la aceasta sesizare.',
+  '[H6] proprietarul nou nu scrie in sesizarea deschisa de predecesor, inainte sa fi locuit el acolo');
 reset role;
 
 select * from finish();
