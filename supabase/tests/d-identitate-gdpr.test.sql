@@ -5,7 +5,7 @@
 --     tinuta in identitate.incercari_invitatii.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(40);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-* si d-*; anulat la rollback).
@@ -113,6 +113,26 @@ begin
   insert into identitate.invitatii (apartament_id, cod, calitate, creat_de, expira_la)
   values (pg_temp.fx('ap1'), 'GCDBUNAC', 'membru_familie', null, now() + interval '30 days'),
          (pg_temp.fx('ap1'), 'GCDBUNAD', 'membru_familie', null, now() + interval '30 days');
+
+  -- Identitatea Auth (login cu email), o sesiune deschisa si un token de
+  -- reimprospatare, pentru loc si pentru admin (C7).
+  insert into auth.identities (user_id, provider_id, provider, identity_data)
+  values (pg_temp.fx('loc'), pg_temp.fx('loc')::text, 'email',
+          jsonb_build_object('sub', pg_temp.fx('loc')::text, 'email', (select email from auth.users where id = pg_temp.fx('loc')))),
+         (pg_temp.fx('admin'), pg_temp.fx('admin')::text, 'email',
+          jsonb_build_object('sub', pg_temp.fx('admin')::text, 'email', (select email from auth.users where id = pg_temp.fx('admin'))));
+
+  insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
+  values (gen_random_uuid(), pg_temp.fx('loc'), now(), now(), now() + interval '1 day') returning id into v_id;
+  perform set_config('fx.sesiune_loc', v_id::text, true);
+  insert into auth.refresh_tokens (token, user_id, revoked, created_at, updated_at, session_id)
+  values ('rt-loc-' || pg_temp.fx('loc'), pg_temp.fx('loc')::text, false, now(), now(), v_id);
+
+  insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
+  values (gen_random_uuid(), pg_temp.fx('admin'), now(), now(), now() + interval '1 day') returning id into v_id;
+  perform set_config('fx.sesiune_admin', v_id::text, true);
+  insert into auth.refresh_tokens (token, user_id, revoked, created_at, updated_at, session_id)
+  values ('rt-admin-' || pg_temp.fx('admin'), pg_temp.fx('admin')::text, false, now(), now(), v_id);
 end;
 $$;
 
@@ -156,7 +176,7 @@ select (select count(*) from financiar.plati where apartament_id = pg_temp.fx('a
 
 select is(
   identitate.anonimizeaza_profil(pg_temp.fx('loc')),
-  jsonb_build_object('legaturi_inchise', 1, 'invitatii_revocate', 0),
+  jsonb_build_object('legaturi_inchise', 1, 'invitatii_revocate', 0, 'mandate_inchise', 0, 'administrator_revocat', false),
   'anonimizeaza_profil: raporteaza ce a inchis si ce a revocat');
 select results_eq(
   $$select nume, email, telefon from identitate.profiluri where id = pg_temp.fx('loc')$$,
@@ -175,6 +195,20 @@ select is(
   (select activ_pana from identitate.locatari where profil_id = pg_temp.fx('fost')),
   current_date - 1,
   'anonimizeaza_profil: legaturile deja inchise ale altora nu se ating');
+
+-- C7: identitatea Auth, sesiunile si token-urile de reimprospatare
+select is(
+  (select identity_data ->> 'email' like 'anonim-%@adminbloc.invalid' from auth.identities where user_id = pg_temp.fx('loc')),
+  true,
+  'anonimizeaza_profil: identity_data din auth.identities nu mai poarta emailul real');
+select is(
+  (select count(*)::int from auth.sessions where user_id = pg_temp.fx('loc')),
+  0,
+  'anonimizeaza_profil: sesiunile deschise ale persoanei se inchid');
+select is(
+  (select count(*)::int from auth.refresh_tokens where user_id = pg_temp.fx('loc')::text),
+  0,
+  'anonimizeaza_profil: token-urile de reimprospatare ale persoanei dispar');
 
 select results_eq(
   $$select (select count(*) from financiar.plati where apartament_id = pg_temp.fx('ap1')),
@@ -202,8 +236,8 @@ reset role;
 select pg_temp.serviciu();
 select is(
   identitate.anonimizeaza_profil(pg_temp.fx('admin')),
-  jsonb_build_object('legaturi_inchise', 0, 'invitatii_revocate', 2),
-  'anonimizeaza_profil: codurile nefolosite ale persoanei se revoca');
+  jsonb_build_object('legaturi_inchise', 0, 'invitatii_revocate', 2, 'mandate_inchise', 1, 'administrator_revocat', true),
+  'anonimizeaza_profil: codurile nefolosite ale persoanei se revoca, mandatul se inchide, calitatea de administrator se revoca');
 select is(
   (select count(*)::int from identitate.invitatii
     where creat_de = pg_temp.fx('admin') and revocata_la is not null),
@@ -213,9 +247,33 @@ select is(
   (select revocata_la from identitate.invitatii where cod = 'GCDFLSTA'),
   null::timestamptz,
   'anonimizeaza_profil: un cod deja folosit nu se revoca');
+
+-- C7: mandatul de administrator, calitatea de administrator, identitatea Auth
+-- si sesiunile administratorului
+select is(
+  (select activ_pana from identitate.membri_asociatie where profil_id = pg_temp.fx('admin') and rol = 'administrator'),
+  current_date,
+  'anonimizeaza_profil: mandatul de administrator, deschis, se inchide azi');
+select results_eq(
+  $$select stare, motiv_respingere is not null from identitate.administratori where profil_id = pg_temp.fx('admin')$$,
+  $$values ('respins', true)$$,
+  'anonimizeaza_profil: calitatea de administrator aprobat se revoca, cu motiv');
+select is(
+  (select identity_data ->> 'email' like 'anonim-%@adminbloc.invalid' from auth.identities where user_id = pg_temp.fx('admin')),
+  true,
+  'anonimizeaza_profil: identity_data a administratorului nu mai poarta emailul real');
+select is(
+  (select count(*)::int from auth.sessions where user_id = pg_temp.fx('admin')),
+  0,
+  'anonimizeaza_profil: sesiunile administratorului se inchid');
+select is(
+  (select count(*)::int from auth.refresh_tokens where user_id = pg_temp.fx('admin')::text),
+  0,
+  'anonimizeaza_profil: token-urile de reimprospatare ale administratorului dispar');
+
 select is(
   identitate.anonimizeaza_profil(pg_temp.fx('admin')),
-  jsonb_build_object('legaturi_inchise', 0, 'invitatii_revocate', 0),
+  jsonb_build_object('legaturi_inchise', 0, 'invitatii_revocate', 0, 'mandate_inchise', 0, 'administrator_revocat', false),
   'anonimizeaza_profil: a doua stergere a aceleiasi persoane nu mai schimba nimic');
 
 -- =============================================================================
