@@ -396,8 +396,14 @@ export function creeazaSursaSupabase(url, cheie) {
     },
 
     async deschideDocument(documentId) {
-      const d = await ok(com.from("documente").select("cale").eq("id", documentId).single());
-      const { data, error } = await sb.storage.from("documente").createSignedUrl(d.cale, 600);
+      const { data: rand, error: erorRand } = await com.from("documente").select("cale").eq("id", documentId).single();
+      if (erorRand) {
+        /* Ascuns de administrator sau sters: RLS nu mai lasa randul sa treaca,
+           iar .single() pe zero randuri intoarce mesajul tehnic PGRST116. */
+        if (erorRand.code === "PGRST116") throw new Error("Documentul nu mai exista sau nu este disponibil.");
+        arunca(erorRand);
+      }
+      const { data, error } = await sb.storage.from("documente").createSignedUrl(rand.cale, 600);
       if (error) arunca(error);
       return data.signedUrl;
     },

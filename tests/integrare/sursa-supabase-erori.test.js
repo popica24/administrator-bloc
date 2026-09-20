@@ -13,6 +13,7 @@ beforeAll(async () => {
 
 const rpc = (nume, raspuns) => (url) => (url.includes(`/rpc/${nume}`) ? raspuns() : undefined);
 const functia = (nume, raspuns) => (url) => (url.includes(`/functions/v1/${nume}`) ? raspuns() : undefined);
+const tabel = (nume, raspuns) => (url) => (url.includes(`/${nume}?`) ? raspuns() : undefined);
 
 describe("mesajele serverului, pe romaneste", () => {
   it("reteaua cazuta: serverul nu raspunde", async () => {
@@ -35,6 +36,12 @@ describe("mesajele serverului, pe romaneste", () => {
 
   it("mesajul backend-ului trece neschimbat cand nu e unul tehnic cunoscut", async () => {
     await expect(s.scrieMesaj(SESIZARE, "x")).rejects.toThrow("Sesizarea nu exista.");
+  });
+
+  it("[NOU-3] deschideDocument(): o eroare care nu e 'randul lipseste' (PGRST116) trece neschimbata", async () => {
+    await cuFetch(tabel("documente", () => json({}, 500)), async () => {
+      await expect(s.deschideDocument(SESIZARE)).rejects.toThrow("A aparut o eroare.");
+    });
   });
 });
 

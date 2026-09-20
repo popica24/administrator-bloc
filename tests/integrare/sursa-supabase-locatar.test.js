@@ -222,7 +222,7 @@ describe("fisiere semnate", () => {
     await expect(s.deschideDocument(docFaraFisier.id)).rejects.toThrow(/not found/i);
   });
 
-  it.fails("[NOU-3] deschideDocument() pe un document ascuns sau sters spune pe romaneste ca nu exista", async () => {
+  it("[NOU-3] deschideDocument() pe un document ascuns sau sters spune pe romaneste ca nu exista", async () => {
     await expect(s.deschideDocument(docAscuns.id)).rejects.toThrow(/document/i);
   });
 
