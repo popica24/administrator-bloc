@@ -183,8 +183,8 @@ select pg_temp.ca('adm');
 select is((select count(*)::int from sesizari.sesizari where bloc_id = pg_temp.id('bloc')), 2,
   'RLS "Sesizarile proprii si cele din blocurile conduse": administratorul vede tot blocul');
 select pg_temp.ca('pres');
-select is((select count(*)::int from sesizari.sesizari where bloc_id = pg_temp.id('bloc')), 2,
-  'RLS "Sesizarile proprii si cele din blocurile conduse": presedintele vede tot blocul');
+select is((select count(*)::int from sesizari.sesizari where bloc_id = pg_temp.id('bloc')), 0,
+  '[H11] RLS "Sesizarile proprii si cele din blocurile conduse": presedintele nu vede sesizarile (doar administratorul le trieaza)');
 select pg_temp.ca('admB');
 select is((select count(*)::int from sesizari.sesizari where bloc_id = pg_temp.id('bloc')), 0,
   'RLS "Sesizarile proprii si cele din blocurile conduse": administratorul altei asociatii nu vede nimic');
@@ -205,8 +205,8 @@ select pg_temp.ca('loc2');
 select is((select count(*)::int from sesizari.sesizari_poze where sesizare_id = pg_temp.id('s1')), 0,
   'RLS "Pozele se vad ca sesizarea lor": vecinul nu vede poza');
 select pg_temp.ca('pres');
-select is((select count(*)::int from sesizari.sesizari_poze where sesizare_id = pg_temp.id('s1')), 1,
-  'RLS "Pozele se vad ca sesizarea lor": conducerea vede poza');
+select is((select count(*)::int from sesizari.sesizari_poze where sesizare_id = pg_temp.id('s1')), 0,
+  '[H11] RLS "Pozele se vad ca sesizarea lor": presedintele nu vede poza (mosteneste vizibilitatea din sesizari.sesizari)');
 
 -- =============================================================================
 -- scrie_mesaj
@@ -240,7 +240,7 @@ select pg_temp.ca('pres');
 select throws_ok(
   $$ select sesizari.scrie_mesaj(pg_temp.id('s1'), 'Presedintele') $$,
   'P0001', 'Nu poti scrie la aceasta sesizare.',
-  'scrie_mesaj: presedintele citeste, dar nu raspunde in numele administratiei');
+  '[H11] scrie_mesaj: presedintele nu raspunde in numele administratiei (si, de la H11, nici nu mai citeste sesizarile)');
 select pg_temp.ca('admB');
 select throws_ok(
   $$ select sesizari.scrie_mesaj(pg_temp.id('s1'), 'Alt bloc') $$,
@@ -287,8 +287,8 @@ select pg_temp.ca('loc2');
 select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id = pg_temp.id('s1')), 0,
   'RLS "Mesajele se vad ca sesizarea lor": vecinul nu vede conversatia');
 select pg_temp.ca('pres');
-select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id = pg_temp.id('s1')), 3,
-  'RLS "Mesajele se vad ca sesizarea lor": presedintele vede conversatia');
+select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id = pg_temp.id('s1')), 0,
+  '[H11] RLS "Mesajele se vad ca sesizarea lor": presedintele nu vede conversatia (mosteneste vizibilitatea din sesizari.sesizari)');
 select pg_temp.ca('admB');
 select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id = pg_temp.id('s1')), 0,
   'RLS "Mesajele se vad ca sesizarea lor": administratorul strain nu vede conversatia');
