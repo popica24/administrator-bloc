@@ -305,7 +305,15 @@ describe("Acasa: consumul fata de bloc", () => {
   });
 
   it("fara persoane declarate nu apare comparatia", async () => {
-    await pornesteApp({ email: ELENA, modifica: (d) => { d.apartamente[0].persoane = 0; } });
+    await pornesteApp({
+      email: ELENA,
+      modifica: (d) => {
+        const ap = d.apartamente[0];
+        ap.persoane = 0;
+        /* [A9] comparatia foloseste persoanele lunii citirii, nu pe cele de azi */
+        if (ap.istoricPersoane[0]) ap.istoricPersoane[0].numar = 0;
+      },
+    });
     expect(screen.queryByText("Consumul tau fata de bloc")).toBeNull();
   });
 
@@ -314,7 +322,7 @@ describe("Acasa: consumul fata de bloc", () => {
     expect(screen.queryByText("Consumul tau fata de bloc")).toBeNull();
   });
 
-  it.fails("[A9] consumul pe persoana imparte la persoanele din luna citirii, nu la cele de azi", async () => {
+  it("[A9] consumul pe persoana imparte la persoanele din luna citirii, nu la cele de azi", async () => {
     await pornesteApp({
       email: ELENA,
       modifica: (d) => {

@@ -399,6 +399,14 @@ function consumApartament(date, apId, luna, tip) {
   return cit.length ? round2(suma(cit, (c) => c.consum)) : null;
 }
 
+/* [A9] Persoanele apartamentului valabile intr-o anumita luna, nu cele de
+   azi: istoricPersoane vine sortat descrescator (cel mai recent prim), deci
+   prima intrare valabila la sau inainte de luna ceruta e cea corecta. */
+function persoaneInLuna(ap, luna) {
+  const intrare = (ap.istoricPersoane || []).find((p) => p.valabilDin <= luna);
+  return intrare ? intrare.numar : ap.persoane;
+}
+
 /* Lunile cu consum validat, de la intrarea in aplicatie */
 function istoricConsum(date, apId) {
   const luni = [...new Set(date.citiri.filter((c) => c.apartamentId === apId && c.stare === "validata" && c.sursa !== "pornire").map((c) => c.luna))].sort();
@@ -1697,7 +1705,8 @@ function LocatarAcasa({ go }) {
   const istoricApa = istoricConsum(date, ap.id).filter((x) => !x.estimat && x.rece != null);
   const ultimaLunaApa = istoricApa.length ? istoricApa[istoricApa.length - 1].luna : null;
   const media = ultimaLunaApa && date.consumMediu[ultimaLunaApa] ? date.consumMediu[ultimaLunaApa].rece : null;
-  const alMeuPePersoana = ultimaLunaApa && ap.persoane ? round2(consumApartament(date, ap.id, ultimaLunaApa, "rece") / ap.persoane) : null;
+  const persoaneLunaApa = ultimaLunaApa ? persoaneInLuna(ap, ultimaLunaApa) : 0;
+  const alMeuPePersoana = ultimaLunaApa && persoaneLunaApa ? round2(consumApartament(date, ap.id, ultimaLunaApa, "rece") / persoaneLunaApa) : null;
   const sesizariMele = date.sesizari.filter((s) => s.aMea && s.stare !== "rezolvata");
 
   return (
