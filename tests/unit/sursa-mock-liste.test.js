@@ -135,7 +135,7 @@ describe("salveazaCheltuiala", () => {
     expect(dupa).toMatchObject({ tip: "fond_reparatii", suma: fond.suma, furnizorId: fond.furnizorId });
   });
 
-  it.fails("[L11] un cod dublat nu lasa in urma furnizorul nou", async () => {
+  it("[L11] un cod dublat nu lasa in urma furnizorul nou", async () => {
     const { s, ciorna } = await admin();
     const inainte = (await s.incarca()).furnizori.length;
     await s.salveazaCheltuiala(factura(ciorna.id, { furnizorNou: "Orfan SRL", cod: "C9" })).catch(() => {});

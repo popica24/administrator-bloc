@@ -880,15 +880,22 @@ export function creeazaSursaMock() {
     async salveazaCheltuiala({ id, listaId, furnizorId: idFurnizor, furnizorNou, categorie, cod, suma, metoda, tipApa, serie, emisa, scadentaFurnizor, fisier }) {
       const { bloc } = cerAdmin();
       let furnizorId = idFurnizor;
-      if (!furnizorId) {
-        if (!(furnizorNou || "").trim()) eroare("Alege furnizorul facturii.");
-        furnizorId = db.adauga("furnizori", { asociatieId: bloc.asociatieId, denumire: furnizorNou.trim(), cui: null, categorie: categorie.trim(), metoda, tipApa: tipApa || null, cod }).id;
-      }
+      const numeFurnizorNou = (furnizorNou || "").trim();
+      /* [L11] Toate verificarile ruleaza inainte de orice scriere: altfel un
+         cod dublat (sau orice alta respingere de mai jos) lasa in urma
+         furnizorul nou, inserat deja cand se afla eroarea. */
+      if (!furnizorId && !numeFurnizorNou) eroare("Alege furnizorul facturii.");
       if (db.cheltuieli.some((c) => c.listaId === listaId && c.cod === cod && c.id !== id)) eroare(`Codul ${cod} exista deja pe lista.`);
       const lista = db.liste.find((l) => l.id === listaId && l.blocId === bloc.id) || eroare("Lista nu exista.");
       if (lista.stare !== "ciorna") eroare("Lista este publicata. Cheltuielile ei nu se mai pot modifica.");
       if (!(Number(suma) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
       if (metoda === "consum" && tipApa !== "rece" && tipApa !== "calda") eroare("Alege daca factura este de apa rece sau de apa calda.");
+      const cheltuialaExistenta = id ? (db.cheltuieli.find((x) => x.id === id && x.listaId === listaId) || eroare("Cheltuiala nu exista.")) : null;
+      if (cheltuialaExistenta && cheltuialaExistenta.tip !== "factura") eroare("Randul fondului de reparatii nu se modifica din formularul de factura.");
+
+      if (!furnizorId) {
+        furnizorId = db.adauga("furnizori", { asociatieId: bloc.asociatieId, denumire: numeFurnizorNou, cui: null, categorie: categorie.trim(), metoda, tipApa: tipApa || null, cod }).id;
+      }
       const scan = fisier ? db.adauga("documente", {
         asociatieId: bloc.asociatieId, blocId: bloc.id, titlu: `Factura ${serie || ""}`.trim(), tip: "factura",
         cale: salveazaFisier(fisier, "documente"), vizibilLocatarilor: true, incarcatDe: eu().id,
@@ -897,11 +904,9 @@ export function creeazaSursaMock() {
         listaId, tip: "factura", cod, categorie: categorie.trim(), furnizorId, serie: serie || null, suma: round2(Number(suma)),
         metoda, tipApa: metoda === "consum" ? tipApa : null, emisa: emisa || null, scadentaFurnizor: scadentaFurnizor || null,
       };
-      if (id) {
-        const c = db.cheltuieli.find((x) => x.id === id && x.listaId === listaId) || eroare("Cheltuiala nu exista.");
-        if (c.tip !== "factura") eroare("Randul fondului de reparatii nu se modifica din formularul de factura.");
-        Object.assign(c, valori, scan ? { documentId: scan.id } : {});
-        return c.id;
+      if (cheltuialaExistenta) {
+        Object.assign(cheltuialaExistenta, valori, scan ? { documentId: scan.id } : {});
+        return cheltuialaExistenta.id;
       }
       return db.adauga("cheltuieli", { ...valori, achitataLa: null, documentId: scan ? scan.id : null }).id;
     },
