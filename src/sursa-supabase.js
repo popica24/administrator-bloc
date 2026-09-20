@@ -391,6 +391,9 @@ export function creeazaSursaSupabase(url, cheie) {
 
     async cereVerificareAdministrator({ numarAtestat, fisier }) {
       const { data } = await sb.auth.getUser();
+      /* [NOU-1] Fara sesiune, data.user este null: data.user.id arunca un
+         TypeError tehnic, in loc sa spuna pe romaneste ce s-a intamplat. */
+      if (!data.user) arunca({ message: "Nu esti autentificat." });
       let cale = null;
       if (fisier) cale = await incarcaFisier("atestate", `${data.user.id}/atestat-${Date.now()}.${extensie(fisier)}`, fisier);
       await ok(id.rpc("cere_verificare_administrator", { p_numar_atestat: numarAtestat, p_atestat_cale: cale }));

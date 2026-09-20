@@ -229,7 +229,7 @@ describe("cereVerificareAdministrator()", () => {
     await expect(s.cereVerificareAdministrator({ numarAtestat: "  " })).rejects.toThrow("Scrie numarul atestatului.");
   });
 
-  it.fails("[NOU-1] fara sesiune, cererea cu atestat spune ca nu esti autentificat (nu TypeError)", async () => {
+  it("[NOU-1] fara sesiune, cererea cu atestat spune ca nu esti autentificat (nu TypeError)", async () => {
     await expect(sursaNoua().cereVerificareAdministrator({ numarAtestat: "AT-1", fisier: pdf() })).rejects.toThrow("Nu esti autentificat.");
   });
 });
