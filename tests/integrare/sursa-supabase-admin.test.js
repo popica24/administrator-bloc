@@ -154,6 +154,10 @@ describe("contoare", () => {
   });
 
   it("estimeazaCitiri(): o citire estimata pe fiecare contor fara citire valabila", async () => {
+    /* [A6] estimarea e refuzata inainte de ziua limita a lunii curente
+       (implicit 25); testul ruleaza in orice zi a lunii, deci termenul
+       blocului se muta la 1, ca "azi" sa fie mereu dupa el. */
+    await ok(db("contorizare").from("setari_contorizare").update({ zi_limita_citire: 1 }).eq("bloc_id", f.blocId));
     const r = await adm.estimeazaCitiri(luna);
     expect(r).toEqual({ estimate: 6 });
     const est = await ok(db("contorizare").from("citiri").select("apartament_id, tip, consum, stare").eq("bloc_id", f.blocId).eq("luna", zi1(luna)).eq("sursa", "estimat"));
