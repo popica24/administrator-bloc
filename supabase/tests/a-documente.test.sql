@@ -1,7 +1,7 @@
 -- Teste pgTAP: documente (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(48);
+select plan(50);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -321,16 +321,22 @@ select is(pg_temp.randuri($$delete from storage.objects where bucket_id = 'docum
 select is(pg_temp.randuri($$delete from storage.objects where bucket_id = 'documente' and name = pg_temp.n('asocB', 'general', 'secret.pdf')$$), 0,
   'politica "Documente: stergere de catre administrator": nu fisierele altei asociatii');
 
-select todo('[S7] administratorul poate sterge sau ascunde documentele si poate indica un cale arbitrar', 4);
 select is(pg_temp.randuri($$delete from storage.objects where bucket_id = 'documente' and name = pg_temp.n('asocA', 'blocA', 'lista.pdf')$$), 0,
   '[S7] fisierul din spatele unui document inregistrat nu se sterge');
-select throws_ok($$update comunicare.documente set cale = pg_temp.n('asocA', 'blocA', 'alt.pdf') where id = pg_temp.doc('Lista august 2026')$$, null, null,
+select throws_ok($$update comunicare.documente set cale = pg_temp.n('asocA', 'blocA', 'alt.pdf') where id = pg_temp.doc('Lista august 2026')$$,
+  'Calea documentului nu se poate schimba dupa incarcare.',
   '[S7] documentul nu se repointeaza spre alt fisier');
-select throws_ok($$update comunicare.documente set vizibil_locatarilor = false where id = pg_temp.doc('Regulament')$$, null, null,
+select throws_ok($$update comunicare.documente set vizibil_locatarilor = false where id = pg_temp.doc('Regulament')$$,
+  'Un document vazut de locatari nu se mai poate ascunde.',
   '[S7] documentul publicat nu se ascunde de locatari');
 select throws_ok($$insert into comunicare.documente (asociatie_id, titlu, tip, cale, incarcat_de)
-    values (pg_temp.id('asocA'), 'Furat', 'altul', pg_temp.n('asocB', 'general', 'secret.pdf'), pg_temp.id('adminA'))$$, null, null,
+    values (pg_temp.id('asocA'), 'Furat', 'altul', pg_temp.n('asocB', 'general', 'secret.pdf'), pg_temp.id('adminA'))$$,
+  '42501', null,
   '[S7] calea documentului incepe cu asociatie_id/');
+select lives_ok($$update comunicare.documente set vizibil_locatarilor = true where id = pg_temp.doc('Contract lift')$$,
+  '[S7] un document inca nevazut de locatari se poate publica (sensul invers ramane liber)');
+select has_trigger('comunicare', 'documente', 'documente_protejeaza',
+  '[S7] exista trigger-ul comunicare.documente_protejeaza (functia comunicare.protejeaza_documentul)');
 reset role;
 
 select pg_temp.ca('adminB');

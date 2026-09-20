@@ -137,16 +137,18 @@ select pg_temp.ca('admin');
 set local role authenticated;
 insert into comunicare.documente (asociatie_id, bloc_id, titlu, tip, cale, incarcat_de)
 values (pg_temp.fx('asociatie'), pg_temp.fx('bloc'), 'Contract firma de curatenie', 'contract',
-        'x/' || gen_random_uuid() || '.pdf', pg_temp.fx('admin'));
+        pg_temp.fx('asociatie') || '/' || gen_random_uuid() || '.pdf', pg_temp.fx('admin'));
 reset role;
 select set_config('fx.doc',
   (select id::text from comunicare.documente where asociatie_id = pg_temp.fx('asociatie') limit 1), true);
 select is(pg_temp.jurnal('comunicare.documente', pg_temp.fx('doc'), 'INSERT'), 1,
   'audit: documentul incarcat lasa urma in jurnal');
 
-update comunicare.documente set vizibil_locatarilor = false where id = pg_temp.fx('doc');
+-- [S7] calea si vizibilitatea (o data publicat) nu se mai pot schimba, deci
+-- modificarea care lasa urma aici e titlul, nu ascunderea.
+update comunicare.documente set titlu = 'Contract firma de curatenie (revizuit)' where id = pg_temp.fx('doc');
 select is(pg_temp.jurnal('comunicare.documente', pg_temp.fx('doc'), 'UPDATE'), 1,
-  'audit: ascunderea unui document lasa urma in jurnal');
+  'audit: modificarea unui document lasa urma in jurnal');
 
 select set_config('fx.cod', identitate.invita_locatar(pg_temp.fx('ap1'), 'chirias'), true);
 select set_config('fx.invitatie',
