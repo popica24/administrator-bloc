@@ -174,7 +174,7 @@ describe("folosesteInvitatie()", () => {
     expect(await s2.folosesteInvitatie(cod)).toEqual({ apartamentNumar: "2A" });
   });
 
-  it.fails("[S11] accesul inchis azi unui cont legat azi se inchide imediat", async () => {
+  it("[S11] accesul inchis azi unui cont legat azi se inchide imediat", async () => {
     await admin.incarca();
     const cod = await admin.invitaLocatar(f.ap["10"], "proprietar");
     const { s, profilId } = await contNou({ email: `s11-${unic()}@adminbloc.test`, nume: "Vanzator" });

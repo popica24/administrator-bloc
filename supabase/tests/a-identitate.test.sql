@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(106);
+select plan(111);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -522,10 +522,12 @@ reset role;
 
 select pg_temp.ca('nou');
 set local role authenticated;
-select todo('[S11] on conflict do nothing consuma codul fara efect cand contul e deja legat', 1);
 select throws_ok($$select identitate.foloseste_invitatie(pg_temp.cod('c5'))$$,
-  null, null,
+  'Esti deja legat de acest apartament.',
   '[S11] un al doilea cod pentru acelasi apartament nu se consuma fara efect');
+select is(
+  (select folosita_la from identitate.invitatii where cod = pg_temp.cod('c5')), null,
+  '[S11] codul c5 ramane nefolosit dupa refuz, nu marcat fara efect');
 reset role;
 
 -- -----------------------------------------------------------------------------
@@ -568,7 +570,6 @@ select is_empty($$select private.apartamentele_mele()$$,
   'identitate.inchide_acces_locatar: locatarul nu mai are apartament');
 reset role;
 
-select todo('[S11] accesul inchis azi ramane deschis pana maine; codurile nefolosite nu se revoca; nu exista revoca_invitatie', 3);
 select pg_temp.ca('nou');
 set local role authenticated;
 select is_empty($$select private.apartamentele_mele()$$,
@@ -578,6 +579,27 @@ select isnt(
   (select revocata_la from identitate.invitatii where cod = pg_temp.cod('c2')), null,
   '[S11] inchiderea accesului revoca codurile nefolosite ale apartamentului');
 select has_function('identitate', 'revoca_invitatie', '[S11] exista comanda identitate.revoca_invitatie');
+
+-- identitate.revoca_invitatie: un cod se poate anula si fara sa se inchida
+-- vreun acces (dat gresit, trimis catre alt apartament etc).
+select pg_temp.ca('adminB');
+set local role authenticated;
+select throws_ok($$select identitate.revoca_invitatie((select id from identitate.invitatii where cod = pg_temp.cod('c3')))$$,
+  'Codul nu exista sau nu este din blocul tau.',
+  '[S11] revoca_invitatie: administratorul altui bloc este refuzat');
+reset role;
+select pg_temp.ca('adminA');
+set local role authenticated;
+insert into t_cod values ('c6', identitate.invita_locatar(pg_temp.id('apA1')));
+select lives_ok($$select identitate.revoca_invitatie((select id from identitate.invitatii where cod = pg_temp.cod('c6')))$$,
+  '[S11] revoca_invitatie: administratorul blocului revoca un cod nefolosit');
+select isnt(
+  (select revocata_la from identitate.invitatii where cod = pg_temp.cod('c6')), null,
+  '[S11] revoca_invitatie: codul c6 este marcat revocat');
+select throws_ok($$select identitate.revoca_invitatie((select id from identitate.invitatii where cod = pg_temp.cod('c1')))$$,
+  'Codul a fost deja folosit; revocarea nu mai are efect.',
+  '[S11] revoca_invitatie: un cod deja folosit nu se mai revoca');
+reset role;
 
 -- -----------------------------------------------------------------------------
 -- Functiile ajutatoare din private
@@ -687,7 +709,7 @@ select set_eq($$select profil_id from identitate.administratori$$, array[pg_temp
   'politica "Fiecare isi vede verificarea": doar randul propriu');
 select throws_ok($$update identitate.administratori set stare = 'aprobat' where profil_id = pg_temp.id('adminNou')$$, '42501', null,
   'identitate.administratori: starea nu se schimba din aplicatie');
-select is((select count(*)::int from identitate.invitatii where apartament_id = pg_temp.id('apA1')), 4,
+select is((select count(*)::int from identitate.invitatii where apartament_id = pg_temp.id('apA1')), 5,
   'politica "Administratorul vede invitatiile blocului": administratorul vede codurile blocului');
 reset role;
 
