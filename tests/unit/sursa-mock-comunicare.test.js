@@ -229,7 +229,7 @@ describe("remindere", () => {
     ]);
   });
 
-  it.fails("[NOU-2] un tip de reminder necunoscut da un mesaj clar", async () => {
+  it("[NOU-2] un tip de reminder necunoscut da un mesaj clar", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.seteazaReminder("sms", true)).rejects.toThrow(/reminder/i);
   });

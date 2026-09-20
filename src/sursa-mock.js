@@ -1108,7 +1108,7 @@ export function creeazaSursaMock() {
 
     async seteazaReminder(tip, activ, zile) {
       const { bloc } = cerAdmin();
-      const r = db.remindere.find((x) => x.asociatieId === bloc.asociatieId && x.tip === tip);
+      const r = db.remindere.find((x) => x.asociatieId === bloc.asociatieId && x.tip === tip) || eroare(`Reminderul ${tip} nu exista.`);
       r.activ = activ;
       if (zile != null) r.zile = Number(zile);
     },
