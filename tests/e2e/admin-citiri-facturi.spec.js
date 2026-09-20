@@ -147,7 +147,7 @@ test.describe("Citiri contoare", () => {
 
   /* Cunoscut din auditul 1 (A6, nereparat): estimarea merge si inainte de
      termen, deci testul ramane oprit ca sa nu strice datele demo. */
-  test.fixme("[A6] estimarea inainte de termen este refuzata cu un mesaj pe romaneste", async ({ page }) => {
+  test("[A6] estimarea inainte de termen este refuzata cu un mesaj pe romaneste", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
