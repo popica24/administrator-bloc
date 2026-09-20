@@ -34,15 +34,23 @@ function bazaApartament(ap, metoda, totaluri) {
   }
 }
 
-/* [L7] Imparte o suma deja rotunjita la 2 zecimale intre ponderi (ex:
+/* [L7, R2] Imparte o suma deja rotunjita la 2 zecimale intre ponderi (ex:
    persoanele apartamentelor), cu metoda resturilor celor mai mari: fiecare
    parte primeste partea intreaga (in sutimi), apoi sutimile ramase merg,
-   cate una, apartamentelor cu cel mai mare rest (la egalitate, in ordinea
-   din lista). Spre deosebire de rotunjirea fiecarei parti in parte, suma
-   partilor intoarse este mereu exact egala cu suma de impartit — altfel
-   metrii cubi repartizati pe apartamente nu s-ar aduna la contorul general,
-   desi fiecare rand, luat separat, pare corect rotunjit. */
-function distribuieExact(suma, ponderi) {
+   cate una, apartamentelor cu cel mai mare rest. Spre deosebire de
+   rotunjirea fiecarei parti in parte, suma partilor intoarse este mereu
+   exact egala cu suma de impartit — altfel metrii cubi repartizati pe
+   apartamente nu s-ar aduna la contorul general, desi fiecare rand, luat
+   separat, pare corect rotunjit.
+   [R2] La egalitate de rest — nu accidentala: apartamente cu aceeasi pondere
+   (acelasi numar de persoane, de exemplu) au mereu rest identic — sutimea
+   trebuie sa mearga la acelasi apartament oricare ar fi ordinea in care au
+   fost primite ponderile. Ordinea din lista nu e o cheie stabila: motorul
+   e chemat cu ordini diferite (intretinere.date_pentru_motor ordoneaza
+   apartamentele dupa numar ca text, sursa demo dupa ordinea ei naturala),
+   iar rezultatul nu are voie sa depinda de asta. De aceea egalitatea se
+   desparte dupa `chei` (id-ul apartamentului), stabil indiferent de ordine. */
+function distribuieExact(suma, ponderi, chei) {
   const totalPonderi = ponderi.reduce((s, p) => s + p, 0);
   const unitati = Math.round(suma * 100);
   if (!(totalPonderi > 0) || unitati === 0) return ponderi.map(() => 0);
@@ -50,8 +58,8 @@ function distribuieExact(suma, ponderi) {
   const bazaUnitati = bruteUnitati.map((u) => Math.floor(u));
   const ramase = unitati - bazaUnitati.reduce((s, u) => s + u, 0);
   const ordine = bruteUnitati
-    .map((u, i) => ({ i, rest: u - bazaUnitati[i] }))
-    .sort((a, b) => b.rest - a.rest || a.i - b.i);
+    .map((u, i) => ({ i, rest: u - bazaUnitati[i], cheie: String(chei[i]) }))
+    .sort((a, b) => b.rest - a.rest || (a.cheie < b.cheie ? -1 : 1));
   const rezultat = [...bazaUnitati];
   for (let k = 0; k < ramase; k += 1) rezultat[ordine[k].i] += 1;
   return rezultat.map((u) => u / 100);
@@ -75,7 +83,9 @@ function repartizeazaApa(cheltuiala, apartamente, consum, contorGeneral, totalur
   const sumaContoare = round2(apartamente.reduce((s, a) => s + propriu(a), 0));
   const diferenta = round2(general - sumaContoare);
   const pretMc = round4(cheltuiala.suma / general);
-  const coteDiferenta = totaluri.persoane > 0 ? distribuieExact(diferenta, apartamente.map((a) => a.persoane)) : apartamente.map(() => 0);
+  const coteDiferenta = totaluri.persoane > 0
+    ? distribuieExact(diferenta, apartamente.map((a) => a.persoane), apartamente.map((a) => a.id))
+    : apartamente.map(() => 0);
 
   return apartamente.map((ap, i) => {
     const consumPropriu = propriu(ap);

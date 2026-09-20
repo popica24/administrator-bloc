@@ -138,6 +138,34 @@ describe("apa pe consum", () => {
     expect(probleme.some((p) => /contor/.test(p) && /mic/.test(p))).toBe(true);
   });
 
+  it("[R2] centimetrul ramas din diferenta ajunge la acelasi apartament indiferent de ordinea din lista de intrare", () => {
+    /* Trei apartamente cu acelasi numar de persoane au ponderi identice, deci
+       cota lor bruta din diferenta e exact egala (o egalitate garantata, nu
+       una accidentala): distribuieExact trebuie sa desparta egalitatea dupa
+       ceva stabil (id-ul apartamentului), nu dupa pozitia din lista primita. */
+    const facApartamente = (ordine) => ordine.map((id) => ap(id, 1, 1));
+    const consumEgal = { a1: { rece: 0 }, a2: { rece: 0 }, a3: { rece: 0 } };
+    const cheltuieliApa = [cheltuiala("consum", 1, { tipApa: "rece" })];
+    const contorGeneralMic = { rece: 0.01 };
+    const dupaId = (r) => Object.fromEntries(r.repartizari.map((x) => [x.apartamentId, x.detaliu.cotaDiferenta]));
+
+    const r1 = calculeazaLista({ apartamente: facApartamente(["a1", "a2", "a3"]), cheltuieli: cheltuieliApa, consum: consumEgal, contorGeneral: contorGeneralMic });
+    const r2 = calculeazaLista({ apartamente: facApartamente(["a3", "a1", "a2"]), cheltuieli: cheltuieliApa, consum: consumEgal, contorGeneral: contorGeneralMic });
+    expect(dupaId(r1)).toEqual(dupaId(r2));
+
+    /* Aceeasi proprietate, verificata pe toate cele 6 permutari posibile ale
+       celor trei apartamente ("amesteca intrarea"), pe suma finala platita. */
+    const permutari = [
+      ["a1", "a2", "a3"], ["a1", "a3", "a2"], ["a2", "a1", "a3"],
+      ["a2", "a3", "a1"], ["a3", "a1", "a2"], ["a3", "a2", "a1"],
+    ];
+    const dupaSuma = (r) => Object.fromEntries(r.repartizari.map((x) => [x.apartamentId, x.suma]));
+    const rezultate = permutari.map((ordine) => dupaSuma(calculeazaLista({
+      apartamente: facApartamente(ordine), cheltuieli: cheltuieliApa, consum: consumEgal, contorGeneral: contorGeneralMic,
+    })));
+    rezultate.forEach((r) => expect(r).toEqual(rezultate[0]));
+  });
+
   it("[L7] suma mc repartizati este egala cu contorul general (iunie, apa calda)", () => {
     const aps = D.APARTAMENTE.map((a) => ap(a.numar, a.persoane, a.cota, a.scutitLift));
     const consumIunie = Object.fromEntries(D.APARTAMENTE.map((a) => [a.numar, { calda: D.consumApartament(a.numar, "2026-06", "calda") }]));
