@@ -210,7 +210,7 @@ describe("Contoare: starile citirii pe luna curenta", () => {
     expect(text(zonaCu(["Citirea trimisa a fost respinsa", "Motivul"]))).toContain("Motivul nou");
   });
 
-  it.fails("[A12] o citire de pornire din luna curenta nu blocheaza transmiterea indexului", async () => {
+  it("[A12] o citire de pornire din luna curenta nu blocheaza transmiterea indexului", async () => {
     await laContoare({
       email: ELENA,
       modifica: (d) => {

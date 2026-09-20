@@ -2074,7 +2074,9 @@ function LocatarConsum() {
   const citiriLuna = contoare.map((c) => ({
     contor: c, citire: citireLuna(date, c.id, luna), anterior: ultimIndexValabil(date, c.id, luna), minim: indexMinim(date, c.id, luna),
   }));
-  const toateTrimise = citiriLuna.length > 0 && citiriLuna.every((x) => x.citire && x.citire.stare !== "respinsa");
+  /* [A12] O citire "pornire" e indexul de start al contorului (luna zero),
+     nu o citire reala a lunii curente: nu trebuie sa blocheze transmiterea. */
+  const toateTrimise = citiriLuna.length > 0 && citiriLuna.every((x) => x.citire && x.citire.stare !== "respinsa" && x.citire.sursa !== "pornire");
   const toateValidate = toateTrimise && citiriLuna.every((x) => x.citire.stare === "validata");
   /* [R7] O citire completata automat nu este o citire verificata de om */
   const estimat = citiriLuna.some((x) => x.citire && x.citire.sursa === "estimat");
@@ -2083,7 +2085,7 @@ function LocatarConsum() {
 
   /* Se completeaza doar contoarele care nu sunt deja validate pe luna [A1].
      Eroarea opreste trimiterea; indiciul doar explica. */
-  const randuri = citiriLuna.filter((x) => !(x.citire && x.citire.stare === "validata")).map((x) => {
+  const randuri = citiriLuna.filter((x) => !(x.citire && x.citire.stare === "validata" && x.citire.sursa !== "pornire")).map((x) => {
     const v = valori[x.contor.id] || "";
     const n = numarDin(v);
     const eroare = v === "" ? null
