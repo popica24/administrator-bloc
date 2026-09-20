@@ -15,6 +15,17 @@ const scrieIn = async (foaie, eticheta, valoare) => {
 /* Blocul reminderului: cel mai mic care are si comutatorul, si zilele */
 const randReminder = (nume) => within(randCu(nume, nume).parentElement);
 
+/* [K12] Instantul ISO al unei ore date a Romaniei (+02:00 iarna, +03:00
+   vara), calculat cu Intl, la fel ca offsetRomania()/oraSeriiRomania() din
+   sursa-mock.js si sursa-supabase.js (J9) - independent de fusul masinii
+   care ruleaza testul. */
+function instantRomania(dataText, oraText) {
+  const aprox = new Date(`${dataText}T${oraText}:00Z`);
+  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
+    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
+  return new Date(`${dataText}T${oraText}:00+${ore.padStart(2, "0")}:00`).toISOString();
+}
+
 describe("Comunicare, anunturi", () => {
   it("lista anunturilor cu urgent, data si cititori", async () => {
     await deschideComunicare();
@@ -267,10 +278,34 @@ describe("Comunicare, vot si adunare generala", () => {
     expect(dezactivat(trimite())).toBe(true);
     await scrieIn("Convoaca adunarea generala", "Ora", "19:00");
     await apasa(trimite());
-    expect(spion).toHaveBeenCalledWith({ dataOra: new Date("2026-10-20T19:00:00").toISOString(), loc: "In curte", ordineDeZi: "Bugetul pe 2027" });
+    expect(spion).toHaveBeenCalledWith({ dataOra: instantRomania("2026-10-20", "19:00"), loc: "In curte", ordineDeZi: "Bugetul pe 2027" });
     expect(toast().textContent).toBe("Convocarea a fost trimisa locatarilor cu cont");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("Adunarea generala din 20 octombrie 2026")).toBeTruthy();
+  });
+
+  /* [K12] Fix J9 a corectat doar deschideVot (ora votului, in sursa): ora
+     adunarii se construia inca cu new Date(`${data}T${ora}:00`), care
+     citeste ora ca fiind cea a dispozitivului. Pe masina care ruleaza
+     testele (Europe/Bucharest) bugul nu se vede - de-aia testul forteaza un
+     alt fus, ca J9. */
+  it("[K12] convoaca adunarea generala trimite ora Romaniei, indiferent de fusul dispozitivului", async () => {
+    const ziOriginal = process.env.TZ;
+    try {
+      process.env.TZ = "Asia/Tokyo";
+      const { sursa } = await deschideComunicare();
+      const spion = vi.spyOn(sursa, "convoacaAdunare");
+      await tab("Vot si AG");
+      await apasa("Convoaca adunarea");
+      await scrieIn("Convoaca adunarea generala", "Data", "2026-10-20");
+      await scrieIn("Convoaca adunarea generala", "Locul", "In curte");
+      await scrieIn("Convoaca adunarea generala", "Ordinea de zi", "Bugetul pe 2027");
+      await scrieIn("Convoaca adunarea generala", "Ora", "19:00");
+      await apasa(inDialog("Convoaca adunarea generala").getByRole("button", { name: "Trimite convocarea" }));
+      expect(spion).toHaveBeenCalledWith({ dataOra: instantRomania("2026-10-20", "19:00"), loc: "In curte", ordineDeZi: "Bugetul pe 2027" });
+    } finally {
+      process.env.TZ = ziOriginal;
+    }
   });
 
   it("o convocare refuzata lasa formularul deschis", async () => {
