@@ -1396,7 +1396,7 @@ function RandLista({ linie }) {
               <RandCalcul st="Baza apartamentului" dr={etichetaBaza(b.valoare, b.unitate)} />
               <Line style={{ marginTop: 2, marginBottom: 2 }} />
               <RandCalcul
-                st={`${lei(linie.sumaFactura, false)} × ${num(b.valoare, b.unitate === "%" ? 2 : 0)} ÷ ${num(b.total, b.unitate === "%" ? 2 : 0)}`}
+                st={`${lei(linie.sumaFactura, false)} × ${b.unitate === "%" ? numCotaEd(b.valoare) : num(b.valoare, 0)} ÷ ${b.unitate === "%" ? numCotaEd(b.total) : num(b.total, 0)}`}
                 dr={lei(round2(linie.suma - (linie.rotunjire || 0)))}
                 bold
               />

@@ -192,7 +192,7 @@ describe("RandLista pe baza de calcul", () => {
   });
 
   /* Audit L14: cota cu 4 zecimale afisata cu 2, inmultirea nu mai reproduce suma */
-  it.fails("[L14] cota cu patru zecimale se afiseaza intreaga in calcul", async () => {
+  it("[L14] cota cu patru zecimale se afiseaza intreaga in calcul", async () => {
     await plata((d) => {
       const { r } = repartizare(d, "C9");
       r.baza = { valoare: 4.0125, total: 100, unitate: "%" };
