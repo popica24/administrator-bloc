@@ -2255,7 +2255,13 @@ function LocatarSesizari() {
   const [raspunsuri, setRaspunsuri] = useState({});
   const [lucreaza, setLucreaza] = useState(false);
 
-  const vizibile = tab === "ale mele" ? date.sesizari.filter((s) => s.aMea) : date.sesizari.filter((s) => s.stare !== "rezolvata" || s.aMea);
+  /* [K14] "Din tot blocul" arata sesizarile deschise ale altora, ale mele
+     (indiferent de stare) si sesizarile altora rezolvate in ultimele 30 de
+     zile: omul trebuie sa vada si ce s-a rezolvat de curand, nu doar ce e
+     inca deschis, ca sa nu scrie din nou despre acelasi lucru. */
+  const vizibile = tab === "ale mele"
+    ? date.sesizari.filter((s) => s.aMea)
+    : date.sesizari.filter((s) => s.aMea || s.stare !== "rezolvata" || zileIntre(s.rezolvataLa, date.azi) <= 30);
 
   const adaugaPoza = async (f) => {
     const mica = await micsoreazaPoza(f);

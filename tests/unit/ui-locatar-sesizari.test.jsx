@@ -47,8 +47,14 @@ describe("Sesizari: listele", () => {
     expect(screen.queryByText("Scurgere la coloana de la subsol")).toBeNull();
   });
 
-  it("Din tot blocul: sesizarile deschise ale altora, cele proprii marcate, fara cele rezolvate ale altora", async () => {
-    await laSesizari({ email: ELENA });
+  it("Din tot blocul: sesizarile deschise ale altora, cele proprii marcate, fara cele rezolvate demult ale altora", async () => {
+    await laSesizari({
+      email: ELENA,
+      modifica: (d) => {
+        /* rezolvata acum peste 30 de zile fata de ZI_DEMO (19 sep 2026) */
+        d.sesizari.find((s) => s.titlu === "Gunoi depozitat pe casa scarii").rezolvataLa = "2026-06-01T10:00:00+03:00";
+      },
+    });
     await alegeSegment("Din tot blocul");
     expect(screen.getByText("Vezi ce s-a semnalat deja, ca sa nu scrii de doua ori despre acelasi lucru. Nu se vede cine a trimis sesizarea.")).toBeTruthy();
     const noua = card("Scurgere la coloana de la subsol");
@@ -60,7 +66,7 @@ describe("Sesizari: listele", () => {
     expect(screen.queryByText("Gunoi depozitat pe casa scarii")).toBeNull();
   });
 
-  it.fails("[K14] Din tot blocul arata si sesizarile rezolvate in ultimele 30 de zile", async () => {
+  it("[K14] Din tot blocul arata si sesizarile rezolvate in ultimele 30 de zile", async () => {
     await laSesizari({ email: ELENA });
     await alegeSegment("Din tot blocul");
     expect(screen.getByText("Gunoi depozitat pe casa scarii")).toBeTruthy();
@@ -73,8 +79,14 @@ describe("Sesizari: listele", () => {
     expect(foaie()).toBeTruthy();
   });
 
-  it("niciuna deschisa in bloc", async () => {
-    await laSesizari({ email: ILIE, modifica: (d) => { d.sesizari = d.sesizari.filter((s) => s.stare === "rezolvata"); } });
+  it("niciuna deschisa in bloc, si nimic rezolvat recent", async () => {
+    await laSesizari({
+      email: ILIE,
+      modifica: (d) => {
+        d.sesizari = d.sesizari.filter((s) => s.stare === "rezolvata");
+        d.sesizari.forEach((s) => { s.rezolvataLa = "2026-06-01T10:00:00+03:00"; });
+      },
+    });
     await alegeSegment("Din tot blocul");
     expect(screen.getByText("Nicio sesizare deschisa in bloc")).toBeTruthy();
   });
