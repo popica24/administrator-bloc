@@ -150,6 +150,31 @@ describe("lista lunii: facturi", () => {
     await adm.stergeCheltuiala(id);
   });
 
+  /* [L11/P4] Verificarile ieftine adaugate la aceste doua reparatii prind
+     aproape orice caz real, dar nu si o cursa genuina intre doua salvari
+     simultane: verificarea trece, apoi scrierea insasi esueaza. Mesajele de
+     rezerva raman, dar nu mai erau exercitate de niciun test de cand
+     verificarile ieftine prind cazurile obisnuite dintii. */
+  it("[P4] o cursa rara (randul dispare chiar intre verificare si scriere) are acelasi mesaj", async () => {
+    const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Cursa", cod: "C12", suma: 4, metoda: "apartamente" });
+    await cuFetch((url, init) => (url.includes("/cheltuieli?") && init.method === "PATCH"
+      ? json({ message: "JSON object requested, multiple (or no) rows returned", code: "PGRST116" }, 406)
+      : undefined), async () => {
+      await expect(adm.salveazaCheltuiala({ id, listaId, furnizorId: st.salubris.id, categorie: "Cursa", cod: "C12", suma: 5, metoda: "apartamente" }))
+        .rejects.toThrow("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
+    });
+    await adm.stergeCheltuiala(id);
+  });
+
+  it("[L11] un cod dublat exact la scriere (cursa intre doua salvari) are acelasi mesaj", async () => {
+    await cuFetch((url, init) => (url.includes("/cheltuieli?") && init.method === "POST"
+      ? json({ message: 'duplicate key value violates unique constraint "cheltuieli_lista_cod_key"', code: "23505" }, 409)
+      : undefined), async () => {
+      await expect(adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Cursa cod", cod: "C13", suma: 1, metoda: "apartamente" }))
+        .rejects.toThrow("Codul C13 exista deja pe lista.");
+    });
+  });
+
   it("stergeCheltuiala() scoate randul din ciorna", async () => {
     const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Temporar", cod: "C8", suma: 9, metoda: "apartamente" });
     await adm.stergeCheltuiala(id);

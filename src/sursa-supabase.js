@@ -549,11 +549,11 @@ export function creeazaSursaSupabase(url, cheie) {
       if (error) {
         if (error.code === "23505") throw new Error(`Codul ${cod} exista deja pe lista.`);
         if (cid && error.code === "PGRST116") {
-          /* update-ul nu a gasit randul: ori este randul fondului (filtrat de
-             .eq("tip","factura")), ori lista s-a publicat sau randul a
-             disparut intre incarcare si salvare (RLS filtreaza tacit) */
-          const r = await intr.from("cheltuieli").select("tip").eq("id", cid).maybeSingle();
-          if (r.data && r.data.tip !== "factura") throw new Error("Randul fondului de reparatii nu se modifica din formularul de factura.");
+          /* [P4] Verificarea de mai sus a gasit randul, cu tipul "factura",
+             inainte de a urca vreun scan: daca update-ul tot nu-l gaseste,
+             lista s-a publicat sau randul a disparut chiar intre verificare
+             si scriere (RLS filtreaza tacit) — o cursa rara, care nu mai are
+             cum sa fie randul fondului (deja exclus mai sus). */
           throw new Error("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
         }
         arunca(error);
