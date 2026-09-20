@@ -1558,6 +1558,10 @@ function LocatarAcasa({ go }) {
   const achitat = deDat <= 0;
   const scadenta = lista ? lista.scadenta : null;
   const zile = scadenta ? zileIntre(date.azi, scadenta) : null;
+  /* [E2] Badge-ul nu se poate uita doar la scadenta listei curente: o datorie
+     mai veche deja scadenta (alta lista, o corectie) face termenul depasit
+     chiar daca lista curenta mai are zile pana la scadenta ei. */
+  const areRestanta = restanta(date, ap.id) > 0;
   const ultimaPlata = date.plati.filter((p) => p.apartamentId === ap.id && p.stare === "confirmata").sort(dupaConfirmare)[0];
   const istoric = istoricLunar(date, ap.id);
   const fraza = frazaComparatie(istoric);
@@ -1590,7 +1594,7 @@ function LocatarAcasa({ go }) {
               <Lei value={Math.max(0, deDat)} size={34} weight={700} />
             </Box>
             {achitat ? <Badge label="Achitat" tone="ok" />
-              : zile != null && zile >= 0 ? <Badge label={zile === 0 ? "Scadent azi" : `Mai ai ${pluralZile(zile)}`} tone={zile > 5 ? "neutral" : "warn"} />
+              : zile != null && zile >= 0 && !areRestanta ? <Badge label={zile === 0 ? "Scadent azi" : `Mai ai ${pluralZile(zile)}`} tone={zile > 5 ? "neutral" : "warn"} />
                 : <Badge label="Termen depasit" tone="danger" />}
           </Box>
           {lista && (

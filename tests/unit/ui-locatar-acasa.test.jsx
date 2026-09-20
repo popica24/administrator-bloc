@@ -56,6 +56,25 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     expect(ecran()).not.toContain("deci luna aceasta platesti");
   });
 
+  /* [E2] Cel mai vechi datornic vedea "Mai ai N zile" pentru ca badge-ul se
+     uita doar la scadenta listei curente, ignorand o datorie mai veche deja
+     scadenta (de exemplu preluata de pe alta lista sau o corectie). */
+  it("[E2] cu o datorie mai veche deja scadenta, badge-ul arata Termen depasit chiar daca lista curenta nu e scadenta", async () => {
+    await pornesteApp({
+      email: ELENA,
+      modifica: (d) => {
+        const ap = d.apartamente.find((a) => a.id === d.eu.apartamentId);
+        d.datorii.push({
+          id: "datorie-veche-test", apartamentId: ap.id, tip: "intretinere", luna: "2026-07",
+          listaId: null, suma: 50, scadenta: "2026-08-25", descriere: "Restanta veche",
+          rest: 50, documentId: null, creatLa: "2026-08-01T00:00:00Z",
+        });
+      },
+    });
+    expect(screen.getByText("Termen depasit")).toBeTruthy();
+    expect(screen.queryByText("Mai ai 6 zile")).toBeNull();
+  });
+
   it("cand totul e platit arata Achitat si descarca ultima chitanta", async () => {
     const descarcari = prindeDescarcari();
     await pornesteApp({ email: VOICU });
