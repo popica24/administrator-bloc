@@ -1,7 +1,7 @@
 -- Teste pgTAP: organizare (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(94);
+select plan(95);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -546,9 +546,10 @@ reset role;
 
 select pg_temp.ca('adminA');
 set local role authenticated;
-select todo('[S16] politica de update pe asociatii nu are grant: administratorul nu isi poate modifica asociatia', 1);
 select lives_ok($$update organizare.asociatii set telefon = '0700' where id = pg_temp.id('asocA')$$,
   '[S16] administratorul modifica datele asociatiei');
+select throws_ok($$update organizare.asociatii set denumire = 'Alt nume' where id = pg_temp.id('asocA')$$,
+  '42501', null, '[S16] denumirea asociatiei nu se schimba din aplicatie (doar grant pe coloana)');
 reset role;
 -- Ca sa verificam expresia politicii, dam grant-ul lipsa doar in tranzactie.
 grant update on organizare.asociatii to authenticated;
