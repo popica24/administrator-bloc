@@ -311,7 +311,6 @@ select set_eq(
 select pg_temp.ca('adm');
 select is((guvernanta.reaminteste_vot(pg_temp.id('v1')) ->> 'destinatari')::int, 2,
   '[K13] reaminteste_vot: destinatari = loc2 si nou3 (nu fostul, nu cel cu acces viitor)');
-select todo('[K11] reaminteste_vot nu trebuie sa accepte voturi inchise', 1);
 select throws_ok($$ select guvernanta.reaminteste_vot(pg_temp.id('vinchis')) $$,
   'P0001', null, '[K11] reaminteste_vot refuza un vot inchis');
 
