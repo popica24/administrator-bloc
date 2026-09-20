@@ -110,7 +110,7 @@ describe("Plata: lista curenta", () => {
     expect(ecran()).toContain("Mai jos este fiecare suma pe rand.");
   });
 
-  it.fails("[L4] dupa o recalculare, totalul de plata este egal cu soldul", async () => {
+  it("[L4] dupa o recalculare, totalul de plata este egal cu soldul", async () => {
     await laPlata({
       email: ELENA,
       modifica: (d) => {

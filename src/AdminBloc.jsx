@@ -369,7 +369,14 @@ function defalcare(date, apId, listaId) {
       total: round2(suma(restante, (d) => d.rest) + suma(penalizari, (d) => d.rest)),
     };
   }
-  const total = esteCurenta ? round2(totalLuna - platitDinLista + datorii.total) : totalLuna;
+  /* [L4] Totalul pentru lista curenta este exact soldul apartamentului
+     (suma resturilor tuturor datoriilor deschise), nu o reconstructie din
+     cheltuielile lunii minus ce s-a platit: dupa o recalculare, cheltuielile
+     lunii si suma inghetata pe datoria de intretinere pot sa nu mai
+     coincida (diferenta devine o datorie de corectie), iar reconstructia
+     aduna sau pierde exact acea diferenta. Soldul, calculat din registru,
+     nu poate diverge. */
+  const total = esteCurenta ? round2(sold(date, apId)) : totalLuna;
   return {
     lista, linii, totalLuna, esteCurenta, datoriaListei,
     achitat: datoriaListei ? datoriaListei.rest <= 0 : false,

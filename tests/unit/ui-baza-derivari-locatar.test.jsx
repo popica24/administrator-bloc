@@ -54,7 +54,7 @@ describe("defalcare pe lista curenta", () => {
 
   /* Audit L4: dupa o recalculare (lista are acum 728,09, datoria a ramas 718,09),
      totalul de plata nu mai este egal cu soldul (318,09); ecranul arata 328,09 */
-  it.fails("[L4] dupa o recalculare, totalul de plata este tot soldul", async () => {
+  it("[L4] dupa o recalculare, totalul de plata este tot soldul", async () => {
     await plata((d) => {
       d.datorii.find((x) => x.id === "dat-1021").rest = 318.09;
       d.cheltuieli.push({ id: "che-x", listaId: AUG, cod: "C10", tip: "factura", categorie: "Verificare hidranti", furnizor: "ISU Service", serie: "H-1", suma: 200, metoda: "apartamente", tipApa: null, documentId: null });
