@@ -286,9 +286,8 @@ select set_eq($$ select pg_temp.destinatari('adunare_generala') except select pg
   'la_vot AdunareConvocata: toata asociatia');
 select results_eq(
   $$ select titlu, corp, referinta ->> 'adunare_id' from comunicare.notificari where tip = 'adunare_generala' and profil_id = pg_temp.id('loc1') $$,
-  $$ values ('Convocare la adunarea generala'::text, '10 decembrie 2026, Sala de la parter. Bugetul pe 2027'::text, pg_temp.id('ag1')::text) $$,
-  'la_vot AdunareConvocata: data, locul si ordinea de zi');
-select todo('[K6] convocarea AG nu contine ora', 1);
+  $$ values ('Convocare la adunarea generala'::text, '10 decembrie 2026, ora 18:00, Sala de la parter. Bugetul pe 2027'::text, pg_temp.id('ag1')::text) $$,
+  'la_vot AdunareConvocata: data, ora, locul si ordinea de zi');
 select ok((select corp like '%18:00%' from comunicare.notificari where tip = 'adunare_generala' and profil_id = pg_temp.id('loc1')),
   '[K6] la_vot AdunareConvocata: convocarea contine ora (18:00)');
 -- data in ora Romaniei este reparata de fusul orar al bazei [X1]
