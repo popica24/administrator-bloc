@@ -4,7 +4,7 @@
 -- Bug-uri cunoscute: F2, F4, L16 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(64);
+select plan(66);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -303,11 +303,27 @@ select results_eq(
   $$select v.a, v.s from (values (pg_temp.fx('ap1'), 33.34::numeric), (pg_temp.fx('ap2'), 100.83 + 45 + 52.50 - 50), (pg_temp.fx('ap3'), 55.83 + 15 - 22.50)) v(a, s) order by v.a$$,
   'solduri: corectia intra in sold, inclusiv cea negativa');
 
-select todo('[F2] corectia negativa se aplica pe datoria initiala, ca rest', 1);
 select is(
   (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap3') and tip = 'intretinere'),
   33.33::numeric,
   '[F2] ap3: intretinerea de 55,83 minus corectia de 22,50 lasa un rest de 33,33');
+-- ap3 mai are o a doua datorie de intretinere (lista2, 15 lei), cu aceeasi
+-- scadenta si acelasi creat_la (transactia de test are un singur now()): ca
+-- alocarea sa nu depinda de ordinea aleatoare intre cele doua id-uri, platim
+-- exact suma ramasa pe ambele (33.33 + 15) si verificam ca amandoua se inchid.
+-- Plata e anulata cu savepoint, ca sa nu schimbe numarul platilor blocului
+-- pentru testele de mai jos.
+savepoint f2_plata_test;
+select financiar.inregistreaza_plata(pg_temp.fx('ap3'), 48.33, 'transfer');
+select is(
+  (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap3') and tip = 'intretinere'),
+  0.00::numeric,
+  '[F2] o plata de 48,33 (33,33 + 15, nu 55,83 + 15) inchide integral datoria din lista, eliberata de corectia negativa');
+select is(
+  (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista2') and apartament_id = pg_temp.fx('ap3') and tip = 'intretinere'),
+  0.00::numeric,
+  '[F2] ...si datoria din lista2, ramasa fara corectie');
+rollback to savepoint f2_plata_test;
 
 -- =============================================================================
 -- financiar.situatie_bloc
