@@ -354,7 +354,6 @@ reset role;
 
 select pg_temp.ca('adminDublu');
 set local role authenticated;
-select todo('[S12] eu() alege asociatia cu limit 1 fara order by; un administrator cu doua asociatii vede doar una', 1);
 select is(
   (select count(*)::int from jsonb_array_elements(coalesce(identitate.eu() -> 'blocuri', '[]'::jsonb))),
   3,
