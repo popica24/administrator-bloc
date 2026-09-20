@@ -101,7 +101,7 @@ describe("reamintesteVot", () => {
     expect(dl.notificari[0]).toMatchObject({ tip: "vot", titlu: "Nu ai votat inca", corp: "Inlocuirea usii de la intrare" });
   });
 
-  it.fails("[K11] reamintirea pentru un vot inchis este refuzata", async () => {
+  it("[K11] reamintirea pentru un vot inchis este refuzata", async () => {
     const { s, d } = await ca(ADMIN);
     ceasDemo(new Date("2026-10-05T09:00:00"));
     await expect(s.reamintesteVot(d.voturi[0].id)).rejects.toThrow();

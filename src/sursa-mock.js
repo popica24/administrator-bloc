@@ -1152,6 +1152,7 @@ export function creeazaSursaMock() {
     async reamintesteVot(votId) {
       const { bloc } = cerAdmin();
       const v = db.voturi.find((x) => x.id === votId && x.asociatieId === bloc.asociatieId) || eroare("Votul nu exista.");
+      if (acum() >= new Date(v.inchideLa).toISOString()) eroare("Votul s-a inchis. Nu se mai pot trimite reamintiri.");
       const auVotat = new Set(db.exprimate.filter((e) => e.votId === votId).map((e) => e.apartamentId));
       let n = 0;
       const tinta = db.apartamente.filter((a) => a.blocId === bloc.id && !auVotat.has(a.id));
