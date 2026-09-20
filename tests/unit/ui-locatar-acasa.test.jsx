@@ -258,7 +258,7 @@ describe("Acasa: De facut", () => {
     expect(screen.queryByRole("button", { name: "Confirma prezenta la adunarea generala" })).toBeNull();
   });
 
-  it.fails("[K8] sarcina Confirma prezenta arata cea mai apropiata adunare, nu cea mai indepartata", async () => {
+  it("[K8] sarcina Confirma prezenta arata cea mai apropiata adunare, nu cea mai indepartata", async () => {
     await pornesteApp({
       email: ELENA,
       modifica: (d) => {

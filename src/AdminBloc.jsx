@@ -1674,7 +1674,11 @@ function LocatarAcasa({ go }) {
   const citireRespinsa = contoare.some((c) => { const x = citireLuna(date, c.id, lunaCitire); return x && x.stare === "respinsa"; });
 
   const votDeschis = date.voturi.find((v) => !v.votulMeu && new Date(v.inchideLa) > new Date());
-  const adunare = date.adunari.find((a) => new Date(a.dataOra) > new Date() && !a.prezentaMea);
+  /* [K8] Sursa trimite adunarile descrescator dupa data; sarcina trebuie sa
+     arate cea mai apropiata adunare viitoare, nu cea mai indepartata. */
+  const adunare = date.adunari
+    .filter((a) => new Date(a.dataOra) > new Date() && !a.prezentaMea)
+    .sort((x, y) => new Date(x.dataOra) - new Date(y.dataOra))[0];
   const necitite = date.notificari.filter((n) => !n.cititaLa).slice(0, 3);
 
   const istoricApa = istoricConsum(date, ap.id).filter((x) => !x.estimat && x.rece != null);
@@ -2423,7 +2427,7 @@ function LocatarBloc({ parametri }) {
   const rulment = date.fonduri.find((f) => f.tip === "rulment");
   const deschise = date.voturi.filter((v) => new Date(v.inchideLa) > new Date());
   const inchise = date.voturi.filter((v) => new Date(v.inchideLa) <= new Date());
-  const adunari = date.adunari.filter((a) => new Date(a.dataOra) > new Date());
+  const adunari = date.adunari.filter((a) => new Date(a.dataOra) > new Date()).sort((x, y) => new Date(x.dataOra) - new Date(y.dataOra));
 
   return (
     <Box gap={S.lg}>
