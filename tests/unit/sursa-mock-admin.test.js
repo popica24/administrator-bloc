@@ -128,7 +128,7 @@ describe("incarcaDocument", () => {
     const { s } = await ca(ADMIN);
     await s.incarcaDocument({ titlu: " Contract ", tip: "contract", fisier: new Blob(["x"]), vizibil: false });
     const da = await s.incarca();
-    expect(da.documente[0]).toMatchObject({ titlu: "Contract", tip: "contract", vizibil: false });
+    expect(da.documente[0]).toMatchObject({ titlu: "Contract", tip: "contract", vizibil: false, areFisier: true });
     const { d } = await ca(LOCATAR, s);
     expect(d.documente.find((x) => x.titlu === "Contract")).toBeUndefined();
     expect(d.documente).toHaveLength(da.documente.length - 1);
