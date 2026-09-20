@@ -24,8 +24,6 @@ const LOCATAR = "elena.marinescu@adminbloc.test";
    cealalta. Calea foloseste * pentru "orice element de lista". */
 const DIVERGENTE_CUNOSCUTE = [
   "bloc.localitate",            /* mock-ul tine localitatea pe bloc; baza o tine in nomenclator */
-  "eu.calitate",                /* [P1] doar sursa Supabase o are inca; sursa demonstrativa ramane de completat */
-  "eu.apartamenteMele.*",       /* [P5] doar sursa Supabase o are inca; sursa demonstrativa ramane de completat */
   "consumMediu.*.persoane",     /* mock-ul da si numarul de persoane al lunii */
   "contacte.*.apartamentNumar", /* in baza vine null cand contactul nu are apartament */
   "penalizari.*.creatLa",       /* mock-ul copiaza randul intreg */

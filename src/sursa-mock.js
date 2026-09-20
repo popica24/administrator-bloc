@@ -476,7 +476,7 @@ function rolul(db, profilId) {
   return { rol: "fara_apartament", legaturi };
 }
 
-function proiecteaza(db, profilId) {
+function proiecteaza(db, profilId, apartamentAles) {
   const profil = db.profiluri.find((p) => p.id === profilId);
   const { rol, mandat, legaturi } = rolul(db, profilId);
   const azi = aziIso();
@@ -489,7 +489,25 @@ function proiecteaza(db, profilId) {
     : db.blocuri.find((b) => b.id === db.apartamente.find((a) => a.id === eu.apartamentId).blocId);
   const asociatie = db.asociatii.find((a) => a.id === bloc.asociatieId);
   const apBloc = db.apartamente.filter((a) => a.blocId === bloc.id);
-  const vizibile = esteAdmin ? apBloc.map((a) => a.id) : [eu.apartamentId];
+  /* [P5] acelasi om poate fi legat de mai multe apartamente ale aceluiasi
+     bloc (proprietar la unul, chirias la altul): toate legaturile lui din
+     acest bloc raman vizibile dintr-o singura incarcare, iar apartamentAles
+     (daca e chiar al lui) devine apartamentul activ. */
+  if (!esteAdmin) {
+    const legaturileBloc = legaturi.filter((l) => {
+      const a = db.apartamente.find((x) => x.id === l.apartamentId);
+      return a && a.blocId === bloc.id;
+    });
+    eu.apartamenteMele = legaturileBloc.map((l) => l.apartamentId);
+    if (apartamentAles && eu.apartamenteMele.includes(apartamentAles)) eu.apartamentId = apartamentAles;
+    /* [P1] calitatea la apartamentul activ, ca ecranele sa stie inainte sa
+       lase omul sa incerce o actiune rezervata proprietarului (votul).
+       eu.apartamentId e mereu cel implicit (in legaturileBloc prin
+       constructia lui bloc) sau un apartamentAles deja validat mai sus,
+       deci se gaseste mereu aici. */
+    eu.calitate = legaturileBloc.find((l) => l.apartamentId === eu.apartamentId).calitate;
+  }
+  const vizibile = esteAdmin ? apBloc.map((a) => a.id) : eu.apartamenteMele;
   const alMeu = (id) => vizibile.includes(id);
   const lunaAzi = lunaDe(azi);
 
@@ -778,9 +796,9 @@ export function creeazaSursaMock() {
       return { apartamentNumar: ap.numar };
     },
 
-    async incarca() {
+    async incarca(apartamentAles) {
       if (!sesiune) return null;
-      return gata(proiecteaza(db, sesiune.profilId));
+      return gata(proiecteaza(db, sesiune.profilId, apartamentAles));
     },
 
     async urlFisier(cale) {

@@ -169,6 +169,31 @@ describe("folosesteInvitatie", () => {
   });
 });
 
+describe("[P1/P5] un locatar legat de doua apartamente ale aceluiasi bloc", () => {
+  it("vede ambele apartamente si poate alege care e activ, cu calitatea lui", async () => {
+    const s = creeazaSursaMock();
+    await s.intra(ADMIN, PAROLA);
+    const d = await s.incarca();
+    const ap3 = apNr(d, "3").id;
+    const ap5 = apNr(d, "5").id;
+    const ap9 = apNr(d, "9").id;
+    const cod = await s.invitaLocatar(ap5, "chirias");
+    await s.intra(ILIE, PAROLA);
+    await s.folosesteInvitatie(cod);
+    const dupa = await s.incarca();
+    expect([...dupa.eu.apartamenteMele].sort()).toEqual([ap3, ap5].sort());
+    expect(dupa.apartamente.map((a) => a.id).sort()).toEqual([ap3, ap5].sort());
+    expect(dupa.eu).toMatchObject({ apartamentId: ap3, calitate: "proprietar" });
+
+    const ales = await s.incarca(ap5);
+    expect(ales.eu).toMatchObject({ apartamentId: ap5, calitate: "chirias" });
+
+    /* apartamentul altcuiva e ignorat, ramane cel implicit */
+    const ignorat = await s.incarca(ap9);
+    expect(ignorat.eu.apartamentId).toBe(ap3);
+  });
+});
+
 describe("incarca ca locatar", () => {
   it("vede doar apartamentul lui, listele publicate si randurile lui", async () => {
     const d = await (await ca(LOCATAR)).incarca();
