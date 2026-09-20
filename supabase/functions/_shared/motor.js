@@ -48,8 +48,17 @@ function bazaApartament(ap, metoda, totaluri) {
    fost primite ponderile. Ordinea din lista nu e o cheie stabila: motorul
    e chemat cu ordini diferite (intretinere.date_pentru_motor ordoneaza
    apartamentele dupa numar ca text, sursa demo dupa ordinea ei naturala),
-   iar rezultatul nu are voie sa depinda de asta. De aceea egalitatea se
-   desparte dupa `chei` (id-ul apartamentului), stabil indiferent de ordine. */
+   iar rezultatul nu are voie sa depinda de asta.
+   [R2] Nici id-ul apartamentului nu e o cheie buna, desi e stabil indiferent
+   de ordine: id-ul nu inseamna acelasi lucru in cele doua surse (UUID in
+   Supabase, "ap-1", "ap-2", ... in sursa demo), deci acelasi bloc, calculat
+   de surse diferite, impartea sutimea la apartamente diferite. Egalitatea
+   se desparte dupa `chei` — numarul apartamentului ("numar", text ca "3"
+   sau "2A"), comparat numeric ca in restul aplicatiei
+   (localeCompare(..., "ro", { numeric: true })), pentru ca inseamna acelasi
+   lucru oriunde vine lista. Id-ul ramane doar rezerva pentru un apelant
+   care nu trimite `numar` (teste vechi, cod neactualizat) — motorul nu
+   arunca niciodata pentru atat de putin. */
 function distribuieExact(suma, ponderi, chei) {
   const totalPonderi = ponderi.reduce((s, p) => s + p, 0);
   const unitati = Math.round(suma * 100);
@@ -59,7 +68,7 @@ function distribuieExact(suma, ponderi, chei) {
   const ramase = unitati - bazaUnitati.reduce((s, u) => s + u, 0);
   const ordine = bruteUnitati
     .map((u, i) => ({ i, rest: u - bazaUnitati[i], cheie: String(chei[i]) }))
-    .sort((a, b) => b.rest - a.rest || (a.cheie < b.cheie ? -1 : 1));
+    .sort((a, b) => b.rest - a.rest || a.cheie.localeCompare(b.cheie, "ro", { numeric: true }));
   const rezultat = [...bazaUnitati];
   for (let k = 0; k < ramase; k += 1) rezultat[ordine[k].i] += 1;
   return rezultat.map((u) => u / 100);
@@ -84,7 +93,7 @@ function repartizeazaApa(cheltuiala, apartamente, consum, contorGeneral, totalur
   const diferenta = round2(general - sumaContoare);
   const pretMc = round4(cheltuiala.suma / general);
   const coteDiferenta = totaluri.persoane > 0
-    ? distribuieExact(diferenta, apartamente.map((a) => a.persoane), apartamente.map((a) => a.id))
+    ? distribuieExact(diferenta, apartamente.map((a) => a.persoane), apartamente.map((a) => a.numar ?? a.id))
     : apartamente.map(() => 0);
 
   return apartamente.map((ap, i) => {
@@ -206,7 +215,9 @@ export function verificaDate({ apartamente, cheltuieli, consum, contorGeneral })
 
 /* Calculeaza o lista lunara.
    Intrare:
-     apartamente:   [{ id, persoane, cota, scutitLift }]
+     apartamente:   [{ id, numar, persoane, cota, scutitLift }] (numar desparte
+                    egalitatile de rest ca in restul aplicatiei; fara el,
+                    motorul cade pe id, doar ca sa nu arunce)
      cheltuieli:    [{ id, cod, suma, metoda, tipApa }]
      consum:        { [apartamentId]: { rece, calda } }, in mc, doar pentru apa
      contorGeneral: { rece, calda }, consumul lunii la contorul general

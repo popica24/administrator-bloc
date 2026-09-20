@@ -166,6 +166,52 @@ describe("apa pe consum", () => {
     rezultate.forEach((r) => expect(r).toEqual(rezultate[0]));
   });
 
+  it("[R2] la egalitate de rest, castiga apartamentul cu numarul mai mic (comparat numeric), nu cel cu id-ul mai mic", () => {
+    /* Id-urile sunt alese deliberat pe dos fata de numar: apartamentul cu
+       numarul "10" are id-ul care ar castiga la o comparatie alfabetica de
+       id-uri ("aaa..." < "zzz..."), dar apartamentul cu numarul "2" trebuie
+       sa castige, pentru ca 2 < 10 numeric ("2".localeCompare("10", "ro",
+       { numeric: true }) < 0), desi "10" < "2" ca text simplu. */
+    const apNumar10 = { id: "aaa-id-mic-numar-mare", numar: "10", persoane: 1, cota: 1, scutitLift: false };
+    const apNumar2 = { id: "zzz-id-mare-numar-mic", numar: "2", persoane: 1, cota: 1, scutitLift: false };
+    const consum = { [apNumar10.id]: { rece: 0 }, [apNumar2.id]: { rece: 0 } };
+    const r = calculeazaLista({
+      apartamente: [apNumar10, apNumar2],
+      cheltuieli: [cheltuiala("consum", 1, { tipApa: "rece" })],
+      consum,
+      contorGeneral: { rece: 0.01 },
+    });
+    const castigator = r.repartizari.find((x) => x.detaliu.cotaDiferenta > 0);
+    expect(castigator.apartamentId).toBe(apNumar2.id);
+  });
+
+  it("[R2] rezultatul nu depinde de schema de id-uri a sursei (UUID sau ap-N), doar de numar", () => {
+    /* Aceleasi trei apartamente (acelasi numar, aceleasi ponderi -> egalitate
+       garantata de rest), o data cu id-uri "UUID" (cum le da Supabase) si o
+       data cu id-uri "ap-N" (cum le da sursa demo), in doua ordini diferite
+       si fara nicio legatura intre schema de id si ordinea numerelor.
+       Rezultatul, citit dupa numar (nu dupa id, care difera intre surse),
+       trebuie sa fie identic. */
+    const idUuid = { 1: "9f1c8a2e-aaaa-bbbb-cccc-000000000001", 2: "2b7e0a10-aaaa-bbbb-cccc-000000000002", 3: "5d4433c0-aaaa-bbbb-cccc-000000000003" };
+    const idDemo = { 1: "ap-30", 2: "ap-5", 3: "ap-100" };
+    const construieste = (schema, ordine) => ordine.map((n) => ({ id: schema[n], numar: n, persoane: 1, cota: 1, scutitLift: false }));
+    const consumPentru = (aps) => Object.fromEntries(aps.map((a) => [a.id, { rece: 0 }]));
+    const cheltuieliApa = [cheltuiala("consum", 1, { tipApa: "rece" })];
+    const contorGeneral = { rece: 0.01 };
+    const dupaNumar = (r, aps) => {
+      const numarDupaId = Object.fromEntries(aps.map((a) => [a.id, a.numar]));
+      return Object.fromEntries(r.repartizari.map((x) => [numarDupaId[x.apartamentId], x.detaliu.cotaDiferenta]));
+    };
+
+    const apsUuid = construieste(idUuid, ["1", "2", "3"]);
+    const rUuid = calculeazaLista({ apartamente: apsUuid, cheltuieli: cheltuieliApa, consum: consumPentru(apsUuid), contorGeneral });
+    const apsDemo = construieste(idDemo, ["3", "1", "2"]);
+    const rDemo = calculeazaLista({ apartamente: apsDemo, cheltuieli: cheltuieliApa, consum: consumPentru(apsDemo), contorGeneral });
+
+    expect(dupaNumar(rUuid, apsUuid)).toEqual(dupaNumar(rDemo, apsDemo));
+    expect(dupaNumar(rUuid, apsUuid)).toEqual({ 1: 0.01, 2: 0, 3: 0 });
+  });
+
   it("[L7] suma mc repartizati este egala cu contorul general (iunie, apa calda)", () => {
     const aps = D.APARTAMENTE.map((a) => ap(a.numar, a.persoane, a.cota, a.scutitLift));
     const consumIunie = Object.fromEntries(D.APARTAMENTE.map((a) => [a.numar, { calda: D.consumApartament(a.numar, "2026-06", "calda") }]));
