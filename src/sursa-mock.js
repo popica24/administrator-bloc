@@ -120,7 +120,23 @@ function persoaneInLuna(db, apartamentId, luna) {
 
 const alocatDatorie = (db, datorieId) => round2(db.alocari.filter((a) => a.datorieId === datorieId).reduce((s, a) => s + a.suma, 0));
 const alocatPlata = (db, plataId) => round2(db.alocari.filter((a) => a.plataId === plataId).reduce((s, a) => s + a.suma, 0));
-const restDatorie = (db, d) => round2(d.suma - alocatDatorie(db, d.id));
+
+/* [K16/F2] O corectie negativa (facuta la recalcularea unei liste
+   republicate) nu ramane deschisa separat: daca are o datorie de
+   intretinere sora (aceeasi lista, acelasi apartament), restul ei propriu
+   e 0, iar reducerea apare in schimb pe restul datoriei surori -- la fel
+   ca in financiar.datorii_rest. Fara sora, corectia isi pastreaza propriul
+   rest (poate negativ), ca suma ei sa nu dispara din Sigma(rest). */
+const areDatorieSora = (db, d) => db.datorii.some((s) => s.tip === "intretinere" && s.listaId === d.listaId && s.apartamentId === d.apartamentId);
+const restDatorie = (db, d) => {
+  if (d.tip === "corectie" && d.suma < 0 && areDatorieSora(db, d)) return 0;
+  const propriu = round2(d.suma - alocatDatorie(db, d.id));
+  if (d.tip !== "intretinere") return propriu;
+  const reducere = db.datorii
+    .filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId)
+    .reduce((s, c) => s + round2(c.suma - alocatDatorie(db, c.id)), 0);
+  return round2(propriu + reducere);
+};
 
 /* Alocarea unei plati pe datorii, incepand cu cea mai veche scadenta */
 function alocaPlata(db, plata) {
@@ -161,6 +177,16 @@ function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = nu
 
 /* Penalizarile lunii: pentru fiecare datorie ramasa neachitata dupa zilele de
    gratie, rest x procent pe zi x zilele de intarziere de la ultimul calcul. */
+/* [K16/H3] Baza de calcul a unei datorii de intretinere: suma ei redusa de
+   corectiile negative surori (aceeasi lista, acelasi apartament) -- exact
+   formula din financiar.calculeaza_penalizari (migratia H3). Pentru orice
+   alt tip de datorie, baza e chiar suma ei. */
+function bazaIntretinere(db, d) {
+  if (d.tip !== "intretinere") return d.suma;
+  const corectii = db.datorii.filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId);
+  return round2(d.suma + corectii.reduce((s, c) => s + c.suma, 0));
+}
+
 function calculeazaPenalizari(db, la) {
   const { procentPenalizareZi, zileGratie } = db.setari;
   db.datorii
@@ -171,10 +197,14 @@ function calculeazaPenalizari(db, la) {
       const dela = anterioare.length && anterioare[anterioare.length - 1] > inceput ? anterioare[anterioare.length - 1] : inceput;
       const zileTaxate = zileIntre(dela, la);
       if (zileTaxate <= 0) return;
-      const rest = restDatorie(db, d);
+      /* [K16/H3] baza corectata: o corectie negativa sora (aceeasi lista,
+         acelasi apartament) reduce direct baza pe care se calculeaza restul
+         si plafonul unei datorii de intretinere. */
+      const baza = bazaIntretinere(db, d);
+      const rest = round2(baza - alocatDatorie(db, d.id));
       if (rest <= 0) return;
-      /* Legea 196/2018: toate penalizarile unei datorii nu depasesc datoria */
-      const plafon = round2(d.suma - db.penalizari.filter((p) => p.datorieSursaId === d.id).reduce((s, p) => s + p.suma, 0));
+      /* Legea 196/2018: toate penalizarile unei datorii nu depasesc datoria (corectata) */
+      const plafon = round2(baza - db.penalizari.filter((p) => p.datorieSursaId === d.id).reduce((s, p) => s + p.suma, 0));
       const suma = Math.min(rest, plafon, round2((rest * procentPenalizareZi * zileTaxate) / 100));
       if (suma <= 0) return;
       const pen = db.adauga("datorii", {
@@ -776,6 +806,13 @@ export function creeazaSursaMock() {
        administrator ajunge azi respins, si in baza reala. Ecranele nu o
        folosesc, doar comenzile de mai jos. */
     db,
+
+    /* [K16, doar pentru teste] Acelasi motiv ca db (mai sus): declanseaza
+       direct calculeazaPenalizari(), fara sa astepte rejucarea intregii
+       cronologii demo, ca testele sa poata verifica plafonul corectat
+       (H3) pe scenarii sintetice -- nicio comanda nu creeaza azi o datorie
+       "corectie" (vezi antetul fisierului de test). */
+    _calculeazaPenalizariPentruTeste(la) { calculeazaPenalizari(db, la); },
 
     async sesiuneCurenta() { return sesiune; },
 
