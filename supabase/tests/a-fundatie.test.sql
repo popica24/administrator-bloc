@@ -298,7 +298,6 @@ select throws_ok($$select count(*) from audit.jurnal$$, '42501', null,
 reset role;
 
 update identitate.administratori set numar_atestat = 'AT-N2' where profil_id = pg_temp.id('adminNou');
-select todo('[S14] auditul ia rand_id din ->>''id'', dar administratori are cheia profil_id', 1);
 select is(
   (select rand_id from audit.jurnal where tabela = 'identitate.administratori' and operatie = 'UPDATE'
      and nou ->> 'profil_id' = pg_temp.id('adminNou')::text order by id desc limit 1),
