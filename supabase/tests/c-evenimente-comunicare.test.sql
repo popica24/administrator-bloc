@@ -380,7 +380,6 @@ update comunicare.remindere_setari
    set activ = true, zile = ((date_trunc('month', current_date) + interval '1 month')::date + 9) - current_date
  where asociatie_id = pg_temp.id('asoc') and tip = 'citire_contoare';
 select pg_temp.zilnic();
-select todo('[K2] reminderul de citire nu pleaca niciodata cand zile >= zi_limita_citire', 1);
 select ok(pg_temp.notificari('loc1', 'citire_contoare') = 1,
   '[K2] trimite_remindere_zilnice citire_contoare: cu zile >= zi_limita pleaca inaintea termenului din luna urmatoare');
 update comunicare.remindere_setari set activ = false where asociatie_id = pg_temp.id('asoc') and tip = 'citire_contoare';
