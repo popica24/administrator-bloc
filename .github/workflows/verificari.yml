@@ -81,8 +81,13 @@ jobs:
       - name: Teste pgTAP
         run: npm run test:db
 
-      - name: Teste de integrare (sursa-supabase contra stivei)
-        run: npm run test:integrare
+      - name: Teste vitest, cu pragul de acoperire 100%
+        # Ruleaza ambele proiecte (unit + integrare). Pragul de 100% pe linii,
+        # ramuri, functii si instructiuni este impus din vitest.config.js, deci
+        # jobul cade daca acoperirea scade. Jobul "aplicatie" ruleaza doar
+        # testele unitare, pentru raspuns rapid, si nu poate impune pragul:
+        # sursa Supabase se acopera abia cu stiva pornita.
+        run: npm run test:acoperire
 
       - name: Teste Edge Functions contra stivei pornite
         # SUPABASE_URL_LOCAL cere testelor de integrare Deno sa ruleze; fara ea
