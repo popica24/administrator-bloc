@@ -2434,10 +2434,11 @@ function LocatarSesizari() {
         <Field label="Sau scrie pe scurt problema" value={titlu} onChange={setTitlu} placeholder="De exemplu: nu merge becul de la etajul 2" />
         <Picker label="Categorie" value={categorie} onChange={setCategorie} options={CATEGORII_SESIZARI} />
         <Field label="Unde este si de cand (optional)" value={desc} onChange={setDesc} multiline placeholder="Etajul, locul exact, de cand se intampla" />
-        {/* [K10] Alti locatari vad titlul si descrierea la "Din tot blocul",
-           fara numele tau; daca scrii detalii care te-ar putea identifica
-           (numarul apartamentului, numele tau), ele raman vizibile. */}
-        <Txt size={11.5} color={C.muted}>Alti locatari vad titlul si descrierea la Din tot blocul, dar nu vad numele tau. Nu scrie in descriere date care te-ar putea identifica.</Txt>
+        {/* [P2/K10] "Din tot blocul" nu mai aduce descrierea (vederea anonima,
+           sesizari_bloc, o lasa afara), doar titlul, fara numele autorului;
+           daca scrii detalii care te-ar putea identifica in titlu, el ramane
+           vizibil. */}
+        <Txt size={11.5} color={C.muted}>Alti locatari vad titlul la Din tot blocul, dar nu vad descrierea si nici numele tau. Nu scrie in titlu date care te-ar putea identifica.</Txt>
         <Box row gap={S.sm} style={{ alignItems: "center", flexWrap: "wrap" }}>
           {poze.map((p) => (
             <Box key={p.url} gap={2} style={{ alignItems: "center" }}>
