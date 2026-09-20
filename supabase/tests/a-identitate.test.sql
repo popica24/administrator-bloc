@@ -414,7 +414,6 @@ set local role authenticated;
 select lives_ok(
   $$select identitate.cere_verificare_administrator('AT-R2')$$,
   'identitate.cere_verificare_administrator: administratorul respins retrimite');
-select todo('[NOU-1] cererea retrimisa de un administrator respins ramane respinsa, fara eroare', 1);
 select is(identitate.eu() ->> 'rol', 'in_asteptare', '[NOU-1] cererea retrimisa revine in asteptare (sau e refuzata explicit)');
 reset role;
 
