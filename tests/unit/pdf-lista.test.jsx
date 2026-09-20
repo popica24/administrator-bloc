@@ -54,11 +54,14 @@ describe("[F27] antetul de coloane se repeta pe fiecare pagina", () => {
   it("pagina a doua nu este o insiruire de cifre fara titluri", async () => {
     const pagini = await listaPdf(24);
     expect(pagini.length).toBeGreaterThan(1);
+    /* [C13] Cu multe cheltuieli, tabelul se imparte in grupuri de coloane;
+       fiecare pagina apartine unui grup si repeta identitatea (Proprietar),
+       dar "Total luna" apare doar in paginile ultimului grup. */
     pagini.forEach((pagina) => {
       const titluri = pagina.map((t) => t.text);
       expect(titluri).toContain("Proprietar");
-      expect(titluri).toContain("Total luna");
     });
+    expect(pagini.flat().map((t) => t.text)).toContain("Total luna");
   });
 });
 

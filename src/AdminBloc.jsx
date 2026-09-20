@@ -508,91 +508,136 @@ function chitantaPdf(date, plata) {
   });
 }
 
-/* Lista de plata pentru avizier: un rand pe apartament, o coloana pe
-   cheltuiala, exact ca foaia de hartie, dar cu cifrele din repartizari. */
-function listaPdf(date, listaId) {
+/* Lista de plata: un rand pe apartament, o coloana pe cheltuiala.
+   [X01] Doua variante, cu aceleasi cifre:
+   - varianta publica (`listaPdf`, pentru avizier, in casa scarii): doar
+     apartamentul, cheltuielile si totalul lunii. Fara nume, fara restante,
+     fara penalizari - astea nu sunt treaba vecinilor de pe scara.
+   - varianta interna (`listaPdfIntern`, uz administrativ): proprietarul,
+     persoanele si, pe lista curenta, restantele si penalizarile, exact ca
+     inainte. Marcata clar ca document intern, niciodata pentru avizier. */
+const LATIME_UTILA_LISTA = 842 - 2 * 40;
+/* [F28] Corpul tabelului sta la 9,5 pt, ca sa se citeasca de pe perete. */
+const MARIME_TABEL_LISTA = 9.5;
+const LAT_LISTA = { ap: 20, prop: 110, pers: 22, ch: 44, tot: 52, rest: 48, pen: 46, plata: 52 };
+
+/* [C13] Cu multe cheltuieli, ingustarea coloanelor la nesfarsit le face
+   ilizibile mult inainte ca litera sa ajunga la pragul minim, iar sumele
+   ajung sa se calce intre coloane. In loc sa se ingusteze, cheltuielile se
+   grupeaza in "pagini de coloane" cate incap la marimea standard: fiecare
+   grup e un tabel intreg, cu apartamentul (si, pe varianta interna,
+   proprietarul) repetate, ca cineva care rasfoieste sa poata lega randurile
+   intre grupuri. Doar ultimul grup mai are loc si pentru Total/Restante/
+   Penalizari/De plata. */
+function grupeazaCheltuieliPdf(cheltuieli, identWidth, extraWidth) {
+  const disponibil = LATIME_UTILA_LISTA - identWidth;
+  const perGrupNormal = Math.max(1, Math.floor(disponibil / LAT_LISTA.ch));
+  const perGrupFinal = Math.max(1, Math.floor((disponibil - extraWidth) / LAT_LISTA.ch));
+  const grupe = [];
+  const ramase = cheltuieli.slice();
+  while (ramase.length > perGrupFinal) grupe.push(ramase.splice(0, perGrupNormal));
+  grupe.push(ramase);
+  return grupe;
+}
+
+function construiesteListaPdf(date, listaId, interna) {
   const lista = listaDupaId(date, listaId);
   const cheltuieli = date.cheltuieli.filter((c) => c.listaId === listaId).sort(ordineCod);
   const esteCurenta = listaCurenta(date) && listaCurenta(date).id === listaId;
-  /* [F26] Coloanele se calculeaza din latimea paginii: latimile de mai jos
-     sunt cele dorite, iar daca nu incap toate se micsoreaza proportional, o
-     data cu marimea literelor. Asa lista nu iese niciodata din pagina.
-     [F28] Corpul tabelului pleaca de la 9,5 pt, ca sa se citeasca de pe perete. */
-  const LATIME_UTILA = 842 - 2 * 40;
-  const dorit = { ap: 20, prop: 110, pers: 22, ch: 44, tot: 52, rest: 48, pen: 46, plata: 52 };
-  const cerut = dorit.ap + dorit.prop + dorit.pers + dorit.ch * cheltuieli.length + dorit.tot
-    + (esteCurenta ? dorit.rest + dorit.pen + dorit.plata : 0);
-  const k = Math.min(1, LATIME_UTILA / cerut);
-  const lat = Object.fromEntries(Object.entries(dorit).map(([nume, v]) => [nume, v * k]));
-  const marimeTabel = Math.max(6.5, round2(9.5 * k));
-  const antet = [
-    { text: "Ap.", latime: lat.ap, bold: true },
-    { text: "Proprietar", latime: lat.prop, bold: true },
-    { text: "Pers.", latime: lat.pers, dreapta: true, bold: true },
-    ...cheltuieli.map((c) => ({ text: c.cod, latime: lat.ch, dreapta: true, bold: true })),
-    { text: "Total luna", latime: lat.tot, dreapta: true, bold: true },
-    ...(esteCurenta ? [
-      { text: "Restante", latime: lat.rest, dreapta: true, bold: true },
-      { text: "Penaliz.", latime: lat.pen, dreapta: true, bold: true },
-      { text: "De plata", latime: lat.plata, dreapta: true, bold: true },
-    ] : []),
+  const arataDatorii = interna && esteCurenta;
+  const identWidth = LAT_LISTA.ap + (interna ? LAT_LISTA.prop + LAT_LISTA.pers : 0);
+  const extraWidth = LAT_LISTA.tot + (arataDatorii ? LAT_LISTA.rest + LAT_LISTA.pen + LAT_LISTA.plata : 0);
+  const grupe = grupeazaCheltuieliPdf(cheltuieli, identWidth, extraWidth);
+  const apartamente = date.apartamente.slice().sort(ordineNumar);
+
+  /* Asambleaza randul unui grup din celulele identitatii, cele ale
+     cheltuielilor acelui grup si, doar pe ultimul grup, cele finale. */
+  const randGrup = (grupCheltuieli, ultimulGrup, c) => [
+    c.ap,
+    ...(interna ? [c.prop, c.pers] : []),
+    ...grupCheltuieli.map(c.cheltuiala),
+    ...(ultimulGrup ? [c.total, ...(arataDatorii ? [c.rest, c.pen, c.plata] : [])] : []),
   ];
-  const randuri = date.apartamente.slice().sort(ordineNumar).map((ap, i) => {
-    const linii = liniiLista(date, listaId, ap.id);
-    const totalL = suma(linii, (l) => l.suma);
-    const pers = linii.find((l) => l.baza && l.baza.unitate === "persoane" && l.metoda === "persoane");
-    const rest = esteCurenta ? suma(datoriiDeschise(date, ap.id).filter((d) => d.tip !== "penalizare" && d.listaId !== listaId), (d) => d.rest) : 0;
-    const pen = esteCurenta ? penalizariDeschise(date, ap.id) : 0;
-    const dl = datoriePeLista(date, listaId, ap.id);
-    const platit = dl ? round2(dl.suma - dl.rest) : 0;
-    return {
-      tip: "rand", marime: marimeTabel, fond: i % 2 === 1,
-      coloane: [
-        { text: ap.numar, latime: lat.ap },
-        { text: scurteazaNume(ap.proprietar, lat.prop - 4, marimeTabel), latime: lat.prop },
-        { text: pers ? num(pers.baza.valoare, 0) : "", latime: lat.pers, dreapta: true },
-        ...cheltuieli.map((c) => {
-          const l = linii.find((x) => x.id === c.id);
-          return { text: l ? lei(l.suma, false) : "", latime: lat.ch, dreapta: true };
+
+  const blocuriTabel = [];
+  grupe.forEach((grupCheltuieli, ig) => {
+    const ultimulGrup = ig === grupe.length - 1;
+    if (ig > 0) blocuriTabel.push({ tip: "spatiu", h: 10 });
+    blocuriTabel.push({
+      tip: "rand", marime: MARIME_TABEL_LISTA, fond: true, repeta: true,
+      coloane: randGrup(grupCheltuieli, ultimulGrup, {
+        ap: { text: "Ap.", latime: LAT_LISTA.ap, bold: true },
+        prop: { text: "Proprietar", latime: LAT_LISTA.prop, bold: true },
+        pers: { text: "Pers.", latime: LAT_LISTA.pers, dreapta: true, bold: true },
+        cheltuiala: (c) => ({ text: c.cod, latime: LAT_LISTA.ch, dreapta: true, bold: true }),
+        total: { text: "Total luna", latime: LAT_LISTA.tot, dreapta: true, bold: true },
+        rest: { text: "Restante", latime: LAT_LISTA.rest, dreapta: true, bold: true },
+        pen: { text: "Penaliz.", latime: LAT_LISTA.pen, dreapta: true, bold: true },
+        plata: { text: "De plata", latime: LAT_LISTA.plata, dreapta: true, bold: true },
+      }),
+    });
+    apartamente.forEach((ap, i) => {
+      const linii = liniiLista(date, listaId, ap.id);
+      const totalL = suma(linii, (l) => l.suma);
+      const pers = linii.find((l) => l.baza && l.baza.unitate === "persoane" && l.metoda === "persoane");
+      const rest = arataDatorii ? suma(datoriiDeschise(date, ap.id).filter((d) => d.tip !== "penalizare" && d.listaId !== listaId), (d) => d.rest) : 0;
+      const pen = arataDatorii ? penalizariDeschise(date, ap.id) : 0;
+      const dl = datoriePeLista(date, listaId, ap.id);
+      const platit = dl ? round2(dl.suma - dl.rest) : 0;
+      blocuriTabel.push({
+        tip: "rand", marime: MARIME_TABEL_LISTA, fond: i % 2 === 1,
+        coloane: randGrup(grupCheltuieli, ultimulGrup, {
+          ap: { text: ap.numar, latime: LAT_LISTA.ap },
+          prop: { text: scurteazaNume(ap.proprietar, LAT_LISTA.prop - 4, MARIME_TABEL_LISTA), latime: LAT_LISTA.prop },
+          pers: { text: pers ? num(pers.baza.valoare, 0) : "", latime: LAT_LISTA.pers, dreapta: true },
+          cheltuiala: (c) => {
+            const l = linii.find((x) => x.id === c.id);
+            return { text: l ? lei(l.suma, false) : "", latime: LAT_LISTA.ch, dreapta: true };
+          },
+          total: { text: lei(totalL, false), latime: LAT_LISTA.tot, dreapta: true, bold: true },
+          rest: { text: rest ? lei(rest, false) : "", latime: LAT_LISTA.rest, dreapta: true },
+          pen: { text: pen ? lei(pen, false) : "", latime: LAT_LISTA.pen, dreapta: true },
+          plata: { text: lei(round2(totalL - platit + rest + pen), false), latime: LAT_LISTA.plata, dreapta: true, bold: true },
         }),
-        { text: lei(totalL, false), latime: lat.tot, dreapta: true, bold: true },
-        ...(esteCurenta ? [
-          { text: rest ? lei(rest, false) : "", latime: lat.rest, dreapta: true },
-          { text: pen ? lei(pen, false) : "", latime: lat.pen, dreapta: true },
-          { text: lei(round2(totalL - platit + rest + pen), false), latime: lat.plata, dreapta: true, bold: true },
-        ] : []),
-      ],
-    };
+      });
+    });
+    blocuriTabel.push({ tip: "linie" });
+    blocuriTabel.push({
+      tip: "rand", marime: MARIME_TABEL_LISTA, bold: true,
+      coloane: randGrup(grupCheltuieli, ultimulGrup, {
+        ap: { text: ig === 0 ? "TOTAL" : "", latime: LAT_LISTA.ap },
+        prop: { text: "", latime: LAT_LISTA.prop },
+        pers: { text: "", latime: LAT_LISTA.pers },
+        cheltuiala: (c) => ({ text: lei(c.suma, false), latime: LAT_LISTA.ch, dreapta: true }),
+        total: { text: lei(suma(cheltuieli, (c) => c.suma), false), latime: LAT_LISTA.tot, dreapta: true },
+        rest: { text: "", latime: LAT_LISTA.rest },
+        pen: { text: "", latime: LAT_LISTA.pen },
+        plata: { text: "", latime: LAT_LISTA.plata },
+      }),
+    });
   });
-  const totaluri = {
-    tip: "rand", marime: marimeTabel, bold: true,
-    coloane: [
-      { text: "", latime: lat.ap }, { text: "TOTAL", latime: lat.prop }, { text: "", latime: lat.pers },
-      ...cheltuieli.map((c) => ({ text: lei(c.suma, false), latime: lat.ch, dreapta: true })),
-      { text: lei(suma(cheltuieli, (c) => c.suma), false), latime: lat.tot, dreapta: true },
-      ...(esteCurenta ? [{ text: "", latime: lat.rest }, { text: "", latime: lat.pen }, { text: "", latime: lat.plata }] : []),
-    ],
-  };
+
   return documentPdf({
-    titlu: `Lista de plata ${monthLabel(lista.luna)}`,
+    titlu: `Lista de plata ${monthLabel(lista.luna)}${interna ? " - uz intern" : ""}`,
     peLatime: true,
-    subsol: `${date.asociatie.denumire}, ${date.bloc.denumire}. Lista generata din AdminBloc pe ${dataLunga(date.azi)}.`,
+    subsol: `${date.asociatie.denumire}, ${date.bloc.denumire}. Lista generata din AdminBloc pe ${dataLunga(date.azi)}.${interna ? " Document intern, nu se afiseaza la avizier." : ""}`,
     blocuri: [
       { tip: "text", text: `${date.asociatie.denumire}  |  ${date.bloc.denumire}, ${date.bloc.adresa}`, gri: true, marime: 9 },
       { tip: "titlu", text: `Lista de plata pe ${monthLabel(lista.luna)}` },
+      ...(interna ? [{ tip: "text", text: "Document intern, uz administrativ: contine numele proprietarilor si restantele. Nu se afiseaza la avizier.", marime: 9, bold: true }] : []),
       { tip: "text", text: `Afisata pe ${dataLunga(lista.publicataLa || date.azi)}. Termen de plata: ${lista.scadenta ? dataLunga(lista.scadenta) : "-"}. Penalizari de ${num(date.setari.procentPenalizareZi)}% pe zi dupa ${date.setari.zileGratie} de zile de la scadenta.`, marime: 9 },
       { tip: "spatiu", h: 6 },
       ...cheltuieli.map((c) => ({ tip: "text", marime: 8, text: `${c.cod}  ${c.categorie}  -  ${c.furnizor}${c.serie ? `, ${c.serie}` : ""}  -  ${lei(c.suma)}  -  ${METODE[c.metoda].eticheta.toLowerCase()}` })),
       { tip: "spatiu", h: 8 },
-      { tip: "rand", coloane: antet, marime: marimeTabel, fond: true, repeta: true },
-      ...randuri,
-      { tip: "linie" },
-      totaluri,
+      ...blocuriTabel,
       { tip: "spatiu", h: 10 },
       { tip: "text", text: "Fiecare suma se poate verifica in aplicatie: apasati pe randul cheltuielii ca sa vedeti factura si calculul complet.", gri: true, marime: 8 },
     ],
   });
 }
+
+function listaPdf(date, listaId) { return construiesteListaPdf(date, listaId, false); }
+function listaPdfIntern(date, listaId) { return construiesteListaPdf(date, listaId, true); }
 
 /* =============================================================================
    5. PRIMITIVE
@@ -2604,7 +2649,7 @@ function AdminSumar({ go }) {
               const r = await trimiteReminder("plata");
               if (r.ok) toastMsg(`Reminder trimis catre ${plural(r.rezultat.destinatari, "locatar", "locatari")}, din ${plural(r.rezultat.apartamente, "apartament", "apartamente")} cu sold`);
             }} />
-            <Btn label="Exporta lista PDF" size="sm" variant="secondary" onPress={() => descarcaPdf(listaPdf(date, lista.id), `lista-plata-${lista.luna}.pdf`)} />
+            <Btn label="Exporta lista PDF" size="sm" variant="secondary" onPress={() => descarcaPdf(listaPdfIntern(date, lista.id), `lista-plata-${lista.luna}.pdf`)} />
           </Box>
         </Card>
       ) : (
@@ -3416,7 +3461,13 @@ function AdminFacturi() {
             <Card gap={S.sm}>
               <Titlu sub="Lista de la avizier, cu toate apartamentele">Exporta lista</Titlu>
               <Txt size={12.5} color={C.inkSoft}>PDF-ul are aceleasi cifre ca aplicatia: fiecare suma vine din repartizarea salvata la publicare.</Txt>
+              {/* [C8/X01] Varianta pentru avizier nu are nume, restante sau
+                  penalizari: e pentru casa scarii, nu un tabel de datornici.
+                  Varianta cu nume ramane, dar separata si marcata intern. */}
               <Btn label="Exporta PDF pentru avizier" size="sm" onPress={() => descarcaPdf(listaPdf(date, lista.id), `lista-plata-${lista.luna}.pdf`)} />
+              <Line />
+              <Txt size={12.5} color={C.inkSoft}>Varianta de uz administrativ, cu proprietari si restante. Nu se afiseaza in casa scarii.</Txt>
+              <Btn label="Exporta lista interna (uz administrativ)" size="sm" variant="secondary" onPress={() => descarcaPdf(listaPdfIntern(date, lista.id), `lista-plata-${lista.luna}-uz-intern.pdf`)} />
             </Card>
           )}
         </>
