@@ -282,7 +282,9 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
   consumul este media ultimelor 3 luni validate (0 daca nu exista istoric). Citirea apare ca
   "Estimat" si pe lista locatarului.
 - **Pe fiecare apartament:** indexul anterior → indexul curent, consumul, starea, poza (URL semnat)
-  si butoanele Valideaza / Respinge (`contorizare.valideaza_citire`). Respingerea cere un motiv (3
+  si butoanele Valideaza / Respinge (`contorizare.valideaza_citiri_apartament`, o singura comanda
+  pentru toate contoarele apartamentului pe acea luna: ori trec toate, ori niciunul, si nicio
+  citire nu se mai verifica pe o luna deja publicata). Respingerea cere un motiv (3
   motive predefinite sau text liber), iar locatarul primeste notificare.
 - Badge-ul de pe tab numara citirile `trimisa`.
 
@@ -510,7 +512,8 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 - Contoarele nu pot fi adaugate, inlocuite sau scoase de utilizatori.
 
 **Identitate**
-- Nu exista comanda pentru revocarea unei invitatii (`revocata_la`).
+- `identitate.revoca_invitatie` exista, dar niciun ecran nu o cheama inca; inchiderea accesului
+  revoca automat codurile nefolosite ale apartamentului.
 - Nu se pot numi presedintele si cenzorul si nu se poate incheia un mandat. `eu()` nu are rol de
   presedinte sau cenzor: un presedinte fara apartament primeste `fara_apartament`, desi RLS i-ar
   da drept de citire.
@@ -531,7 +534,8 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 - Datoriile `fond_rulment` nu se genereaza; fondul `special` nu are comenzi.
 - `chitante.pdf_cale` nu se completeaza (PDF-ul se genereaza doar in browser).
 - O factura platita furnizorului nu creeaza iesire din fond.
-- O `corectie` negativa scade soldul, dar nu devine bani disponibili pentru alocare.
+- O `corectie` negativa reduce restul datoriei de intretinere a aceleiasi liste (`datorii_rest`,
+  `aloca_plata`). Cand nu are o datorie frate pe aceeasi lista, ramane doar in sold.
 - Webhook-ul nu compara suma confirmata cu suma platii.
 
 **Guvernanta**
@@ -599,7 +603,8 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `inregistreazaIesireFond` | admin | Storage `documente` + `financiar.inregistreaza_iesire_fond` (suma negativa, document obligatoriu, soldul nu poate trece sub zero) |
 | `invitaLocatar` | admin | `identitate.invita_locatar` |
 | `inchideAcces` | admin | `identitate.inchide_acces_locatar` |
-| `valideazaCitire` | admin | `contorizare.valideaza_citire` |
+| `valideazaCitiriApartament` | admin | `contorizare.valideaza_citiri_apartament` (toate contoarele apartamentului pe o luna, totul sau nimic) |
+| `valideazaCitire` | admin | `contorizare.valideaza_citire` (o singura citire; nefolosit de ecrane) |
 | `citesteContorGeneral` | admin | `contorizare.citeste_contor_general` |
 | `estimeazaCitiri` | admin | `contorizare.estimeaza_citiri` |
 | `preiaSesizare`, `rezolvaSesizare` | admin | `sesizari.preia_sesizare`, `sesizari.rezolva_sesizare` |
