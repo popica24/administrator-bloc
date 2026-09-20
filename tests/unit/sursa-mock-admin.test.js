@@ -70,7 +70,7 @@ describe("schimbaPersoane", () => {
     await expect(s.schimbaPersoane(apNr(d, "1").id, "doi", "2026-10")).rejects.toThrow("Numarul de persoane nu este valid.");
   });
 
-  it.fails("[§8] un numar fractionar de persoane este refuzat", async () => {
+  it("[§8] un numar fractionar de persoane este refuzat", async () => {
     const { s, d } = await ca(ADMIN);
     await expect(s.schimbaPersoane(apNr(d, "1").id, 2.5, "2026-10")).rejects.toThrow();
   });
@@ -91,7 +91,7 @@ describe("invitaLocatar si inchideAcces", () => {
     expect(apNr(await s.incarca(), "2").invitatii.map((i) => [i.cod, i.calitate])).toEqual([[a, "proprietar"], [b, "chirias"]]);
   });
 
-  it.fails("[§8] invitatia pentru un apartament inexistent este refuzata", async () => {
+  it("[§8] invitatia pentru un apartament inexistent este refuzata", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.invitaLocatar("apa-0", "chirias")).rejects.toThrow();
   });
@@ -110,6 +110,16 @@ describe("invitaLocatar si inchideAcces", () => {
   it("inchiderea accesului pe un id inexistent este refuzata", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.inchideAcces("loc-0")).rejects.toThrow("Legatura nu exista.");
+  });
+
+  it("[H9] inchiderea accesului revoca codurile de invitatie nefolosite ale apartamentului", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap = apNr(d, "17");
+    await s.invitaLocatar(ap.id, "chirias");
+    expect(apNr(await s.incarca(), "17").invitatii.length).toBeGreaterThan(0);
+    const leg = ap.locatari[0];
+    await s.inchideAcces(leg.id);
+    expect(apNr(await s.incarca(), "17").invitatii).toEqual([]);
   });
 });
 

@@ -990,7 +990,9 @@ export function creeazaSursaMock() {
     async schimbaPersoane(apartamentId, numar, dinLuna, motiv) {
       const { bloc } = cerAdmin();
       if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) eroare("Apartamentul nu exista sau nu este in blocul tau.");
-      if (!(Number(numar) >= 0)) eroare("Numarul de persoane nu este valid.");
+      /* [paritate] organizare.apartamente_persoane.numar_persoane e smallint:
+         un numar fractionar este refuzat, nu doar unul negativ. */
+      if (!Number.isInteger(Number(numar)) || !(Number(numar) >= 0)) eroare("Numarul de persoane nu este valid.");
       const existent = db.persoane.find((p) => p.apartamentId === apartamentId && p.valabilDin === dinLuna);
       if (existent) eroare("Exista deja o modificare pentru luna aceasta. Istoricul nu se rescrie.");
       db.adauga("persoane", { apartamentId, valabilDin: dinLuna, numar: Number(numar), motiv: motiv || null, modificatDe: eu().id });
@@ -1066,7 +1068,12 @@ export function creeazaSursaMock() {
     },
 
     async invitaLocatar(apartamentId, calitate) {
-      cerAdmin();
+      const { bloc } = cerAdmin();
+      /* [paritate] identitate.invita_locatar refuza un apartament care nu
+         exista sau nu e al blocului administrat, cu mesajul bazei. */
+      if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) {
+        eroare("Doar administratorul blocului poate invita locatari.");
+      }
       const inv = db.adauga("invitatii", { apartamentId, cod: genereazaCod(), calitate, creatDe: eu().id, expiraLa: new Date(Date.now() + 30 * 86400000).toISOString() });
       return inv.cod;
     },
@@ -1075,6 +1082,13 @@ export function creeazaSursaMock() {
       cerAdmin();
       const l = db.locatari.find((x) => x.id === locatarId) || eroare("Legatura nu exista.");
       l.activPana = aziIso();
+      /* [H9] Se revoca doar codurile de invitatie nefolosite emise pana la
+         data la care se inchide legatura: un cod emis dupa aceea (de exemplu
+         cel al cumparatorului, dat inainte de a inchide accesul vanzatorului
+         cu data lui reala de plecare, adesea in trecut) ramane valabil. */
+      db.invitatii
+        .filter((i) => i.apartamentId === l.apartamentId && !i.folositaLa && !i.revocataLa && i.creatLa.slice(0, 10) <= l.activPana)
+        .forEach((i) => { i.revocataLa = acum(); });
     },
 
     async valideazaCitire(citireId, accepta, motiv) {
