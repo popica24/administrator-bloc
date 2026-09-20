@@ -49,7 +49,7 @@ AdminBloc
 ├── ADMINISTRATOR (5 taburi)
 │   ├── Sumar ─────── incasari pe lista curenta, KPI, lista in lucru, facturi de platit furnizorilor,
 │   │                 restantieri, actiuni rapide, export PDF
-│   ├── Apartamente ─ Fise (cautare, filtre, fisa apartamentului) · Citiri contoare (validare, contor general, estimare)
+│   ├── Apartamente ─ Fise (cautare, filtre, fisa apartamentului) · Citiri contoare (validare, contor general, estimare) · Fonduri (solduri, miscari, iesiri cu document)
 │   ├── Facturi ───── lista lunara: ciorna → facturi → previzualizare → publicare; plata catre furnizori; export
 │   ├── Sesizari ──── triere (noua → in lucru → rezolvata), raspuns, timp de asteptare
 │   └── Comunicare ── Anunturi · Remindere · Vot si AG · Acte
@@ -97,9 +97,10 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 - **Reguli:** codul are 8 caractere din alfabetul fara caractere usor de confundat
   (`A–Z` fara I/O, `2–9`), se foloseste o singura data, expira in 30 de zile si poate fi revocat.
   Mesajul de eroare: "Codul nu este valabil. Cere administratorului un cod nou."
-- **Impotriva ghicirii codurilor:** 5 incercari gresite pe cont la 15 minute, plus un plafon
-  global de 20 de incercari gresite in acelasi interval, ca deschiderea de conturi noi sa nu
-  cumpere incercari (`identitate.incercari_invitatii`).
+- **Impotriva ghicirii codurilor:** 5 incercari gresite pe cont la 15 minute, plus 20 de
+  incercari gresite de la aceeasi adresa in acelasi interval, ca deschiderea de conturi noi sa
+  nu cumpere incercari (`identitate.incercari_invitatii`, `identitate.adresa_cererii`).
+  Modul demonstrativ nu are adrese, deci acolo ramane doar limita pe cont (§8).
 - **Efect:** un rand in `identitate.locatari` cu calitatea din invitatie (proprietar, chirias sau
   membru al familiei).
 
@@ -258,10 +259,20 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
 | **Instiintare de plata** | Activa doar cand apartamentul are restanta |
 | **Numarul de persoane** | Numarul nou, luna de la care se aplica (luna curenta sau urmatoarele doua, fara lunile deja folosite) si motivul. Se insereaza direct in `organizare.apartamente_persoane`; RLS cere `valabil_din` ≥ luna curenta. Listele publicate nu se schimba. |
 | **Invita un locatar** | Calitatea (proprietar, chirias, membru al familiei) → `identitate.invita_locatar` → codul de 8 caractere afisat mare, valabil 30 de zile |
+| **Corecteaza datele apartamentului** | Proprietar, etaj, suprafata, scutirea de lift si corectii mici de cota → `organizare.schimba_fisa_apartament`. Pe un bloc activ, o cota se accepta doar cat timp suma blocului ramane 100%. |
+| **Redistribuie cotele blocului** | Editor cu cota fiecarui apartament si totalul la vedere; salvarea e blocata pana cand suma este 100% → `organizare.schimba_cotele_blocului`. Listele deja publicate nu se schimba: repartizarile lor au bazele inghetate. |
 | Defalcarea lunii | Aceleasi `RandLista` pe care le vede locatarul |
 | Consum apa | Ultimele 3 luni si starea citirii din luna curenta |
 | Istoricul persoanelor | Fiecare schimbare, cu luna si motivul |
 | **Locatari cu cont** | Nume, calitate, de cand, telefon; "Inchide accesul" (`identitate.inchide_acces_locatar`, istoricul ramane); codurile nefolosite; accesele inchise |
+
+**Subtab Fonduri** (`AdminFonduri`)
+- Soldul fiecarui fond si toate miscarile lui, cu documentul fiecareia, in acelasi format pe
+  care il vede locatarul la Bloc → Fonduri.
+- **"Inregistreaza o iesire"**: suma scrisa pozitiv (se scade din fond), motivul, data si un
+  document obligatoriu → `financiar.inregistreaza_iesire_fond`. Soldul nu poate trece sub zero.
+  Este singura cale prin care ies bani dintr-un fond; intrarile vin automat, la publicarea
+  listei.
 
 **Subtab Citiri contoare** (`AdminCitiri`)
 - Alegerea lunii; KPI Transmise si De verificat.
@@ -303,8 +314,12 @@ Ciclul de viata al unei liste lunare: **ciorna → publicata**.
    - **Marcheaza platita** sau **Anuleaza plata furnizor** (`intretinere.marcheaza_factura_platita`)
      este singura modificare permisa dupa publicare.
    - **Exporta PDF pentru avizier** (`listaPdf`): landscape, un rand pe apartament si o coloana pe
-     cheltuiala, ca foaia de hartie. Pentru lista curenta adauga coloanele Restante, Penalizari si
-     De plata. Legenda arata fiecare cod, furnizorul si metoda.
+     cheltuiala, ca foaia de hartie. **Fara nume si fara restante**: la avizier ajung numarul
+     apartamentului, coloanele de cheltuieli si totalul lunii. Legenda arata fiecare cod,
+     furnizorul si metoda.
+   - **Exporta lista interna** (`listaPdfIntern`): aceleasi cifre, plus proprietarul, persoanele,
+     restantele, penalizarile si totalul de plata. Este pentru administratie, nu pentru avizier;
+     fisierul se numeste ca atare.
 
 ### 4.4 Sesizari (`AdminSesizari`)
 - Filtrele Deschise (cele mai vechi primele) / Rezolvate / Toate.

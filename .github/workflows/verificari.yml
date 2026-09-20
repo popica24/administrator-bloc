@@ -99,6 +99,22 @@ jobs:
       - name: Acoperirea obiectelor SQL
         run: node scripts/acoperire-sql.mjs
 
+      - name: Browserul pentru testele end-to-end
+        run: npx playwright install --with-deps chromium
+
+      - name: Teste end-to-end (Playwright, aplicatia reala peste stiva)
+        run: npm run test:e2e
+
+      - name: Raportul Playwright, cand ceva a picat
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raport-playwright
+          path: |
+            coverage/e2e
+            test-results
+          retention-days: 7
+
       - name: Jurnalele stivei, cand ceva a picat
         if: failure()
         run: supabase status && docker ps -a
