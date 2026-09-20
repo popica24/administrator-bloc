@@ -179,6 +179,29 @@ describe("Bloc: votul", () => {
     expect(screen.queryByText("Niciun vot")).toBeNull();
     expect(screen.getByText("Inchis pe 18 sep 2026")).toBeTruthy();
   });
+
+  /* [P1] Doar proprietarul poate vota (Legea 196/2018, migratia k3). Un
+     chirias sau un membru al familiei nu trebuie sa mai ajunga la refuz:
+     formularul de vot ii explica direct de ce nu poate alege o varianta. */
+  it("[P1] chirias: fara Alege o varianta, cu explicatia legii, si voteaza() nu se cheama", async () => {
+    const { sursa } = await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "chirias"; } }, "Vot si adunare");
+    const spion = vi.spyOn(sursa, "voteaza");
+    expect(screen.queryByText("Alege o varianta")).toBeNull();
+    expect(screen.queryByRole("button", { name: OFERTA_A })).toBeNull();
+    expect(screen.getByText(/Doar proprietarul apartamentului poate vota \(Legea 196\/2018\)/)).toBeTruthy();
+    expect(spion).not.toHaveBeenCalled();
+  });
+
+  it("[P1] membru al familiei: la fel ca un chirias, nu poate vota", async () => {
+    await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "membru_familie"; } }, "Vot si adunare");
+    expect(screen.queryByText("Alege o varianta")).toBeNull();
+    expect(screen.getByText(/Doar proprietarul apartamentului poate vota/)).toBeTruthy();
+  });
+
+  it("[P1] proprietarul (calitate explicita) voteaza normal", async () => {
+    await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "proprietar"; } }, "Vot si adunare");
+    expect(screen.getByText("Alege o varianta")).toBeTruthy();
+  });
 });
 
 describe("Bloc: adunarea generala", () => {

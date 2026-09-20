@@ -137,7 +137,7 @@ export function creeazaSursaSupabase(url, cheie) {
       asociatie, setariFin, setariCont, blocRand, contacte, apartamente, persoane, liste, cheltuieli, furnizori,
       repartizari, contoare, citiri, consumMediu, datorii, penalizari, plati, alocari, chitante, situatieBloc,
       fonduri, miscari, sesizari, mesaje, poze, sesizariBloc, anunturi, anunturiCitiri, documente, voturi, adunari,
-      remindere, notificari, locatari, profiluri,
+      remindere, notificari, locatari, profiluri, legaturaMea,
     ] = await Promise.all([
       ok(org.from("asociatii").select("*").eq("id", asoc).single()),
       ok(fin.from("setari_financiare").select("*").eq("asociatie_id", asoc).maybeSingle()),
@@ -175,6 +175,12 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? ok(id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
       toate(() => id.from("profiluri").select("id, nume, email, telefon")),
+      /* [P1] Legatura proprie a locatarului cu apartamentul, ca ecranele sa
+         stie calitatea lui (proprietar, chirias, membru al familiei) inainte
+         sa lase omul sa incerce o actiune rezervata proprietarului (votul,
+         Legea 196/2018) si sa fie refuzat abia la capat. RLS lasa oricine sa-si
+         vada propriul rand in identitate.locatari. */
+      esteAdmin ? Promise.resolve(null) : ok(id.from("locatari").select("calitate").eq("profil_id", eu.profil_id).eq("apartament_id", eu.apartament_id).maybeSingle()),
     ]);
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
        identitate.invitatii si organizare.apartamente sunt in scheme diferite,
@@ -185,6 +191,7 @@ export function creeazaSursaSupabase(url, cheie) {
         .is("folosita_la", null).is("revocata_la", null).gt("expira_la", new Date().toISOString()))
       : [];
 
+    if (!esteAdmin) euUi.calitate = legaturaMea ? legaturaMea.calitate : null;
     ctx.blocDenumire = blocRand.denumire;
     /* Soldul fiecarui fond, retinut pentru verificarea ieftina din
        inregistreazaIesireFond: evita o cerere in plus catre server doar ca sa

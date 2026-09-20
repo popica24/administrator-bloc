@@ -417,6 +417,13 @@ describe("bloc de test: ramurile maparii", () => {
     expect(loc1.adunari.find((a) => a.id === ids.adunare)).toMatchObject({ prezente: 1, totalApartamente: 5, prezentaMea: true });
   });
 
+  it("[P1] eu.calitate reflecta legatura proprie a locatarului cu apartamentul, dar nu apare la administrator", async () => {
+    expect(loc1.eu.calitate).toBe("proprietar");
+    expect(admin.eu.calitate).toBeUndefined();
+    const chirias = (await intraCa(f.conturi.viitor.email)).date;
+    expect(chirias.eu).toMatchObject({ rol: "locatar", apartamentId: f.ap["2A"], calitate: "chirias" });
+  });
+
   it("locatarul: apartamentul lui, sesizarile altora anonime, notificarile lui", () => {
     expect(loc1.eu).toMatchObject({ rol: "locatar", apartamentId: f.ap["1"] });
     expect(loc1.apartamente.map((a) => a.numar)).toEqual(["1"]);

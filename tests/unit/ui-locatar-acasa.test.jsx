@@ -156,6 +156,15 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
     expect(screen.getByRole("button", { name: "Confirm ca particip" })).toBeTruthy();
   });
 
+  /* [P1] Un chirias nu poate vota (Legea 196/2018): sarcina "Voteaza" nu
+     trebuie sa-l trimita la un formular pe care nu-l poate folosi. Adunarea
+     ramane, ca oricine poate confirma prezenta. */
+  it("[P1] chirias: fara sarcina de vot pe Acasa, dar cu cea de adunare", async () => {
+    await pornesteApp({ email: ELENA, modifica: (d) => { d.eu.calitate = "chirias"; } });
+    expect(screen.queryByText(/^Voteaza:/)).toBeNull();
+    expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
+  });
+
   it("anunturile de la avizier: Urgent, Nou si legatura spre Bloc", async () => {
     await pornesteApp({ email: ELENA });
     const card = screen.getByText("Oprire apa rece marti, 22 septembrie").closest("[role=button]");

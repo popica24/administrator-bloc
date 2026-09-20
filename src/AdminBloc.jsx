@@ -1735,7 +1735,12 @@ function LocatarAcasa({ go }) {
   const citireFacuta = contoare.length > 0 && contoare.every((c) => { const x = citireLuna(date, c.id, lunaCitire); return x && x.stare !== "respinsa"; });
   const citireRespinsa = contoare.some((c) => { const x = citireLuna(date, c.id, lunaCitire); return x && x.stare === "respinsa"; });
 
-  const votDeschis = date.voturi.find((v) => !v.votulMeu && new Date(v.inchideLa) > new Date());
+  /* [P1] Doar proprietarul poate vota (Legea 196/2018, migratia K3). Sursa
+     demonstrativa nu are inca eu.calitate (o va capata separat): pana atunci,
+     calitate absenta se trateaza ca "poate vota", ca sa nu ascunda sarcina
+     tuturor locatarilor in modul demonstrativ. */
+  const potVota = date.eu.calitate == null || date.eu.calitate === "proprietar";
+  const votDeschis = potVota ? date.voturi.find((v) => !v.votulMeu && new Date(v.inchideLa) > new Date()) : null;
   /* [K8] Sursa trimite adunarile descrescator dupa data; sarcina trebuie sa
      arate cea mai apropiata adunare viitoare, nu cea mai indepartata. */
   const adunare = date.adunari
@@ -2490,6 +2495,8 @@ function LocatarBloc({ parametri }) {
   const ap = apartamentulMeu(date);
   const [tab, setTab] = useState(parametri && parametri.tab ? parametri.tab : "avizier");
   const [confirmVot, setConfirmVot] = useState(null);
+  /* [P1] Vezi comentariul din LocatarAcasa: doar proprietarul poate vota. */
+  const potVota = date.eu.calitate == null || date.eu.calitate === "proprietar";
 
   /* Anunturile afisate pe ecran se considera citite, intr-o singura comanda
      [K1]: altfel fiecare anunt necitit ar porni propria reincarcare completa. */
@@ -2557,7 +2564,7 @@ function LocatarBloc({ parametri }) {
                   <Txt size={12.5} color={C.ok} weight={600}>Apartamentul tau a votat. Rezultatele se actualizeaza pe masura ce voteaza si ceilalti.</Txt>
                   <RezultateVot vot={vot} />
                 </Box>
-              ) : (
+              ) : potVota ? (
                 <Box gap={S.sm}>
                   <Eyebrow>Alege o varianta</Eyebrow>
                   {vot.optiuni.map((o) => (
@@ -2575,6 +2582,13 @@ function LocatarBloc({ parametri }) {
                     Votul se inregistreaza pe apartament, o singura data, si apare in procesul verbal al adunarii generale.
                   </Txt>
                 </Box>
+              ) : (
+                /* [P1] Un chirias sau un membru al familiei nu poate vota
+                   (Legea 196/2018): fara variantele de raspuns, ca sa nu
+                   incerce o actiune pe care backend-ul o refuza oricum. */
+                <Txt size={12.5} color={C.inkSoft}>
+                  Doar proprietarul apartamentului poate vota (Legea 196/2018). Vezi rezultatele aici dupa ce se incheie votul.
+                </Txt>
               )}
             </Card>
           ))}
