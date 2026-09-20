@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, tab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, stergeCont, legaDeApartament, asteaptaToast, textEcran, CUVINTE_TEHNICE, fisierPoza,
-  asociatieD14, votDupaTitlu,
+  asociatieD14, votDupaTitlu, dataScurtaRo,
 } from "./ajutor.js";
 
 /* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
@@ -100,7 +100,7 @@ test.describe("Sesizari", () => {
     await buton(page, "Trimite").first().click();
     await asteaptaToast(page, "Mesajul a fost trimis");
     await expect(page.getByText("Tot nu merge, a trecut o saptamana.")).toBeVisible();
-    await expect(page.getByText("MESAJUL TAU · 20 sep 2026").first()).toBeVisible();
+    await expect(page.getByText(`MESAJUL TAU · ${dataScurtaRo()}`).first()).toBeVisible();
   });
 
   test("sesizarile blocului sunt anonime", async ({ page }) => {

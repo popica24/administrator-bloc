@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
   creeazaCont, stergeCont, legaDeApartament, datorieDeTest, soldApartament,
-  asteaptaToast, textEcran, CUVINTE_TEHNICE,
+  asteaptaToast, textEcran, CUVINTE_TEHNICE, aziRo,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -12,7 +12,7 @@ const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+
 async function statistici() {
   const b = await blocD14();
   const sb = serviciu();
-  const azi = new Date().toISOString().slice(0, 10);
+  const azi = aziRo();
   const { data: datorii } = await sb.schema("financiar").from("datorii_rest")
     .select("apartament_id, rest, scadenta, tip").eq("bloc_id", b.id).gt("rest", 0);
   const restante = datorii.filter((d) => d.scadenta < azi);
@@ -127,7 +127,7 @@ test.describe("Apartamente: lista", () => {
 
   test("filtrele numara corect si arata doar ce trebuie", async ({ page }) => {
     const b = await blocD14();
-    const azi = new Date().toISOString().slice(0, 10);
+    const azi = aziRo();
     const { data } = await serviciu().schema("financiar").from("datorii_rest")
       .select("apartament_id, rest, scadenta").eq("bloc_id", b.id).gt("rest", 0);
     const cuSold = new Set(data.map((d) => d.apartament_id)).size;

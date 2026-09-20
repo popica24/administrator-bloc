@@ -5,6 +5,7 @@
    locatar), starea se face aici, cu cheia de serviciu, exact ca dezvoltatorul
    din §8 al hartii functiilor. */
 
+import { deflateSync } from "node:zlib";
 import { createClient } from "@supabase/supabase-js";
 import { expect } from "@playwright/test";
 
@@ -13,6 +14,22 @@ export const CHEIE_SERVICIU = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 export const CHEIE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
 export const PAROLA = "Bloc-D14-2026";
+
+/* Ziua de azi asa cum o vad baza (Europe/Bucharest) si aplicatia (fusul din
+   playwright.config.js). `new Date().toISOString()` da ziua UTC: intre 00:00 si
+   03:00, ora Romaniei, aceea este inca ziua de ieri, iar testele care compara
+   scadente sau leaga un locatar "de azi" cad fara ca aplicatia sa aiba ceva.
+   Acelasi bug ca T2 din auditul 2. */
+export const aziRo = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Bucharest" });
+export const ziRo = (peste) =>
+  new Date(Date.now() + peste * 86400000).toLocaleDateString("en-CA", { timeZone: "Europe/Bucharest" });
+
+/* Ziua scrisa ca in aplicatie: "21 sep 2026" (dataRo din AdminBloc.jsx) */
+const LUNI_SCURTE = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "noi", "dec"];
+export function dataScurtaRo(iso = aziRo()) {
+  const [y, m, d] = iso.split("-");
+  return `${Number(d)} ${LUNI_SCURTE[Number(m) - 1]} ${y}`;
+}
 export const CONTURI = {
   admin: "administrator@adminbloc.test",
   elena: "elena.marinescu@adminbloc.test",
@@ -223,6 +240,58 @@ export function fisierPoza(nume = "contor.jpg") {
     + "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAA"
     + "AAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
   return { name: nume, mimeType: "image/jpeg", buffer: Buffer.from(base64, "base64") };
+}
+
+/* O poza adevarata, cu laturile ei: telefonul tinut vertical da o poza mult
+   mai inalta decat lata. PNG scris de mana (semnatura, IHDR, IDAT, IEND) ca
+   sa nu aduca nicio librarie; aplicatia o trece oricum prin `micsoreazaPoza`,
+   care o reduce la 1600 px si o salveaza JPEG. */
+export function fisierPozaPortret(latime = 480, inaltime = 960, nume = "contor-portret.png") {
+  const crcTabel = (() => {
+    const t = new Int32Array(256);
+    for (let n = 0; n < 256; n += 1) {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c;
+    }
+    return t;
+  })();
+  const crc32 = (buf) => {
+    let c = -1;
+    for (let i = 0; i < buf.length; i += 1) c = crcTabel[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ -1) >>> 0;
+  };
+  const bucata = (tip, date) => {
+    const lungime = Buffer.alloc(4);
+    lungime.writeUInt32BE(date.length);
+    const corp = Buffer.concat([Buffer.from(tip, "latin1"), date]);
+    const suma = Buffer.alloc(4);
+    suma.writeUInt32BE(crc32(corp));
+    return Buffer.concat([lungime, corp, suma]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(latime, 0);
+  ihdr.writeUInt32BE(inaltime, 4);
+  ihdr[8] = 8; /* 8 biti pe canal */
+  ihdr[9] = 2; /* truecolor RGB */
+  const brut = Buffer.alloc(inaltime * (1 + latime * 3));
+  for (let y = 0; y < inaltime; y += 1) {
+    const rand = y * (1 + latime * 3);
+    brut[rand] = 0;
+    for (let x = 0; x < latime; x += 1) {
+      const p = rand + 1 + x * 3;
+      /* Dungi orizontale, ca pe rola unui contor */
+      const val = y % 40 < 20 ? 30 : 220;
+      brut[p] = val; brut[p + 1] = val; brut[p + 2] = val;
+    }
+  }
+  const octeti = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    bucata("IHDR", ihdr),
+    bucata("IDAT", deflateSync(brut)),
+    bucata("IEND", Buffer.alloc(0)),
+  ]);
+  return { name: nume, mimeType: "image/png", buffer: octeti };
 }
 
 /* ---------- descarcari si PDF ---------- */

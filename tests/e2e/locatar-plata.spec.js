@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 import {
   CONTURI, buton, intra, intraCa, mergiLaTab, serviciu, apartamentulNumarul,
   creeazaCont, legaDeApartament, datorieDeTest, soldApartament,
-  textEcran, CUVINTE_TEHNICE,
+  textEcran, CUVINTE_TEHNICE, aziRo,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -46,7 +46,7 @@ test.describe("Acasa", () => {
     const ap = await apartamentulNumarul(3);
     const scadente = await serviciu().schema("financiar").from("datorii_rest")
       .select("scadenta, rest").eq("apartament_id", ap.id).gt("rest", 0);
-    const azi = new Date().toISOString().slice(0, 10);
+    const azi = aziRo();
     expect(scadente.data.some((d) => d.scadenta < azi)).toBe(true);
 
     await intraCa(page, "ilie");

@@ -6,7 +6,7 @@
 import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, asteaptaToast,
-  textEcran, CUVINTE_TEHNICE, fisierPoza,
+  textEcran, CUVINTE_TEHNICE, fisierPoza, ziRo,
 } from "./ajutor.js";
 
 const MARCAJ = "E2E fond";
@@ -209,7 +209,7 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
     await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
 
     await page.getByLabel("Suma iesita").fill("50");
-    const maine = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const maine = ziRo(1);
     await page.getByLabel("Data").fill(maine);
     await buton(page, "Inregistreaza iesirea").click();
     await asteaptaToast(page, "Data iesirii din fond nu poate fi in viitor");

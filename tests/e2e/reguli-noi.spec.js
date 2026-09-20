@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, intra, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, stergeCont, profilDupaEmail,
-  asteaptaToast, textEcran, CUVINTE_TEHNICE, PAROLA, CONTURI,
+  asteaptaToast, textEcran, CUVINTE_TEHNICE, PAROLA, CONTURI, aziRo,
 } from "./ajutor.js";
 
 const VOT = "Inlocuirea usii de la intrare";
@@ -79,7 +79,7 @@ test.describe("Doar proprietarul voteaza [K3]", () => {
 test.describe("Sesizarile se vad dupa perioada de locuire [K4]", () => {
   test("locatarul mutat azi nu vede conversatia celui dinaintea lui", async ({ page }) => {
     /* Ap. 17 are sesizari din august si din septembrie, scrise de Elena */
-    const azi = new Date().toISOString().slice(0, 10);
+    const azi = aziRo();
     await leaga("e2e-mutat-azi@adminbloc.test", "Mutat Azi", 17, "chirias", azi);
 
     await intra(page, "e2e-mutat-azi@adminbloc.test");

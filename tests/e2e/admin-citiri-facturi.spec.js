@@ -63,13 +63,20 @@ test.describe("Citiri contoare", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
-    const rand = page.getByText(/^Apa rece, index anterior /);
-    await expect(rand).toBeVisible();
-    const anterior = Number((await rand.innerText()).match(/([\d.]+,\d+)/)[1].replace(".", "").replace(",", "."));
+    /* [S5] Ordinea celor doua contoare generale pe ecran vine din date si nu
+       este garantata (`toate()` cere randurile ordonate dupa id, iar id-ul e
+       un uuid aleatoriu), deci randul de apa rece poate fi al doilea. Testul
+       cauta randul dupa eticheta lui, nu dupa pozitie. */
+    const randuri = page.getByText(/^Apa (rece|calda), index anterior /);
+    await expect(randuri).toHaveCount(2);
+    const texte = await randuri.allInnerTexts();
+    const i = texte.findIndex((x) => x.startsWith("Apa rece"));
+    expect(i, "randul contorului general de apa rece").toBeGreaterThanOrEqual(0);
+    const anterior = Number(texte[i].match(/([\d.]+,\d+)/)[1].replace(/\./g, "").replace(",", "."));
 
-    await page.getByPlaceholder("Index nou").first().fill(String(anterior + 250));
+    await page.getByPlaceholder(/Index nou|Corecteaza indexul/).nth(i).fill(String(anterior + 250));
     await expect(page.getByText("Consum 250,00 mc")).toBeVisible();
-    await buton(page, "Salveaza").first().click();
+    await buton(page, "Salveaza").nth(i).click();
     await asteaptaToast(page, "Indexul contorului general a fost salvat");
 
     const { data } = await serviciu().schema("contorizare").from("citiri")
@@ -78,6 +85,32 @@ test.describe("Citiri contoare", () => {
     expect(data.stare).toBe("validata");
 
     await serviciu().schema("contorizare").from("citiri").delete().eq("contor_id", contor.id).eq("luna", LUNA);
+  });
+
+  test.fixme("[S5] contoarele stau in aceeasi ordine peste tot si la fiecare intrare", async ({ page }) => {
+    /* [S5] `LocatarConsum` isi sorteaza contoarele (rece inaintea celei calde,
+       src/AdminBloc.jsx:2126), dar ecranul administratorului nu: `AdminCitiri`
+       ia `date.contoare` asa cum vin (src/AdminBloc.jsx:3400 si 3402), iar
+       `toate()` cere randurile ordonate dupa id, adica dupa un uuid aleatoriu
+       (src/sursa-supabase.js:121). Pe ecran, cele doua contoare generale si
+       perechea Rece/Calda a fiecarui apartament apar in ordine intamplatoare —
+       si diferita de la un apartament la altul, in aceeasi pagina. Doua campuri
+       "Index nou" fara eticheta proprie, care isi schimba locul, sunt exact
+       felul in care un administrator scrie indexul de la apa rece in randul
+       apei calde.
+       Asteptat: aceeasi ordine, rece apoi calda, peste tot. */
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Citiri contoare" }).click();
+
+    const generale = await page.getByText(/^Apa (rece|calda), index anterior /).allInnerTexts();
+    expect(generale[0].startsWith("Apa rece"), `ordinea contoarelor generale: ${generale.join(" | ")}`).toBe(true);
+
+    /* Si in fiecare apartament, Rece inaintea Caldei */
+    const randuri = await page.getByText(/^(Rece|Calda)(:|$)/).allInnerTexts();
+    for (let i = 0; i < randuri.length; i += 2) {
+      expect(randuri[i].startsWith("Rece"), `apartamentul ${i / 2 + 1}: ${randuri[i]} inaintea ${randuri[i + 1]}`).toBe(true);
+    }
   });
 
   test("un index mai mic decat cel anterior este refuzat in formular", async ({ page }) => {
