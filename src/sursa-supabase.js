@@ -477,7 +477,17 @@ export function creeazaSursaSupabase(url, cheie) {
       return data.id;
     },
 
-    stergeCheltuiala: (cid) => ok(intr.from("cheltuieli").delete().eq("id", cid)),
+    /* .select() dupa delete intoarce randurile chiar sterse: pe o lista
+       publicata, politica RLS de delete nu se potriveste, deci fara el un
+       delete care nu a atins niciun rand ar parea reusit (NOU-4). */
+    async stergeCheltuiala(cid) {
+      const randuri = await ok(intr.from("cheltuieli").delete().eq("id", cid).select());
+      if (randuri.length === 0) {
+        const r = await intr.from("cheltuieli").select("lista_id, l:liste_lunare!inner(stare)").eq("id", cid).maybeSingle();
+        if (r.data && r.data.l.stare !== "ciorna") throw new Error("Lista este deja publicata; cheltuiala nu se mai poate sterge.");
+        throw new Error("Randul nu mai exista. Reincarca lista si incearca din nou.");
+      }
+    },
 
     async dateMotor(listaId) {
       const dm = await ok(intr.rpc("date_pentru_motor", { p_lista_id: listaId }));

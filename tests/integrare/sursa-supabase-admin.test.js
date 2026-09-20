@@ -129,6 +129,12 @@ describe("lista lunii: facturi", () => {
     const r = await ok(db("intretinere").from("cheltuieli").select("id").eq("id", id));
     expect(r).toEqual([]);
   });
+
+  it("[NOU-4] stergeCheltuiala() pe un rand deja sters are mesajul lui", async () => {
+    const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Disparuta", cod: "C6", suma: 3, metoda: "apartamente" });
+    await ok(db("intretinere").from("cheltuieli").delete().eq("id", id));
+    await expect(adm.stergeCheltuiala(id)).rejects.toThrow("Randul nu mai exista. Reincarca lista si incearca din nou.");
+  });
 });
 
 describe("contoare", () => {
@@ -236,8 +242,10 @@ describe("motorul si publicarea", () => {
     expect((await ok(db("intretinere").from("cheltuieli").select("achitata_furnizor_la").eq("id", st.c2).single())).achitata_furnizor_la).toBeNull();
   });
 
-  it.fails("[NOU-4] stergeCheltuiala() pe o lista publicata este refuzata, nu raportata ca reusita", async () => {
-    await expect(adm.stergeCheltuiala(st.c2)).rejects.toThrow();
+  it("[NOU-4] stergeCheltuiala() pe o lista publicata este refuzata, nu raportata ca reusita", async () => {
+    await expect(adm.stergeCheltuiala(st.c2)).rejects.toThrow("Lista este deja publicata; cheltuiala nu se mai poate sterge.");
+    const r = await ok(db("intretinere").from("cheltuieli").select("id").eq("id", st.c2));
+    expect(r).toHaveLength(1);
   });
 });
 
