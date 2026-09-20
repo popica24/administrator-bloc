@@ -694,6 +694,12 @@ export function creeazaSursaMock() {
       }
       const p = db.adauga("profiluri", { nume: nume.trim(), telefon: telefon || null, email: email.trim() });
       db.autentificari.push({ email: email.trim(), parola, profilId: p.id });
+      /* Paritate cu sursa Supabase (C1): acolo, signUp() nu deschide sesiune
+         cat timp Auth cere confirmarea emailului, iar comanda intoarce null.
+         Modul demonstrativ nu are confirmare reala prin email, deci reproduce
+         acelasi raspuns pentru orice adresa cu eticheta "+cere-confirmare"
+         (contul se creeaza, dar ramane fara sesiune, ca la Supabase). */
+      if (email.trim().toLowerCase().includes("+cere-confirmare")) return null;
       sesiune = { profilId: p.id, email: email.trim() };
       return sesiune;
     },

@@ -68,9 +68,11 @@ describe("inregistreaza()", () => {
   it("creeaza contul cu profilul din metadate si cere confirmarea emailului", async () => {
     const email = `nou-${unic()}@adminbloc.test`;
     const s = sursaNoua();
-    /* Auth cere confirmarea adresei, deci inregistrarea nu mai deschide sesiune */
+    /* Auth cere confirmarea adresei, deci inregistrarea nu mai deschide sesiune.
+       Comanda intoarce null (nu arunca): ecranul de "Confirma adresa de email"
+       se decide dupa rezultat, nu dupa o exceptie (C1) */
     await expect(s.inregistreaza({ email, parola: PAROLA_TEST, nume: "Ana Popa", telefon: "0722 000 111" }))
-      .rejects.toThrow("Contul a fost creat. Confirma adresa de email din mesajul primit, apoi intra in cont.");
+      .resolves.toBeNull();
     const profil = await ok(db("identitate").from("profiluri").select("*").eq("email", email).single());
     expect(profil).toMatchObject({ nume: "Ana Popa", telefon: "0722 000 111", email });
     expect(await s.sesiuneCurenta()).toBeNull();
@@ -111,12 +113,11 @@ describe("inregistreaza()", () => {
     });
   });
 
-  it("cand serverul cere confirmarea emailului, omul afla ce are de facut", async () => {
+  it("cand serverul cere confirmarea emailului, comanda intoarce null (nu arunca)", async () => {
     const email = `confirmare-${unic()}@adminbloc.test`;
     const utilizator = { id: "00000000-0000-4000-8000-000000000001", aud: "authenticated", role: "", email, app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
     await cuFetch((url) => (url.includes("/auth/v1/signup") ? json(utilizator) : undefined), async () => {
-      await expect(sursaNoua().inregistreaza({ email, parola: PAROLA_TEST, nume: "X" }))
-        .rejects.toThrow("Contul a fost creat. Confirma adresa de email din mesajul primit, apoi intra in cont.");
+      await expect(sursaNoua().inregistreaza({ email, parola: PAROLA_TEST, nume: "X" })).resolves.toBeNull();
     });
   });
 });

@@ -19,6 +19,25 @@ const intra = async (email) => {
   date = await s.incarca();
 };
 
+describe("inregistreaza() in sursa demonstrativa (C1)", () => {
+  it("un email obisnuit deschide sesiunea imediat", async () => {
+    const s = creeazaSursaMock();
+    const r = await s.inregistreaza({ email: "cont-nou@adminbloc.test", parola: "Parola12345", nume: "Cont Nou" });
+    expect(r).toEqual({ profilId: expect.any(String), email: "cont-nou@adminbloc.test" });
+    expect(await s.sesiuneCurenta()).toEqual(r);
+  });
+
+  it("un email cu eticheta +cere-confirmare reproduce cazul din Supabase: contul se creeaza, dar fara sesiune", async () => {
+    const s = creeazaSursaMock();
+    const r = await s.inregistreaza({ email: "cont-nou+cere-confirmare@adminbloc.test", parola: "Parola12345", nume: "Cont Fara Sesiune" });
+    expect(r).toBeNull();
+    expect(await s.sesiuneCurenta()).toBeNull();
+    /* Contul exista totusi si poate intra normal dupa aceea */
+    const dupa = await s.intra("cont-nou+cere-confirmare@adminbloc.test", "Parola12345");
+    expect(dupa.email).toBe("cont-nou+cere-confirmare@adminbloc.test");
+  });
+});
+
 describe("schimbaFisaApartament() in sursa demonstrativa", () => {
   beforeEach(() => intra(ADMIN));
 

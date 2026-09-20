@@ -345,10 +345,14 @@ export function creeazaSursaSupabase(url, cheie) {
       await sb.auth.signOut();
     },
 
+    /* Cand Auth cere confirmarea emailului, signUp() nu deschide sesiune.
+       Comanda intoarce null (nu arunca): ecranul stie sa arate "Confirma
+       adresa de email" doar dupa un rezultat gol, nu dupa o exceptie, care ar
+       fi tratata ca o inregistrare esuata si ar pierde codul de invitatie (C1). */
     async inregistreaza({ email, parola, nume, telefon }) {
       const { data, error } = await sb.auth.signUp({ email, password: parola, options: { data: { nume, telefon } } });
       if (error) arunca(error);
-      if (!data.session) throw new Error("Contul a fost creat. Confirma adresa de email din mesajul primit, apoi intra in cont.");
+      if (!data.session) return null;
       return { profilId: data.user.id, email };
     },
 
