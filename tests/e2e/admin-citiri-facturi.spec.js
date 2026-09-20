@@ -145,8 +145,7 @@ test.describe("Citiri contoare", () => {
     expect(raspuns.status()).toBe(200);
   });
 
-  /* Cunoscut din auditul 1 (A6, nereparat): estimarea merge si inainte de
-     termen, deci testul ramane oprit ca sa nu strice datele demo. */
+  /* A6, reparat: estimarea nu mai porneste inainte de termenul de citire */
   test("[A6] estimarea inainte de termen este refuzata cu un mesaj pe romaneste", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
@@ -158,6 +157,21 @@ test.describe("Citiri contoare", () => {
     const mesaj = await page.locator(".ab-toast").innerText();
     expect(mesaj).toMatch(/termen|25/i);
     for (const cuvant of CUVINTE_TEHNICE) expect(mesaj).not.toContain(cuvant);
+  });
+
+  /* [P6] Vezi raportul: refuzurile scrise in SQL pun luna in mesaj cu `%`,
+     deci ajunge la om asa cum o tine baza ("2026-09-01"), nu cum o scrie
+     restul aplicatiei ("septembrie 2026"). */
+  test.fixme("[P6] mesajele de refuz scriu luna pe romaneste, nu ca in baza", async ({ page }) => {
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Citiri contoare" }).click();
+    page.once("dialog", (d) => d.accept());
+    await buton(page, "Estimeaza citirile lipsa").click();
+    await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
+    const mesaj = await page.locator(".ab-toast").innerText();
+    expect(mesaj).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    expect(mesaj).toContain("septembrie");
   });
 });
 

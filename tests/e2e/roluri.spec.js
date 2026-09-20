@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, stergeCont, legaDeApartament, textEcran, CUVINTE_TEHNICE,
-  asociatieD14,
+  asociatieD14, datorieDeTest,
 } from "./ajutor.js";
 
 /* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
@@ -109,6 +109,61 @@ test.describe("presedinte fara apartament", () => {
     const t = await textEcran(page);
     expect(t).not.toContain("Bloc D14");
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
+  });
+});
+
+/* Aplicatia nu modeleaza un om legat de doua apartamente: identitate.eu()
+   alege un singur apartament (cea mai veche legatura activa), iar toate
+   ecranele de locatar sunt filtrate pe el. Testele fixeaza ce vede azi. */
+test.describe("locatar cu doua apartamente", () => {
+  const EMAIL = "e2e-doua-apartamente@adminbloc.test";
+  let DATORIE;
+
+  test.beforeAll(async () => {
+    await stergeCont(EMAIL);
+    const b = await blocD14();
+    const primul = await apartamentulNumarul(5);
+    const alDoilea = await apartamentulNumarul(7);
+    const pid = await creeazaCont(EMAIL, "Doua Apartamente");
+    const sb = serviciu();
+    for (const [ap, din] of [[primul, "2026-06-01"], [alDoilea, "2026-07-01"]]) {
+      const { error } = await sb.schema("identitate").from("locatari").insert({
+        apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "proprietar", activ_din: din,
+      });
+      if (error) throw new Error(error.message);
+    }
+    DATORIE = await datorieDeTest(alDoilea.id, 77.77, "E2E datoria celui de-al doilea apartament");
+  });
+
+  test.afterAll(async () => {
+    await stergeCont(EMAIL);
+    if (DATORIE) await serviciu().schema("financiar").from("datorii").delete().eq("id", DATORIE);
+  });
+
+  test("vede doar primul apartament, fara nicio urma a celui de-al doilea", async ({ page }) => {
+    const primul = await apartamentulNumarul(5);
+    const alDoilea = await apartamentulNumarul(7);
+
+    await intra(page, EMAIL);
+    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`)).toBeVisible();
+
+    /* Nicio cale spre al doilea apartament si nicio cifra de la el */
+    const t = await textEcran(page);
+    expect(t).not.toContain(alDoilea.proprietar_nume);
+    expect(t).not.toContain("77,77");
+    await mergiLaTab(page, "Plata");
+    expect(await textEcran(page)).not.toContain("77,77");
+    for (const cuvant of CUVINTE_TEHNICE) expect(await textEcran(page)).not.toContain(cuvant);
+  });
+
+  /* [P5] Vezi raportul: omul plateste pentru doua apartamente, dar aplicatia
+     ii arata unul singur si nu ii spune nimic despre celalalt. */
+  test.fixme("[P5] stie ca mai are un apartament in aplicatie", async ({ page }) => {
+    const alDoilea = await apartamentulNumarul(7);
+    await intra(page, EMAIL);
+    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(new RegExp(`[Aa]partament(ul)? ${alDoilea.numar}\\b`))).toBeVisible();
   });
 });
 

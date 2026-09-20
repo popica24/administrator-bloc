@@ -84,7 +84,9 @@ test.describe("Sumar", () => {
     const descarcare = page.waitForEvent("download");
     await buton(page, "Exporta lista PDF").click();
     const f = await descarcare;
-    expect(f.suggestedFilename()).toBe("lista-plata-2026-08.pdf");
+    /* [F4] Butonul de pe Sumar descarca varianta interna, cu alt nume decat
+       cel de avizier (vezi pdf-liste.spec.js) */
+    expect(f.suggestedFilename()).toBe("lista-plata-2026-08-uz-intern.pdf");
     const flux = await f.createReadStream();
     const bucati = [];
     for await (const b of flux) bucati.push(b);
@@ -93,7 +95,9 @@ test.describe("Sumar", () => {
 
   test("actiunile rapide si KPI-urile navigheaza acolo unde scrie", async ({ page }) => {
     await intraCa(page, "admin");
-    await page.getByText("RESTANTE").click();
+    /* KPI-ul "Restante", nu nota de sub exportul intern, care contine si ea
+       cuvantul (potrivirea dupa text nu tine cont de majuscule) */
+    await page.getByRole("button", { name: /^Restante/ }).first().click();
     await expect(page.getByText(/^Restante \d+$/)).toBeVisible();
     await mergiLaTab(page, "Sumar");
     await page.getByText("CITIRI DE VERIFICAT").click();

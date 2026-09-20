@@ -49,6 +49,13 @@ export async function asociatieD14() {
   return (await blocD14()).asociatie_id;
 }
 
+/* Dupa un `supabase db reset && npm run seed` toate identificatoarele sunt
+   altele: ce s-a gasit o data pe rulare nu mai este valabil. */
+export function uitaCache() {
+  cacheBloc = null;
+  cacheServiciu = null;
+}
+
 /* Lista lunara a lui D14: dupa stare ("ciorna" / "publicata") sau dupa luna */
 export async function listaLunara({ stare, luna }) {
   const b = await blocD14();
