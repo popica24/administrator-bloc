@@ -61,10 +61,18 @@ describe("Plata: lista curenta", () => {
     expect(text(card)).toContain("Diferenta0,00 lei");
   });
 
-  it("scade ce s-a platit deja din lista lunii", async () => {
+  it("scade ce s-a platit deja din lista lunii, dupa alocarile reale", async () => {
     await laPlata({
       email: ELENA,
-      modifica: (d) => { d.datorii.find((x) => x.luna === "2026-08").rest = 518.09; },
+      modifica: (d) => {
+        const dat = d.datorii.find((x) => x.luna === "2026-08");
+        dat.rest = 518.09;
+        d.plati.push({
+          id: "pla-test-200", apartamentId: d.eu.apartamentId, suma: 200, metoda: "card", stare: "confirmata",
+          referinta: "SIM-K5", inregistrataDe: null, confirmataLa: "2026-08-20T10:00:00+03:00", chitanta: null,
+          alocari: [{ datorieId: dat.id, suma: 200 }],
+        });
+      },
     });
     const card = cardTotal();
     expect(text(card)).toContain("Platit deja din lista lunii-200,00 lei");

@@ -23,6 +23,14 @@ const calcul = (st) => zonaCu(st, 1).parentElement.textContent;
 
 const datorie = (x) => ({ apartamentId: AP, luna: null, listaId: null, documentId: null, creatLa: "2026-06-01T10:00:00+03:00", ...x });
 
+/* O plata reala, cu alocarile ei, ca sa nu se mai deduca "platit" din
+   suma - rest (K5): singura sursa de adevar pentru ce s-a incasat este
+   suma alocarilor din registru. */
+const plataReala = (id, suma, alocari) => ({
+  id, apartamentId: AP, suma, metoda: "card", stare: "confirmata", referinta: `SIM-${id}`,
+  inregistrataDe: null, confirmataLa: "2026-08-20T10:00:00+03:00", chitanta: null, alocari,
+});
+
 describe("defalcare pe lista curenta", () => {
   it("totalul listei curente este exact soldul, fara datorii vechi", async () => {
     await plata();
@@ -41,8 +49,9 @@ describe("defalcare pe lista curenta", () => {
     expect(screen.getByRole("button", { name: "Plateste 718,09 lei cu cardul" })).toBeTruthy();
   });
 
-  it("scade ce s-a platit deja din lista si pune codurile necunoscute la Alte cheltuieli", async () => {
+  it("scade ce s-a platit deja din lista, dupa alocarile reale, si pune codurile necunoscute la Alte cheltuieli", async () => {
     await plata((d) => {
+      d.plati.push(plataReala("pla-400", 400, [{ datorieId: "dat-1021", suma: 400 }]));
       d.datorii.find((x) => x.id === "dat-1021").rest = 318.09;
       d.cheltuieli.push({ id: "che-x", listaId: AUG, cod: "C10", tip: "factura", categorie: "Verificare hidranti", furnizor: "ISU Service", serie: "H-1", suma: 200, metoda: "apartamente", tipApa: null, documentId: null });
       d.repartizari.push({ cheltuialaId: "che-x", listaId: AUG, apartamentId: AP, suma: 10, baza: { valoare: 1, total: 20, unitate: "apartamente" }, rotunjire: 0, detaliu: null });
@@ -52,16 +61,59 @@ describe("defalcare pe lista curenta", () => {
     expect(calcul("Platit deja din lista lunii")).toContain("-400,00 lei");
   });
 
-  /* Audit L4: dupa o recalculare (lista are acum 728,09, datoria a ramas 718,09),
-     totalul de plata nu mai este egal cu soldul (318,09); ecranul arata 328,09 */
-  it("[L4] dupa o recalculare, totalul de plata este tot soldul", async () => {
-    await plata((d) => {
-      d.datorii.find((x) => x.id === "dat-1021").rest = 318.09;
-      d.cheltuieli.push({ id: "che-x", listaId: AUG, cod: "C10", tip: "factura", categorie: "Verificare hidranti", furnizor: "ISU Service", serie: "H-1", suma: 200, metoda: "apartamente", tipApa: null, documentId: null });
-      d.repartizari.push({ cheltuialaId: "che-x", listaId: AUG, apartamentId: AP, suma: 10, baza: { valoare: 1, total: 20, unitate: "apartamente" }, rotunjire: 0, detaliu: null });
+  /* Audit K5 (si L4): platitDinLista = suma - rest presupune ca orice scadere
+     a restului e o plata. O recalculare o contrazice in ambele sensuri:
+     in minus, corectia scade direct restul datoriei initiale (F2) fara nicio
+     plata noua, deci apare o "plata" fantoma; in plus, corectia ramane o
+     datorie deschisa separata, insa cheltuielile lunii (randul 1) deja arata
+     suma noua, deci datoria de corectie o numara a doua oara. In ambele
+     cazuri randurile afisate trebuie sa se adune exact la total (soldul). */
+  describe("[K5] recalcularea listei curente", () => {
+    it("fara nicio recalculare, randurile se aduna la total", async () => {
+      await plata();
+      expect(calcul("1. Cheltuielile lunii august")).toBe("1. Cheltuielile lunii august644,01 lei");
+      expect(calcul("2. Fonduri")).toBe("2. Fonduri74,08 lei");
+      expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
+      expect(calcul("Total de plata")).toBe("Total de plata718,09 lei");
+      expect(screen.queryByText(/Corectie dupa recalculare/)).toBeNull();
     });
-    expect(screen.getByRole("button", { name: "Plateste 318,09 lei cu cardul" })).toBeTruthy();
-    expect(calcul("Total de plata")).toContain("318,09 lei");
+
+    it("recalculare in minus: corectia scade direct restul, fara nicio plata fantoma", async () => {
+      await plata((d) => {
+        /* cheltuielile lunii scad la 600 lei (de la 718,09); corectia de
+           -118,09 e o datorie sora, cu propriul rest fortat la 0 (F2), care
+           scade direct restul datoriei de intretinere initiale */
+        d.repartizari.filter((r) => r.apartamentId === AP && r.listaId === AUG).forEach((r, i) => { r.suma = i === 0 ? 600 : 0; });
+        d.datorii.find((x) => x.id === "dat-1021").rest = 600;
+        d.datorii.push(datorie({
+          id: "dat-corectie-minus", listaId: AUG, luna: "2026-08", tip: "corectie", suma: -118.09, rest: 0,
+          scadenta: "2026-09-25", creatLa: "2026-08-21T10:00:00+03:00", descriere: "Corectie dupa recalcularea listei",
+        }));
+      });
+      expect(screen.queryByText("Platit deja din lista lunii")).toBeNull();
+      expect(screen.getByText(/Corectie dupa recalculare/)).toBeTruthy();
+      expect(calcul(/Corectie dupa recalculare/)).toContain("-118,09 lei");
+      expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
+      expect(calcul("Total de plata")).toBe("Total de plata600,00 lei");
+      expect(screen.getByRole("button", { name: "Plateste 600,00 lei cu cardul" })).toBeTruthy();
+    });
+
+    it("recalculare in plus: corectia nu se mai numara de doua ori", async () => {
+      await plata((d) => {
+        /* cheltuielile lunii cresc la 900 lei (de la 718,09); corectia de
+           +181,91 ramane o datorie deschisa separata, neplatita */
+        d.repartizari.filter((r) => r.apartamentId === AP && r.listaId === AUG).forEach((r, i) => { r.suma = i === 0 ? 900 : 0; });
+        d.datorii.push(datorie({
+          id: "dat-corectie-plus", listaId: AUG, luna: "2026-08", tip: "corectie", suma: 181.91, rest: 181.91,
+          scadenta: "2026-09-25", creatLa: "2026-08-21T10:00:00+03:00", descriere: "Corectie dupa recalcularea listei",
+        }));
+      });
+      expect(screen.queryByText("Platit deja din lista lunii")).toBeNull();
+      expect(calcul(/Corectie dupa recalculare/)).toContain("181,91 lei");
+      expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
+      expect(calcul("Total de plata")).toBe("Total de plata900,00 lei");
+      expect(screen.getByRole("button", { name: "Plateste 900,00 lei cu cardul" })).toBeTruthy();
+    });
   });
 
   it("aduna restantele si penalizarile, cu zilele de intarziere si calculul penalizarii", async () => {

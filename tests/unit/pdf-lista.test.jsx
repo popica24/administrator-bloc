@@ -154,3 +154,77 @@ describe("[F30] numele se scurteaza la cuvant, nu la jumatatea lui", () => {
     });
   });
 });
+
+/* Randul unui apartament din tabel: doar pagina cu antetul "De plata" are
+   coloanele financiare (grupul final, [C13]); randul e citit de la stanga
+   la dreapta dupa pozitia x, ca ultima celula sa fie mereu "De plata". */
+function randulApartamentului(pagini, apNumar) {
+  for (const pagina of pagini) {
+    if (!pagina.some((t) => t.text === "De plata")) continue;
+    const cel = pagina.find((t) => t.text === apNumar);
+    if (cel) return pagina.filter((t) => Math.abs(t.y - cel.y) < 0.3).sort((a, b) => a.x - b.x);
+  }
+  throw new Error(`Randul apartamentului ${apNumar} nu a fost gasit in pagina cu "De plata"`);
+}
+
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/* Formateaza ca in AdminBloc.jsx (lei(n, false)): "1.234,56", fara unitate */
+function feiTest(n) {
+  const neg = n < 0;
+  const v = Math.abs(round2(n)).toFixed(2);
+  const [int, dec] = v.split(".");
+  return `${neg ? "-" : ""}${int.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${dec}`;
+}
+
+/* Exporta lista interna a lunii curente dupa ce primul apartament a primit o
+   corectie de recalculare: suma facturata (repartizarile curente) devine
+   `sumaVeche * factor`, in loc de `sumaVeche` inghetata pe datoria de
+   intretinere, fara nicio alta datorie si fara nicio plata. */
+async function listaCuCorectie(factor) {
+  let apNumar;
+  let totalNou;
+  await pornesteApp({
+    email: ADMIN,
+    modifica: (d) => {
+      const lista = d.liste.find((l) => l.stare === "publicata");
+      /* Ap. 17 (Elena): lista pe august neplatita, fara nicio alocare pe
+         datoria de intretinere - deci nicio plata reala care sa se
+         amestece cu corectia injectata mai jos. */
+      const ap = d.apartamente.find((a) => a.numar === "17");
+      apNumar = ap.numar;
+      const dat = d.datorii.find((x) => x.listaId === lista.id && x.apartamentId === ap.id && x.tip === "intretinere");
+      const sumaVeche = dat.suma;
+      totalNou = round2(sumaVeche * factor);
+      d.repartizari.filter((r) => r.apartamentId === ap.id && r.listaId === lista.id).forEach((r, i) => { r.suma = i === 0 ? totalNou : 0; });
+      const corectie = round2(totalNou - sumaVeche);
+      dat.rest = corectie < 0 ? round2(sumaVeche + corectie) : sumaVeche;
+      d.datorii = d.datorii.filter((x) => x.apartamentId !== ap.id || x.id === dat.id);
+      d.datorii.push({
+        id: "dat-pdf-corectie", apartamentId: ap.id, listaId: lista.id, luna: lista.luna, tip: "corectie",
+        suma: corectie, rest: corectie > 0 ? corectie : 0,
+        scadenta: lista.scadenta, creatLa: "2026-08-21T10:00:00+03:00", documentId: null, descriere: "Corectie dupa recalcularea listei",
+      });
+    },
+  });
+  const pdf = prindePdf();
+  await apasa("Exporta lista PDF");
+  const { blob } = pdf.descarcate[pdf.descarcate.length - 1];
+  const pagini = textePdf(await citesteBlob(blob));
+  return { rand: randulApartamentului(pagini, apNumar), totalNou };
+}
+
+/* Audit K5: coloana "De plata" folosea suma - rest, care numara o corectie
+   negativa de recalculare drept plata (F2 o scade direct din restul datoriei
+   de intretinere, fara nicio plata noua). */
+describe("[K5] coloana De plata dupa o recalculare", () => {
+  it("recalculare in minus, fara nicio plata: De plata este totalul curent, nu suma - rest", async () => {
+    const { rand, totalNou } = await listaCuCorectie(0.6);
+    expect(rand[rand.length - 1].text).toBe(feiTest(totalNou));
+  });
+
+  it("recalculare in plus, fara nicio plata: De plata este totalul curent, nu de doua ori corectia", async () => {
+    const { rand, totalNou } = await listaCuCorectie(1.4);
+    expect(rand[rand.length - 1].text).toBe(feiTest(totalNou));
+  });
+});

@@ -350,6 +350,14 @@ const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => 
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
 const explicatiePenalizare = (date, datorieId) => date.penalizari.find((p) => p.datorieId === datorieId) || null;
+/* Corectiile aceleiasi liste (create de o recalculare): datorii sora ale
+   datoriei de intretinere, cu acelasi apartament si aceeasi lista. */
+const corectiiListei = (date, listaId, apId) => date.datorii.filter((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "corectie");
+/* [K5] Suma reala incasata pe o datorie: din alocarile platilor (ca la
+   `incasat` din statisticiAdmin), nu din suma - rest. O corectie negativa
+   scade direct restul datoriei de intretinere fara nicio plata noua (F2), iar
+   "suma - rest" ar numara-o drept plata fantoma. */
+const incasatPeDatorie = (date, datorieId) => suma(date.plati.flatMap((p) => p.alocari.filter((a) => a.datorieId === datorieId)), (a) => a.suma);
 
 /* Randul unui apartament din lista de plata, desfacut in trepte: cheltuielile
    lunii pe grupe, contributiile la fonduri si, doar pentru lista curenta,
@@ -372,18 +380,33 @@ function defalcare(date, apId, listaId) {
   const totalLuna = suma(linii, (l) => l.suma);
 
   const datoriaListei = datoriePeLista(date, listaId, apId);
-  const platitDinLista = datoriaListei ? round2(datoriaListei.suma - datoriaListei.rest) : 0;
+  const corectii = corectiiListei(date, listaId, apId);
+  /* [K5] Incasarea reala pe aceasta lista: alocarile datoriei de intretinere
+     si ale corectiilor ei (o corectie pozitiva poate primi si ea o plata).
+     Cheltuielile lunii (randul 1) arata deja repartizarea curenta, dupa orice
+     recalculare, deci corectiile nu se mai aduna separat - doar ce s-a platit
+     efectiv din ele se scade aici. */
+  const platitDinLista = datoriaListei
+    ? suma([datoriaListei, ...corectii], (d) => incasatPeDatorie(date, d.id))
+    : 0;
+  const corectieSuma = suma(corectii, (d) => d.suma);
   const esteCurenta = listaCurenta(date) && listaCurenta(date).id === listaId;
 
   let datorii = null;
   if (esteCurenta) {
-    const altele = datoriiDeschise(date, apId).filter((d) => !datoriaListei || d.id !== datoriaListei.id);
+    /* [K5] "Datorii din lunile trecute" sunt datorii de pe ALTE liste: o
+       corectie a acestei liste nu e o datorie veche, ci explicatia pentru ce
+       arata randul 1 altfel decat suma inghetata la publicare - are randul ei
+       explicit mai sus, "Corectie dupa recalculare". Fara aceasta excludere,
+       o corectie pozitiva neplatita ar fi numarata de doua ori: o data in
+       cheltuielile lunii (deja recalculate) si o data aici. */
+    const altele = datoriiDeschise(date, apId).filter((d) => d.listaId !== listaId);
     const restante = altele.filter((d) => d.tip !== "penalizare").map((d) => ({
       ...d, zile: Math.max(0, zileIntre(d.scadenta, date.azi)),
     }));
     const penalizari = altele.filter((d) => d.tip === "penalizare").map((d) => ({ ...d, calcul: explicatiePenalizare(date, d.id) }));
     datorii = {
-      restante, penalizari, platitDinLista,
+      restante, penalizari, platitDinLista, corectieSuma,
       total: round2(suma(restante, (d) => d.rest) + suma(penalizari, (d) => d.rest)),
     };
   }
@@ -651,7 +674,10 @@ function construiesteListaPdf(date, listaId, interna) {
       const rest = arataDatorii ? suma(datoriiDeschise(date, ap.id).filter((d) => d.tip !== "penalizare" && d.listaId !== listaId), (d) => d.rest) : 0;
       const pen = arataDatorii ? penalizariDeschise(date, ap.id) : 0;
       const dl = datoriePeLista(date, listaId, ap.id);
-      const platit = dl ? round2(dl.suma - dl.rest) : 0;
+      /* [K5] Ca la ecranul locatarului: "de plata" se calculeaza din
+         incasarile reale (alocarile din registru), nu din suma - rest, care
+         ar numara o corectie a recalcularii drept plata. */
+      const platit = dl ? suma([dl, ...corectiiListei(date, listaId, ap.id)], (d) => incasatPeDatorie(date, d.id)) : 0;
       blocuriTabel.push({
         tip: "rand", marime: MARIME_TABEL_LISTA, fond: i % 2 === 1,
         coloane: randGrup(grupCheltuieli, ultimulGrup, {
@@ -1962,6 +1988,7 @@ function LocatarPlata({ parametri }) {
             <Box gap={6} style={{ backgroundColor: C.paper, borderRadius: R.md, padding: S.md }}>
               <RandCalcul st={`1. Cheltuielile lunii ${monthName(def.lista.luna)}`} dr={lei(cheltuieli.total)} />
               <RandCalcul st="2. Fonduri" dr={lei(fonduri.total)} />
+              {datorii && datorii.corectieSuma !== 0 && <RandCalcul st="Corectie dupa recalculare (inclusa in cheltuielile de mai sus)" dr={lei(datorii.corectieSuma)} />}
               {datorii && datorii.platitDinLista > 0 && <RandCalcul st="Platit deja din lista lunii" dr={lei(-datorii.platitDinLista)} />}
               {datorii && <RandCalcul st="3. Datorii din lunile trecute" dr={lei(datorii.total)} accent={datorii.total > 0} />}
               <Line style={{ marginTop: 2, marginBottom: 2 }} />
