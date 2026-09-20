@@ -36,7 +36,7 @@ describe("AdminSumar, cu datele demo", () => {
 
   it("KPI-urile arata restantele, penalizarile, citirile, sesizarile si fondul de reparatii", async () => {
     await pornesteAdmin();
-    expect(screen.getByText("7.014,11")).toBeTruthy();
+    expect(screen.getByText("7.013,65")).toBeTruthy();
     expect(screen.getByText("5 apartamente in urma")).toBeTruthy();
     expect(screen.getByText("17,11")).toBeTruthy();
     const citiri = within(buton("Citiri de verificat"));

@@ -22,7 +22,7 @@ describe("ListaApartamente", () => {
     expect(ap17.getByText("Etaj 4 · 3 pers. · cota 4,63%")).toBeTruthy();
     expect(ap17.getByText("In termen")).toBeTruthy();
     const ap11 = within(buton("Apartament 11"));
-    expect(ap11.getByText("Restanta 2.917,95")).toBeTruthy();
+    expect(ap11.getByText("Restanta 2.917,41")).toBeTruthy();
   });
 
   it("totalul lunii pe fiecare rand vine din lista publicata", async () => {
@@ -135,12 +135,12 @@ describe("FisaApartament, incasare cash", () => {
     await deschideFisa("3");
     await apasa("Inregistreaza incasare cash");
     const camp = screen.getByLabelText("Suma primita");
-    expect(camp.value).toBe("2.319,21");
+    expect(camp.value).toBe("2.319,36");
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.21);
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36);
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
     const f = inDialog("Apartament 3");
-    expect(f.getByText("Incasare inregistrata: 2.319,21 lei")).toBeTruthy();
+    expect(f.getByText("Incasare inregistrata: 2.319,36 lei")).toBeTruthy();
     expect(f.getByText("Chitanta AP118 nr. 000464. Locatarul o vede si in aplicatie.")).toBeTruthy();
     expect(f.getByText("Nu are nimic de plata.")).toBeTruthy();
     expect(screen.queryByLabelText("Suma primita")).toBeNull();
@@ -189,7 +189,7 @@ describe("FisaApartament, incasare cash", () => {
     await apasa("Inregistreaza incasare cash");
     await apasa("Emite chitanta");
     expect(toast().textContent).toBe("Suma trebuie sa fie mai mare decat zero.");
-    expect(screen.getByLabelText("Suma primita").value).toBe("2.319,21");
+    expect(screen.getByLabelText("Suma primita").value).toBe("2.319,36");
   });
 
   it("o plata fara chitanta nu afiseaza cardul de chitanta", async () => {

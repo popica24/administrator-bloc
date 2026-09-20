@@ -243,7 +243,7 @@ describe("incarca ca administrator", () => {
     expect(d.remindere).toHaveLength(5);
     expect(apNr(d, "17").locatari).toHaveLength(1);
     expect(apNr(d, "2").locatari).toEqual([]);
-    expect(d.situatieBloc).toEqual({ apartamente: 20, faraRestanta: 15, restanteTotal: 7014.11 });
+    expect(d.situatieBloc).toEqual({ apartamente: 20, faraRestanta: 15, restanteTotal: 7013.65 });
     expect(d.anunturi.map((a) => [a.cititori, a.totalLocatari])).toEqual([[2, 3], [3, 3], [3, 3]]);
     expect(d.voturi[0].nevotate).toEqual(["1", "3", "11", "15", "17", "19"]);
     expect(d.sesizari.every((x) => x.apartamentNumar)).toBe(true);

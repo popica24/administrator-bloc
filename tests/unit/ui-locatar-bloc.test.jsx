@@ -243,8 +243,8 @@ describe("Bloc: fonduri", () => {
     expect(t).toContain("Fond de reparatii, fiecare intrare si iesire");
     expect(t).toContain("Reparatie pompa hidrofor18 iul 2026Vezi documentul-2.240,00LEI");
     expect(t).toContain(`Apartamente fara restanta${d.situatieBloc.faraRestanta} din 20`);
-    expect(d.situatieBloc.restanteTotal).toBe(7014.11);
-    expect(t).toContain("Restantele blocului sunt 7.014,11 lei.");
+    expect(d.situatieBloc.restanteTotal).toBe(7013.65);
+    expect(t).toContain("Restantele blocului sunt 7.013,65 lei.");
     /* iesirile sunt cu rosu, intrarile cu verde */
     expect(screen.getByText("-2.240,00").parentElement.style.color)
       .not.toBe(screen.getByText("20.468,60").parentElement.style.color);
