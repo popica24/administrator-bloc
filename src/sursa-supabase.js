@@ -29,6 +29,8 @@ const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
 function traduce(error) {
   const m = (error && (error.message || error.msg)) || "A aparut o eroare.";
   if (/Invalid login credentials/i.test(m)) return "Emailul sau parola nu sunt corecte.";
+  if (/Email not confirmed/i.test(m)) return "Confirma adresa de email inainte sa intri in cont.";
+  if (/you can only request this after/i.test(m)) return "Ai trimis cererea de doua ori prea repede. Mai asteapta putin si incearca din nou.";
   if (/already registered|already been registered/i.test(m)) return "Exista deja un cont cu acest email.";
   const lungime = m.match(/Password should be at least (\d+) characters/i);
   if (lungime) return `Parola trebuie sa aiba cel putin ${lungime[1]} caractere.`;

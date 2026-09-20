@@ -37,6 +37,12 @@ describe("sesiunea", () => {
     await expect(sursaNoua().intra(D14_ADMIN, "parola-gresita")).rejects.toThrow("Emailul sau parola nu sunt corecte.");
   });
 
+  it("intra() inainte de confirmarea emailului spune pe romaneste ce s-a intamplat (C12)", async () => {
+    const email = `neconfirmat-${unic()}@adminbloc.test`;
+    await ok(serviciu.auth.admin.createUser({ email, password: PAROLA_TEST, email_confirm: false }), "cont neconfirmat");
+    await expect(sursaNoua().intra(email, PAROLA_TEST)).rejects.toThrow("Confirma adresa de email inainte sa intri in cont.");
+  });
+
   it("iesi() inchide sesiunea si uita contextul, deci comenzile cer autentificare", async () => {
     const { s } = await intraCa(f.adminEmail);
     await s.iesi();
@@ -88,6 +94,13 @@ describe("inregistreaza()", () => {
   it("un email deja folosit este refuzat pe romaneste", async () => {
     await expect(sursaNoua().inregistreaza({ email: f.adminEmail, parola: PAROLA_TEST, nume: "X" }))
       .rejects.toThrow("Exista deja un cont cu acest email.");
+  });
+
+  it("un dublu-clic pe inregistrare (cerere repetata prea repede) spune pe romaneste ce s-a intamplat (C12)", async () => {
+    const email = `dublu-${unic()}@adminbloc.test`;
+    await sursaNoua().inregistreaza({ email, parola: PAROLA_TEST, nume: "X" });
+    await expect(sursaNoua().inregistreaza({ email, parola: PAROLA_TEST, nume: "X" }))
+      .rejects.toThrow("Ai trimis cererea de doua ori prea repede. Mai asteapta putin si incearca din nou.");
   });
 
   it("o parola prea scurta este refuzata pe romaneste, cu lungimea ceruta de server", async () => {
