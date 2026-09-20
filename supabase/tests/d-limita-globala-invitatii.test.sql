@@ -16,7 +16,7 @@
 -- pe cont.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 create or replace function private.este_serviciu()
 returns boolean
@@ -97,7 +97,8 @@ begin
   values (pg_temp.fx('ap1'), 'HCDBUNAA', 'membru_familie', now() + interval '30 days'),
          (pg_temp.fx('ap1'), 'HCDBUNAB', 'membru_familie', now() + interval '30 days'),
          (pg_temp.fx('ap1'), 'HCDBUNAC', 'membru_familie', now() + interval '30 days'),
-         (pg_temp.fx('ap1'), 'HCDBUNAD', 'membru_familie', now() + interval '30 days');
+         (pg_temp.fx('ap1'), 'HCDBUNAD', 'membru_familie', now() + interval '30 days'),
+         (pg_temp.fx('ap1'), 'HCDBUNAE', 'membru_familie', now() + interval '30 days');
 
   perform set_config('fx.g1', pg_temp.utilizator('Atacator 1')::text, true);
   perform set_config('fx.g2', pg_temp.utilizator('Atacator 2')::text, true);
@@ -107,6 +108,7 @@ begin
   perform set_config('fx.onest', pg_temp.utilizator('Om Cinstit')::text, true);
   perform set_config('fx.onest2', pg_temp.utilizator('Alt Om Cinstit')::text, true);
   perform set_config('fx.onest3', pg_temp.utilizator('Al Treilea Om Cinstit')::text, true);
+  perform set_config('fx.onest4', pg_temp.utilizator('Al Patrulea Om Cinstit')::text, true);
 end;
 $$;
 
@@ -157,6 +159,19 @@ select is(
   identitate.foloseste_invitatie('HCDBUNAA') ->> 'eroare',
   'S-au incercat prea multe coduri gresite de la aceasta conexiune. Mai asteapta un sfert de ora si incearca din nou.',
   'foloseste_invitatie: peste plafonul pe adresa, si un cod bun este refuzat de la acea adresa');
+reset role;
+
+-- Un cont nou, curat, incearca de la aceeasi adresa reala (203.0.113.7,
+-- blocata mai sus), dar cu un prefix inventat inaintea ei, ca sa para o
+-- adresa noua: proxy-ul de incredere adauga mereu adresa reala la coada, deci
+-- prefixul falsificat nu cumpara incercari noi si contul ramane blocat.
+set local role authenticated;
+select pg_temp.dela('9.9.9.9, 203.0.113.7');
+select pg_temp.ca('onest4');
+select is(
+  identitate.foloseste_invitatie('HCDBUNAE') ->> 'eroare',
+  'S-au incercat prea multe coduri gresite de la aceasta conexiune. Mai asteapta un sfert de ora si incearca din nou.',
+  'foloseste_invitatie: un prefix falsificat nu cumpara incercari noi (se numara ultimul element, adresa reala)');
 reset role;
 
 -- Omul cinstit, de pe alta adresa, trece: platforma nu se blocheaza.
@@ -211,10 +226,11 @@ select is(
   'foloseste_invitatie: dupa un sfert de ora, adresa se elibereaza');
 reset role;
 
--- identitate.adresa_cererii: primul element din x-forwarded-for, sau null
+-- identitate.adresa_cererii: ultimul element din x-forwarded-for (cel adaugat
+-- de proxy-ul de incredere), nu primul (scris de client si deci falsificabil).
 select pg_temp.dela('203.0.113.7, 70.41.3.18, 150.172.238.178');
-select is(identitate.adresa_cererii(), '203.0.113.7',
-  'adresa_cererii: din lantul de proxy-uri ia clientul, primul element');
+select is(identitate.adresa_cererii(), '150.172.238.178',
+  'adresa_cererii: din lantul de proxy-uri ia ultimul element, cel de incredere');
 select pg_temp.fara_adresa();
 select is(identitate.adresa_cererii(), null,
   'adresa_cererii: fara antete, adresa nu se cunoaste');
