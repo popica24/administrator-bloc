@@ -130,7 +130,11 @@ describe("D14, administratorul (doar citire)", () => {
     expect(date.furnizori.length).toBeGreaterThan(0);
     expect(date.furnizori[0]).toEqual(expect.objectContaining({ id: expect.any(String), denumire: expect.any(String), metoda: expect.any(String) }));
     expect(date.remindere.map((r) => r.tip).sort()).toEqual(["adunare_generala", "citire_contoare", "lista_publicata", "plata", "restanta"]);
-    expect(date.anunturi.every((a) => typeof a.cititori === "number" && a.totalLocatari === 3)).toBe(true);
+    /* numarul de locatari cu cont se citeste din baza: fixture-urile testelor
+       end-to-end adauga si ele locatari in blocul demonstrativ */
+    const locatari = await ok(db("identitate").from("locatari").select("profil_id").eq("bloc_id", blocId).is("activ_pana", null));
+    const cuCont = new Set(locatari.map((l) => l.profil_id)).size;
+    expect(date.anunturi.every((a) => typeof a.cititori === "number" && a.totalLocatari === cuCont)).toBe(true);
     expect(date.voturi[0].nevotate).toEqual(expect.any(Array));
     expect(typeof date.voturi[0].optiuni[0].cote).toBe("number");
     expect(date.adunari[0].totalApartamente).toBe(20);

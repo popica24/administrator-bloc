@@ -179,7 +179,7 @@ test.describe("erori care raman pe ecran", () => {
     expect(dupa.count).toBe(inainte.count);
   });
 
-  test.fixme("[F6] refuzul unei iesiri din fond lasa si el motivul pe ecran", async ({ page }) => {
+  test("[F6] refuzul unei iesiri din fond lasa si el motivul pe ecran", async ({ page }) => {
     /* [F6] Toate celelalte comenzi de bani au primit, la reparatia F17, un
        mesaj care ramane pe ecran: incasarea cash, corectia fisei, cotele,
        plata cu cardul si publicarea folosesc componenta <Eroare>. Iesirea din
@@ -197,9 +197,13 @@ test.describe("erori care raman pe ecran", () => {
     });
     await buton(page, "Inregistreaza iesirea").click();
     const panou = page.getByRole("dialog", { name: "Iesire din fond" });
-    await expect(panou.locator("text=/fond|sold/i").first()).toBeVisible({ timeout: 20000 });
+    /* mesajul sursei: "Fondul are X lei; o iesire de Y lei l-ar duce pe minus." */
+    const motiv = panou.getByText(/l-ar duce pe minus/i).first();
+    await expect(motiv).toBeVisible({ timeout: 20000 });
+    /* dupa ce toastul de 3,4 secunde dispare, motivul e inca pe ecran */
     await page.waitForTimeout(5000);
-    await expect(panou.getByText(/nu poate|nu ajung|sold/i).first()).toBeVisible();
+    await expect(page.locator(".ab-toast")).toHaveCount(0);
+    await expect(motiv).toBeVisible();
   });
 });
 
@@ -229,7 +233,7 @@ test.describe("panoul: paza si focusul", () => {
       .toContain("Sesizare noua");
   });
 
-  test.fixme("[F5] Shift+Tab imediat dupa deschidere nu scoate focusul din panou", async ({ page }) => {
+  test("[F5] Shift+Tab imediat dupa deschidere nu scoate focusul din panou", async ({ page }) => {
     /* [F5] Capcana de Tab (AdminBloc.jsx:1016-1028) compara focusul curent cu primul
        si cu ultimul element focalizabil din panou. La deschidere focusul este
        pe panoul insusi (tabIndex -1), care nu intra in lista, deci niciuna din

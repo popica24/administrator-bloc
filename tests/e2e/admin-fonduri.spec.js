@@ -167,7 +167,7 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
     expect(await sold(reparatii.id)).toBe(inainte);
   });
 
-  test.fixme("[F3] refuzul pe sold nu lasa documentul orfan la avizierul de Acte", async ({ page }) => {
+  test("[F3] refuzul pe sold nu lasa documentul orfan la avizierul de Acte", async ({ page }) => {
     /* [F3] Reparatia C6 verifica ieftin suma, descrierea si data inainte de a
        incarca documentul, dar verificarea care conteaza — soldul fondului nu
        poate trece sub zero — este in RPC, dupa upload. Cand RPC-ul refuza,
@@ -191,6 +191,8 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
       .select("id, vizibil_locatarilor").eq("titlu", descriere);
     expect(docuri, "documentul unei iesiri refuzate ramane in baza").toHaveLength(0);
 
+    /* panoul ramane deschis, cu motivul refuzului; se inchide inainte de iesire */
+    await page.getByRole("button", { name: "Inchide" }).click();
     await buton(page, "Iesi").click();
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");

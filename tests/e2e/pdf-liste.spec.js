@@ -86,7 +86,7 @@ test.describe("exportul intern al administratorului", () => {
     expect(text).toContain("Document intern, uz administrativ");
   });
 
-  test.fixme("[F4] exportul intern de pe Sumar nu se cheama la fel ca cel de avizier", async ({ page }) => {
+  test("[F4] exportul intern de pe Sumar nu se cheama la fel ca cel de avizier", async ({ page }) => {
     /* [F4] Butonul "Exporta lista PDF" de pe Sumar descarca varianta interna
        (AdminBloc.jsx:2652 foloseste listaPdfIntern), dar sub numele
        `lista-plata-2026-08.pdf` — exact numele fisierului de avizier de la
