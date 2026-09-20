@@ -5,7 +5,7 @@
 -- scrise pentru comportamentul corect si marcate todo.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(100);
+select plan(103);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -620,8 +620,15 @@ select throws_ok(
   '[A3] refuza luna unei liste deja publicate');
 
 -- O citire deja inregistrata pe luna urmatoare fixeaza plafonul de sus:
--- indexul de pe luna curenta nu poate trece de indexul de pornire al lunii
--- urmatoare, altfel consumul lunii urmatoare ar iesi negativ.
+-- indexul de pe luna curenta nu poate trece de indexul CHIAR INREGISTRAT
+-- (index_curent, citit efectiv de pe cadran) al lunii urmatoare — atat cat
+-- e imposibil ca un contor sa mearga inapoi. [J7] Plafonul nu mai e
+-- index_anterior-ul inghetat al lunii urmatoare: acela poate fi stale (o
+-- corectura legitima in sus a lunii curente il face oricum invechit), iar
+-- vechiul cod refuza corectura fara nicio cale de iesire. Acum corectura e
+-- acceptata cat timp nu trece de indexul real al lunii urmatoare, iar
+-- contorizare.recalculeaza_viitorul() (J1) propaga noul index mai departe,
+-- exact ca la contoarele de apartament.
 reset role;
 select pg_temp.serviciu();
 insert into contorizare.citiri (contor_id, tip, bloc_id, luna, index_anterior, index_curent, sursa, stare)
@@ -629,9 +636,23 @@ values (pg_temp.fx('cg'), 'rece', pg_temp.fx('bloc'), (pg_temp.luna() + interval
 set local role authenticated;
 select pg_temp.ca('admin');
 select throws_ok(
-  $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(), 'rece', 1046)$$,
-  'Indexul nou (1046) nu poate fi mai mare decat indexul de pornire al lunii urmatoare (1045.000).',
-  '[A3] refuza un index mai mare decat indexul de pornire al lunii urmatoare');
+  $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(), 'rece', 1051)$$,
+  'Indexul nou (1051) nu poate fi mai mare decat indexul contorului general de pe luna urmatoare (1050.000).',
+  '[J7] refuza un index mai mare decat indexul chiar inregistrat pe luna urmatoare');
+
+select lives_ok(
+  $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(), 'rece', 1048)$$,
+  '[J7] o corectura in sus, sub indexul chiar inregistrat al lunii urmatoare, e acceptata');
+
+select is(
+  (select index_anterior from contorizare.citiri where contor_id = pg_temp.fx('cg') and luna = (pg_temp.luna() + interval '1 month')::date),
+  1048.000::numeric,
+  '[J7] cascada actualizeaza index_anterior al lunii urmatoare la noul index corectat');
+
+select is(
+  (select consum from contorizare.citiri where contor_id = pg_temp.fx('cg') and luna = (pg_temp.luna() + interval '1 month')::date),
+  2.000::numeric,
+  '[J7] consumul lunii urmatoare se recalculeaza (1050 - 1048), nu mai ramane inghetat la 5 (1050 - 1045)');
 
 select throws_ok(
   $$select contorizare.index_anterior(pg_temp.fx('c1'), pg_temp.luna())$$,
