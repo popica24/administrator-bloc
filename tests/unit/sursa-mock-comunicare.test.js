@@ -261,10 +261,12 @@ describe("remindere", () => {
     ]);
   });
 
-  it("[K5] reminderul de plata nu merge la cine are doar datorii deja scadente", async () => {
+  it("[K5, paritate] reminderul de plata ajunge si la restantieri, cu instiintarea de restanta in loc de 'se apropie termenul'", async () => {
     ceasDemo(new Date("2026-09-26T09:00:00"));
     const { s } = await ca(ADMIN);
-    expect(await s.trimiteReminder("plata")).toEqual({ apartamente: 0, destinatari: 0 });
+    expect(await s.trimiteReminder("plata")).toEqual({ apartamente: 6, destinatari: 2 });
+    const { d } = await ca(ILIE, s);
+    expect(d.notificari[0]).toMatchObject({ tip: "restanta", titlu: "Instiintare de plata" });
   });
 
   it("locatarul nu poate trimite remindere", async () => {

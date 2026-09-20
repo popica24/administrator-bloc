@@ -1219,27 +1219,38 @@ export function creeazaSursaMock() {
       const azi = aziIso();
       const lunaAzi = lunaDe(azi);
       const apBloc = db.apartamente.filter((a) => a.blocId === bloc.id);
+      const areSold = (a) => db.datorii.some((d) => d.apartamentId === a.id && restDatorie(db, d) > 0);
+      const esteRestant = (a) => db.datorii.some((d) => d.apartamentId === a.id && d.scadenta < azi && restDatorie(db, d) > 0);
+      const texteRestanta = ["Instiintare de plata", "Aveti sume neachitate trecute de scadenta. Va rugam sa le achitati ca sa opriti penalizarile."];
       let tinta = [];
+      /* [K5] fiecare apartament cu sold, cu textul potrivit pentru fiecare */
+      let mesajPentru = () => ["Mesaj de la administratie", ""];
       if (tip === "citire_contoare") {
         tinta = apBloc.filter((a) => !db.citiri.some((c) => c.apartamentId === a.id && c.luna === lunaAzi && c.stare !== "respinsa"));
+        mesajPentru = () => ["Transmite indexul la apa", `Te rugam sa transmiti indexul contoarelor pana pe ${db.setari.ziLimitaCitire}.`];
       } else if (tip === "restanta") {
-        tinta = apBloc.filter((a) => db.datorii.some((d) => d.apartamentId === a.id && d.scadenta < azi && restDatorie(db, d) > 0));
+        tinta = apBloc.filter(esteRestant);
+        mesajPentru = () => texteRestanta;
+      } else if (tip === "plata") {
+        /* [paritate] reminderul de plata pleaca la orice apartament cu sold:
+           cel deja restant primeste instiintarea de restanta ("se apropie
+           termenul" i-ar contrazice realitatea), nu mai e exclus din trimitere. */
+        tinta = apBloc.filter(areSold);
+        mesajPentru = (a) => (esteRestant(a) ? texteRestanta : ["Reamintire de plata", "Se apropie termenul de plata al intretinerii."]);
       } else {
-        /* [K5] reminderul de plata ("se apropie termenul") nu se trimite la
-           cine e deja restant: acela primeste instiintarea de restanta, nu
-           un mesaj care contrazice realitatea lui. */
-        tinta = apBloc.filter((a) => db.datorii.some((d) => d.apartamentId === a.id && d.scadenta >= azi && restDatorie(db, d) > 0));
+        /* Un tip necunoscut (nefolosit de ecrane) tot ajunge la apartamentele
+           cu sold, cu un text generic, ca sa nu ramana o comanda oarba. */
+        tinta = apBloc.filter(areSold);
       }
-      const texte = {
-        citire_contoare: ["Transmite indexul la apa", `Te rugam sa transmiti indexul contoarelor pana pe ${db.setari.ziLimitaCitire}.`],
-        restanta: ["Instiintare de plata", "Aveti sume neachitate trecute de scadenta. Va rugam sa le achitati ca sa opriti penalizarile."],
-        plata: ["Reamintire de plata", "Se apropie termenul de plata al intretinerii."],
-      }[tip] || ["Mesaj de la administratie", ""];
       let n = 0;
-      tinta.forEach((a) => locatariActivi(db, a.id).forEach((l) => {
-        notifica(db, { profilId: l.profilId, asociatieId: bloc.asociatieId, tip, titlu: texte[0], corp: texte[1] });
-        n += 1;
-      }));
+      tinta.forEach((a) => {
+        const [titlu, corp] = mesajPentru(a);
+        const tipReal = tip === "plata" && esteRestant(a) ? "restanta" : tip;
+        locatariActivi(db, a.id).forEach((l) => {
+          notifica(db, { profilId: l.profilId, asociatieId: bloc.asociatieId, tip: tipReal, titlu, corp });
+          n += 1;
+        });
+      });
       return { apartamente: tinta.length, destinatari: n };
     },
 

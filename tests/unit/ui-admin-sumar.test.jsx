@@ -166,13 +166,13 @@ describe("AdminSumar, cu datele demo", () => {
     expect(toast().textContent).toBe("Nu s-a putut trimite");
   });
 
-  it("[K5] reminderul manual 'se apropie termenul' nu merge la cei deja restanti", async () => {
-    /* Pe 26 septembrie toate datoriile sunt trecute de scadenta: nu se apropie niciun termen */
+  it("[K5, paritate] reminderul de plata ajunge si la restantieri, cu instiintarea in loc de 'se apropie termenul'", async () => {
+    /* Pe 26 septembrie toate datoriile sunt trecute de scadenta: toti primesc instiintarea */
     const { sursa } = await pornesteAdmin({ zi: new Date("2026-09-26T09:00:00") });
     const spion = vi.spyOn(sursa, "trimiteReminder");
     await apasa("Trimite reminder de plata");
     const r = await spion.mock.results[0].value;
-    expect(r.apartamente).toBe(0);
+    expect(r.apartamente).toBe(6);
   });
 
   it("[G2/F4] exporta lista publicata ca PDF, cu numele fisierului de uz intern si o mentiune vizibila", async () => {
