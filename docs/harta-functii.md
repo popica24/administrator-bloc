@@ -1,7 +1,7 @@
 # Harta functiilor AdminBloc
 
 Tot ce face aplicatia, pe roluri si ecrane, cu regulile de business si locul din cod unde sta
-fiecare functie. Starea la 2026-09-19, pe ramura `supabase-administratii-locale`.
+fiecare functie. Starea la 2026-09-20, pe ramura `supabase-administratii-locale`.
 
 Cum se citeste:
 - **UI** = componenta din `src/AdminBloc.jsx`; **Comanda** = metoda din `src/sursa-supabase.js`
@@ -88,13 +88,18 @@ autentificare, modul demonstrativ afiseaza conturile de test.
   4. `fara_apartament`: altfel.
 
 ### 2.2 Locatar nou, cu cod de invitatie
-- **UI:** "Am un cod de la administrator": codul, numele, telefonul, emailul si parola (minim 6
-  caractere).
-- **Flux:** `inregistreaza()` creeaza contul Auth. Triggerul `identitate.la_cont_nou` creeaza
-  profilul. Apoi `folosesteInvitatie(cod)` → `identitate.foloseste_invitatie`.
+- **UI:** "Am un cod de la administrator": codul, numele, telefonul, emailul si parola (minim 10
+  caractere, cu litere mari, litere mici si cifre).
+- **Flux:** `inregistreaza()` creeaza contul Auth. Adresa de email trebuie confirmata, deci
+  inregistrarea nu deschide sesiune: ecranul arata "Confirma adresa de email" si pastreaza codul.
+  Triggerul `identitate.la_cont_nou` creeaza profilul. Dupa confirmare si intrare,
+  `folosesteInvitatie(cod)` → `identitate.foloseste_invitatie`.
 - **Reguli:** codul are 8 caractere din alfabetul fara caractere usor de confundat
   (`A–Z` fara I/O, `2–9`), se foloseste o singura data, expira in 30 de zile si poate fi revocat.
   Mesajul de eroare: "Codul nu este valabil. Cere administratorului un cod nou."
+- **Impotriva ghicirii codurilor:** 5 incercari gresite pe cont la 15 minute, plus un plafon
+  global de 20 de incercari gresite in acelasi interval, ca deschiderea de conturi noi sa nu
+  cumpere incercari (`identitate.incercari_invitatii`).
 - **Efect:** un rand in `identitate.locatari` cu calitatea din invitatie (proprietar, chirias sau
   membru al familiei).
 
@@ -537,10 +542,13 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | **Contexte (DDD)** | O schema Postgres pe context: `organizare`, `identitate`, `intretinere`, `contorizare`, `financiar`, `sesizari`, `guvernanta`, `comunicare`, `nomenclator`. Neexpuse: `private`, `evenimente`, `audit`. Modelul este in `docs/schema-propunere.md`. |
 | **RLS** | Citirile trec prin helperii din `private` (`blocuri_administrate`, `apartamentele_mele`, `blocuri_conduse`, …). Conducerea (administrator, presedinte, cenzor) vede tot blocul; locatarul vede apartamentul lui plus ce e comun blocului. Scrierile trec prin functii `security definer`, una pe agregat. |
 | **Storage** | `documente` (10 MB, pdf/jpeg/png/webp), `poze` (1 MB, jpeg/webp), `atestate` (5 MB). Toate private, cu URL semnat la deschidere. |
-| **Audit** | `audit.jurnal`: fiecare modificare pe apartamente, persoane, locatari, administratori, citiri, liste, cheltuieli, datorii, plati, miscari de fond si sesizari, cu starea veche si noua si autorul. |
+| **Audit** | `audit.jurnal`: fiecare modificare pe apartamente, persoane, locatari, administratori, citiri, liste, cheltuieli, datorii, plati, miscari de fond, sesizari, voturi (cu optiunile si voturile exprimate), documente, invitatii si chitante, cu starea veche si noua si autorul. |
 | **Nomenclator** | `nomenclator.administratii_locale`: judete, municipii, orase, comune si sectoare, cu codul SIRUTA. Contine doar randurile demo. |
 | **PDF** | `src/pdf.js`: generator PDF 1.4 fara librarii, cu Helvetica si WinAnsi (de aici textele fara diacritice). Produce chitanta si lista pentru avizier. |
 | **Fotografii** | Micsorare locala la 1600 px JPEG inainte de upload (`micsoreazaPoza`) |
+| **Autentificare** | Parola de minim 10 caractere, cu litere mari, mici si cifre; adresa de email se confirma; schimbarea parolei cere autentificare recenta; sesiunea expira la 24 de ore, sau dupa 8 ore de inactivitate (`supabase/config.toml`). |
+| **Secretele din productie** | `SITE_URL` (singura adresa careia Edge Functions ii raspund cu antete CORS) si `PROCESATOR_SECRET` (semneaza confirmarile de plata). Vezi README, "Punerea in productie". |
+| **Date personale** | `identitate.anonimizeaza_profil` (doar dezvoltatorul) inlocuieste numele, emailul si telefonul, inchide legaturile si mandatele, revoca invitatiile nefolosite si sterge sesiunile, pastrand randurile contabile. |
 | **UI** | O coloana de telefon (maxim 520 px), flexbox, primitivele din sectiunea 5 (portabile pe React Native), 5 taburi cu badge-uri, toast dupa fiecare comanda, tinte mari la atingere pentru utilizatori de peste 50 de ani |
 | **Ciclul unei comenzi** | `cmd()` in `AdminBloc`: apelul catre sursa, reincarcarea datelor, toastul; ecranul primeste `{ ok, rezultat }` |
 
@@ -571,6 +579,9 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `inregistreazaNumerar` | admin | `financiar.inregistreaza_plata_numerar` |
 | `trimiteInstiintare` | admin | `comunicare.trimite_instiintare` |
 | `schimbaPersoane` | admin | insert pe `organizare.apartamente_persoane` |
+| `schimbaFisaApartament` | admin | `organizare.schimba_fisa_apartament` (proprietar, suprafata, etaj, scutire de lift, corectii mici de cota) |
+| `schimbaCoteleBlocului` | admin | `organizare.schimba_cotele_blocului` (toate cotele deodata, cu verificarea sumei la 100) |
+| `inregistreazaIesireFond` | admin | Storage `documente` + `financiar.inregistreaza_iesire_fond` (suma negativa, document obligatoriu, soldul nu poate trece sub zero) |
 | `invitaLocatar` | admin | `identitate.invita_locatar` |
 | `inchideAcces` | admin | `identitate.inchide_acces_locatar` |
 | `valideazaCitire` | admin | `contorizare.valideaza_citire` |
