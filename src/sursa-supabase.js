@@ -496,6 +496,16 @@ export function creeazaSursaSupabase(url, cheie) {
       let dubluQ = intr.from("cheltuieli").select("id").eq("lista_id", listaId).eq("cod", cod);
       if (cid) dubluQ = dubluQ.neq("id", cid);
       if ((await ok(dubluQ)).length > 0) throw new Error(`Codul ${cod} exista deja pe lista.`);
+      /* [P4] La editare, randul se verifica inainte de a urca scanul, la fel
+         ca la codul dublat mai sus si ca la iesirea din fond (C6): altfel un
+         scan urca deja in comunicare.documente, vizibil locatarilor la Acte,
+         pentru o cheltuiala care pana la urma nu s-a salvat (randul fondului
+         de reparatii sau un rand disparut intre incarcare si salvare). */
+      if (cid) {
+        const rand = await ok(intr.from("cheltuieli").select("tip").eq("id", cid).maybeSingle());
+        if (!rand) throw new Error("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
+        if (rand.tip !== "factura") throw new Error("Randul fondului de reparatii nu se modifica din formularul de factura.");
+      }
       let fid = furnizorId;
       if (!fid) {
         const f = await ok(intr.from("furnizori").insert({

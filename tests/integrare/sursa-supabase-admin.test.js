@@ -116,6 +116,31 @@ describe("lista lunii: facturi", () => {
       .rejects.toThrow("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
   });
 
+  /* [P4] Randul se verifica inainte de a urca scanul (acelasi tipar ca la
+     iesirea din fond, C6): altfel scanul ajunge deja in comunicare.documente,
+     vizibil locatarilor la Acte, pentru o cheltuiala care pana la urma nu
+     s-a salvat. */
+  it("[P4] randul fondului cu scan atasat: scanul nu ramane orfan la Acte", async () => {
+    const [fond] = await ok(db("intretinere").from("cheltuieli").select("*").eq("lista_id", listaId).eq("tip", "fond_reparatii"));
+    const inainte = await ok(db("comunicare").from("documente").select("id").eq("asociatie_id", f.asociatieId));
+    await expect(adm.salveazaCheltuiala({
+      id: fond.id, listaId, furnizorId: st.salubris.id, categorie: "Fond de reparatii", cod: "C9", suma: 170, metoda: "cota", fisier: pdf("scan-fond.pdf"),
+    })).rejects.toThrow("Randul fondului de reparatii nu se modifica din formularul de factura.");
+    const dupa = await ok(db("comunicare").from("documente").select("id").eq("asociatie_id", f.asociatieId));
+    expect(dupa).toHaveLength(inainte.length);
+  });
+
+  it("[P4] rand disparut cu scan atasat: scanul nu ramane orfan la Acte", async () => {
+    const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Va disparea", cod: "C11", suma: 7, metoda: "apartamente" });
+    await ok(db("intretinere").from("cheltuieli").delete().eq("id", id));
+    const inainte = await ok(db("comunicare").from("documente").select("id").eq("asociatie_id", f.asociatieId));
+    await expect(adm.salveazaCheltuiala({
+      id, listaId, furnizorId: st.salubris.id, categorie: "Va disparea", cod: "C11", suma: 8, metoda: "apartamente", fisier: pdf("scan-disparut.pdf"),
+    })).rejects.toThrow("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
+    const dupa = await ok(db("comunicare").from("documente").select("id").eq("asociatie_id", f.asociatieId));
+    expect(dupa).toHaveLength(inainte.length);
+  });
+
   it("[L11] dupa un cod duplicat, reincercarea cu acelasi furnizor nou si alt cod reuseste", async () => {
     const nume = `Gaz Test ${unic()}`;
     await expect(adm.salveazaCheltuiala({ listaId, furnizorNou: nume, categorie: "Gaz", cod: "C2", suma: 5, metoda: "cota" })).rejects.toThrow("Codul C2 exista deja pe lista.");
