@@ -4247,12 +4247,20 @@ export default function AdminBloc() {
       const val = toate[nume];
       if (!val || !val.esteComanda) { protejate[nume] = val; return; }
       protejate[nume] = async (...args) => {
-        if (inCurs.current.has(nume)) return { ok: false, inCurs: true, mesaj: null };
-        inCurs.current.add(nume);
+        /* [C10] Cheia include argumentele: "Instiintare" pe apartamentul 3 nu
+           trebuie sa blocheze "Instiintare" pe apartamentul 5, apasat imediat
+           dupa. Doar aceeasi comanda cu aceleasi argumente se blocheaza. */
+        const cheie = `${nume}:${JSON.stringify(args)}`;
+        if (inCurs.current.has(cheie)) {
+          /* [E6] O reintrare blocata trebuie sa se simta, nu sa fie tacuta */
+          toastMsg("Asteapta sa se termine actiunea anterioara.");
+          return { ok: false, inCurs: true, mesaj: null };
+        }
+        inCurs.current.add(cheie);
         try {
           return await val(...args);
         } finally {
-          inCurs.current.delete(nume);
+          inCurs.current.delete(cheie);
         }
       };
     });

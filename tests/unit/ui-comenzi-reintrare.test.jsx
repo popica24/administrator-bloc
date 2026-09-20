@@ -5,7 +5,7 @@ import { act, fireEvent, screen } from "@testing-library/react";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 import { pornesteApp, ADMIN, LOCATAR } from "./ajutor.jsx";
-import { apasa, scrie, tab } from "./ui-baza-ajutor.jsx";
+import { apasa, scrie, tab, toast } from "./ui-baza-ajutor.jsx";
 
 /* O promisiune pe care testul o rezolva cand vrea, ca sa tina comanda in aer */
 function amanat() {
@@ -123,6 +123,43 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     await apasa("Bec ars pe scara");
     await apasaDeDouaOri("Trimite sesizarea");
     expect(spion).toHaveBeenCalledTimes(1);
+    await termina();
+  });
+
+  /* [C10] paza de reintrare cheia doar dupa numele comenzii: "Instiintare"
+     pe apartamentul 3 tinea blocata si "Instiintare" pe apartamentul 5,
+     apasat imediat dupa, in aceeasi secunda. */
+  it("[C10] Instiintare pe un apartament nu blocheaza Instiintare pe alt apartament", async () => {
+    const { sursa } = await pornesteApp({ email: ADMIN });
+    const apeluri = [];
+    const rezolva = [];
+    vi.spyOn(sursa, "trimiteInstiintare").mockImplementation((ap) => {
+      apeluri.push(ap);
+      return new Promise((r) => rezolva.push(r));
+    });
+    const butoane = screen.getAllByRole("button").filter((b) => b.textContent === "Instiintare");
+    expect(butoane.length).toBeGreaterThan(1);
+    await act(async () => {
+      fireEvent.click(butoane[0]);
+      fireEvent.click(butoane[1]);
+    });
+    expect(apeluri).toHaveLength(2);
+    expect(apeluri[0]).not.toBe(apeluri[1]);
+    await act(async () => { rezolva.forEach((r) => r({})); });
+  });
+
+  /* [E6] cand paza chiar blocheaza a doua apasare (aceeasi comanda, aceleasi
+     argumente), omul trebuie sa afle de ce nu s-a intamplat nimic. */
+  it("[E6] o comanda blocata anunta omul, nu tace", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "publicaAnunt");
+    await tab("Comunicare");
+    await apasa("Scrie un anunt");
+    await scrie("Titlu", "Curatenie generala");
+    await scrie("Continut", "Sambata la ora 10");
+    await apasaDeDouaOri("Publica anuntul");
+    expect(spion).toHaveBeenCalledTimes(1);
+    expect(toast()).toBeTruthy();
+    expect(toast().textContent).not.toBe("");
     await termina();
   });
 
