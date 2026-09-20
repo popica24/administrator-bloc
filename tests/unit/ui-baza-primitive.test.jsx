@@ -235,6 +235,50 @@ describe("Sheet, Field, Picker si pozele alese", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  /* [C18] Sheet-ul nu avea management de focus: la inchidere focusul se
+     pierdea (ramanea pe body), iar Tab putea iesi din panou catre restul
+     ecranului din spate, ascuns dupa scrim. */
+  it("[C18] la inchidere, focusul revine la elementul care a deschis sheet-ul", async () => {
+    await pornesteApp({ email: LOCATAR });
+    await tab("Sesizari");
+    const declansator = buton("Sesizare noua");
+    declansator.focus();
+    await apasa("Sesizare noua");
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await apasa("Inchide");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(declansator);
+  });
+
+  it("[C18] Tab si Shift+Tab nu ies din sheet, se rotesc la celalalt capat", async () => {
+    await pornesteApp({ email: LOCATAR });
+    await tab("Sesizari");
+    await apasa("Sesizare noua");
+    const dialog = screen.getByRole("dialog");
+    const focalizabile = [...dialog.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]):not([type="file"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )];
+    expect(focalizabile.length).toBeGreaterThan(1);
+    const prim = focalizabile[0];
+    const ultim = focalizabile[focalizabile.length - 1];
+
+    ultim.focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(prim);
+
+    prim.focus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(ultim);
+
+    /* Tab si Shift+Tab in afara capetelor nu fac nimic (Tab-ul normal preia) */
+    prim.focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(prim);
+    ultim.focus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(ultim);
+  });
+
   it("campul pe mai multe randuri, lista de categorii si poza aleasa", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:sesizare");
     await pornesteApp({ email: LOCATAR });

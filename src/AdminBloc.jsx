@@ -942,13 +942,46 @@ function Switch({ value, onChange, label }) {
   );
 }
 
+/* Elementele pe care le poate atinge Tab-ul dintr-un sheet. Fisierul ales cu
+   AlegeFisier este mereu un <input type="file"> ascuns (display: none):
+   omul apasa butonul vizibil, nu ajunge niciodata cu Tab pe el. */
+const SELECTOR_FOCALIZABIL = 'a[href], button:not([disabled]), input:not([disabled]):not([type="file"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /* Panou care urca de jos. Este singura miscare de tip slide din aplicatie. */
 /* `pazit` inseamna ca formularul are ceva scris: atunci o atingere pe fundal
    nu mai inchide panoul si nu mai arunca ce a scris omul. */
 function Sheet({ open, onClose, titlu, pazit, children }) {
   const panou = React.useRef(null);
-  useEffect(() => { if (open && panou.current) panou.current.focus(); }, [open]);
+  /* [C18] Focusul dinainte de deschidere, ca sa revina acolo la inchidere,
+     si o capcana de Tab: fara ea, tastatura ajunge in ecranul din spate,
+     ascuns dupa scrim. */
+  const inainteDeSheet = React.useRef(null);
+  useEffect(() => {
+    if (open) {
+      inainteDeSheet.current = document.activeElement;
+      panou.current.focus();
+    } else if (inainteDeSheet.current) {
+      inainteDeSheet.current.focus();
+      inainteDeSheet.current = null;
+    }
+  }, [open]);
   if (!open) return null;
+  /* Sheet-ul are mereu macar butonul "Inchide" (tabindex 0) in antet, deci
+     lista de mai jos nu este niciodata goala. */
+  const peTasta = (e) => {
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key !== "Tab") return;
+    const focalizabile = Array.from(panou.current.querySelectorAll(SELECTOR_FOCALIZABIL));
+    const prim = focalizabile[0];
+    const ultim = focalizabile[focalizabile.length - 1];
+    if (e.shiftKey && document.activeElement === prim) {
+      e.preventDefault();
+      ultim.focus();
+    } else if (!e.shiftKey && document.activeElement === ultim) {
+      e.preventDefault();
+      prim.focus();
+    }
+  };
   return (
     <div
       className="ab-fade"
@@ -966,7 +999,7 @@ function Sheet({ open, onClose, titlu, pazit, children }) {
         ref={panou}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+        onKeyDown={peTasta}
         style={{
           backgroundColor: C.paper, borderTopLeftRadius: 18, borderTopRightRadius: 18,
           maxHeight: "90%", overflowY: "auto", borderTop: `1px solid ${C.line}`,
