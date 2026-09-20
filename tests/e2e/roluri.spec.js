@@ -140,7 +140,7 @@ test.describe("locatar cu doua apartamente", () => {
     if (DATORIE) await serviciu().schema("financiar").from("datorii").delete().eq("id", DATORIE);
   });
 
-  test("vede doar primul apartament, fara nicio urma a celui de-al doilea", async ({ page }) => {
+  test("ecranele arata un singur apartament o data, cel ales", async ({ page }) => {
     const primul = await apartamentulNumarul(5);
     const alDoilea = await apartamentulNumarul(7);
 
@@ -148,7 +148,7 @@ test.describe("locatar cu doua apartamente", () => {
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`)).toBeVisible();
 
-    /* Nicio cale spre al doilea apartament si nicio cifra de la el */
+    /* Datele celui de-al doilea apartament nu se amesteca in ecranele primului */
     const t = await textEcran(page);
     expect(t).not.toContain(alDoilea.proprietar_nume);
     expect(t).not.toContain("77,77");
@@ -159,10 +159,16 @@ test.describe("locatar cu doua apartamente", () => {
 
   /* [P5] Vezi raportul: omul plateste pentru doua apartamente, dar aplicatia
      ii arata unul singur si nu ii spune nimic despre celalalt. */
-  test.fixme("[P5] stie ca mai are un apartament in aplicatie", async ({ page }) => {
+  test("[P5] stie ca mai are un apartament in aplicatie", async ({ page }) => {
     const alDoilea = await apartamentulNumarul(7);
     await intra(page, EMAIL);
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+
+    /* [P5] Bara de sus spune ca apartamentul se poate schimba, iar panoul le
+       arata pe amandoua; dupa alegere, ecranele urmeaza apartamentul ales. */
+    await page.getByRole("button", { name: "Schimba apartamentul" }).click();
+    await expect(page.getByRole("button", { name: `Apartament ${alDoilea.numar}` })).toBeVisible();
+    await page.getByRole("button", { name: `Apartament ${alDoilea.numar}` }).click();
     await expect(page.getByText(new RegExp(`[Aa]partament(ul)? ${alDoilea.numar}\\b`))).toBeVisible();
   });
 });

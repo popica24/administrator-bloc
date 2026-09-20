@@ -151,7 +151,7 @@ async function anuntInceput(page) {
 test.describe("sesiunea expira cu formularul deschis", () => {
   /* [P3] Vezi raportul: eroarea bruta a bazei ajunge nemodificata pe ecran, in
      engleza tehnica, si nimic nu-i spune omului ca trebuie sa intre din nou. */
-  test.fixme("[P3] sesiunea inchisa spune pe romaneste ce s-a intamplat", async ({ page }) => {
+  test("[P3] sesiunea inchisa spune pe romaneste ce s-a intamplat", async ({ page }) => {
     await anuntInceput(page);
     await inchideSesiuneaDinServer(page);
 
@@ -246,7 +246,7 @@ test.describe("aplicatia deschisa in doua locuri deodata", () => {
      cade (randul sters intre timp, lista publicata in alt tab), documentul
      ramane la "Acte", in fata locatarilor, fara nicio cheltuiala in spate —
      acelasi tipar reparat la iesirea din fond (F3). */
-  test.fixme("[P4] o salvare cazuta nu lasa factura scanata la Acte", async ({ page }) => {
+  test("[P4] o salvare cazuta nu lasa factura scanata la Acte", async ({ page }) => {
     const sb = serviciu();
     const categorie = `E2E scan orfan ${Date.now()}`;
     await intraCa(page, "admin");

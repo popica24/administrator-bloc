@@ -162,7 +162,7 @@ test.describe("Citiri contoare", () => {
   /* [P6] Vezi raportul: refuzurile scrise in SQL pun luna in mesaj cu `%`,
      deci ajunge la om asa cum o tine baza ("2026-09-01"), nu cum o scrie
      restul aplicatiei ("septembrie 2026"). */
-  test.fixme("[P6] mesajele de refuz scriu luna pe romaneste, nu ca in baza", async ({ page }) => {
+  test("[P6] mesajele de refuz scriu luna pe romaneste, nu ca in baza", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();

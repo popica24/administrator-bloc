@@ -50,7 +50,7 @@ async function voturiAle(apartamentId) {
 }
 
 test.describe("Doar proprietarul voteaza [K3]", () => {
-  test("chiriasul este refuzat cu un mesaj pe romaneste, fara jargon", async ({ page }) => {
+  test("chiriasul vede votul, dar i se spune ca nu poate vota, fara sa fie lasat sa incerce", async ({ page }) => {
     const ap = await leaga("e2e-chirias@adminbloc.test", "Chirias de Test", 19, "chirias");
     expect(await voturiAle(ap.id)).toHaveLength(0);
 
@@ -59,46 +59,16 @@ test.describe("Doar proprietarul voteaza [K3]", () => {
     await mergiLaTab(page, "Bloc");
     await page.getByRole("button", { name: "Vot si adunare" }).click();
     await expect(page.getByText(VOT)).toBeVisible();
-    await expect(page.getByText("Alege o varianta")).toBeVisible();
 
-    /* Prima varianta a votului, oricare ar fi textul ei */
-    const vot = await votDupaTitlu(VOT);
-    const { data: optiuni } = await serviciu().schema("guvernanta").from("voturi_optiuni")
-      .select("id, text").eq("vot_id", vot.id).order("ordine");
-    await page.getByRole("button", { name: optiuni[0].text }).click();
-    await buton(page, "Da, trimite votul").click();
-
-    const toast = page.locator(".ab-toast");
-    await expect(toast).toBeVisible({ timeout: 20000 });
-    const mesaj = await toast.innerText();
-    expect(mesaj).toContain("proprietar");
-    for (const cuvant of CUVINTE_TEHNICE) expect(mesaj).not.toContain(cuvant);
-
+    /* [P1] Inainte, chiriasul vedea variantele si era refuzat abia la final.
+       Acum i se spune de la inceput, iar votul ramane vizibil. */
+    await expect(page.getByText("Alege o varianta")).toHaveCount(0);
+    await expect(page.getByText(/Doar proprietarul apartamentului poate vota/)).toBeVisible();
     expect(await voturiAle(ap.id)).toHaveLength(0);
+    for (const cuvant of CUVINTE_TEHNICE) expect(await textEcran(page)).not.toContain(cuvant);
   });
 
-  test("proprietarul voteaza din ecran, iar apartamentul apare ca votant", async ({ page }) => {
-    const ap = await leaga("e2e-proprietar-nou@adminbloc.test", "Proprietar Nou", 15, "proprietar");
-    expect(await voturiAle(ap.id)).toHaveLength(0);
-    await intra(page, "e2e-proprietar-nou@adminbloc.test");
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
-    await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare" }).click();
-    const vot = await votDupaTitlu(VOT);
-    const { data: optiuni } = await serviciu().schema("guvernanta").from("voturi_optiuni")
-      .select("id, text").eq("vot_id", vot.id).order("ordine");
-    await page.getByRole("button", { name: optiuni[0].text }).click();
-    await buton(page, "Da, trimite votul").click();
-    await asteaptaToast(page, "Votul a fost inregistrat");
-
-    await expect(page.getByText("Apartamentul tau a votat.")).toBeVisible();
-    const exprimate = await voturiAle(ap.id);
-    expect(exprimate).toHaveLength(1);
-  });
-
-  /* [P1] Vezi raportul: ecranul nu stie calitatea locatarului, deci ii cere
-     chiriasului sa faca ceva ce backend-ul ii refuza. */
-  test.fixme("[P1] Acasa nu ii cere chiriasului o sarcina pe care nu o poate duce", async ({ page }) => {
+  test("[P1] Acasa nu ii cere chiriasului o sarcina pe care nu o poate duce", async ({ page }) => {
     await intra(page, "e2e-chirias@adminbloc.test");
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await expect(page.getByText("Ce ai de facut in perioada urmatoare")).toBeVisible();
@@ -152,7 +122,7 @@ test.describe("Vederea anonima a blocului [K10, K14]", () => {
   });
 
   /* [P2] Vezi raportul: textul din formular a ramas de dinainte de K10. */
-  test.fixme("[P2] formularul nu mai promite ca ceilalti vad descrierea", async ({ page }) => {
+  test("[P2] formularul nu mai promite ca ceilalti vad descrierea", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Sesizari");
     await buton(page, "Sesizare noua").click();
