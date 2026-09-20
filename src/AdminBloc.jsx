@@ -2664,7 +2664,7 @@ function AdminSumar({ go }) {
         <Kpi eticheta="Citiri de verificat" valoare={String(st.citiriDeVerificat)} sub="indexuri trimise cu poza" tone={st.citiriDeVerificat ? C.warn : C.ink} onPress={() => go("apartamente", { tab: "citiri" })} />
         <Kpi eticheta="Sesizari" valoare={String(st.sesizariDeschise)} sub="deschise" tone={st.sesizariDeschise ? C.warn : C.ink} onPress={() => go("adminsesizari")} />
       </Box>
-      {reparatii && <Kpi eticheta="Fond de reparatii" valoare={lei(reparatii.sold)} sub="sold curent" />}
+      {reparatii && <Kpi eticheta="Fond de reparatii" valoare={lei(reparatii.sold)} sub="sold curent" onPress={() => go("apartamente", { tab: "fonduri" })} />}
 
       {ciorna && (
         <SarcinaRand
@@ -2742,11 +2742,88 @@ function AdminSumar({ go }) {
 }
 
 function AdminApartamente({ parametri }) {
-  const [tab, setTab] = useState(parametri && parametri.tab === "citiri" ? "citiri" : "fise");
+  const tabInitial = parametri && (parametri.tab === "citiri" || parametri.tab === "fonduri") ? parametri.tab : "fise";
+  const [tab, setTab] = useState(tabInitial);
   return (
     <Box gap={S.lg}>
-      <Segment value={tab} onChange={setTab} options={[{ value: "fise", label: "Apartamente" }, { value: "citiri", label: "Citiri contoare" }]} />
-      {tab === "fise" ? <ListaApartamente filtruInitial={parametri && parametri.filtru} /> : <AdminCitiri />}
+      <Segment
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "fise", label: "Apartamente" },
+          { value: "citiri", label: "Citiri contoare" },
+          { value: "fonduri", label: "Fonduri" },
+        ]}
+      />
+      {tab === "fise" ? <ListaApartamente filtruInitial={parametri && parametri.filtru} />
+        : tab === "citiri" ? <AdminCitiri /> : <AdminFonduri />}
+    </Box>
+  );
+}
+
+/* Fondurile blocului, vazute de administrator (C3/E5): acelasi vocabular ca la
+   locatar (LocatarBloc, tabul Fonduri), plus inregistrarea unei iesiri, cu
+   documentul obligatoriu, ca §10.4 din harta functiilor. */
+function AdminFonduri() {
+  const { date, inregistreazaIesireFond, deschideDocument } = useApp();
+  const [ies, setIes] = useState(null);
+  const [suma, setSuma] = useState("");
+  const [descriere, setDescriere] = useState("");
+  const [data, setData] = useState(date.azi);
+  const [fisier, setFisier] = useState(null);
+
+  const deschide = (fondId) => { setIes(fondId); setSuma(""); setDescriere(""); setData(date.azi); setFisier(null); };
+  const inchide = () => setIes(null);
+  const s = sumaDin(suma);
+  const valid = s > 0 && descriere.trim() && data && fisier;
+
+  return (
+    <Box gap={S.lg}>
+      <AntetEcran eyebrow={`${date.fonduri.length} fonduri ale blocului`} titlu="Fonduri" />
+      {date.fonduri.map((f) => (
+        <Card key={f.id} gap={S.md}>
+          <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.md }}>
+            <Box gap={2}>
+              <Eyebrow>{f.denumire}</Eyebrow>
+              <Lei value={f.sold} size={19} weight={700} />
+            </Box>
+            <Btn label="Inregistreaza o iesire" size="sm" variant="secondary" onPress={() => deschide(f.id)} />
+          </Box>
+          {f.miscari.map((m, i) => (
+            <Box key={m.id} gap={S.sm}>
+              {i > 0 && <Line />}
+              <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.sm }}>
+                <Box gap={2} flex={1}>
+                  <Txt size={13}>{m.descriere}</Txt>
+                  <Txt size={11} color={C.muted}>{dataRo(m.data)}</Txt>
+                  {m.documentId && <Btn label="Vezi documentul" variant="quiet" size="sm" style={{ paddingLeft: 0 }} onPress={() => deschideDocument(m.documentId)} />}
+                </Box>
+                <Lei value={m.suma} size={13} color={m.suma < 0 ? C.danger : C.ok} />
+              </Box>
+            </Box>
+          ))}
+        </Card>
+      ))}
+
+      <Sheet open={!!ies} onClose={inchide} titlu="Iesire din fond" pazit={areText(suma, descriere)}>
+        <Field label="Suma iesita" value={suma} onChange={setSuma} placeholder="0,00" suffix="lei" inputMode="decimal" hint="Scrie suma ca numar pozitiv; ea se scade din fond." />
+        <Field label="Pentru ce" value={descriere} onChange={setDescriere} placeholder="Reparatie acoperis, bloc scara A" />
+        <Field label="Data" value={data} onChange={setData} type="date" />
+        <Box row gap={S.sm} style={{ alignItems: "center" }}>
+          <AlegeFisier label={fisier ? "Alt document" : "Ataseaza documentul"} accept="application/pdf,image/*" onAles={async (f2) => setFisier(await micsoreazaPoza(f2))} size="sm" />
+          {fisier && <Txt size={12} color={C.ok} weight={600}>{fisier.name}</Txt>}
+        </Box>
+        <Btn
+          label="Inregistreaza iesirea"
+          full
+          size="lg"
+          disabled={!valid}
+          onPress={async () => {
+            const r = await inregistreazaIesireFond({ fondId: ies, suma: -s, descriere: descriere.trim(), data, fisier });
+            if (r.ok) inchide();
+          }}
+        />
+      </Sheet>
     </Box>
   );
 }

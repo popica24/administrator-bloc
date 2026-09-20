@@ -44,9 +44,16 @@ describe("AdminSumar, cu datele demo", () => {
     const ses = within(buton("Sesizari"));
     expect(ses.getByText("3")).toBeTruthy();
     expect(screen.getByText("19.228,60 lei")).toBeTruthy();
-    /* Penalizarile si fondul nu sunt apasabile */
+    /* Penalizarile nu sunt apasabile; fondul duce la tabul Fonduri (C3/E5) */
     expect(butoane("Penalizari")).toHaveLength(0);
-    expect(butoane("Fond de reparatii")).toHaveLength(0);
+    expect(buton("Fond de reparatii")).toBeTruthy();
+  });
+
+  it("[C3/E5] panoul Fond de reparatii duce la tabul Fonduri, din Apartamente", async () => {
+    await pornesteAdmin();
+    await apasa("Fond de reparatii");
+    expect(tabActiv()).toBe("Apartamente");
+    expect(screen.getByRole("button", { name: "Fonduri" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("lista in lucru apare ca sarcina si duce la facturi", async () => {
