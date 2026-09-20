@@ -48,7 +48,7 @@ describe("Bloc: avizierul", () => {
     expect(spion).toHaveBeenCalledTimes(1);
   });
 
-  it.fails("[K1] deschiderea avizierului cu mai multe anunturi necitite face o singura reincarcare", async () => {
+  it("[K1] deschiderea avizierului cu mai multe anunturi necitite face o singura reincarcare", async () => {
     ceasDemo();
     const sursa = sursaDemo();
     await sursa.intra(ADMIN, "Bloc-D14-2026");

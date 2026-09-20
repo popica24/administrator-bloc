@@ -2400,16 +2400,18 @@ function RezultateVot({ vot }) {
 }
 
 function LocatarBloc({ parametri }) {
-  const { date, voteaza, confirmaPrezenta, marcheazaAnuntCitit, deschideDocument } = useApp();
+  const { date, voteaza, confirmaPrezenta, marcheazaAnunturiCitite, deschideDocument } = useApp();
   const ap = apartamentulMeu(date);
   const [tab, setTab] = useState(parametri && parametri.tab ? parametri.tab : "avizier");
   const [confirmVot, setConfirmVot] = useState(null);
 
-  /* Anunturile afisate pe ecran se considera citite */
+  /* Anunturile afisate pe ecran se considera citite, intr-o singura comanda
+     [K1]: altfel fiecare anunt necitit ar porni propria reincarcare completa. */
   useEffect(() => {
     if (tab !== "avizier") return;
-    date.anunturi.filter((a) => !a.citit).forEach((a) => marcheazaAnuntCitit(a.id));
-  }, [tab, date.anunturi, marcheazaAnuntCitit]);
+    const idNecitite = date.anunturi.filter((a) => !a.citit).map((a) => a.id);
+    if (idNecitite.length > 0) marcheazaAnunturiCitite(idNecitite);
+  }, [tab, date.anunturi, marcheazaAnunturiCitite]);
 
   const reparatii = date.fonduri.find((f) => f.tip === "reparatii");
   const rulment = date.fonduri.find((f) => f.tip === "rulment");
@@ -4538,6 +4540,12 @@ export default function AdminBloc() {
       voteaza: cmd((v, o, a) => sursa.voteaza(v, o, a), "Votul a fost inregistrat"),
       confirmaPrezenta: cmd((a, ap) => sursa.confirmaPrezenta(a, ap), "Prezenta a fost confirmata"),
       marcheazaAnuntCitit: cmd((id) => sursa.marcheazaAnuntCitit(id), null, true, true, true),
+      /* [K1] Avizierul cu mai multe anunturi necitite marca fiecare anunt cu o
+         comanda proprie, deci cu o reincarcare completa proprie: N anunturi
+         necitite porneau N reincarcari, iar fiecare reincarcare repornea
+         efectul din LocatarBloc. O singura comanda marcheaza tot lotul si
+         reincarca o singura data la final. */
+      marcheazaAnunturiCitite: cmd((ids) => Promise.all(ids.map((id) => sursa.marcheazaAnuntCitit(id))), null, true, true, true),
       marcheazaNotificareCitita: cmd((id) => sursa.marcheazaNotificareCitita(id), null, true, true, true),
 
       deschideLista: cmd((l) => sursa.deschideLista(l), (r, l) => `Lista pe ${monthLabel(l)} a fost inceputa`),
