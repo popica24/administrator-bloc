@@ -3280,7 +3280,7 @@ function FisaApartament({ apId, onClose }) {
 }
 
 function AdminCitiri() {
-  const { date, valideazaCitire, citesteContorGeneral, estimeazaCitiri, toastMsg } = useApp();
+  const { date, valideazaCitiriApartament, citesteContorGeneral, estimeazaCitiri, toastMsg } = useApp();
   const luniCuCitiri = [...new Set([lunaDe(date.azi), ...date.citiri.filter((c) => c.sursa !== "pornire").map((c) => c.luna)])].sort().reverse();
   const [luna, setLuna] = useState(luniCuCitiri[0]);
   const [respinge, setRespinge] = useState(null);
@@ -3368,12 +3368,7 @@ function AdminCitiri() {
               )}
               {x.contoare.some((c) => c.citire && c.citire.stare === "trimisa") && (
                 <Box row gap={S.sm}>
-                  <Btn label="Valideaza" size="sm" onPress={async () => {
-                    for (const c of x.contoare.filter((y) => y.citire && y.citire.stare === "trimisa")) {
-                      const r = await valideazaCitire(c.citire.id, true, null);
-                      if (!r.ok) return;
-                    }
-                  }} />
+                  <Btn label="Valideaza" size="sm" onPress={async () => { await valideazaCitiriApartament(x.ap.id, luna, true, null); }} />
                   <Btn label="Respinge" size="sm" variant="danger" onPress={() => { setRespinge(x); setMotiv(""); }} />
                 </Box>
               )}
@@ -3393,11 +3388,8 @@ function AdminCitiri() {
         </Box>
         <Field label="Motivul" value={motiv} onChange={setMotiv} multiline placeholder="Ce trebuie sa corecteze locatarul" />
         <Btn label="Respinge citirea" variant="danger" full disabled={!motiv.trim()} onPress={async () => {
-          for (const c of respinge.contoare.filter((y) => y.citire && y.citire.stare === "trimisa")) {
-            const r = await valideazaCitire(c.citire.id, false, motiv.trim());
-            if (!r.ok) return;
-          }
-          setRespinge(null);
+          const r = await valideazaCitiriApartament(respinge.ap.id, luna, false, motiv.trim());
+          if (r.ok) setRespinge(null);
         }} />
       </Sheet>
     </Box>
@@ -4601,6 +4593,8 @@ export default function AdminBloc() {
       schimbaCoteleBlocului: cmd((cote) => sursa.schimbaCoteleBlocului(cote), "Cotele blocului au fost actualizate"),
       inregistreazaIesireFond: cmd((x) => sursa.inregistreazaIesireFond(x), "Iesirea din fond a fost inregistrata"),
       valideazaCitire: cmd((id, a, m) => sursa.valideazaCitire(id, a, m), (r, id, a) => (a ? "Citirea a fost validata" : "Citirea a fost respinsa, locatarul a fost anuntat")),
+      /* [A5] O singura comanda pentru tot apartamentul: totul sau nimic */
+      valideazaCitiriApartament: cmd((ap, l, a, m) => sursa.valideazaCitiriApartament(ap, l, a, m), (r, ap, l, a) => (a ? "Citirea a fost validata" : "Citirea a fost respinsa, locatarul a fost anuntat")),
       citesteContorGeneral: cmd((l, t, i) => sursa.citesteContorGeneral(l, t, i), "Indexul contorului general a fost salvat"),
       estimeazaCitiri: cmd((l) => sursa.estimeazaCitiri(l)),
       preiaSesizare: cmd((id) => sursa.preiaSesizare(id), "Sesizarea este in lucru"),

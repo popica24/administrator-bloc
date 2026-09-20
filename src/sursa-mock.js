@@ -1059,6 +1059,31 @@ export function creeazaSursaMock() {
       }
     },
 
+    /* [A5] Valideaza sau respinge dintr-o data toate citirile "trimise" ale
+       unui apartament, pe o luna: o singura schimbare, nu un apel separat pe
+       fiecare contor. Un apel pe contor lasa apartamentul pe jumatate
+       validat daca al doilea apel esueaza (retea, sesiune expirata) - exact
+       bug-ul A1, pe care il repara si retrimiterea (asa cum ramane acum). */
+    async valideazaCitiriApartament(apartamentId, luna, accepta, motiv) {
+      const { bloc } = cerAdmin();
+      const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
+      if (!accepta && !(motiv || "").trim()) eroare("Scrie motivul, ca locatarul sa stie ce sa corecteze.");
+      const citiri = db.citiri.filter((c) => c.apartamentId === ap.id && c.luna === luna && c.stare === "trimisa");
+      if (citiri.length === 0) eroare("Nu mai sunt citiri de verificat pentru acest apartament si aceasta luna.");
+      citiri.forEach((c) => {
+        c.stare = accepta ? "validata" : "respinsa";
+        c.motivRespingere = accepta ? null : motiv.trim();
+        c.verificataLa = acum();
+      });
+      if (!accepta) {
+        locatariActivi(db, ap.id).forEach((l) => notifica(db, {
+          profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "citire",
+          titlu: "Indexul trimis a fost respins", corp: `${motiv.trim()} Te rugam sa trimiti din nou indexul, cu o poza clara.`,
+        }));
+      }
+      return { validate: citiri.length };
+    },
+
     async citesteContorGeneral(luna, tip, index) {
       const { bloc } = cerAdmin();
       const c = db.contoare.find((x) => x.blocId === bloc.id && !x.apartamentId && x.tip === tip);

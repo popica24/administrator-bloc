@@ -56,42 +56,44 @@ describe("AdminCitiri, luna curenta", () => {
     expect(randAp("6").getAllByText("Respins")).toHaveLength(2);
   });
 
-  it("valideaza ambele contoare ale apartamentului", async () => {
+  it("valideaza ambele contoare ale apartamentului, intr-o singura comanda [A5]", async () => {
     const { sursa } = await deschideCitiri();
-    const spion = vi.spyOn(sursa, "valideazaCitire");
-    const ids = (await citiri(sursa, "2026-09", "9")).map((c) => c.id);
+    const spion = vi.spyOn(sursa, "valideazaCitiriApartament");
+    const ap9 = (await sursa.incarca()).apartamente.find((a) => a.numar === "9").id;
     await apasa(randAp("9").getByRole("button", { name: "Valideaza" }));
-    expect(spion.mock.calls.map((c) => c[0]).sort()).toEqual(ids.sort());
-    spion.mock.calls.forEach((c) => { expect(c.slice(1)).toEqual([true, null]); });
+    expect(spion).toHaveBeenCalledTimes(1);
+    expect(spion).toHaveBeenCalledWith(ap9, "2026-09", true, null);
     expect(toast().textContent).toBe("Citirea a fost validata");
     expect(randAp("9").getAllByText("Validat")).toHaveLength(2);
     expect(inZona("De verificat", "cu poza atasata").getByText("3")).toBeTruthy();
   });
 
-  it("validarea se opreste la prima eroare", async () => {
+  it("o eroare la validare arata mesajul si nu schimba nimic", async () => {
     const { sursa } = await deschideCitiri();
-    const spion = vi.spyOn(sursa, "valideazaCitire").mockRejectedValue(new Error("Citirea a fost deja verificata."));
+    const spion = vi.spyOn(sursa, "valideazaCitiriApartament").mockRejectedValue(new Error("Citirile au fost deja verificate."));
     await apasa(randAp("9").getByRole("button", { name: "Valideaza" }));
     expect(spion).toHaveBeenCalledTimes(1);
-    expect(toast().textContent).toBe("Citirea a fost deja verificata.");
+    expect(toast().textContent).toBe("Citirile au fost deja verificate.");
   });
 
-  it.fails("[A5] validarea unui apartament este totul sau nimic", async () => {
+  /* [A5] "Valideaza"/"Respinge" faceau cate un apel pe contor, cu reincarcare
+     completa dupa fiecare; daca al doilea contor esua, primul ramanea
+     validat si al doilea "trimisa" (exact bug-ul A1). O singura comanda
+     pentru tot apartamentul face imposibila starea intermediara: fie
+     reuseste pentru amandoua, fie nu schimba nimic. */
+  it("[A5] validarea unui apartament este totul sau nimic", async () => {
     const { sursa } = await deschideCitiri();
-    const real = sursa.valideazaCitire.bind(sursa);
-    let n = 0;
-    vi.spyOn(sursa, "valideazaCitire").mockImplementation((...a) => {
-      n += 1;
-      return n === 1 ? real(...a) : Promise.reject(new Error("Retea cazuta"));
-    });
+    vi.spyOn(sursa, "valideazaCitiriApartament").mockRejectedValue(new Error("Retea cazuta"));
     await apasa(randAp("9").getByRole("button", { name: "Valideaza" }));
     const dupa = await citiri(sursa, "2026-09", "9");
     expect(dupa.map((c) => c.stare)).toEqual(["trimisa", "trimisa"]);
+    expect(toast().textContent).toBe("Retea cazuta");
   });
 
   it("respinge cu un motiv gata scris, apoi cu motivul editat", async () => {
     const { sursa } = await deschideCitiri();
-    const spion = vi.spyOn(sursa, "valideazaCitire");
+    const spion = vi.spyOn(sursa, "valideazaCitiriApartament");
+    const ap9 = (await sursa.incarca()).apartamente.find((a) => a.numar === "9").id;
     await apasa(randAp("9").getByRole("button", { name: "Respinge" }));
     const f = inDialog("Respinge citirea, ap. 9");
     expect(dezactivat(f.getByRole("button", { name: "Respinge citirea" }))).toBe(true);
@@ -103,8 +105,8 @@ describe("AdminCitiri, luna curenta", () => {
     expect(chip("Poza este neclara, nu se vad cifrele.").getAttribute("aria-pressed")).toBe("false");
     await act(async () => { fireEvent.change(camp, { target: { value: "  Se vede alt contor.  " } }); });
     await apasa(f.getByRole("button", { name: "Respinge citirea" }));
-    expect(spion).toHaveBeenCalledTimes(2);
-    spion.mock.calls.forEach((c) => { expect(c.slice(1)).toEqual([false, "Se vede alt contor."]); });
+    expect(spion).toHaveBeenCalledTimes(1);
+    expect(spion).toHaveBeenCalledWith(ap9, "2026-09", false, "Se vede alt contor.");
     expect(toast().textContent).toBe("Citirea a fost respinsa, locatarul a fost anuntat");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(randAp("9").getAllByText("Se vede alt contor.").length).toBeGreaterThan(0);
@@ -112,7 +114,7 @@ describe("AdminCitiri, luna curenta", () => {
 
   it("motivul doar din spatii nu permite respingerea; inchiderea foii renunta", async () => {
     const { sursa } = await deschideCitiri();
-    const spion = vi.spyOn(sursa, "valideazaCitire");
+    const spion = vi.spyOn(sursa, "valideazaCitiriApartament");
     await apasa(randAp("12").getByRole("button", { name: "Respinge" }));
     const f = inDialog("Respinge citirea, ap. 12");
     await act(async () => { fireEvent.change(f.getByLabelText("Motivul"), { target: { value: "   " } }); });
@@ -124,7 +126,7 @@ describe("AdminCitiri, luna curenta", () => {
 
   it("o respingere esuata lasa foaia deschisa", async () => {
     const { sursa } = await deschideCitiri();
-    vi.spyOn(sursa, "valideazaCitire").mockRejectedValue(new Error("Scrie motivul"));
+    vi.spyOn(sursa, "valideazaCitiriApartament").mockRejectedValue(new Error("Scrie motivul"));
     await apasa(randAp("12").getByRole("button", { name: "Respinge" }));
     const f = inDialog("Respinge citirea, ap. 12");
     await apasa(f.getByText("Poza nu arata contorul apartamentului."));
