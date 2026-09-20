@@ -508,14 +508,21 @@ export function creeazaSursaSupabase(url, cheie) {
       p_cote: (cote || []).map((c) => ({ apartament_id: c.apartamentId, cota: numarSauNull(c.cota) })),
     })),
 
-    /* Iesire din fond: documentul justificativ se incarca intai, ca sa aiba ce
-       numar sa primeasca miscarea; comanda refuza orice iesire fara el. */
+    /* Iesire din fond: suma, descrierea si data se verifica aici, ieftin,
+       inainte sa se incarce documentul (C6) — altfel orice refuz din RPC (care
+       reverifica aceleasi campuri) lasa un document orfan, vizibil locatarilor
+       prin comunicare.documente. Existenta fondului si dreptul de a-l atinge
+       raman verificate doar in RPC: nu se pot verifica ieftin, fara o cerere
+       in plus catre server, inaintea uploadului. */
     async inregistreazaIesireFond({ fondId, suma, descriere, data, fisier }) {
       if (!fisier) throw new Error("Alege documentul care justifica iesirea din fond.");
-      const doc = await document({ titlu: (descriere || "").trim() || "Iesire din fond", tip: "factura", fisier });
+      const sumaNoua = numarSauNull(suma);
+      if (sumaNoua == null || !(sumaNoua < 0)) throw new Error("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
+      if (!(descriere || "").trim()) throw new Error("Scrie pentru ce au iesit banii din fond.");
+      if (!data || data > aziIso()) throw new Error("Data iesirii din fond nu poate fi in viitor.");
+      const doc = await document({ titlu: descriere.trim(), tip: "factura", fisier });
       return ok(fin.rpc("inregistreaza_iesire_fond", {
-        p_fond_id: fondId, p_suma: numarSauNull(suma),
-        p_descriere: descriere, p_data: data || null, p_document_id: doc.id,
+        p_fond_id: fondId, p_suma: sumaNoua, p_descriere: descriere, p_data: data, p_document_id: doc.id,
       }));
     },
 

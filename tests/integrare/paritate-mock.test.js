@@ -147,17 +147,19 @@ describe("inregistreazaIesireFond() in sursa demonstrativa", () => {
     expect(dupa.documente.some((d) => d.id === iesire.documentId && d.titlu === "Reparatie instalatie")).toBe(true);
   });
 
-  it("titlul documentului cade pe o eticheta neutra cand descrierea e goala", async () => {
+  it("descrierea goala este refuzata fara sa incarce vreun document orfan (C6)", async () => {
     const fond = date.fonduri.find((f) => f.tip === "reparatii");
+    const inainte = date.documente.length;
     await expect(s.inregistreazaIesireFond({ fondId: fond.id, suma: -10, descriere: "   ", data: date.azi, fisier: fisier() }))
       .rejects.toThrow("Scrie pentru ce au iesit banii din fond.");
     await expect(s.inregistreazaIesireFond({ fondId: fond.id, suma: -10, descriere: null, data: date.azi, fisier: fisier() }))
       .rejects.toThrow("Scrie pentru ce au iesit banii din fond.");
-    expect((await s.incarca()).documente.some((d) => d.titlu === "Iesire din fond")).toBe(true);
+    expect((await s.incarca()).documente.length).toBe(inainte);
   });
 
   it("refuza iesirea fara document, cu suma pozitiva, zero sau necompletata, si cu data din viitor", async () => {
     const fond = date.fonduri.find((f) => f.tip === "reparatii");
+    const inainte = date.documente.length;
     const baza = { fondId: fond.id, suma: -10, descriere: "Reparatie", data: date.azi };
     await expect(s.inregistreazaIesireFond({ ...baza })).rejects.toThrow("Alege documentul care justifica iesirea din fond.");
     await expect(s.inregistreazaIesireFond({ ...baza, suma: 10, fisier: fisier() })).rejects.toThrow("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
@@ -167,6 +169,12 @@ describe("inregistreazaIesireFond() in sursa demonstrativa", () => {
     await expect(s.inregistreazaIesireFond({ ...baza, data: "2999-01-01", fisier: fisier() })).rejects.toThrow("Data iesirii din fond nu poate fi in viitor.");
     await expect(s.inregistreazaIesireFond({ ...baza, data: null, fisier: fisier() })).rejects.toThrow("Data iesirii din fond nu poate fi in viitor.");
     await expect(s.inregistreazaIesireFond({ ...baza, fondId: "fon-inexistent", fisier: fisier() })).rejects.toThrow("Fondul nu exista sau nu este al unui bloc administrat de tine.");
+    /* Divergenta fata de sursa Supabase (C6): acolo, existenta fondului se
+       verifica doar in RPC (dupa upload), pentru ca verificarea ieftina, fara
+       rotund suplimentar la server, se limiteaza la suma/descriere/data.
+       Mock-ul nu are cost de retea, deci poate verifica totul, inclusiv
+       fondul, inainte sa "incarce" documentul: niciun caz nu lasa orfan aici. */
+    expect((await s.incarca()).documente.length).toBe(inainte);
   });
 
   it("locatarul nu scoate bani din fond", async () => {

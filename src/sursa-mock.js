@@ -960,24 +960,29 @@ export function creeazaSursaMock() {
       cote2.forEach((c) => { apartamenteBloc.find((a) => a.id === c.apartamentId).cota = c.cota; });
     },
 
-    /* Iesire din fond: documentul se incarca inainte, ca in sursa Supabase */
+    /* Iesire din fond: toate verificarile trec inainte sa se incarce
+       documentul (C6), ca niciun refuz sa nu lase un document orfan. In
+       sursa Supabase, verificarea ieftina in JS acopera doar suma, descrierea
+       si data (fara rotund suplimentar la server); existenta fondului ramane
+       verificata acolo de RPC, dupa upload. Mock-ul nu are cost de retea,
+       deci verifica totul, inclusiv fondul, inainte de "upload". */
     async inregistreazaIesireFond({ fondId, suma, descriere, data, fisier }) {
       const { bloc } = cerAdmin();
       if (!fisier) eroare("Alege documentul care justifica iesirea din fond.");
-      const document = db.adauga("documente", {
-        asociatieId: bloc.asociatieId, blocId: bloc.id, titlu: String(descriere || "").trim() || "Iesire din fond", tip: "factura",
-        cale: salveazaFisier(fisier, "documente"), vizibilLocatarilor: true, incarcatDe: eu().id,
-      });
-      const fond = db.fonduri.find((f) => f.id === fondId && f.blocId === bloc.id) || eroare("Fondul nu exista sau nu este al unui bloc administrat de tine.");
       const sumaNoua = numarSauNull(suma);
       if (sumaNoua == null || !(sumaNoua < 0)) eroare("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
+      if (!(descriere || "").trim()) eroare("Scrie pentru ce au iesit banii din fond.");
+      if (!data || data > aziIso()) eroare("Data iesirii din fond nu poate fi in viitor.");
+      const fond = db.fonduri.find((f) => f.id === fondId && f.blocId === bloc.id) || eroare("Fondul nu exista sau nu este al unui bloc administrat de tine.");
       /* Fondul nu poate ajunge pe minus (C5): banii care ies sunt cei adunati de locatari */
       const soldFond = round2(db.miscari.filter((m) => m.fondId === fond.id).reduce((s, m) => s + m.suma, 0));
       if (round2(soldFond + sumaNoua) < 0) {
         eroare(`Fondul are ${soldFond.toFixed(2)} lei; o iesire de ${(-sumaNoua).toFixed(2)} lei l-ar duce pe minus.`);
       }
-      if (!(descriere || "").trim()) eroare("Scrie pentru ce au iesit banii din fond.");
-      if (!data || data > aziIso()) eroare("Data iesirii din fond nu poate fi in viitor.");
+      const document = db.adauga("documente", {
+        asociatieId: bloc.asociatieId, blocId: bloc.id, titlu: descriere.trim(), tip: "factura",
+        cale: salveazaFisier(fisier, "documente"), vizibilLocatarilor: true, incarcatDe: eu().id,
+      });
       return db.adauga("miscari", {
         fondId: fond.id, data, suma: round2(sumaNoua), descriere: descriere.trim(), listaId: null, documentId: document.id, creatDe: eu().id,
       }).id;

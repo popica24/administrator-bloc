@@ -100,27 +100,32 @@ describe("inregistreazaIesireFond()", () => {
       .rejects.toThrow("Alege documentul care justifica iesirea din fond.");
   });
 
-  it("refuza o suma necompletata si o data necompletata", async () => {
+  it("refuza o suma necompletata si o data necompletata, fara sa incarce vreun document (C6)", async () => {
     const d = await adm.incarca();
     const fond = d.fonduri.find((x) => x.tip === "reparatii");
+    const inainte = d.documente.length;
     await expect(adm.inregistreazaIesireFond({ fondId: fond.id, suma: "", descriere: "Gol", data: d.azi, fisier: pdf("x.pdf") }))
       .rejects.toThrow("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
     await expect(adm.inregistreazaIesireFond({ fondId: fond.id, suma: -10, descriere: "Gol", data: "", fisier: pdf("x.pdf") }))
       .rejects.toThrow("Data iesirii din fond nu poate fi in viitor.");
+    expect((await adm.incarca()).documente.length).toBe(inainte);
   });
 
-  it("fara descriere, documentul primeste o eticheta neutra, iar comanda refuza iesirea", async () => {
+  it("fara descriere, comanda refuza iesirea fara sa incarce vreun document orfan (C6)", async () => {
     const d = await adm.incarca();
     const fond = d.fonduri.find((x) => x.tip === "reparatii");
+    const inainte = d.documente.length;
     await expect(adm.inregistreazaIesireFond({ fondId: fond.id, suma: -10, descriere: "", data: d.azi, fisier: pdf("x.pdf") }))
       .rejects.toThrow("Scrie pentru ce au iesit banii din fond.");
-    expect((await adm.incarca()).documente.some((x) => x.titlu === "Iesire din fond")).toBe(true);
+    expect((await adm.incarca()).documente.length).toBe(inainte);
   });
 
-  it("refuza o suma pozitiva", async () => {
+  it("refuza o suma pozitiva, fara sa incarce vreun document (C6)", async () => {
     const d = await adm.incarca();
     const fond = d.fonduri.find((x) => x.tip === "reparatii");
+    const inainte = d.documente.length;
     await expect(adm.inregistreazaIesireFond({ fondId: fond.id, suma: 10, descriere: "Bani in plus", data: d.azi, fisier: pdf("x.pdf") }))
       .rejects.toThrow("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
+    expect((await adm.incarca()).documente.length).toBe(inainte);
   });
 });
