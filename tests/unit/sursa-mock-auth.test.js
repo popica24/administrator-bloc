@@ -206,12 +206,21 @@ describe("folosesteInvitatie", () => {
     expect(apNr(await s.incarca(), "11").invitatii).toEqual([]);
   });
 
-  it("[§8] codul folosit de cineva deja legat de apartament nu dubleaza legatura", async () => {
+  /* [J13] identitate.foloseste_invitatie() (migratia S11,
+     revoca_invitatie_si_inchide_acces_corect) refuza cu "Esti deja legat de
+     acest apartament." si nu consuma codul cand omul e deja legat activ de
+     acelasi apartament -- "on conflict do nothing" nu mai lasa comanda sa
+     para reusita fara niciun efect real. Mock-ul intorcea succes si consuma
+     codul oricum: paritatea era doar in comentariu, nu si in cod. */
+  it("[J13] codul folosit de cineva deja legat de apartament este refuzat, nu consumat", async () => {
     const { s, cod } = await codPentru("17", "proprietar");
     await s.intra(LOCATAR, PAROLA);
-    await s.folosesteInvitatie(cod).catch(() => {});
+    await expect(s.folosesteInvitatie(cod)).rejects.toThrow("Esti deja legat de acest apartament.");
     await s.intra(ADMIN, PAROLA);
-    expect(apNr(await s.incarca(), "17").locatari).toHaveLength(1);
+    const ap17 = apNr(await s.incarca(), "17");
+    expect(ap17.locatari).toHaveLength(1);
+    /* codul ramane nefolosit, nu disparut ca "deja consumat" */
+    expect(ap17.invitatii).toEqual([{ id: expect.any(String), cod, calitate: "proprietar", expiraLa: expect.any(String) }]);
   });
 });
 

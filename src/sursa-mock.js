@@ -824,13 +824,14 @@ export function creeazaSursaMock() {
         eroare("Codul nu este valabil. Cere administratorului un cod nou.");
       }
       const ap = db.apartamente.find((a) => a.id === inv.apartamentId);
-      /* [paritate] identitate.foloseste_invitatie insereaza "on conflict do
-         nothing": daca omul e deja legat activ de acelasi apartament, codul
-         se consuma oricum, dar nu se dubleaza legatura. */
+      /* [J13] identitate.foloseste_invitatie (migratia S11) insereaza "on
+         conflict do nothing", dar acum verifica daca legatura chiar s-a
+         creat: daca omul e deja legat activ de acelasi apartament, refuza
+         cu "Esti deja legat de acest apartament." si nu consuma codul -
+         comanda nu mai poate parea reusita fara niciun efect real. */
       const legatAcum = db.locatari.some((l) => l.apartamentId === ap.id && l.profilId === p.id && !l.activPana);
-      if (!legatAcum) {
-        db.adauga("locatari", { apartamentId: ap.id, blocId: ap.blocId, profilId: p.id, calitate: inv.calitate, activDin: aziIso(), activPana: null });
-      }
+      if (legatAcum) eroare("Esti deja legat de acest apartament.");
+      db.adauga("locatari", { apartamentId: ap.id, blocId: ap.blocId, profilId: p.id, calitate: inv.calitate, activDin: aziIso(), activPana: null });
       inv.folositaLa = acum();
       inv.folositaDe = p.id;
       db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.profilId !== p.id);
