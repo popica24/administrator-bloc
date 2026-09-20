@@ -216,9 +216,10 @@ select throws_ok(
   $$insert into nomenclator.administratii_locale (denumire, tip, judet) values ('X', 'comuna', 'Y')$$,
   '42501', null,
   'nomenclator: anon nu poate adauga (nicio politica de insert)');
-select is(
-  pg_temp.randuri($$update nomenclator.administratii_locale set denumire = 'Hack' where id = pg_temp.id('uat')$$), 0,
-  'nomenclator: anon nu poate modifica niciun rand');
+select throws_ok(
+  $$update nomenclator.administratii_locale set denumire = 'Hack' where id = pg_temp.id('uat')$$,
+  '42501', null,
+  'nomenclator: anon nu poate modifica niciun rand (fara grant de update)');
 reset role;
 
 select pg_temp.ca('strain');
@@ -226,12 +227,12 @@ set local role authenticated;
 select is(
   (select count(*)::int from nomenclator.administratii_locale where id = pg_temp.id('uat')), 1,
   'politica "Administratiile locale pot fi citite de oricine": authenticated citeste');
-select is(
-  pg_temp.randuri($$delete from nomenclator.administratii_locale where id = pg_temp.id('uat')$$), 0,
-  'nomenclator: authenticated nu poate sterge niciun rand');
+select throws_ok(
+  $$delete from nomenclator.administratii_locale where id = pg_temp.id('uat')$$,
+  '42501', null,
+  'nomenclator: authenticated nu poate sterge niciun rand (fara grant de delete)');
 reset role;
 
-select todo('[S15] nomenclator.administratii_locale pastreaza INSERT/UPDATE/DELETE/TRUNCATE pentru anon si authenticated', 2);
 select table_privs_are('nomenclator', 'administratii_locale', 'anon', array['SELECT'],
   '[S15] anon are doar SELECT pe nomenclator.administratii_locale');
 select table_privs_are('nomenclator', 'administratii_locale', 'authenticated', array['SELECT'],
