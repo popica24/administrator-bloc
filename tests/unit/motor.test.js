@@ -138,7 +138,7 @@ describe("apa pe consum", () => {
     expect(probleme.some((p) => /contor/.test(p) && /mic/.test(p))).toBe(true);
   });
 
-  it.fails("[L7] suma mc repartizati este egala cu contorul general (iunie, apa calda)", () => {
+  it("[L7] suma mc repartizati este egala cu contorul general (iunie, apa calda)", () => {
     const aps = D.APARTAMENTE.map((a) => ap(a.numar, a.persoane, a.cota, a.scutitLift));
     const consumIunie = Object.fromEntries(D.APARTAMENTE.map((a) => [a.numar, { calda: D.consumApartament(a.numar, "2026-06", "calda") }]));
     const r = calculeazaLista({
