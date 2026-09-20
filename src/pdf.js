@@ -35,6 +35,27 @@ const DIACRITICE = {
 };
 const transliteraza = (t) => String(t).replace(/[ăâîșşțţĂÂÎȘŞȚŢ]/g, (c) => DIACRITICE[c]);
 
+/* [J3] escape() rula pe sirul JS dinainte de transliterare, dar octetii
+   fisierului se scriu mai departe cu `charCodeAt & 0xff` (un octet pe
+   caracter, codarea WinAnsi). Un caracter din afara diacriticelor romanesti
+   stiute (o litera straina sau un emoji) trecea neschimbat prin ambele si
+   putea cadea, dupa trunchiere, exact pe octetul '(' (0x28), ')' (0x29) sau
+   '\' (0x5c) -- fara ca escape() sa fi vazut vreodata acel caracter ca
+   paranteza, deci sirul PDF delimitat de paranteze ramanea nebalansat si
+   fisierul nu se mai deschidea. Acum transliterarea ruleaza intai, apoi se
+   refuza orice caracter ramas care nu incape intr-un singur octet Latin-1
+   (peste 0xff nu poate fi scris corect de codarea de mai jos), si abia apoi
+   se scapa parantezele si backslash-ul ramase in text. */
+function pregatesteText(t) {
+  const s = transliteraza(String(t));
+  for (const ch of s) {
+    if (ch.codePointAt(0) > 0xff) {
+      throw new Error(`Textul "${t}" contine un caracter care nu poate fi scris in PDF. Scoate-l si incearca din nou.`);
+    }
+  }
+  return escape(s);
+}
+
 /* Rupe un cuvant mai lung decat randul in bucati care incap [F29] */
 function rupeCuvant(cuvant, latime, marime, bold) {
   const bucati = [];
@@ -93,7 +114,7 @@ function scriePdf(pagini, latimePagina, inaltimePagina, titlu) {
   adauga("PAGINI");
   const f1 = adauga("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
   const f2 = adauga("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
-  const info = adauga(`<< /Title (${escape(titlu)}) /Producer (AdminBloc) >>`);
+  const info = adauga(`<< /Title (${pregatesteText(titlu)}) /Producer (AdminBloc) >>`);
 
   const kids = [];
   pagini.forEach((flux) => {
@@ -117,7 +138,11 @@ function scriePdf(pagini, latimePagina, inaltimePagina, titlu) {
   pozitii.forEach((p) => { out += `${String(p).padStart(10, "0")} 00000 n \n`; });
   out += `trailer\n<< /Size ${obiecte.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF`;
 
-  out = transliteraza(out);
+  /* [J3] Textul a fost deja transliterat si scapat per fragment, la locul
+     unde a intrat in `out` (pregatesteText, mai jos): un transliteraza()
+     global aici, dupa ce parantezele de scapare au fost deja scrise, ar
+     rula prea tarziu ca sa mai poata refuza un caracter periculos inainte
+     de trunchierea la un octet. */
   const bytes = new Uint8Array(out.length);
   for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
   return bytes;
@@ -140,14 +165,14 @@ export function documentPdf({ titlu, blocuri, peLatime = false, subsol }) {
 
   const paginaNoua = () => {
     if (subsol) {
-      flux.push(`BT /F1 7 Tf 0.45 g ${M} 22 Td (${escape(`${subsol}  |  pagina ${pagini.length + 1}`)}) Tj ET 0 g`);
+      flux.push(`BT /F1 7 Tf 0.45 g ${M} 22 Td (${pregatesteText(`${subsol}  |  pagina ${pagini.length + 1}`)}) Tj ET 0 g`);
     }
     pagini.push(flux.join("\n"));
     flux = [];
     y = H - M;
   };
   const text = (t, x, yy, marime, bold, gri) => {
-    flux.push(`BT /${bold ? "F2" : "F1"} ${marime} Tf ${gri ? "0.4 g " : ""}${x.toFixed(2)} ${yy.toFixed(2)} Td (${escape(t)}) Tj ET${gri ? " 0 g" : ""}`);
+    flux.push(`BT /${bold ? "F2" : "F1"} ${marime} Tf ${gri ? "0.4 g " : ""}${x.toFixed(2)} ${yy.toFixed(2)} Td (${pregatesteText(t)}) Tj ET${gri ? " 0 g" : ""}`);
   };
 
   /* Antetul de tabel marcat cu `repeta` se redeseneaza pe fiecare pagina noua,

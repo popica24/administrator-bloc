@@ -198,4 +198,21 @@ describe("documentPdf: paginarea", () => {
     const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Știrbu Țăranu" }] }));
     expect(s).toContain("(Stirbu Taranu)");
   });
+
+  /* [J3] escape() rula pe sirul JS, dar octetii se trunchiaza mai departe
+     (charCodeAt & 0xff): un caracter din afara Latin-1 care nu e o
+     diacritica romaneasca (deci transliteraza() nu il atinge) putea cadea,
+     dupa trunchiere, exact pe octetul '(' (0x28) -- de exemplu Ĩ (U+0128,
+     128 & 0xff = 0x28) -- si strica sirul PDF delimitat de paranteze fara
+     ca escape() sa fi vazut vreodata o paranteza in sirul original.
+     Fisierul trebuie refuzat, nu scris stricat. */
+  it("[J3] un caracter care ramane in afara Latin-1 dupa transliterare este refuzat, nu scrie un octet care strica sirul PDF", () => {
+    expect(() => documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "CategorieĨ" }] })).toThrow();
+    expect(() => documentPdf({ titlu: "Chitanta Ĩ", blocuri: [{ tip: "titlu", text: "Chitanta" }] })).toThrow();
+    expect(() => documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Un emoji 😀" }] })).toThrow();
+    /* textul din Latin-1 (chiar in afara diacriticelor romanesti stiute)
+       tot se scrie normal, fara sa fie refuzat */
+    const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Straße" }] }));
+    expect(s).toContain("Stra");
+  });
 });
