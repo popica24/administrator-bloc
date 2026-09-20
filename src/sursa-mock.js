@@ -197,6 +197,29 @@ function notifica(db, { profilId, asociatieId, tip, titlu, corp, la, referinta =
 
 const locatariActivi = (db, apartamentId) => db.locatari.filter((l) => l.apartamentId === apartamentId && !l.activPana);
 
+/* [J1] Cascada extinsa (migratia 20260920190515): dupa ce o citire devine
+   validata -- prin validare (valideazaCitire, valideazaCitiriApartament),
+   estimare (estimeazaCitiri) sau citirea contorului general (J7) --
+   recalculeaza indexAnterior (si, in cascada, consum) al citirilor mai noi
+   ale aceluiasi contor, oricare le-ar fi starea (trimisa sau validata), mai
+   putin respinsa, fara sa atinga o luna a carei lista e deja publicata
+   (banii ei sunt inghetati de motor, invariantul central al aplicatiei).
+   Citirea tocmai validata/estimata are ea insasi luna = dupaLuna < x.luna
+   pentru orice x atins mai jos, deci lista de candidati gaseste mereu cel
+   putin un candidat: fara fallback la 0. */
+function recalculeazaViitorul(db, contorId, blocId, dupaLuna) {
+  db.citiri
+    .filter((x) => x.contorId === contorId && x.luna > dupaLuna && x.stare !== "respinsa")
+    .filter((x) => !db.liste.some((l) => l.blocId === blocId && l.luna === x.luna && l.stare === "publicata"))
+    .forEach((x) => {
+      const anterioare = db.citiri
+        .filter((y) => y.contorId === contorId && y.luna < x.luna && y.stare === "validata")
+        .sort((a, b) => b.luna.localeCompare(a.luna));
+      x.indexAnterior = anterioare[0].indexCurent;
+      x.consum = round3(x.indexCurent - x.indexAnterior);
+    });
+}
+
 function consumLuna(db, blocId, luna) {
   const consum = {};
   const general = {};
@@ -904,6 +927,17 @@ export function creeazaSursaMock() {
          fixeaza ceasul) le folosesc deliberat ca sa verifice lantul
          indexAnterior fara sa avanseze ceasul de fiecare data. */
       if (luna > lunaDe(aziIso())) eroare("Nu poti transmite indexul pentru o luna viitoare.");
+      /* [J2] Singura comanda de scriere din contorizare fara paza "lista
+         lunii e deja publicata", pe care surorile ei o au deja (valideaza_
+         citire, valideaza_citiri_apartament, citeste_contor_general,
+         estimeaza_citiri): fara ea, un index transmis dupa ce administratorul
+         publica lista mai devreme decat sfarsitul lunii ramane "trimisa"
+         pentru totdeauna (valideaza_citire refuza sa mai verifice o luna
+         publicata). */
+      const ap = db.apartamente.find((a) => a.id === apartamentId);
+      if (db.liste.some((l) => l.blocId === ap.blocId && l.luna === luna && l.stare === "publicata")) {
+        eroare(`Lista lunii ${lunaText(luna)} este deja publicata; nu se mai poate transmite un index.`);
+      }
       /* [§8] transmiterea e atomica: intai se verifica toate indexurile,
          fara nicio scriere; abia apoi se scriu toate deodata, ca un index
          gresit sa nu lase alt contor pe jumatate salvat. */
@@ -1202,21 +1236,12 @@ export function creeazaSursaMock() {
       c.stare = accepta ? "validata" : "respinsa";
       c.motivRespingere = accepta ? null : motiv.trim();
       c.verificataLa = acum();
-      /* [H1] Indexul anterior al citirilor inca "trimise" ale aceluiasi
-         contor, pentru lunile de dupa cea tocmai validata, era inghetat la
+      /* [H1/J1] Indexul anterior al citirilor mai noi ale aceluiasi contor,
+         pentru lunile de dupa cea tocmai validata, era inghetat la
          transmitere si putea ramane stale (calculat sarind peste luna
          validata acum): se recalculeaza, in cascada, ca acelasi consum sa nu
-         se numere de doua ori. */
-      if (accepta) {
-        /* Citirea tocmai validata (c) are ea insasi c.luna < x.luna pentru
-           orice x atins mai jos, deci lista de mai jos gaseste mereu cel
-           putin un candidat (pe c insasi): fara fallback la 0. */
-        db.citiri.filter((x) => x.contorId === c.contorId && x.luna > c.luna && x.stare === "trimisa").forEach((x) => {
-          const anterioare = db.citiri.filter((y) => y.contorId === x.contorId && y.luna < x.luna && y.stare === "validata").sort((a, b) => b.luna.localeCompare(a.luna));
-          x.indexAnterior = anterioare[0].indexCurent;
-          x.consum = round3(x.indexCurent - x.indexAnterior);
-        });
-      }
+         se numere de doua ori -- vezi recalculeazaViitorul. */
+      if (accepta) recalculeazaViitorul(db, c.contorId, bloc.id, c.luna);
       if (!accepta) {
         locatariActivi(db, c.apartamentId).forEach((l) => notifica(db, {
           profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "citire",
@@ -1246,16 +1271,9 @@ export function creeazaSursaMock() {
         c.stare = accepta ? "validata" : "respinsa";
         c.motivRespingere = accepta ? null : motiv.trim();
         c.verificataLa = acum();
-        /* [H1] aceeasi cascada ca in valideazaCitire, pe contorul acestei
-           citiri, fara fallback la 0 (acelasi motiv: c e ea insasi mai veche
-           decat orice x atins mai jos). */
-        if (accepta) {
-          db.citiri.filter((x) => x.contorId === c.contorId && x.luna > c.luna && x.stare === "trimisa").forEach((x) => {
-            const anterioare = db.citiri.filter((y) => y.contorId === x.contorId && y.luna < x.luna && y.stare === "validata").sort((a, b) => b.luna.localeCompare(a.luna));
-            x.indexAnterior = anterioare[0].indexCurent;
-            x.consum = round3(x.indexCurent - x.indexAnterior);
-          });
-        }
+        /* [H1/J1] aceeasi cascada extinsa ca in valideazaCitire, pe contorul
+           acestei citiri -- vezi recalculeazaViitorul. */
+        if (accepta) recalculeazaViitorul(db, c.contorId, bloc.id, c.luna);
       });
       if (!accepta) {
         locatariActivi(db, ap.id).forEach((l) => notifica(db, {
@@ -1273,7 +1291,9 @@ export function creeazaSursaMock() {
          vechea citire. */
       if (luna > lunaDe(aziIso())) eroare("Nu poti citi contorul general pe o luna viitoare.");
       if (db.liste.some((l) => l.blocId === bloc.id && l.luna === luna && l.stare === "publicata")) {
-        eroare(`Lista lunii ${luna} este deja publicata; contorul general nu se mai poate schimba.`);
+        /* [K18] numele lunii in romana ("iunie 2026"), nu sirul brut al lunii
+           ("2026-06") -- P6, reparat in SQL, uitat aici. */
+        eroare(`Lista lunii ${lunaText(luna)} este deja publicata; contorul general nu se mai poate schimba.`);
       }
       /* [§8] un tip fara contor general (de exemplu "gaz") trebuie sa dea un
          mesaj clar, nu un TypeError pe find(...).id mai jos. */
@@ -1282,10 +1302,13 @@ export function creeazaSursaMock() {
       const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare !== "respinsa").sort((a, b) => (a.luna < b.luna ? 1 : -1));
       const anterior = anterioare.length ? anterioare[0].indexCurent : 0;
       if (Number(index) < anterior) eroare("Indexul nou nu poate fi mai mic decat cel anterior.");
-      /* [A3] Un index prea mare ar face consumul lunii urmatoare negativ */
+      /* [J7] Plafonul e indexul CHIAR INREGISTRAT (indexCurent) al lunii
+         urmatoare, nu indexAnterior-ul ei inghetat -- acela se recalculeaza
+         mai jos, cu cascada, in loc sa blocheze definitiv o corectura in sus
+         legitima. */
       const urmatoare = db.citiri.find((x) => x.contorId === c.id && x.luna === lunaUrmatoare(luna) && x.stare !== "respinsa");
-      if (urmatoare && Number(index) > urmatoare.indexAnterior) {
-        eroare(`Indexul nou (${index}) nu poate fi mai mare decat indexul de pornire al lunii urmatoare (${urmatoare.indexAnterior}).`);
+      if (urmatoare && Number(index) > urmatoare.indexCurent) {
+        eroare(`Indexul nou (${index}) nu poate fi mai mare decat indexul contorului general de pe luna urmatoare (${urmatoare.indexCurent}).`);
       }
       const existenta = db.citiri.find((x) => x.contorId === c.id && x.luna === luna);
       if (existenta) db.citiri.splice(db.citiri.indexOf(existenta), 1);
@@ -1293,6 +1316,8 @@ export function creeazaSursaMock() {
         contorId: c.id, blocId: bloc.id, apartamentId: null, tip, luna, indexAnterior: anterior, indexCurent: round3(Number(index)),
         consum: round3(Number(index) - anterior), sursa: "administrator", stare: "validata", transmisaLa: acum(),
       });
+      /* [J7] aceeasi cascada ca la contoarele de apartament (J1), pe contorul general. */
+      recalculeazaViitorul(db, c.id, bloc.id, luna);
     },
 
     async estimeazaCitiri(luna) {
@@ -1325,6 +1350,11 @@ export function creeazaSursaMock() {
           contorId: c.id, blocId: bloc.id, apartamentId: c.apartamentId, tip: c.tip, luna, indexAnterior: anterior,
           indexCurent: round3(anterior + medie), consum: medie, sursa: "estimat", stare: "validata", transmisaLa: acum(),
         });
+        /* [J1] o citire estimata devine "validata" direct, fara sa treaca
+           prin valideazaCitire -- nimeni nu recalcula pana acum daca luna
+           urmatoare fusese deja transmisa/validata sarind peste aceasta
+           luna, lipsa. */
+        recalculeazaViitorul(db, c.id, bloc.id, luna);
         n += 1;
       });
       return { estimate: n };
