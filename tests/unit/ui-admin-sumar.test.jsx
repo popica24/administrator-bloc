@@ -147,11 +147,12 @@ describe("AdminSumar, cu datele demo", () => {
     expect(r.apartamente).toBe(0);
   });
 
-  it("exporta lista publicata ca PDF", async () => {
+  it("[G2/F4] exporta lista publicata ca PDF, cu numele fisierului de uz intern si o mentiune vizibila", async () => {
     await pornesteAdmin();
     const { nume, blob } = prindeDescarcari();
+    expect(screen.getByText(/uz administrativ/i)).toBeTruthy();
     await apasa("Exporta lista PDF");
-    expect(nume).toEqual(["lista-plata-2026-08.pdf"]);
+    expect(nume).toEqual(["lista-plata-2026-08-uz-intern.pdf"]);
     expect(blob.mock.calls[0][0].type).toBe("application/pdf");
   });
 

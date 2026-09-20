@@ -82,7 +82,7 @@ describe("listaPdf pentru avizier", () => {
     const pdf = prindePdf();
     await apasa("Exporta lista PDF");
     const { nume, text: t } = await pdf.ultimul();
-    expect(nume).toBe("lista-plata-2026-08.pdf");
+    expect(nume).toBe("lista-plata-2026-08-uz-intern.pdf");
     expect(t).toContain("Asociatia de proprietari nr. 118 | Bloc D14, scara A, Str. Nicolae Balcescu nr. 22, Pitesti");
     expect(t).toContain("Lista de plata pe august 2026");
     expect(t).toContain("Afisata pe 8 septembrie 2026. Termen de plata: 25 septembrie 2026. Penalizari de 0,02% pe zi dupa 30 de zile de la scadenta.");

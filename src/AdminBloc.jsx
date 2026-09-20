@@ -2649,8 +2649,12 @@ function AdminSumar({ go }) {
               const r = await trimiteReminder("plata");
               if (r.ok) toastMsg(`Reminder trimis catre ${plural(r.rezultat.destinatari, "locatar", "locatari")}, din ${plural(r.rezultat.apartamente, "apartament", "apartamente")} cu sold`);
             }} />
-            <Btn label="Exporta lista PDF" size="sm" variant="secondary" onPress={() => descarcaPdf(listaPdfIntern(date, lista.id), `lista-plata-${lista.luna}.pdf`)} />
+            <Btn label="Exporta lista PDF" size="sm" variant="secondary" onPress={() => descarcaPdf(listaPdfIntern(date, lista.id), `lista-plata-${lista.luna}-uz-intern.pdf`)} />
           </Box>
+          {/* [G2/F4] Varianta de aici e cea interna (nume, restante, penalizari):
+              acelasi continut ca la Facturi, deci acelasi nume de fisier "-uz-intern",
+              ca sa nu se confunde cu PDF-ul de avizier la descarcare. */}
+          <Txt size={11.5} color={C.muted}>PDF-ul de mai sus e de uz administrativ: contine proprietarii si restantele, nu se afiseaza la avizier.</Txt>
         </Card>
       ) : (
         <Gol titlu="Nicio lista publicata" text="Adauga facturile lunii si publica prima lista de plata." actiune={<Btn label="Mergi la facturi" size="sm" onPress={() => go("facturi")} />} />
