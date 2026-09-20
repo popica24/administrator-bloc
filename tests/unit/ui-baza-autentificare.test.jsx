@@ -327,14 +327,25 @@ describe("EcranFaraAcces", () => {
     await screen.findByText("Intra in cont");
   });
 
-  it("cerere respinsa, profil fara email", async () => {
+  /* [J4] Backend-ul lasa acum pe un administrator respins sa retrimita
+     cererea (numar de atestat corectat), dar ecranul ii arata doar "scrie-ne
+     la suport", fara niciun formular: omul nu are nicio cale inainte. */
+  it("[J4] cerere respinsa: poate retrimite cererea corectata, nu doar sa scrie la suport", async () => {
     const s = sursaDemo((d) => { d.eu.rol = "respins"; d.eu.email = null; });
     await s.intra("admin.nou@adminbloc.test", PAROLA);
+    const cerere = vi.spyOn(s, "cereVerificareAdministrator").mockResolvedValue(undefined);
     await pornesteApp({ sursa: s });
     await screen.findByText("Cererea de administrator a fost respinsa");
     expect(screen.getByText("Respins")).toBeTruthy();
     expect(screen.getByText("Pentru detalii, scrie-ne la adresa de suport.")).toBeTruthy();
     expect(screen.queryByText("Contul de administrator asteapta verificarea")).toBeNull();
+
+    expect(screen.getByText("Esti administrator de bloc?")).toBeTruthy();
+    /* nu si formularul de invitatie: acela e pentru un locatar fara apartament */
+    expect(screen.queryByText("Leaga contul de apartamentul tau")).toBeNull();
+    await scrie("Numarul atestatului", "AT-77 corectat");
+    await apasa("Trimite cererea de administrator");
+    expect(cerere).toHaveBeenCalledWith({ numarAtestat: "AT-77 corectat", fisier: null });
   });
 
   it("cont fara apartament: codul se scrie cu majuscule si leaga contul", async () => {

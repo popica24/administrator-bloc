@@ -4543,7 +4543,11 @@ function EcranFaraAcces() {
           <Btn label="Foloseste codul" full size="lg" disabled={cod.trim().length < 6} onPress={() => folosesteInvitatie(cod.trim())} />
         </Card>
       )}
-      {rol === "fara_apartament" && (
+      {/* [J4] Backend-ul lasa pe oricine nu e deja aprobat (in_asteptare sau
+          respins) sa retrimita cererea, cu atestatul corectat, si o intoarce
+          mereu la in_asteptare: un respins nu are de ce sa ramana blocat pe
+          "scrie-ne la suport" cand are aceeasi cale inainte ca un fara_apartament. */}
+      {(rol === "fara_apartament" || rol === "respins") && (
         <Card gap={S.md}>
           <Txt size={15} weight={700}>Esti administrator de bloc?</Txt>
           <Txt size={13} color={C.inkSoft}>Trimite numarul atestatului si o poza cu el. Verificam si te legam de asociatia pe care o administrezi.</Txt>

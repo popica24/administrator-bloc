@@ -100,11 +100,57 @@ describe("cereVerificareAdministrator", () => {
     expect(Object.keys(d)).toEqual(["azi", "eu"]);
   });
 
-  it("a doua cerere este refuzata; merge si fara fisier", async () => {
+  it("merge si fara fisier", async () => {
     const s = creeazaSursaMock();
     await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
     await s.cereVerificareAdministrator({ numarAtestat: "AT-1" });
-    await expect(s.cereVerificareAdministrator({ numarAtestat: "AT-1" })).rejects.toThrow("Cererea a fost deja trimisa.");
+    const d = await s.incarca();
+    expect(d.eu.rol).toBe("in_asteptare");
+  });
+
+  /* [J4] Backend-ul (identitate.cere_verificare_administrator) lasa pe
+     oricine nu e deja aprobat sa retrimita cererea (numar de atestat
+     corectat, eventual poza noua): cererea se intoarce mereu la
+     in_asteptare. Mock-ul o refuza pe a doua necondiționat ("Cererea a fost
+     deja trimisa."), ceea ce nu are corespondent in baza si bloca exact
+     scenariul pe care J4 il repara in ecran (un administrator respins care
+     vrea sa incerce din nou). */
+  it("[J4] o a doua cerere, de la cineva neaprobat, actualizeaza atestatul in loc sa fie refuzata", async () => {
+    const s = creeazaSursaMock();
+    await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-1" });
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-2" });
+    expect((await s.incarca()).eu.rol).toBe("in_asteptare");
+    const { profilId } = await s.sesiuneCurenta();
+    expect(s.db.administratori.find((a) => a.profilId === profilId).numarAtestat).toBe("AT-2");
+  });
+
+  /* [J4] Un administrator respins (stare pe care doar o cerere de
+     dezvoltator din Studio > SQL o poate scrie astazi, ca in
+     conturi-test.txt) trebuie sa poata retrimite cererea si sa redevina
+     in_asteptare, exact ca unul in_asteptare. */
+  it("[J4] un administrator respins retrimite cererea si redevine in asteptare", async () => {
+    const s = creeazaSursaMock();
+    await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-1" });
+    const { profilId } = await s.sesiuneCurenta();
+    const rand = s.db.administratori.find((a) => a.profilId === profilId);
+    rand.stare = "respins";
+    expect((await s.incarca()).eu.rol).toBe("respins");
+
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-1 corectat" });
+    expect((await s.incarca()).eu.rol).toBe("in_asteptare");
+    expect(rand.numarAtestat).toBe("AT-1 corectat");
+  });
+
+  it("[J4] o cerere de la cineva deja aprobat nu schimba nimic", async () => {
+    const s = await ca(ADMIN);
+    const { profilId } = await s.sesiuneCurenta();
+    const rand = s.db.administratori.find((a) => a.profilId === profilId);
+    const atestatDinainte = rand.numarAtestat;
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-ALTUL" });
+    expect(rand.numarAtestat).toBe(atestatDinainte);
+    expect(rand.stare).toBe("aprobat");
   });
 
   it("contul demo neverificat vede doar ecranul de asteptare", async () => {

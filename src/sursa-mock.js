@@ -482,6 +482,9 @@ function rolul(db, profilId) {
   if (adm && adm.stare === "aprobat" && mandat) return { rol: "administrator", mandat, legaturi };
   if (legaturi.length) return { rol: "locatar", mandat: null, legaturi };
   if (adm && adm.stare === "in_asteptare") return { rol: "in_asteptare", legaturi };
+  /* [J4] O cerere respinsa nu se pierdea in "fara_apartament": omul trebuie
+     sa vada de ce e blocat, ca sa poata retrimite cererea corectata. */
+  if (adm && adm.stare === "respins") return { rol: "respins", legaturi };
   return { rol: "fara_apartament", legaturi };
 }
 
@@ -734,6 +737,11 @@ export function creeazaSursaMock() {
 
   return {
     tip: "demo",
+    /* [J4] Expusa doar pentru teste: paritatea cu accesul de dezvoltator
+       din Studio > SQL (conturi-test.txt), singura cale prin care un
+       administrator ajunge azi respins, si in baza reala. Ecranele nu o
+       folosesc, doar comenzile de mai jos. */
+    db,
 
     async sesiuneCurenta() { return sesiune; },
 
@@ -768,10 +776,23 @@ export function creeazaSursaMock() {
       return sesiune;
     },
 
+    /* [J4] identitate.cere_verificare_administrator() (backend) lasa pe
+       oricine nu e deja aprobat sa retrimita cererea, cu atestatul
+       actualizat, si o intoarce mereu la in_asteptare -- inclusiv pe cineva
+       respins, ca sa aiba o cale inainte. Mock-ul refuza necondiționat a
+       doua cerere, ceea ce nu are corespondent in baza. O cerere de la
+       cineva deja aprobat nu schimba nimic (nici in baza). */
     async cereVerificareAdministrator({ numarAtestat, fisier }) {
       const p = eu();
-      if (db.administratori.some((a) => a.profilId === p.id)) eroare("Cererea a fost deja trimisa.");
-      db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
+      const existent = db.administratori.find((a) => a.profilId === p.id);
+      if (existent) {
+        if (existent.stare === "aprobat") return;
+        existent.numarAtestat = numarAtestat;
+        if (fisier) existent.atestatCale = salveazaFisier(fisier, "atestate");
+        existent.stare = "in_asteptare";
+      } else {
+        db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
+      }
     },
 
     /* Limita de 5 incercari gresite pe cont intr-un sfert de ora, ca in
