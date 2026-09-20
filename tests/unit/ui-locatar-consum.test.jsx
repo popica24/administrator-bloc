@@ -307,6 +307,28 @@ describe("Contoare: graficul de consum", () => {
     expect(text(card)).toContain("aug 269,02 mc · 3,01 pe pers., bloc 2,70");
   });
 
+  /* [J10] pePers folosea ap.persoane (numarul de azi) pentru fiecare luna a
+     istoricului, in timp ce media blocului de alaturi (date.consumMediu)
+     vine deja calculata pe persoanele acelei luni. LocatarAcasa (linia
+     ~1760) foloseste deja persoaneInLuna pentru randul curent; graficul
+     Contoare trebuia sa faca la fel pentru fiecare rand din istoric. */
+  it("[J10] persoanele s-au schimbat intre timp: august foloseste persoanele din august, nu cele de azi", async () => {
+    await laContoare({
+      email: ELENA,
+      modifica: (d) => {
+        const ap = d.apartamente.find((a) => a.id === d.eu.apartamentId);
+        ap.persoane = 5; /* azi (septembrie): 5 persoane */
+        ap.istoricPersoane = [
+          { valabilDin: "2026-09", numar: 5 },
+          { valabilDin: "2026-05", numar: 3 },
+        ];
+      },
+    });
+    const card = zonaCu(["Cum a evoluat consumul", "aug 26"]);
+    /* august a avut 3 persoane, nu 5: 14,68 / 3 = 4,89, ca in testul de mai sus */
+    expect(text(card)).toContain("aug 2614,68 mc · 4,89 pe pers., bloc 4,79");
+  });
+
   it("luna estimata, luna fara apa calda si luna fara medie", async () => {
     await laContoare({
       email: ELENA,
@@ -326,7 +348,14 @@ describe("Contoare: graficul de consum", () => {
   it("fara persoane si fara medie pe tipul de apa nu se afiseaza consumul pe persoana", async () => {
     await laContoare({
       email: ELENA,
-      modifica: (d) => { d.apartamente[0].persoane = 0; Object.values(d.consumMediu).forEach((m) => { m.calda = null; }); },
+      /* [J10] fara persoane in nicio luna a istoricului, nu doar azi
+         (ap.persoane), ca sa acopere si lunile din grafic, nu doar randul
+         curent. */
+      modifica: (d) => {
+        d.apartamente[0].persoane = 0;
+        d.apartamente[0].istoricPersoane = [{ valabilDin: "2000-01", numar: 0 }];
+        Object.values(d.consumMediu).forEach((m) => { m.calda = null; });
+      },
     });
     const card = zonaCu(["Cum a evoluat consumul", "aug 26"]);
     expect(text(card)).not.toContain("pe pers.");

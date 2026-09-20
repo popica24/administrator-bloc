@@ -2261,7 +2261,11 @@ function LocatarConsum() {
           <Box gap={S.xs}>
             {istoric.slice().reverse().map((x) => {
               const media = date.consumMediu[x.luna];
-              const pePers = ap.persoane && x[tipGrafic] != null ? round2(x[tipGrafic] / ap.persoane) : null;
+              /* [J10] Persoanele acelei luni, nu cele de azi (ap.persoane):
+                 media blocului de alaturi (date.consumMediu) e deja
+                 calculata pe persoanele lunii ei, la fel ca la LocatarAcasa. */
+              const persLuna = persoaneInLuna(ap, x.luna);
+              const pePers = persLuna && x[tipGrafic] != null ? round2(x[tipGrafic] / persLuna) : null;
               return (
                 <Box key={x.luna} row style={{ justifyContent: "space-between", gap: S.sm }}>
                   <Txt size={12} color={C.inkSoft}>{monthShort(x.luna)}{x.estimat ? " (estimat)" : ""}</Txt>
