@@ -5,7 +5,7 @@
 -- scrise pentru comportamentul corect si marcate todo.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(86);
+select plan(87);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -654,13 +654,19 @@ select throws_ok(
   'Poti estima citirile lunii ' || pg_temp.luna(1)::text || ' abia dupa ziua 20 a lunii.',
   '[A6] refuza estimarea inainte de termen (luna urmatoare)');
 
-select todo('[L5] consumul apartamentului cere cate o citire validata pe fiecare contor activ', 1);
 reset role;
 select pg_temp.serviciu();
 select is(
   contorizare.consum_validat(pg_temp.fx('bloc'), pg_temp.luna()) -> 'consum' -> (pg_temp.fx('ap2')::text),
   null,
   '[L5] ap2 cu un contor validat si unul doar trimis nu are inca consum validat');
+update contorizare.citiri set stare = 'validata'
+  where contor_id = (select id from contorizare.contoare where serie = 'BUCATARIE' and apartament_id = pg_temp.fx('ap2'))
+    and luna = pg_temp.luna();
+select is(
+  contorizare.consum_validat(pg_temp.fx('bloc'), pg_temp.luna()) -> 'consum' -> (pg_temp.fx('ap2')::text) -> 'rece',
+  '11.000'::jsonb,
+  '[L5] dupa validarea celui de-al doilea contor, consumul ap2 aduna ambele contoare (4 + 7)');
 
 select * from finish();
 rollback;
