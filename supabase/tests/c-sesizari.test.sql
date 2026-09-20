@@ -298,14 +298,14 @@ select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id 
 -- =============================================================================
 select pg_temp.ca('loc2');
 select pg_temp.pune('s3', sesizari.adauga_sesizare(pg_temp.id('a2'), 'Liftul nu merge', 'altele', 'Blocat la etajul 2'));
-select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', null,
+select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', 'Sesizarea nu exista, este deja preluata sau nu este din blocul tau.',
   '[K12] sesizari.preia_sesizare: locatarul nu poate prelua sesizarea, ridica eroare');
 reset role;
 select is((select stare from sesizari.sesizari where id = pg_temp.id('s3')), 'noua',
   'preia_sesizare: locatarul nu poate prelua sesizarea');
 
 select pg_temp.ca('admB');
-select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', null,
+select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', 'Sesizarea nu exista, este deja preluata sau nu este din blocul tau.',
   '[K12] preia_sesizare: administratorul altei asociatii nu o poate prelua, ridica eroare');
 reset role;
 select is((select stare from sesizari.sesizari where id = pg_temp.id('s3')), 'noua',
@@ -320,10 +320,10 @@ select results_eq(
   'preia_sesizare: sesizarea trece in lucru, cu cine si cand');
 
 select pg_temp.ca('adm');
-select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', null,
+select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', 'Sesizarea nu exista, este deja preluata sau nu este din blocul tau.',
   '[K12] preia_sesizare pe o sesizare deja in lucru ridica eroare');
 select pg_temp.ca('admB');
-select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s2')) $$, 'P0001', null,
+select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s2')) $$, 'P0001', 'Sesizarea nu exista, este deja preluata sau nu este din blocul tau.',
   '[K12] preia_sesizare pe o sesizare din alt bloc ridica eroare');
 
 -- =============================================================================

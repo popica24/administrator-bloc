@@ -213,7 +213,7 @@ select results_eq(
 
 select pg_temp.ca('chirias1');
 select throws_ok($$ select guvernanta.voteaza(pg_temp.id('v3'), pg_temp.optiune('v3', 'Nu'), pg_temp.id('a1')) $$,
-  'P0001', null, '[K3] chiriasul nu poate vota pentru apartament');
+  'P0001', 'Doar proprietarul apartamentului poate vota (Legea 196/2018).', '[K3] chiriasul nu poate vota pentru apartament');
 select pg_temp.ca('loc1');
 select lives_ok($$ select guvernanta.voteaza(pg_temp.id('v3'), pg_temp.optiune('v3', 'Da'), pg_temp.id('a1')) $$,
   '[K3] proprietarul poate vota dupa ce chiriasul a incercat');
@@ -311,7 +311,7 @@ select pg_temp.ca('adm');
 select is((guvernanta.reaminteste_vot(pg_temp.id('v1')) ->> 'destinatari')::int, 2,
   '[K13] reaminteste_vot: destinatari = loc2 si nou3 (nu fostul, nu cel cu acces viitor)');
 select throws_ok($$ select guvernanta.reaminteste_vot(pg_temp.id('vinchis')) $$,
-  'P0001', null, '[K11] reaminteste_vot refuza un vot inchis');
+  'P0001', 'Votul s-a inchis. Nu se mai pot trimite reamintiri.', '[K11] reaminteste_vot refuza un vot inchis');
 
 -- =============================================================================
 -- convoaca_adunare, confirma_prezenta, situatie_adunari
