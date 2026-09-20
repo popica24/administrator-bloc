@@ -54,7 +54,13 @@ async function ok(promisiune) {
    consecutive nu vad neaparat randurile in aceeasi ordine, deci un rand putea
    sa vina de doua ori sau deloc; iar OFFSET pune serverul sa numere de fiecare
    data randurile pe care apoi le arunca. Asa, fiecare pagina cere randurile de
-   dupa ultimul id primit, iar pagina scurta inseamna ca s-a terminat. */
+   dupa ultimul id primit.
+   Oprirea nu se uita la PAGINA (1000, cat e azi max_rows in
+   supabase/config.toml): o pagina mai scurta decat cat s-a cerut nu inseamna
+   neaparat sfarsitul, doar ca serverul a intors mai putin decat am cerut noi
+   — daca max_rows ar scadea sub PAGINA, fiecare cerere ar veni "scurta" din
+   prima, desi mai raman randuri, si toate() ar trunchia tacut (G13). Singurul
+   semnal de sfarsit de incredere este o pagina goala. */
 const PAGINA = 1000;
 async function toate(construieste) {
   const rezultat = [];
@@ -63,8 +69,8 @@ async function toate(construieste) {
     let q = construieste().order("id", { ascending: true }).limit(PAGINA);
     if (ultim !== null) q = q.gt("id", ultim);
     const bucata = await ok(q);
+    if (bucata.length === 0) return rezultat;
     rezultat.push(...bucata);
-    if (bucata.length < PAGINA) return rezultat;
     ultim = bucata[bucata.length - 1].id;
   }
 }

@@ -117,6 +117,37 @@ describe("P4: citirile pleaca filtrate pe blocul de pe ecran", () => {
   });
 });
 
+describe("G13: toate() nu se opreste la o pagina scurta, ca sa nu para sfarsitul", () => {
+  /* PAGINA (1000) e egal cu max_rows-ul implicit al PostgREST din
+     supabase/config.toml. toate() se oprea cand o pagina venea mai scurta
+     decat PAGINA — corect cat timp server-ul intoarce mereu exact ce i se
+     cere, dar gresit daca max_rows scade sub PAGINA: server-ul ar limita
+     fiecare cerere la mai putin, iar prima pagina "scurta" ar parea sfarsitul,
+     desi mai sunt randuri. Aici simulam exact acel server, printr-un
+     intermediar care taie fiecare raspuns la un prag mai mic decat PAGINA. */
+  it("chiar daca serverul intoarce mai putine randuri decat pragul cerut, toate() continua pana la o pagina chiar goala", async () => {
+    const izolat = await creeazaBloc();
+    const admIzolat = (await intraCa(izolat.adminEmail)).s;
+    const randuri = [];
+    for (let i = 1; i <= 5; i += 1) {
+      randuri.push({ asociatie_id: izolat.asociatieId, bloc_id: izolat.blocId, titlu: `Document G13 ${i}`, tip: "altul", cale: `g13/${izolat.id}/${i}.pdf` });
+    }
+    await ok(db("comunicare").from("documente").insert(randuri));
+
+    const CAP_SERVER = 2;
+    const date = await cuFetch(async (url, init, original) => {
+      if (!url.includes("/rest/v1/documente?")) return undefined;
+      const r = await original(url, init);
+      const corp = await r.clone().json();
+      if (!Array.isArray(corp) || corp.length <= CAP_SERVER) return r;
+      return new Response(JSON.stringify(corp.slice(0, CAP_SERVER)), { status: r.status, headers: r.headers });
+    }, () => admIzolat.incarca());
+
+    expect(date.documente.length).toBe(5);
+    expect(new Set(date.documente.map((d) => d.id)).size).toBe(5);
+  });
+});
+
 describe("C11: sesizari, anunturi, documente, profiluri si liste_lunare pagineaza pe cheie", () => {
   it("un tabel cu peste 1000 de randuri (documente) se intoarce intreg, fara sa se piarda sau sa se dubleze vreun rand", async () => {
     const u = unic();
