@@ -1,0 +1,281 @@
+/* Viata unui apartament: cineva se muta la mijlocul lunii, altcineva pleaca,
+   apartamentul se vinde cu datorii cu tot, iar noul proprietar primeste cont.
+   Intrebarea, peste tot, este ce vede omul nou despre omul dinaintea lui si ce
+   ramane pe apartament dupa ce cineva pleaca.
+
+   Regula pe care si-a pus-o proiectul la sesizari (migratia K4: un locatar nou
+   nu citeste conversatia celui dinaintea lui) se cere aici si de la bani si de
+   la documente. */
+
+import { test, expect } from "@playwright/test";
+import {
+  buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
+  creeazaCont, stergeCont, legaDeApartament, textEcran, CUVINTE_TEHNICE,
+  asteaptaToast, descarca, textPdf, soldApartament, datorieDeTest,
+} from "./ajutor.js";
+
+const azi = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Bucharest" });
+
+async function repuneFisa(ap) {
+  const { error } = await serviciu().schema("organizare").rpc("schimba_fisa_apartament", {
+    p_apartament_id: ap.id,
+    p_proprietar_nume: ap.proprietar_nume,
+    p_cota_indiviza: ap.cota_indiviza,
+    p_suprafata_mp: ap.suprafata_mp,
+    p_scutit_lift: ap.scutit_lift,
+    p_etaj: ap.etaj,
+  });
+  if (error) throw new Error(`repuneFisa: ${error.message}`);
+}
+
+test.describe("cineva se muta la mijlocul lunii", () => {
+  const EMAIL = "e2e-viata-mutat@adminbloc.test";
+  test.beforeAll(async () => { await stergeCont(EMAIL); });
+  test.afterAll(async () => { await stergeCont(EMAIL); });
+
+  test("chiriasul mutat azi intra si vede apartamentul, cu lista intreaga a lunii", async ({ page }) => {
+    const ap = await apartamentulNumarul(17);
+    const pid = await creeazaCont(EMAIL, "Nicolae Mutat");
+    const b = await blocD14();
+    const { error } = await serviciu().schema("identitate").from("locatari").insert({
+      apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "chirias", activ_din: azi(),
+    });
+    if (error) throw new Error(error.message);
+
+    await intra(page, EMAIL);
+    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(`Apartament ${ap.numar}, Bloc D14, scara A`)).toBeVisible();
+
+    /* Intretinerea nu se imparte pe zile: cine se muta pe 15 primeste
+       lista intreaga a lunii. Ecranul trebuie macar sa fie intreg si pe
+       romaneste, nu un ecran gol sau o eroare. */
+    await mergiLaTab(page, "Plata");
+    const t = await textEcran(page);
+    expect(t).toContain("TOTAL DE PLATA ACUM");
+    expect(t).toContain(String(await soldApartament(ap.id)).replace(".", ","));
+    for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
+  });
+
+  test.fixme("[S3] chiriasul mutat azi nu vede platile si chitantele celui dinaintea lui", async ({ page }) => {
+    /* [S3] Migratia K4 a scos conversatiile fostului locatar din ochii celui
+       nou, cu argumentul ca un chirias nou nu are ce citi din viata celui
+       dinainte. Banii au ramas nefiltrati: `financiar.plati`, `alocari_plati`
+       si `chitante` se vad dupa `private.apartamentele_mele()`, fara nicio
+       conditie de perioada (supabase/migrations/20260919120017_financiar.sql:424).
+       Un chirias mutat azi deschide "Platile mele" si vede fiecare plata a
+       fostului locatar, cu suma, data si numarul chitantei, si poate descarca
+       chitantele lui in PDF.
+       Asteptat: ca la sesizari, doar platile de dupa `activ_din`. */
+    const ap = await apartamentulNumarul(17);
+    const pid = await creeazaCont(EMAIL, "Nicolae Mutat");
+    const b = await blocD14();
+    await serviciu().schema("identitate").from("locatari").insert({
+      apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "chirias", activ_din: azi(),
+    });
+
+    await intra(page, EMAIL);
+    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await mergiLaTab(page, "Plata");
+    await page.getByRole("button", { name: "Platile mele" }).click();
+    const t = await textEcran(page);
+    expect(t).not.toMatch(/Chitanta [A-Z0-9]+ nr\./);
+    await expect(buton(page, "Descarca chitanta")).toHaveCount(0);
+  });
+});
+
+test.describe("cineva pleaca la mijlocul lunii", () => {
+  const EMAIL = "e2e-viata-plecat@adminbloc.test";
+  test.beforeAll(async () => { await stergeCont(EMAIL); });
+  test.afterAll(async () => { await stergeCont(EMAIL); });
+
+  test("administratorul inchide accesul din fisa, iar datoria ramane pe apartament", async ({ page, browser }) => {
+    const ap = await apartamentulNumarul(10);
+    const pid = await creeazaCont(EMAIL, "Olga Plecata");
+    await legaDeApartament(pid, ap.id, "chirias");
+    const datorie = await datorieDeTest(ap.id, 155.5, "E2E datoria celui plecat");
+
+    try {
+      /* Omul este in aplicatie chiar acum, cu un alt browser deschis */
+      const ctx = await browser.newContext();
+      const alPlecatului = await ctx.newPage();
+      await intra(alPlecatului, EMAIL);
+      await expect(alPlecatului.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
+      page.once("dialog", (d) => d.accept());
+      await buton(page, "Inchide accesul").first().click();
+      await asteaptaToast(page, "Accesul a fost inchis");
+
+      /* Fisa il tine minte ca acces inchis, nu il sterge */
+      const fisa = page.getByRole("dialog", { name: `Apartament ${ap.numar}` });
+      await expect(fisa.getByText(/Olga Plecata, acces inchis pe/)).toBeVisible();
+
+      /* Datoria lui ramane a apartamentului, nu pleaca odata cu el */
+      expect(await soldApartament(ap.id)).toBeGreaterThanOrEqual(155.5);
+      /* Fisa scrie datoria cu eticheta tipului ei si cu suma */
+      await expect(fisa.getByText("155,50").first()).toBeVisible();
+
+      /* Iar omul, la urmatoarea incarcare, nu mai vede nimic din bloc */
+      await alPlecatului.reload();
+      await expect(alPlecatului.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
+      const t = await textEcran(alPlecatului);
+      expect(t).not.toContain("155,50");
+      for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
+      await ctx.close();
+    } finally {
+      await serviciu().schema("financiar").from("datorii").delete().eq("id", datorie);
+    }
+  });
+});
+
+test.describe("apartamentul se vinde cu datorii cu tot", () => {
+  const EMAIL = "e2e-viata-cumparator@adminbloc.test";
+  test.beforeAll(async () => { await stergeCont(EMAIL); });
+  test.afterAll(async () => { await stergeCont(EMAIL); });
+
+  test("noul proprietar preia soldul vechiului proprietar, scris pe fata", async ({ page }) => {
+    const ap = await apartamentulNumarul(3);
+    const vechi = { ...ap };
+    const datorie = await soldApartament(ap.id);
+    expect(datorie, "apartamentul 3 este restantierul demo").toBeGreaterThan(0);
+
+    try {
+      /* 1. Administratorul schimba proprietarul din fisa */
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
+      await buton(page, "Corecteaza datele apartamentului").click();
+      await page.getByLabel("Proprietar").fill("Vasile Cumparatorul");
+      await buton(page, "Salveaza corectia").click();
+      await asteaptaToast(page, "Fisa apartamentului a fost actualizata");
+
+      /* 2. Soldul nu se muta nicaieri: ramane pe apartament, sub numele nou */
+      const fisa = page.getByRole("dialog", { name: `Apartament ${ap.numar}` });
+      await expect(fisa.getByText("Vasile Cumparatorul")).toBeVisible();
+      expect(await soldApartament(ap.id)).toBeCloseTo(datorie, 2);
+
+      /* 3. Cumparatorul primeste cont si vede datoria ca fiind a lui */
+      const pid = await creeazaCont(EMAIL, "Vasile Cumparatorul");
+      await legaDeApartament(pid, ap.id, "proprietar");
+      await buton(page, "Inchide").click();
+      await buton(page, "Iesi").click();
+      await intra(page, EMAIL);
+      await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+      const t = await textEcran(page);
+      /* Datoria vanzatorului este acum de plata cumparatorului: aplicatia nu
+         cunoaste adeverinta de achitare la zi ceruta la vanzare. */
+      expect(t).toMatch(/Termen depasit|De plata acum/i);
+      for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
+    } finally {
+      await repuneFisa(vechi);
+    }
+  });
+
+  test.fixme("[S4] chitanta ramane pe numele celui care a platit, nu al proprietarului de azi", async ({ page }) => {
+    /* [S4] Chitanta nu se pastreaza nicaieri (`chitante.pdf_cale` e gol):
+       PDF-ul se genereaza de fiecare data din datele de azi, iar randul
+       "Am primit de la ..." ia `apartament.proprietar` (src/AdminBloc.jsx:561),
+       nu platitorul inregistrat (`financiar.plati.platita_de`). Dupa ce
+       apartamentul isi schimba proprietarul, toate chitantele vechi ale
+       apartamentului se retiparesc pe numele nou: un document de casa
+       incepe sa spuna altceva decat a spus cand a fost emis.
+       Asteptat: chitanta reprodusa dupa schimbarea proprietarului poarta
+       acelasi nume ca la emitere. */
+    const ap = await apartamentulNumarul(17);
+    const vechi = { ...ap };
+
+    await intraCa(page, "elena");
+    await mergiLaTab(page, "Plata");
+    await page.getByRole("button", { name: "Platile mele" }).click();
+    const inainte = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
+    expect(inainte).toContain(`Am primit de la ${vechi.proprietar_nume}`);
+
+    try {
+      await serviciu().schema("organizare").rpc("schimba_fisa_apartament", {
+        p_apartament_id: ap.id, p_proprietar_nume: "Vasile Cumparatorul",
+        p_cota_indiviza: ap.cota_indiviza, p_suprafata_mp: ap.suprafata_mp,
+        p_scutit_lift: ap.scutit_lift, p_etaj: ap.etaj,
+      });
+
+      await page.reload();
+      await mergiLaTab(page, "Plata");
+      await page.getByRole("button", { name: "Platile mele" }).click();
+      const dupa = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
+      expect(dupa).toContain(`Am primit de la ${vechi.proprietar_nume}`);
+      expect(dupa).not.toContain("Am primit de la Vasile Cumparatorul");
+    } finally {
+      await repuneFisa(vechi);
+    }
+  });
+});
+
+test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () => {
+  const EMAIL = "e2e-viata-doua-ap@adminbloc.test";
+  let DATORIE_A = null;
+  let DATORIE_B = null;
+
+  test.beforeAll(async () => {
+    await stergeCont(EMAIL);
+    const b = await blocD14();
+    const primul = await apartamentulNumarul(15);
+    const alDoilea = await apartamentulNumarul(16);
+    const pid = await creeazaCont(EMAIL, "Doi Proprietari");
+    for (const [ap, din] of [[primul, "2026-06-01"], [alDoilea, "2026-07-01"]]) {
+      const { error } = await serviciu().schema("identitate").from("locatari").insert({
+        apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "proprietar", activ_din: din,
+      });
+      if (error) throw new Error(error.message);
+    }
+    DATORIE_A = await datorieDeTest(primul.id, 31.11, "E2E datoria apartamentului intai");
+    DATORIE_B = await datorieDeTest(alDoilea.id, 42.22, "E2E datoria apartamentului doi");
+  });
+
+  test.afterAll(async () => {
+    await stergeCont(EMAIL);
+    const sb = serviciu();
+    for (const id of [DATORIE_A, DATORIE_B]) if (id) await sb.schema("financiar").from("datorii").delete().eq("id", id);
+  });
+
+  test("plata se duce pe apartamentul ales, nu pe celalalt", async ({ page }) => {
+    const primul = await apartamentulNumarul(15);
+    const alDoilea = await apartamentulNumarul(16);
+    const soldA = await soldApartament(primul.id);
+    const soldB = await soldApartament(alDoilea.id);
+
+    await intra(page, EMAIL);
+    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+
+    /* Alege explicit al doilea apartament si plateste soldul lui */
+    await page.getByRole("button", { name: "Schimba apartamentul" }).click();
+    await page.getByRole("button", { name: `Apartament ${alDoilea.numar}` }).click();
+    await expect(page.getByText(`Apartament ${alDoilea.numar}, Bloc D14, scara A`)).toBeVisible({ timeout: 20000 });
+    await mergiLaTab(page, "Plata");
+    const suma = Number(soldB).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
+    await buton(page, `Plateste ${suma} lei cu cardul`).click();
+    await page.getByLabel("Numarul cardului").fill("4242424242424242");
+    await page.getByLabel("Expira").fill("12/30");
+    await page.getByLabel("Cod CVC").fill("123");
+    await page.getByLabel("Numele de pe card").fill("DOI PROPRIETARI");
+    await buton(page, `Plateste ${suma} lei`).click();
+    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 30000 });
+    await buton(page, "Gata").click();
+
+    /* Al doilea apartament este achitat, primul a ramas neatins */
+    await expect.poll(async () => soldApartament(alDoilea.id), { timeout: 30000 }).toBe(0);
+    expect(await soldApartament(primul.id)).toBeCloseTo(soldA, 2);
+
+    /* Iar in aplicatie, dupa schimbare, ecranul arata apartamentul celalalt
+       cu soldul lui neschimbat */
+    await page.getByRole("button", { name: "Schimba apartamentul" }).click();
+    await page.getByRole("button", { name: `Apartament ${primul.numar}` }).click();
+    await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`)).toBeVisible({ timeout: 20000 });
+    await mergiLaTab(page, "Plata");
+    await expect(page.getByText("31,11").first()).toBeVisible({ timeout: 20000 });
+    const t = await textEcran(page);
+    expect(t).toContain("31,11");
+    expect(t).not.toContain("42,22");
+    for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
+  });
+});

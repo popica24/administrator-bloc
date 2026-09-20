@@ -10,57 +10,95 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the production build locally |
 | `npm run lint` | ESLint over the whole project |
+| `supabase start` | Local Supabase stack in Docker (API :54321, Postgres :54322, Studio :54323) |
+| `supabase db reset` | Drop the local DB, replay every migration, run `supabase/seed.sql` |
+| `npm run seed` | Load the demo building (D14) into the local DB through the real backend commands; run after `db reset` |
+| `npm test` | Unit tests (vitest, jsdom): engine, PDF, demo source, every UI screen. No server needed |
+| `npm run test:integrare` | `src/sursa-supabase.js` against the local stack (needs `supabase start` + seed) |
+| `npm run test:acoperire` | Both vitest projects with v8 coverage; fails below 100% |
+| `npm run test:functii` | Edge Functions with `deno test`; fails below 100% (`scripts/acoperire-deno.mjs`) |
+| `npm run test:db` / `npm run acoperire:sql` | pgTAP tests in `supabase/tests/`; every function, error and RLS policy must be cited by a test |
 
-There is no test setup — no test runner, no test files, no test script. Verification is `npm run lint` plus running the app.
+Coverage is 100% on every layer and the thresholds are enforced: new code needs tests. Known bugs
+(`docs/audit-2026-09-19.md`) have tests for the correct behaviour marked `it.fails` / Deno `ignore`
+/ pgTAP `todo` with the bug ID; after fixing one, remove its marker. UI tests use
+`tests/unit/ajutor.jsx` (demo source, Date frozen at 2026-09-19). pgTAP files build their own
+fixtures inside a rolled-back transaction and override `private.este_serviciu()` locally, because
+under psql `session_user` is `postgres`. Verification is also `npm run lint` and
+`supabase db lint --local`. Test accounts are in `conturi-test.txt` (password `Bloc-D14-2026`).
 
 ## What this is
 
-AdminBloc is a functional mockup of a Romanian apartment-building administration app (maintenance charge list, meter readings, complaints, admin↔tenant communication). It runs entirely in the browser on mock data: **no backend, no `fetch`, no persistence**. Reloading resets all state.
+AdminBloc is a Romanian apartment-building administration app (maintenance charge list, meter
+readings, complaints, admin↔tenant communication) whose product promise is transparency: every
+amount opens into the formula, invoice and document behind it.
 
-Two roles are switchable from the top bar (`BaraSus`), each with its own bottom tab bar:
-- **Locatar** (tenant) — Acasa, Plata, Contoare, Sesizari, Bloc
-- **Administrator** — Sumar, Apartamente, Facturi, Sesizari, Comunicare
+The app has two data sources with the same interface (`src/sursa.js` picks one):
+- **Supabase** when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set (`.env.local`,
+  see `.env.example`). Local development uses the Docker stack; production is not wired yet.
+- **Demo mode** otherwise: `src/sursa-mock.js`, in memory, reset on reload. It replays
+  `src/date-demo.js` with the same rules as the database, so both sources show the same numbers.
+
+Login decides the role: **Locatar** (Acasa, Plata, Contoare, Sesizari, Bloc) or
+**Administrator** (Sumar, Apartamente, Facturi, Sesizari, Comunicare). An unverified
+administrator or an account without an apartment gets a waiting / invitation-code screen.
 
 ## Architecture
 
-Essentially the whole app lives in one file: `src/AdminBloc.jsx` (~2500 lines). `src/main.jsx` only mounts it; `src/index.css` is a document-level reset. This is deliberate — do not split it into modules without being asked.
-
-The file is divided into numbered sections, in reading order:
-
-1. **TOKENS** — `C` (colors), `S` (spacing), `R` (radii), `F` (fonts). No hardcoded colors or spacing anywhere else.
-2. **HELPERS** — pure JS: `round2`, `lei()` (Romanian `1.234,56 lei` formatting, hand-written to avoid `Intl`), `num()`, month labels, date helpers.
-3. **MOCK DATA** — `BLOC`, `APARTAMENTE`, `FACTURI` (keyed by month), `CONSUM`, `CONTOR_GENERAL`, `SOLDURI_INITIALE`, `SESIZARI_INITIALE`, etc. `LUNA_CURENTA = "2026-07"`; `LUNI_DISPONIBILE` holds the three months with data.
-4. **ENGINE** — the allocation logic. **This is the single source of truth for every number displayed.**
-5. **PRIMITIVE** — `Box`, `Txt`, `Btn`, `Press`, `Card`, `Field`, `Sheet`, etc. The only place that touches the DOM.
-6. **STARE PARTAJATA** — one `AppCtx` React Context holding all mutable state.
-7. **ELEMENTUL SEMNATURA** — `RandLista`, the expandable charge row.
-8. **ECRANE LOCATAR** / 9. **ECRANE ADMINISTRATOR** / 10. **NAVIGATIE SI SHELL** / 11. **APLICATIA**.
+### Frontend
+- `src/AdminBloc.jsx` — the whole UI in one file (do not split it without being asked), in
+  numbered sections: 1 TOKENS, 2 HELPERS, 3 CONSTANTE (labels), 4 DERIVARI (pure functions that
+  read the loaded data), 5 PRIMITIVE (the only place touching the DOM), 6 STARE (`AppCtx`),
+  7 `RandLista`, 8 locatar screens, 9 admin screens, 10 shell + auth screens, 11 the app.
+- `src/sursa-supabase.js` / `src/sursa-mock.js` — `incarca()` returns one `date` object for the
+  signed-in user; every command (`platesteCard`, `publicaLista`, …) is a method. The app wraps
+  each command in `cmd()` (call, reload, toast) and screens get `{ ok, rezultat }` back.
+- `src/pdf.js` — tiny PDF writer (receipts, the list for the notice board). No libraries.
+- `supabase/functions/_shared/motor.js` — **the allocation engine**, pure JS, imported unchanged
+  by the app (invoice preview) and by the `publica-lista` Edge Function (Deno).
 
 ### The engine is the invariant
+Amounts are computed **once**, when a list is published: `publica-lista` runs `motor.js` and
+`intretinere.salveaza_lista_publicata()` stores the result in `intretinere.repartizari` in one
+transaction. Screens only read stored rows and the financial ledger; they never compute a charge.
+Never reimplement allocation in SQL or in a screen — that is the "tenant list and admin report
+contradict each other" bug the app exists to prevent. Methods: `consum`, `persoane`,
+`persoane_fara_lift` (uses `scutit_lift`), `apartamente`, `cota` (divides by the sum of shares;
+the DB refuses to activate a block whose shares do not sum to 100).
 
-`calculeazaLuna(luna)` runs once per month in `LUNI_DISPONIBILE` at module load and fills `LISTE`. Every screen — tenant list and admin report alike — reads from `LISTE`, `deIncasat()`, `penalizare()`, `STATISTICI`. **Screens must never contain hand-written numbers.** That is what keeps the tenant's charge list and the administrator's report from contradicting each other; breaking it is the main correctness risk in this codebase.
+`RandLista` is the signature element: the row that expands into the full derivation.
 
-Allocation methods (`METODE`): `consum`, `persoane`, `persoaneFaraParter` (ground floor pays no lift), `apartamente`, `cota` (share of common property). Two notable rules:
-- `repartizeazaApa` splits water by individual meter consumption, then distributes the gap between the building's main meter and the sum of individual meters across people.
-- `corecteazaRotunjirea` pushes the rounding remainder onto the largest share so the allocated total matches the invoice to the ban.
+### Backend (DDD, `docs/schema-propunere.md`)
+One Postgres schema per bounded context: `organizare`, `identitate`, `intretinere` (core),
+`contorizare`, `financiar`, `sesizari`, `guvernanta`, `comunicare`, `nomenclator`; unexposed:
+`private` (RLS helpers), `evenimente` (domain event queue), `audit` (change log). Migrations are in
+`supabase/migrations/` in the order of §9; use the `adaugare-migratie` skill for any DDL.
 
-### The signature element
-
-`RandLista` is the row in the charge list that expands to show the full derivation of the amount — invoice total, allocation basis, the arithmetic, the supporting document. The rest of the app is built around it; treat it as the feature, not decoration.
-
-### State
-
-All mutable state is `useState` in the `AdminBloc()` root component, exposed through `AppCtx` as an `api` object (`adaugaSesizare`, `schimbaStare`, `raspunde`, `adaugaAnunt`, `voteaza`, `plateste`, `transmiteIndex`, `incaseaza`, `comutaReminder`, `toastMsg`). Screens read it via `useApp()`. When a real backend arrives, only these functions become network calls.
+- Reads go through RLS (`private.blocuri_administrate()`, `private.apartamentele_mele()`, …).
+  Writes go through `security definer` command functions, one aggregate each.
+- Money is an append-only ledger: `datorii`, `plati`, `alocari_plati` (oldest debt first),
+  `chitante` (gapless numbering via `setari_financiare`), `penalizari` (frozen parameters, monthly
+  pg_cron job). Balance is always computed (`financiar.datorii_rest`, `financiar.solduri`).
+- Cross-context effects are events in `evenimente.coada`, processed by `evenimente.proceseaza`
+  (called by the `proceseaza-eveniment` Edge Function via a pg_net webhook, and by pg_cron).
+- Edge Functions: `publica-lista`, `plata-card` + `procesator-simulat` + `plata-card-webhook`
+  (HMAC, simulated card processor), `proceseaza-eveniment`, `creeaza-asociatie`, `exporta-bloc`.
+- Storage buckets (private): `documente`, `poze` (1 MB, JPEG/WebP; the app shrinks photos),
+  `atestate`.
+- Edge Function secrets, required in production (see README, "Punerea in productie"):
+  `SITE_URL` (the only origin the functions answer with CORS headers; without it they fall
+  back to `http://localhost:5173`) and `PROCESATOR_SECRET` (signs payment confirmations;
+  without it the code falls back to a development value that is in the repo).
 
 ## Conventions
 
-**React Native portability is a hard constraint.** The file is written to port with minimal rewriting (`Box`→`View`, `Txt`→`Text`, `Btn`→`Pressable`, `.map()`→`FlatList`, `style={{}}`→`StyleSheet.create`). Therefore:
-- Flexbox only — no CSS grid, no pseudo-selectors, no CSS units other than px.
-- No external libraries, no icon packs (tab labels are plain text). Only `react` / `react-dom`.
-- Screens use only the primitives from section 5; raw DOM elements belong in section 5 alone.
-- Web-only CSS lives in the `BASE_CSS` template string (fade + slide animations, focus rings) — it is expected to disappear on port.
-- Sections 2, 3 and 4 must stay pure JavaScript so they copy over unchanged.
+**React Native portability is a hard constraint for the UI.** Flexbox only, no grid, no
+pseudo-selectors, px only; screens use only section-5 primitives; web-only CSS lives in
+`BASE_CSS`. Only `react`, `react-dom` and `@supabase/supabase-js` (which also runs on RN).
 
-**Language:** identifiers, comments, and UI strings are Romanian without diacritics (`sesizari`, `intretinere`, `factura`). Follow that; do not introduce diacritics or mix in English names.
+**Language:** identifiers, comments, UI strings and SQL are Romanian without diacritics.
 
-**Layout:** the app shell is a fixed-width column (`maxWidth: 520`, full viewport height) centered on the page — it is designed as a phone screen, not a desktop layout.
+**Users are 50+ and non-technical:** large touch targets, plain wording, one primary action per
+screen, derivations behind the expandable row.
+
+**Layout:** a fixed-width phone column (`maxWidth: 520`), not a desktop layout.
