@@ -330,8 +330,13 @@ const datoriiApartament = (date, apId) => date.datorii
   .sort((a, b) => (a.scadenta === b.scadenta ? (a.creatLa < b.creatLa ? -1 : 1) : a.scadenta < b.scadenta ? -1 : 1));
 const datoriiDeschise = (date, apId) => datoriiApartament(date, apId).filter((d) => d.rest > 0);
 
-/* Soldul: tot ce a ramas neplatit, calculat din registru, niciodata stocat */
-const sold = (date, apId) => suma(datoriiDeschise(date, apId), (d) => d.rest);
+/* [H8] Soldul: tot ce a ramas neplatit, calculat din registru, niciodata
+   stocat. Trebuie sa adune restul FIECAREI datorii, nu doar al celor cu rest
+   pozitiv: o corectie negativa lasa un rest negativ (un credit), iar
+   datoriiDeschise() il arunca (e filtrata pe rest > 0, ca sa arate doar ce
+   mai e de platit). Fara acest credit in suma, soldul apare mai mare decat
+   cel din registru. */
+const sold = (date, apId) => suma(datoriiApartament(date, apId), (d) => d.rest);
 const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.scadenta < date.azi), (d) => d.rest);
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
@@ -472,7 +477,14 @@ function statisticiAdmin(date) {
   const lista = listaCurenta(date);
   const datoriiLista = lista ? date.datorii.filter((d) => d.listaId === lista.id && d.tip === "intretinere") : [];
   const deIncasat = suma(datoriiLista, (d) => d.suma);
-  const incasat = suma(datoriiLista, (d) => d.suma - d.rest);
+  /* [H8] `suma - rest` presupune ca orice scadere a restului vine dintr-o
+     plata: o corectie negativa poate sa scada restul datoriei de intretinere
+     a aceleiasi liste fara nicio plata noua (docs/schema-propunere.md
+     §11.4), ceea ce arata o incasare fantoma egala cu corectia pentru un
+     apartament care nu a platit nimic. Incasarea reala este suma alocarilor
+     platilor pe aceste datorii. */
+  const idDatoriiLista = new Set(datoriiLista.map((d) => d.id));
+  const incasat = suma(date.plati.flatMap((p) => p.alocari.filter((a) => idDatoriiLista.has(a.datorieId))), (a) => a.suma);
   const apAchitate = datoriiLista.filter((d) => d.rest <= 0).length;
   const cuRestanta = date.apartamente.filter((a) => restanta(date, a.id) > 0);
   return {

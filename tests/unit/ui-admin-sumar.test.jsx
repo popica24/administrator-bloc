@@ -2,8 +2,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { pornesteAdmin, apasa, buton, butoane, butonul, toast, randCu } from "./ui-admin-ajutor.js";
+import { PAROLA, ADMIN } from "./ajutor.jsx";
+import { creeazaSursaMock } from "../../src/sursa-mock.js";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
+
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /* Tine minte numele fisierelor PDF descarcate, fara navigare in jsdom */
 function prindeDescarcari() {
@@ -32,6 +36,30 @@ describe("AdminSumar, cu datele demo", () => {
     expect(screen.getByText("Publicata 8 sep 2026")).toBeTruthy();
     expect(screen.getByText(`${Math.round((incasat / deIncasat) * 100)}%`)).toBeTruthy();
     expect(screen.getByText(`Au platit integral ${datorii.filter((d) => d.rest <= 0).length} din 20 apartamente.`)).toBeTruthy();
+  });
+
+  it("[H8] o corectie care scade restul fara o plata noua nu umfla incasat (fara alocare fantoma)", async () => {
+    const baza = creeazaSursaMock();
+    await baza.intra(ADMIN, PAROLA);
+    const date0 = await baza.incarca();
+    const lista = date0.liste.find((l) => l.stare === "publicata");
+    const datoriiLista = date0.datorii.filter((d) => d.listaId === lista.id && d.tip === "intretinere");
+    const deIncasat = datoriiLista.reduce((s, d) => s + d.suma, 0);
+    const idDatorii = new Set(datoriiLista.map((d) => d.id));
+    /* Incasarea reala: doar ce a fost alocat din plati confirmate pe aceste datorii */
+    const incasatReal = round2(date0.plati.flatMap((p) => p.alocari).filter((a) => idDatorii.has(a.datorieId)).reduce((s, a) => s + a.suma, 0));
+    const tintaId = datoriiLista.find((d) => d.rest > 0).id;
+
+    await pornesteAdmin({
+      modifica: (d) => {
+        /* O corectie scade restul datoriei de intretinere fara nicio plata
+           noua (docs/schema-propunere.md §11.4): d.suma - d.rest creste, dar
+           nimeni nu a platit nimic in plus. */
+        const dt = d.datorii.find((x) => x.id === tintaId);
+        if (dt) dt.rest = round2(dt.rest - 50);
+      },
+    });
+    expect(screen.getByText(`${Math.round((incasatReal / deIncasat) * 100)}%`)).toBeTruthy();
   });
 
   it("KPI-urile arata restantele, penalizarile, citirile, sesizarile si fondul de reparatii", async () => {

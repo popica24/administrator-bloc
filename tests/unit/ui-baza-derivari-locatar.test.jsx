@@ -87,6 +87,14 @@ describe("defalcare pe lista curenta", () => {
     expect(screen.getByText(/Penalizarea este de 0,02% pe zi din suma neplatita/)).toBeTruthy();
   });
 
+  it("[H8] o corectie negativa (credit) scade soldul, nu doar datoriile pozitive", async () => {
+    await plata((d) => {
+      d.datorii.push(datorie({ id: "dat-credit", tip: "corectie", suma: -40, rest: -40, scadenta: "2026-08-25", descriere: "Corectie credit" }));
+    });
+    expect(calcul("Total de plata")).toBe("Total de plata678,09 lei");
+    expect(screen.getByRole("button", { name: "Plateste 678,09 lei cu cardul" })).toBeTruthy();
+  });
+
   it("datoriile cu aceeasi scadenta apar in ordinea in care s-au creat", async () => {
     await plata((d) => {
       d.datorii.push(datorie({ id: "dat-b", tip: "corectie", suma: 20, rest: 20, scadenta: "2026-06-25", descriere: "Corectie a doua", creatLa: "2026-06-20T10:00:00+03:00" }));
