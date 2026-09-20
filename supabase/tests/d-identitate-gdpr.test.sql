@@ -5,7 +5,7 @@
 --     tinuta in identitate.incercari_invitatii.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(40);
+select plan(43);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-* si d-*; anulat la rollback).
@@ -87,6 +87,12 @@ begin
 
   perform set_config('fx.admin', pg_temp.utilizator('Admin G')::text, true);
   perform identitate.numeste_administrator(pg_temp.fx('admin'), pg_temp.fx('asociatie'), 'AT-G-1', current_date - 30);
+  -- Poza atestatului administratorului, in bucket-ul privat "atestate" (C7).
+  update identitate.administratori
+     set atestat_cale = pg_temp.fx('admin')::text || '/atestat-test.jpg'
+   where profil_id = pg_temp.fx('admin');
+  insert into storage.objects (bucket_id, name, owner)
+  values ('atestate', pg_temp.fx('admin')::text || '/atestat-test.jpg', pg_temp.fx('admin'));
   perform set_config('fx.loc', pg_temp.utilizator('Locatar G')::text, true);
   perform set_config('fx.fost', pg_temp.utilizator('Fost Locatar G')::text, true);
   perform set_config('fx.nou', pg_temp.utilizator('Cont Nou G')::text, true);
@@ -120,7 +126,8 @@ begin
   values (pg_temp.fx('loc'), pg_temp.fx('loc')::text, 'email',
           jsonb_build_object('sub', pg_temp.fx('loc')::text, 'email', (select email from auth.users where id = pg_temp.fx('loc')))),
          (pg_temp.fx('admin'), pg_temp.fx('admin')::text, 'email',
-          jsonb_build_object('sub', pg_temp.fx('admin')::text, 'email', (select email from auth.users where id = pg_temp.fx('admin'))));
+          jsonb_build_object('sub', pg_temp.fx('admin')::text, 'email', (select email from auth.users where id = pg_temp.fx('admin')),
+            'name', 'Admin G', 'phone', '0711111111'));
 
   insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
   values (gen_random_uuid(), pg_temp.fx('loc'), now(), now(), now() + interval '1 day') returning id into v_id;
@@ -262,6 +269,18 @@ select is(
   (select identity_data ->> 'email' like 'anonim-%@adminbloc.invalid' from auth.identities where user_id = pg_temp.fx('admin')),
   true,
   'anonimizeaza_profil: identity_data a administratorului nu mai poarta emailul real');
+select is(
+  (select identity_data ?| array['name', 'phone'] from auth.identities where user_id = pg_temp.fx('admin')),
+  false,
+  'anonimizeaza_profil: identity_data nu mai poarta numele sau telefonul (C7)');
+select results_eq(
+  $$select numar_atestat, atestat_cale from identitate.administratori where profil_id = pg_temp.fx('admin')$$,
+  $$values (null::text, null::text)$$,
+  'anonimizeaza_profil: numarul atestatului si calea pozei dispar de pe fisa administratorului (C7)');
+select is(
+  (select count(*)::int from storage.objects where bucket_id = 'atestate' and name like pg_temp.fx('admin')::text || '/%'),
+  0,
+  'anonimizeaza_profil: poza atestatului din bucket-ul privat se sterge (C7)');
 select is(
   (select count(*)::int from auth.sessions where user_id = pg_temp.fx('admin')),
   0,
