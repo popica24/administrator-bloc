@@ -43,6 +43,25 @@ async function pana(conditie, limita = 8000) {
   }
 }
 
+/* pg_locks nu poate fi filtrat dupa "randul blocat de sesiunea a": alte sesiuni
+   (jobul pg_cron de fiecare minut, fixture-urile altor fisiere de test care
+   ruleaza in paralel pe aceeasi baza, chiar webhook-ul care anunta un eveniment
+   nou) pot tine in acelasi moment un RowShareLock pe alt rand din acelasi
+   tabel. Numarand doar dupa `relname` si `mode`, testul lua acel lock strain
+   drept dovada ca sesiunea noastra a apucat randul, si pornea cursa prea
+   devreme. Legam verificarea de backend-ul exact al sesiunii. */
+async function pidSesiune(s) {
+  s.scrie("select pg_backend_pid();");
+  await pana(() => /^\d+\s*$/m.test(s.text()));
+  return Number(s.text().match(/^(\d+)\s*$/m)[1]);
+}
+
+async function tineLocul(pid, relatie) {
+  return pana(async () => (await psql(
+    `select count(*) from pg_locks l join pg_class c on c.oid = l.relation
+      where l.pid = ${pid} and c.relname = '${relatie}' and l.mode = 'RowShareLock' and l.granted`)) !== "0");
+}
+
 let f;
 let adm;
 
@@ -90,32 +109,52 @@ describe("evenimente: doi consumatori pe acelasi rand", () => {
   beforeAll(async () => {
     /* Un eveniment fara consumator (CitireTransmisa), pus inapoi in coada.
        incercari = 10 il scoate din raza jobului pg_cron, care ia doar randurile
-       cu incercari < 10, ca sa nu ni-l proceseze el intre timp. */
+       cu incercari < 10, ca sa nu ni-l proceseze el intre timp.
+
+       INSERT-ul de mai jos porneste si trigger-ul `coada_anunta_functia`, care
+       cheama prin pg_net webhook-ul real (Edge Function `proceseaza-eveniment`)
+       pe acelasi rand, asincron. Daca am face reset-ul de mai jos imediat, acel
+       webhook ramane "in zbor" si poate ajunge sa proceseze randul chiar in
+       timpul testelor de mai jos (mai probabil sub incarcare, cand pg_net si
+       runtime-ul de Edge Functions sunt ocupate cu evenimentele altor fisiere
+       de test rulate in paralel pe aceeasi baza). Nu e de ajuns sa asteptam
+       `incercari > 0`: jobul pg_cron de fiecare minut poate proceza si el
+       randul (tot cu incercari < 10) inaintea webhook-ului, ceea ce ne-ar
+       pacali sa credem ca "singurul consumator automat" si-a facut treaba cand
+       de fapt cererea originala e inca in coada lui pg_net. Asteptam raspunsul
+       chiar al acelei cereri (net._http_response, cu id-ul nostru in corp),
+       singurul semnal ca livrarea declansata de INSERT chiar s-a incheiat. */
     const loc = (await intraCa(f.conturi.loc.email)).s;
     const contor = (await loc.incarca()).contoare.find((c) => c.tip === "rece");
     await loc.transmiteCitire({ apartamentId: f.ap["1"], luna: lunaDelta(0), indexuri: [{ contorId: contor.id, index: 99 }] });
     idEveniment = await psql(`select id from evenimente.coada where tip = 'CitireTransmisa' and (date ->> 'bloc_id') = '${f.blocId}' order by id desc limit 1`);
     expect(idEveniment).toMatch(/^\d+$/);
+
+    const raspunsSosit = await pana(async () => (await psql(
+      `select exists(select 1 from net._http_response where content::jsonb ->> 'id' = '${idEveniment}')`)) === "t", 20000);
+    expect(raspunsSosit).toBe(true);
+
     await psql(`update evenimente.coada set procesat_la = null, incercari = 10 where id = ${idEveniment}`);
   });
 
   it("randul blocat de alta sesiune este sarit, nu asteptat (skip locked)", async () => {
     const a = sesiune();
-    a.scrie("begin;");
-    a.scrie(`select id from evenimente.coada where id = ${idEveniment} for update;`);
-    expect(await pana(async () => (await psql(
-      `select count(*) from pg_locks l join pg_class c on c.oid = l.relation
-        where c.relname = 'coada' and l.mode = 'RowShareLock' and l.granted`)) !== "0")).toBe(true);
+    try {
+      const pidA = await pidSesiune(a);
+      a.scrie("begin;");
+      a.scrie(`select id from evenimente.coada where id = ${idEveniment} for update;`);
+      expect(await tineLocul(pidA, "coada")).toBe(true);
 
-    const inceput = Date.now();
-    const rezultat = await psql(`select evenimente.proceseaza(${idEveniment})`);
-    const durata = Date.now() - inceput;
-    expect(rezultat).toBe("f");
-    expect(durata).toBeLessThan(3000);
-    expect(await psql(`select procesat_la is null from evenimente.coada where id = ${idEveniment}`)).toBe("t");
-
-    a.scrie("rollback;");
-    await a.inchide();
+      const inceput = Date.now();
+      const rezultat = await psql(`select evenimente.proceseaza(${idEveniment})`);
+      const durata = Date.now() - inceput;
+      expect(rezultat).toBe("f");
+      expect(durata).toBeLessThan(3000);
+      expect(await psql(`select procesat_la is null from evenimente.coada where id = ${idEveniment}`)).toBe("t");
+    } finally {
+      a.scrie("rollback;");
+      await a.inchide();
+    }
   });
 
   it("doua apeluri simultane il proceseaza o singura data", async () => {
@@ -138,29 +177,32 @@ describe("penalizarile blocheaza contul inainte sa citeasca restul (F7)", () => 
     }));
 
     const a = sesiune();
-    a.scrie("begin;");
-    a.scrie(`select 1 from financiar.conturi where apartament_id = '${ap}' for update;`);
-    expect(await pana(async () => (await psql(
-      `select count(*) from pg_locks l join pg_class c on c.oid = l.relation
-        where c.relname = 'conturi' and l.mode = 'RowShareLock' and l.granted`)) !== "0")).toBe(true);
-
-    /* Calculul ruleaza in alta sesiune, intr-o tranzactie anulata la final, ca
-       sa nu lase penalizari in baza locala. */
     const b = sesiune();
-    b.scrie("begin;");
-    b.scrie("select 'inceput' as pas;");
-    b.scrie("select financiar.calculeaza_penalizari(current_date) as penalizari;");
+    try {
+      const pidA = await pidSesiune(a);
+      a.scrie("begin;");
+      a.scrie(`select 1 from financiar.conturi where apartament_id = '${ap}' for update;`);
+      expect(await tineLocul(pidA, "conturi")).toBe(true);
 
-    const blocat = await pana(async () => (await psql(
-      `select count(*) from pg_stat_activity
-        where wait_event_type = 'Lock' and query like '%calculeaza_penalizari%'`)) !== "0");
-    expect(blocat).toBe(true);
-    expect(b.text()).not.toMatch(/penalizari/);
+      /* Calculul ruleaza in alta sesiune, intr-o tranzactie anulata la final, ca
+         sa nu lase penalizari in baza locala. */
+      const pidB = await pidSesiune(b);
+      b.scrie("begin;");
+      b.scrie("select 'inceput' as pas;");
+      b.scrie("select financiar.calculeaza_penalizari(current_date) as penalizari;");
 
-    a.scrie("rollback;");
-    await a.inchide();
-    expect(await pana(async () => /inceput/.test(b.text()) && /\n/.test(b.text().split("inceput")[1] || ""))).toBe(true);
-    b.scrie("rollback;");
-    await b.inchide();
+      const blocat = await pana(async () => (await psql(
+        `select count(*) from pg_stat_activity
+          where pid = ${pidB} and wait_event_type = 'Lock' and query like '%calculeaza_penalizari%'`)) !== "0");
+      expect(blocat).toBe(true);
+      expect(b.text()).not.toMatch(/penalizari/);
+
+      a.scrie("rollback;");
+      expect(await pana(async () => /inceput/.test(b.text()) && /\n/.test(b.text().split("inceput")[1] || ""))).toBe(true);
+    } finally {
+      a.scrie("rollback;");
+      b.scrie("rollback;");
+      await Promise.all([a.inchide(), b.inchide()]);
+    }
   });
 });
