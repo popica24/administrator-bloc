@@ -431,11 +431,6 @@ describe("bloc de test: ramurile maparii", () => {
     expect(loc1.plati.find((p) => p.id === ids.cash).inregistrataDe).toBe(`Administrator ${f.id}`);
   });
 
-  it("mesajul unui om pe care cititorul nu il poate vedea apare fara autor", () => {
-    const fost = loc1.sesizari.find((s) => s.id === ids.sFost);
-    expect(fost.mesaje[0]).toMatchObject({ text: "Mesajul fostului", autor: null });
-  });
-
   it("[S2] presedintele care locuieste in bloc vede ca ale lui doar platile apartamentului lui", () => {
     expect(pres.eu.rol).toBe("locatar");
     expect(pres.plati.map((p) => p.apartamentId)).toEqual([]);
@@ -446,7 +441,7 @@ describe("bloc de test: ramurile maparii", () => {
     expect(new Set(idsS).size).toBe(idsS.length);
   });
 
-  it.fails("[K4] locatarul nou nu vede sesizarile si mesajele fostului locatar", () => {
+  it("[K4] locatarul nou nu vede sesizarile si mesajele fostului locatar", () => {
     expect(loc1.sesizari.map((s) => s.id)).not.toContain(ids.sFost);
   });
 

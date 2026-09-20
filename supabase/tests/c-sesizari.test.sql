@@ -426,7 +426,6 @@ select pg_temp.ca('fost3');
 select is((select count(*)::int from sesizari.sesizari where id = pg_temp.id('s6')), 0,
   'RLS "Sesizarile proprii si cele din blocurile conduse": fostul locatar nu isi mai vede sesizarea');
 select pg_temp.ca('nou3');
-select todo('[K4] sesizarile se vad dupa autor/perioada, nu dupa apartament', 2);
 select is((select count(*)::int from sesizari.sesizari where id = pg_temp.id('s6')), 0,
   '[K4] locatarul nou nu vede sesizarea fostului locatar');
 select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id = pg_temp.id('s6')), 0,

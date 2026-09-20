@@ -574,8 +574,13 @@ function proiecteaza(db, profilId) {
   });
 
   const numarAp = (id) => db.apartamente.find((a) => a.id === id).numar;
+  /* [K4] "a mea" nu inseamna doar acelasi apartament, ci ca eu locuiam acolo
+     cand a fost scrisa sesizarea: altfel un chirias nou ar mosteni
+     conversatia si pozele fostului locatar. */
+  const legaturaCurenta = (apartamentId) => db.locatari.find((l) => l.profilId === eu.profilId && l.apartamentId === apartamentId && !l.activPana);
   const sesizari = db.sesizari.filter((s) => s.blocId === bloc.id).sort((a, b) => (a.creatLa < b.creatLa ? 1 : -1)).map((s) => {
-    const aMea = s.apartamentId === eu.apartamentId;
+    const legatura = legaturaCurenta(s.apartamentId);
+    const aMea = !!legatura && s.creatLa >= legatura.activDin;
     const complet = esteAdmin || aMea;
     return {
       id: s.id, aMea, titlu: s.titlu, categorie: s.categorie, stare: s.stare, creataLa: s.creatLa,

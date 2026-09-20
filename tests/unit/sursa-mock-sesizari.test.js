@@ -133,7 +133,7 @@ describe("preiaSesizare si rezolvaSesizare", () => {
 });
 
 describe("[K4] sesizarile fostului locatar", () => {
-  it.fails("[K4] un locatar nou nu vede conversatia de dinaintea venirii lui", async () => {
+  it("[K4] un locatar nou nu vede conversatia de dinaintea venirii lui", async () => {
     const { s, d } = await ca(ADMIN);
     const ap11 = d.apartamente.find((a) => a.numar === "11").id;
     const cod = await s.invitaLocatar(ap11, "chirias");
