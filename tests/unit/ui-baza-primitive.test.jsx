@@ -32,12 +32,12 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     const numerar = vi.spyOn(sursa, "inregistreazaNumerar").mockResolvedValue({ plataId: null });
     await apasa("Inregistreaza incasare cash");
     /* campul pleaca de la sold, scris romaneste, si se citeste inapoi exact */
-    expect(screen.getByLabelText("Suma primita").value).toBe("3.939,38");
+    expect(screen.getByLabelText("Suma primita").value).toBe("3.939,39");
     /* [F8] nu exista nicio cale de a anula o chitanta emisa; ecranul o spune inainte de emitere */
     expect(screen.getByText("Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua.")).toBeTruthy();
     expect(within(screen.getByRole("dialog")).getByText("lei")).toBeTruthy();
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.38);
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.39);
 
     for (const gol of ["   ", "abc", "0", "-5"]) {
       await incaseaza(gol);

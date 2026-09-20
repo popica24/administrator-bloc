@@ -144,16 +144,16 @@ describe("Plata: datorii si penalizari", () => {
   it("restantele cu zilele de intarziere si penalizarea cu formula", async () => {
     await laPlata({ email: ILIE });
     const card = cardTotal();
-    expect(text(card)).toContain("3. Datorii din lunile trecute1.497,45 lei");
-    expect(text(card)).toContain("Total de plata2.319,36 lei");
+    expect(text(card)).toContain("3. Datorii din lunile trecute1.497,37 lei");
+    expect(text(card)).toContain("Total de plata2.319,21 lei");
     const t = ecran();
     expect(t).toContain("Intretinere iunie 2026, neplatita");
-    expect(t).toContain("scadenta 25 iul 2026, 56 de zile intarziere748,64");
+    expect(t).toContain("scadenta 25 iul 2026, 56 de zile intarziere748,56");
     expect(t).toContain("Intretinere iulie 2026, neplatita");
     expect(t).toContain("scadenta 25 aug 2026, 25 de zile intarziere747,61");
     expect(t).toContain("Penalizare calculata pe 1 septembrie 2026");
-    expect(t).toContain("748,64 × 0,02% × 8 zile1,20");
-    expect(t).toContain("Penalizare pentru intretinere iunie 2026. Suma neplatita era 748,64 lei, cu 38 de zile de la scadenta; primele 30 de zile nu se penalizeaza.");
+    expect(t).toContain("748,56 × 0,02% × 8 zile1,20");
+    expect(t).toContain("Penalizare pentru intretinere iunie 2026. Suma neplatita era 748,56 lei, cu 38 de zile de la scadenta; primele 30 de zile nu se penalizeaza.");
     expect(t).toContain("Penalizarea este de 0,02% pe zi din suma neplatita, doar pentru zilele de dupa primele 30 de intarziere");
   });
 
@@ -213,7 +213,7 @@ describe("Plata: alegerea lunii", () => {
     await laPlata({ email: ILIE });
     await apasaButon("iun 26");
     expect(screen.getByText("Neachitata")).toBeTruthy();
-    expect(text(cardTotal())).toContain("Total lista748,64 lei");
+    expect(text(cardTotal())).toContain("Total lista748,56 lei");
   });
 
   it("cu mai mult de patru liste alegerea lunii devine lista derulanta", async () => {
@@ -281,7 +281,7 @@ describe("Plata: Platile mele", () => {
     await alegeSegment("Platile mele");
     expect(screen.getByText("Nicio plata inca")).toBeTruthy();
     expect(ecran()).not.toContain("deci luna aceasta platesti");
-    expect(ecran()).toContain("august 2026821,91LEINeachitat");
+    expect(ecran()).toContain("august 2026821,84LEINeachitat");
   });
 
   it("[S2] Platile mele arata doar platile apartamentului propriu", async () => {

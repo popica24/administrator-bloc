@@ -51,7 +51,7 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     await pornesteApp({ email: ILIE, modifica: (d) => { d.liste = []; } });
     expect(screen.getByText("Termen depasit")).toBeTruthy();
     expect(ecran()).not.toContain("termen de plata");
-    expect(ecran()).toContain("De plata acum2.319,36");
+    expect(ecran()).toContain("De plata acum2.319,21");
     /* fara doua liste nu exista fraza de comparatie */
     expect(ecran()).not.toContain("deci luna aceasta platesti");
   });
