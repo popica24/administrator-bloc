@@ -215,6 +215,24 @@ describe("verificaDate", () => {
     expect(verificaDate({ cheltuieli: [{ cod: "C1", metoda: "consum", suma: 10, tipApa: "rece" }], contorGeneral: { rece: 3 } }))
       .toEqual(["Blocul nu are apartamente."]);
   });
+
+  it("[minor] L1: sumaContoare se calculeaza la fel ca in repartizeazaApa, rotunjit pe apartament, nu pe suma bruta", () => {
+    /* Trei consumuri estimate, pe 3 zecimale (exact ce produce
+       contorizare.estimeaza_citiri): 10.005 fiecare. Suma bruta e 30.015,
+       care rotunjita o singura data da 30.02 — egala cu contorul general,
+       deci L1 n-ar avea ce semnala. Dar repartizeazaApa rotunjeste FIECARE
+       apartament la 2 zecimale INAINTE sa insumeze (10.01 x 3 = 30.03), mai
+       mult decat contorul general: coloana ar iesi cu diferenta negativa pe
+       lista locatarului, desi verificaDate a lasat lista sa treaca. */
+    const apartamente = [ap("a1", 1, 33.34), ap("a2", 1, 33.33), ap("a3", 1, 33.33)];
+    const consum = { a1: { rece: 10.005 }, a2: { rece: 10.005 }, a3: { rece: 10.005 } };
+    const contorGeneral = { rece: 30.02 };
+    const cheltuieli = [{ id: "ch1", cod: "C1", suma: 300, metoda: "consum", tipApa: "rece" }];
+
+    expect(verificaDate({ apartamente, cheltuieli, consum, contorGeneral })).toEqual([
+      "C1: contorul general (30.02 mc) este mai mic decat suma contoarelor din apartamente (30.03 mc). Verifica citirile la apa rece.",
+    ]);
+  });
 });
 
 describe("calculeazaLista refuza datele gresite", () => {

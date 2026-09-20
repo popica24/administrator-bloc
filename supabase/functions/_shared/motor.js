@@ -173,10 +173,17 @@ export function verificaDate({ apartamente, cheltuieli, consum, contorGeneral })
         return;
       }
       /* Contorul general masoara tot ce intra in bloc, deci nu poate arata mai
-         putin decat contoarele din apartamente. Daca arata, o citire e gresita. */
+         putin decat contoarele din apartamente. Daca arata, o citire e gresita.
+         [minor] sumaContoare trebuie calculata exact ca in repartizeazaApa:
+         fiecare apartament rotunjit la 2 zecimale INAINTE sa fie insumat, nu
+         suma bruta rotunjita o singura data la sfarsit. Cu consumuri pe 3
+         zecimale (exact ce produce contorizare.estimeaza_citiri), cele doua
+         ordini de rotunjire pot da rezultate diferite: L1 ar lasa sa treaca o
+         lista pentru care repartizeazaApa calculeaza totusi o diferenta
+         negativa pe coloana. */
       if (!apartamente || apartamente.length === 0) return;
       const general = contorGeneral && contorGeneral[c.tipApa];
-      const sumaContoare = round2(apartamente.reduce((s, a) => s + Number(consum[a.id][c.tipApa]), 0));
+      const sumaContoare = round2(apartamente.reduce((s, a) => s + round2(Number(consum[a.id][c.tipApa])), 0));
       if (general > 0 && general < sumaContoare) {
         probleme.push(`${c.cod}: contorul general (${general} mc) este mai mic decat suma contoarelor din apartamente (${sumaContoare} mc). Verifica citirile la apa ${c.tipApa}.`);
       } else if (general > sumaContoare && !(totaluri.persoane > 0)) {
