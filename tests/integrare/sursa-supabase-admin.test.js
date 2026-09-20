@@ -116,9 +116,11 @@ describe("lista lunii: facturi", () => {
       .rejects.toThrow("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
   });
 
-  it.fails("[L11] dupa un cod duplicat, reincercarea cu acelasi furnizor nou si alt cod reuseste", async () => {
+  it("[L11] dupa un cod duplicat, reincercarea cu acelasi furnizor nou si alt cod reuseste", async () => {
     const nume = `Gaz Test ${unic()}`;
     await expect(adm.salveazaCheltuiala({ listaId, furnizorNou: nume, categorie: "Gaz", cod: "C2", suma: 5, metoda: "cota" })).rejects.toThrow("Codul C2 exista deja pe lista.");
+    const orfan = await ok(db("intretinere").from("furnizori").select("id").eq("asociatie_id", f.asociatieId).eq("denumire", nume));
+    expect(orfan).toEqual([]);
     const id = await adm.salveazaCheltuiala({ listaId, furnizorNou: nume, categorie: "Gaz", cod: "C6", suma: 5, metoda: "cota" });
     await adm.stergeCheltuiala(id);
   });

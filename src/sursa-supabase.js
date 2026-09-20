@@ -468,9 +468,16 @@ export function creeazaSursaSupabase(url, cheie) {
 
     async salveazaCheltuiala({ id: cid, listaId, furnizorId, furnizorNou, categorie, cod, suma, metoda, tipApa, serie, emisa, scadentaFurnizor, fisier }) {
       const c = cerCtx();
+      if (!furnizorId && !(furnizorNou || "").trim()) throw new Error("Alege furnizorul facturii.");
+      /* [L11] Codul dublat se verifica inainte de orice scriere, la fel ca in
+         sursa demonstrativa: altfel furnizorul nou se insereaza deja cand
+         baza refuza cheltuiala cu codul dublat (unique lista_id+cod), si
+         ramane orfan, fara nicio cheltuiala care sa-l foloseasca. */
+      let dubluQ = intr.from("cheltuieli").select("id").eq("lista_id", listaId).eq("cod", cod);
+      if (cid) dubluQ = dubluQ.neq("id", cid);
+      if ((await ok(dubluQ)).length > 0) throw new Error(`Codul ${cod} exista deja pe lista.`);
       let fid = furnizorId;
       if (!fid) {
-        if (!(furnizorNou || "").trim()) throw new Error("Alege furnizorul facturii.");
         const f = await ok(intr.from("furnizori").insert({
           asociatie_id: c.asociatieId, denumire: furnizorNou.trim(), categorie_implicita: categorie, metoda_implicita: metoda, tip_apa_implicit: tipApa || null, cod_implicit: cod,
         }).select().single());
