@@ -42,18 +42,27 @@ const transliteraza = (t) => String(t).replace(/[ăâîșşțţĂÂÎȘŞȚŢ]/g
    putea cadea, dupa trunchiere, exact pe octetul '(' (0x28), ')' (0x29) sau
    '\' (0x5c) -- fara ca escape() sa fi vazut vreodata acel caracter ca
    paranteza, deci sirul PDF delimitat de paranteze ramanea nebalansat si
-   fisierul nu se mai deschidea. Acum transliterarea ruleaza intai, apoi se
-   refuza orice caracter ramas care nu incape intr-un singur octet Latin-1
-   (peste 0xff nu poate fi scris corect de codarea de mai jos), si abia apoi
-   se scapa parantezele si backslash-ul ramase in text. */
+   fisierul nu se mai deschidea.
+
+   [K10] J3 a reparat asta refuzand documentul (o exceptie), dar functiile
+   astea sunt chemate direct dintr-un onPress, unde nimic n-o prinde (o
+   error boundary nu prinde handlerele de eveniment): butonul nu mai facea
+   nimic, iar mesajul scris cu grija nu se vedea niciodata. "Kovács Győző"
+   (ő = U+0151) o declansa. Regula produsului e ca o chitanta sau o lista nu
+   are voie sa devina imposibil de descarcat din cauza unui nume -- deci in
+   loc sa opreasca documentul, orice litera care mai ramane in afara
+   diacriticelor romanesti stiute trece printr-o normalizare Unicode (litera
+   de baza fara semnul diacritic: acopera maghiara, franceza, germana etc.,
+   nu doar romana), iar daca tot nu incape intr-un singur octet Latin-1 (alt
+   alfabet, un emoji), primeste un inlocuitor nevinovat, "?", in loc de
+   caracterul original. "?" (0x3f) nu poate niciodata sa cada pe o paranteza
+   sau pe backslash, deci sirul PDF ramane mereu bine format, iar
+   documentul, mereu descarcabil. */
 function pregatesteText(t) {
-  const s = transliteraza(String(t));
-  for (const ch of s) {
-    if (ch.codePointAt(0) > 0xff) {
-      throw new Error(`Textul "${t}" contine un caracter care nu poate fi scris in PDF. Scoate-l si incearca din nou.`);
-    }
-  }
-  return escape(s);
+  const romana = transliteraza(String(t));
+  const fixa = romana.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const latin1 = Array.from(fixa, (ch) => (ch.codePointAt(0) > 0xff ? "?" : ch)).join("");
+  return escape(latin1);
 }
 
 /* Rupe un cuvant mai lung decat randul in bucati care incap [F29] */

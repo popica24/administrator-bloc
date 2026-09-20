@@ -205,13 +205,34 @@ describe("documentPdf: paginarea", () => {
      dupa trunchiere, exact pe octetul '(' (0x28) -- de exemplu Ĩ (U+0128,
      128 & 0xff = 0x28) -- si strica sirul PDF delimitat de paranteze fara
      ca escape() sa fi vazut vreodata o paranteza in sirul original.
-     Fisierul trebuie refuzat, nu scris stricat. */
-  it("[J3] un caracter care ramane in afara Latin-1 dupa transliterare este refuzat, nu scrie un octet care strica sirul PDF", () => {
-    expect(() => documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "CategorieĨ" }] })).toThrow();
-    expect(() => documentPdf({ titlu: "Chitanta Ĩ", blocuri: [{ tip: "titlu", text: "Chitanta" }] })).toThrow();
-    expect(() => documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Un emoji 😀" }] })).toThrow();
-    /* textul din Latin-1 (chiar in afara diacriticelor romanesti stiute)
-       tot se scrie normal, fara sa fie refuzat */
+     J3 refuza fisierul in loc sa-l scrie stricat. */
+  /* [K10] Dar refuzul lui J3 arunca dintr-un onPress, unde nimic nu-l prinde
+     (o error boundary nu prinde handlerele de eveniment): butonul nu facea
+     nimic si mesajul scris cu grija nu se vedea niciodata. "Kovács Győző"
+     (ő = U+0151) il declansa. O chitanta nu are voie sa devina imposibila de
+     descarcat din cauza unui nume, deci litera se transliterareaza acum mai
+     departe, dupa normalizare Unicode (litera de baza fara semnul
+     diacritic), iar daca tot nu incape intr-un octet (alt alfabet, un
+     emoji), primeste un inlocuitor nevinovat, "?", in loc sa opreasca tot
+     documentul; fara aceasta transliterare suplimentara, octetul trunchiat
+     tot ar putea sa strice sirul PDF, ca in J3. */
+  it("[K10] o litera din afara diacriticelor romanesti stiute se transliterareaza, nu se refuza", () => {
+    const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Kovács Győző" }] }));
+    expect(s).toContain("(Kovacs Gyozo)");
+    expect(() => documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Kovács Győző" }] })).not.toThrow();
+  });
+
+  it("[K10] Ĩ (fara decompunere in litere romanesti) se transliterareaza in I, fara sa strice sirul PDF", () => {
+    const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "CategorieĨ" }] }));
+    expect(s).toContain("(CategorieI)");
+  });
+
+  it("[K10] un caracter fara nicio transliterare (alt alfabet, un emoji) primeste un inlocuitor, nu opreste documentul", () => {
+    const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Un emoji 😀" }] }));
+    expect(s).toContain("(Un emoji ?)");
+  });
+
+  it("textul din Latin-1 (chiar in afara diacriticelor romanesti stiute) se scrie normal", () => {
     const s = text(documentPdf({ titlu: "t", blocuri: [{ tip: "text", text: "Straße" }] }));
     expect(s).toContain("Stra");
   });
