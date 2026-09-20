@@ -81,6 +81,19 @@ describe("[F15] tintele de atingere au cel putin 44 px", () => {
   });
 });
 
+describe("[R3] bara de taburi se ingusteaza in loc sa iasa din ecran la zoom mare", () => {
+  it("cele cinci taburi nu impun un minWidth de 44 px fiecare (220 px nu incape intr-o coloana de 206 px), doar inaltimea tintei ramane 44 px", async () => {
+    await pornesteApp({ email: ADMIN });
+    const taburi = screen.getAllByRole("tab");
+    expect(taburi).toHaveLength(5);
+    taburi.forEach((t) => {
+      expect(px(t, "minHeight")).toBeGreaterThanOrEqual(44);
+      const minWidth = t.style.minWidth === "" ? 0 : px(t, "minWidth");
+      expect(minWidth).toBeLessThan(44);
+    });
+  });
+});
+
 describe("[F16] panoul de jos se poarta ca un dialog modal", () => {
   async function sesizareNoua() {
     await pornesteApp({ email: LOCATAR });

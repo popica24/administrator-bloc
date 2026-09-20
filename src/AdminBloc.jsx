@@ -4221,6 +4221,14 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
             ales={esteActiv}
             style={{
               flex: 1,
+              /* [R3] Fara asta, cele 5 taburi cer impreuna 220 px (Press
+                 impune minWidth: 44 fiecare, [F15]) si la 200% zoom
+                 (o coloana de aprox. 206 px) ultimul tab iese din ecran,
+                 fara scroll orizontal, iar zonele de atingere nu mai
+                 corespund cu ce se vede. Latimea se poate ingusta oricat;
+                 doar inaltimea tintei de atingere (minHeight: 44,
+                 mostenit din Press) trebuie sa ramana de cel putin 44 px. */
+              minWidth: 0,
               alignItems: "center",
               paddingTop: 11,
               paddingBottom: 9,
