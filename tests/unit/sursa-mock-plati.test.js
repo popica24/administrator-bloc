@@ -81,6 +81,12 @@ describe("platesteCard", () => {
     const { s, d } = await ca(LOCATAR);
     await expect(s.platesteCard({ apartamentId: d.eu.apartamentId, suma: 0, card: CARD_BUN })).rejects.toThrow();
   });
+
+  it("[paritate NOU-2] o suma care se rotunjeste la 0 lei este refuzata, nu doar cea scrisa 0", async () => {
+    const { s, d } = await ca(LOCATAR);
+    await expect(s.platesteCard({ apartamentId: d.eu.apartamentId, suma: 0.004, card: CARD_BUN }))
+      .rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+  });
 });
 
 describe("inregistreazaNumerar", () => {
@@ -114,6 +120,11 @@ describe("inregistreazaNumerar", () => {
     await expect(s.inregistreazaNumerar("apa-0", 10)).rejects.toThrow("Apartamentul nu exista.");
     await expect(s.inregistreazaNumerar(apNr(d, "3").id, "0")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
     await expect(s.inregistreazaNumerar(apNr(d, "3").id, "abc")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+  });
+
+  it("[paritate NOU-2] o suma care se rotunjeste la 0 lei este refuzata", async () => {
+    const { s, d } = await ca(ADMIN);
+    await expect(s.inregistreazaNumerar(apNr(d, "3").id, "0.004")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
   });
 
   it("locatarul nu poate inregistra cash", async () => {

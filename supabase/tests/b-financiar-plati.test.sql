@@ -386,7 +386,6 @@ select is(
   jsonb_build_object('plata_id', pg_temp.fx('p_transfer'), 'apartament_id', pg_temp.fx('ap2'), 'bloc_id', pg_temp.fx('bloc'), 'suma', 100.46, 'metoda', 'transfer'),
   'inregistreaza_plata: evenimentul PlataConfirmata');
 
-select todo('[NOU-2] o suma care se rotunjeste la 0 lei trebuie refuzata cu mesajul clar, nu cu plati_suma_check', 1);
 select throws_ok($$select financiar.inregistreaza_plata(pg_temp.fx('ap2'), 0.004, 'transfer')$$,
   'Suma trebuie sa fie mai mare decat zero.', '[NOU-2] 0,004 lei este refuzat ca suma zero');
 

@@ -841,8 +841,10 @@ export function creeazaSursaMock() {
 
     async platesteCard({ apartamentId, suma, card }) {
       cerLocatarPe(apartamentId);
-      /* [paritate] plata-card refuza mai intai o suma care nu e pozitiva. */
-      if (!(Number(suma) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
+      /* [paritate] plata-card refuza mai intai o suma care nu e pozitiva, dupa
+         aceeasi rotunjire la ban pe care o foloseste plata: o suma ca 0,004
+         lei nu trebuie sa treaca doar ca sa devina o plata de 0 lei. */
+      if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
       const cifre = String((card && card.numar) || "").replace(/\D/g, "");
       if (cifre.length < 13) eroare("Numarul cardului nu este complet.");
       /* [paritate] procesatorul de test refuza cardul care se termina in
@@ -1027,7 +1029,9 @@ export function creeazaSursaMock() {
     async inregistreazaNumerar(apartamentId, suma) {
       const { bloc } = cerAdmin();
       const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
-      if (!(Number(suma) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
+      /* [paritate] aceeasi rotunjire la ban ca la financiar.inregistreaza_plata:
+         o suma care se rotunjeste la 0 lei e refuzata, nu doar cea scrisa 0. */
+      if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
       const p = inregistreazaPlata(db, { apartamentId: ap.id, suma: Number(suma), metoda: "numerar", la: acum(), inregistrataDe: eu().id });
       return { plataId: p.id };
     },
