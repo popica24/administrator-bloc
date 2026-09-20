@@ -5,7 +5,7 @@ import { act, fireEvent, screen } from "@testing-library/react";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 import { pornesteApp, ADMIN, LOCATAR } from "./ajutor.jsx";
-import { apasa, scrie, tab, toast, asteapta } from "./ui-baza-ajutor.jsx";
+import { apasa, scrie, tab, toast, asteapta, contextApp } from "./ui-baza-ajutor.jsx";
 
 /* O promisiune pe care testul o rezolva cand vrea, ca sa tina comanda in aer */
 function amanat() {
@@ -201,5 +201,27 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     await asteapta();
 
     expect(toast()).toBeNull();
+  });
+
+  /* [G14] Cheia de reintrare e construita cu JSON.stringify(args), care scrie
+     un File ca {}: doua iesiri de fond diferite, cu aceeasi suma, descriere
+     si data dar cu fisiere diferite (doua poze de chitanta), primesc aceeasi
+     cheie si se blocheaza reciproc, desi sunt doua documente diferite. */
+  it("[G14] doua comenzi cu acelasi text dar fisiere diferite nu se blocheaza reciproc", async () => {
+    const { sursa, container } = await pornesteApp({ email: ADMIN });
+    const ctx = () => contextApp(container);
+    const aman = amanat();
+    const spion = vi.spyOn(sursa, "inregistreazaIesireFond").mockImplementation(() => aman.promisiune);
+    const comune = { fondId: "fond-1", suma: -100, descriere: "Reparatie", data: "2026-09-19" };
+    const fisier1 = new File(["a"], "a.jpg", { type: "image/jpeg" });
+    const fisier2 = new File(["b"], "b.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      ctx().inregistreazaIesireFond({ ...comune, fisier: fisier1 });
+      ctx().inregistreazaIesireFond({ ...comune, fisier: fisier2 });
+    });
+
+    expect(spion).toHaveBeenCalledTimes(2);
+    await act(async () => { aman.rezolva({}); });
   });
 });

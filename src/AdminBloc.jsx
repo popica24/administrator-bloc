@@ -4473,7 +4473,9 @@ export default function AdminBloc() {
      bar-ul de jos (@react-navigation/bottom-tabs) tine singur istoricul
      ecranelor, deci acest efect nu are echivalent acolo. */
   useEffect(() => {
-    const laInapoi = (e) => { setTab(e.state.tab); setParametri(e.state.parametri); };
+    /* [G14] O intrare straina in istoric (fara state pus de aplicatie) nu are
+       stare de-a noastra: nu are ce tab sa restaureze, deci nu face nimic. */
+    const laInapoi = (e) => { if (!e.state) return; setTab(e.state.tab); setParametri(e.state.parametri); };
     window.addEventListener("popstate", laInapoi);
     return () => window.removeEventListener("popstate", laInapoi);
   }, []);
@@ -4577,8 +4579,14 @@ export default function AdminBloc() {
       protejate[nume] = async (...args) => {
         /* [C10] Cheia include argumentele: "Instiintare" pe apartamentul 3 nu
            trebuie sa blocheze "Instiintare" pe apartamentul 5, apasat imediat
-           dupa. Doar aceeasi comanda cu aceleasi argumente se blocheaza. */
-        const cheie = `${nume}:${JSON.stringify(args)}`;
+           dupa. Doar aceeasi comanda cu aceleasi argumente se blocheaza.
+           [G14] Un File nu are proprietati proprii pentru JSON.stringify (ar
+           scrie "{}" pentru oricare), deci doua documente diferite trimise cu
+           acelasi text (aceeasi suma/descriere/data, poze diferite) s-ar
+           bloca reciproc: fiecare File e scris cu numele, marimea si data lui. */
+        const cheie = `${nume}:${JSON.stringify(args, (k, v) => (
+          v instanceof File ? `File:${v.name}:${v.size}:${v.lastModified}` : v
+        ))}`;
         if (inCurs.current.has(cheie)) {
           /* [E6] O reintrare blocata trebuie sa se simta, nu sa fie tacuta -
              dar doar cand omul a apasat ceva de doua ori. O comanda de

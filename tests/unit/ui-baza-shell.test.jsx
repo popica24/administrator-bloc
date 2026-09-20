@@ -146,6 +146,27 @@ describe("TabBar si BaraSus", () => {
     expect(taburi()[0]).toEqual(["Sumar", "true"]);
   });
 
+  /* [G14] O intrare straina in istoric (fara state pus de aplicatie, de
+     exemplu inainte de primul replaceState sau venita din alta pagina) nu
+     are voie sa darame ecranul: handler-ul de popstate citea e.state.tab
+     fara nicio garda. */
+  it("[G14] un eveniment popstate fara state nu arunca eroare si nu schimba tabul", async () => {
+    await pornesteApp({ email: ADMIN });
+    await tab("Facturi");
+    /* O eroare intr-un ascultator de evenimente nu iese din dispatchEvent():
+       jsdom (ca si un browser) o raporteaza pe window ca eroare neprinsa. */
+    let prinsa = null;
+    const prinde = (e) => { prinsa = e.error; e.preventDefault(); };
+    window.addEventListener("error", prinde);
+    try {
+      await act(async () => { window.dispatchEvent(new PopStateEvent("popstate", { state: null })); });
+    } finally {
+      window.removeEventListener("error", prinde);
+    }
+    expect(prinsa).toBeNull();
+    expect(taburi()[2]).toEqual(["Facturi", "true"]);
+  });
+
   it("go() cu parametri: indicatorul Restante duce la apartamentele cu restanta", async () => {
     await pornesteApp({ email: ADMIN });
     await apasa("Restante");
