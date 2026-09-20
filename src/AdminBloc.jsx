@@ -3736,7 +3736,7 @@ function AdminFacturi() {
           <>
             <Txt size={14}>Publici lista pe {monthLabel(lista.luna)}, cu {cheltuieli.length} cheltuieli in valoare de {lei(totalFacturi)}.</Txt>
             <Txt size={12.5} color={C.inkSoft}>
-              Locatarii o vad imediat, fiecare cu calculul lui. Termenul de plata va fi {dataLunga(`${lunaUrmatoare(lista.luna)}-${pad2(date.setari.ziScadenta)}`)}. Dupa publicare, facturile listei nu se mai pot modifica.
+              Locatarii o vad imediat, fiecare cu calculul lui. Termenul de plata va fi {dataLunga(lista.scadenta || `${lunaUrmatoare(lista.luna)}-${pad2(date.setari.ziScadenta)}`)}. Dupa publicare, facturile listei nu se mai pot modifica.
             </Txt>
             <Eroare mesaj={eroare} />
             <Btn label={lucreaza ? "Se publica..." : "Da, publica lista"} full size="lg" disabled={lucreaza} onPress={async () => {

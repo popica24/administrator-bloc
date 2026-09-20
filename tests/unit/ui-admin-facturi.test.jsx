@@ -250,7 +250,7 @@ describe("AdminFacturi, publicare", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it.fails("[L15] confirmarea foloseste termenul salvat pe lista, daca exista", async () => {
+  it("[L15] confirmarea foloseste termenul salvat pe lista, daca exista", async () => {
     await deschideFacturi({ modifica: (d) => { d.liste.find((l) => l.stare === "ciorna").scadenta = "2026-10-30"; } });
     await apasa("Publica lista");
     expect(inDialog("Publica lista").getByText(/Termenul de plata va fi 30 octombrie 2026\./)).toBeTruthy();
