@@ -47,6 +47,15 @@ const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 const round4 = (n) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 const eroare = (mesaj) => { throw new Error(mesaj); };
 
+/* Formateaza un numar pe romaneste (punct la mii, virgula zecimala), la fel
+   ca public.numar_ro() din baza, pentru mesajele de refuz aratate omului.
+   Apelantii trimit mereu o valoare nenegativa (sumele sunt precalculate cu
+   semnul potrivit inainte de a ajunge aici). */
+function numarRo(n) {
+  const [intreg, zecimal] = n.toFixed(2).split(".");
+  return `${intreg.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${zecimal}`;
+}
+
 /* Ora Romaniei (+02:00 iarna, +03:00 vara) pentru ora serii (20:00) a unei
    zile date, calculata cu Intl (nu depinde de fusul masinii care ruleaza
    testele). Vot si adunare inchid/anunta seara, ora Romaniei, care e mereu
@@ -1058,7 +1067,7 @@ export function creeazaSursaMock() {
       if (bloc.stare === "activ" && cotaNoua !== a.cota) {
         const suma = round2(db.apartamente.filter((x) => x.blocId === bloc.id).reduce((s, x) => s + (x.id === a.id ? cotaNoua : x.cota), 0));
         if (Math.abs(suma - 100) > 0.01) {
-          eroare(`Cotele blocului ar ajunge la ${suma.toFixed(4)} din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.`);
+          eroare(`Cotele blocului ar ajunge la ${numarRo(suma)} din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.`);
         }
       }
       Object.assign(a, { proprietar: proprietar.trim(), cota: cotaNoua, mp: mpNou, scutitLift: !!scutitLift, etaj: etajNou });
@@ -1078,7 +1087,7 @@ export function creeazaSursaMock() {
       if (cote2.some((c) => !(c.cota > 0) || c.cota > 100)) eroare("Cota indiviza trebuie sa fie un numar intre 0 si 100.");
       const suma = round4(cote2.reduce((s, c) => s + c.cota, 0));
       if (Math.abs(suma - 100) > 0.01) {
-        eroare(`Cotele trimise insumeaza ${suma.toFixed(4)}, nu 100. Corecteaza-le pe toate inainte de a le salva.`);
+        eroare(`Cotele trimise insumeaza ${numarRo(suma)}, nu 100. Corecteaza-le pe toate inainte de a le salva.`);
       }
       cote2.forEach((c) => { apartamenteBloc.find((a) => a.id === c.apartamentId).cota = c.cota; });
     },
@@ -1102,7 +1111,7 @@ export function creeazaSursaMock() {
       /* Fondul nu poate ajunge pe minus (C5): banii care ies sunt cei adunati de locatari */
       const soldFond = round2(db.miscari.filter((m) => m.fondId === fond.id).reduce((s, m) => s + m.suma, 0));
       if (round2(soldFond + sumaNoua) < 0) {
-        eroare(`Fondul are ${soldFond.toFixed(2)} lei; o iesire de ${(-sumaNoua).toFixed(2)} lei l-ar duce pe minus.`);
+        eroare(`Fondul are ${numarRo(soldFond)} lei; o iesire de ${numarRo(-sumaNoua)} lei l-ar duce pe minus.`);
       }
       const document = db.adauga("documente", {
         asociatieId: bloc.asociatieId, blocId: bloc.id, titlu: descriere.trim(), tip: "factura",
