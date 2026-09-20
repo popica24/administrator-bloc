@@ -77,7 +77,7 @@ select set_config('request.jwt.claims',
 
 select throws_ok(
   format('select contorizare.estimeaza_citiri(%L, %L)', current_setting('fx.bloc')::uuid, pg_temp.luna(-3)),
-  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; citirile nu se mai pot estima.',
+  'Lista lunii ' || comunicare.luna_text(pg_temp.luna(-3)) || ' este deja publicata; citirile nu se mai pot estima.',
   'estimeaza_citiri: refuza o luna a carei lista e deja publicata');
 
 select is(

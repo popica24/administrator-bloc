@@ -616,7 +616,7 @@ select throws_ok(
   '[A3] refuza o luna viitoare');
 select throws_ok(
   $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(-3), 'rece', 1020)$$,
-  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; contorul general nu se mai poate schimba.',
+  'Lista lunii ' || comunicare.luna_text(pg_temp.luna(-3)) || ' este deja publicata; contorul general nu se mai poate schimba.',
   '[A3] refuza luna unei liste deja publicate');
 
 -- O citire deja inregistrata pe luna urmatoare fixeaza plafonul de sus:
@@ -646,12 +646,12 @@ set local role authenticated;
 select pg_temp.ca('admin');
 select throws_ok(
   $$select contorizare.valideaza_citire((select id from contorizare.citiri where contor_id = pg_temp.fx('c2') and luna = pg_temp.luna(-3)), true)$$,
-  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; citirea nu se mai poate verifica.',
+  'Lista lunii ' || comunicare.luna_text(pg_temp.luna(-3)) || ' este deja publicata; citirea nu se mai poate verifica.',
   '[A4] refuza validarea unei citiri din luna unei liste publicate');
 
 select throws_ok(
   $$select contorizare.estimeaza_citiri(pg_temp.fx('bloc'), pg_temp.luna(1))$$,
-  'Poti estima citirile lunii ' || pg_temp.luna(1)::text || ' abia dupa ziua 20 a lunii.',
+  'Poti estima citirile lunii ' || comunicare.luna_text(pg_temp.luna(1)) || ' abia dupa ziua 20 a lunii.',
   '[A6] refuza estimarea inainte de termen (luna urmatoare)');
 
 reset role;
@@ -730,7 +730,7 @@ select throws_ok(
 
 select throws_ok(
   format('select contorizare.valideaza_citiri_apartament(%L, pg_temp.luna(-3), true)', pg_temp.fx('ap9')),
-  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; citirile nu se mai pot verifica.',
+  'Lista lunii ' || comunicare.luna_text(pg_temp.luna(-3)) || ' este deja publicata; citirile nu se mai pot verifica.',
   '[A5-backend] valideaza_citiri_apartament: refuza o luna a carei lista e deja publicata');
 
 select throws_ok(
