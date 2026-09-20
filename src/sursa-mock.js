@@ -1086,10 +1086,14 @@ export function creeazaSursaMock() {
       return { estimate: n };
     },
 
+    /* Divergenta cunoscuta fata de sesizari.preia_sesizare (K12): SQL arunca
+       eroare cand nu mai e nimic de preluat (deja in lucru, alt bloc);
+       mock-ul ramane permisiv si nu face nimic in acel caz, ca sa nu strice
+       reincercarea idempotenta folosita de teste si de ecranul admin. */
     async preiaSesizare(id) {
-      cerAdmin();
+      const { bloc } = cerAdmin();
       const s = db.sesizari.find((x) => x.id === id) || eroare("Sesizarea nu exista.");
-      if (s.stare === "noua") { s.stare = "in_lucru"; s.preluataLa = acum(); }
+      if (s.stare === "noua" && s.blocId === bloc.id) { s.stare = "in_lucru"; s.preluataLa = acum(); }
     },
 
     async rezolvaSesizare(id) {

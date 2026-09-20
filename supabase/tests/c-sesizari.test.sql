@@ -2,7 +2,7 @@
 -- Toate datele sunt create aici si se anuleaza la rollback.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(68);
+select plan(69);
 
 -- -----------------------------------------------------------------------------
 -- Ajutoare si date proprii testului (pg_temp: dispar odata cu sesiunea; totul
@@ -298,14 +298,15 @@ select is((select count(*)::int from sesizari.sesizari_mesaje where sesizare_id 
 -- =============================================================================
 select pg_temp.ca('loc2');
 select pg_temp.pune('s3', sesizari.adauga_sesizare(pg_temp.id('a2'), 'Liftul nu merge', 'altele', 'Blocat la etajul 2'));
-select lives_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$,
-  'sesizari.preia_sesizare: apelul locatarului nu arunca (K12)');
+select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', null,
+  '[K12] sesizari.preia_sesizare: locatarul nu poate prelua sesizarea, ridica eroare');
 reset role;
 select is((select stare from sesizari.sesizari where id = pg_temp.id('s3')), 'noua',
   'preia_sesizare: locatarul nu poate prelua sesizarea');
 
 select pg_temp.ca('admB');
-select sesizari.preia_sesizare(pg_temp.id('s3'));
+select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', null,
+  '[K12] preia_sesizare: administratorul altei asociatii nu o poate prelua, ridica eroare');
 reset role;
 select is((select stare from sesizari.sesizari where id = pg_temp.id('s3')), 'noua',
   'preia_sesizare: administratorul altei asociatii nu o poate prelua');
@@ -318,7 +319,6 @@ select results_eq(
   $$ values ('in_lucru'::text, pg_temp.id('adm'), true) $$,
   'preia_sesizare: sesizarea trece in lucru, cu cine si cand');
 
-select todo('[K12] preia_sesizare trebuie sa spuna cand nu a preluat nimic', 2);
 select pg_temp.ca('adm');
 select throws_ok($$ select sesizari.preia_sesizare(pg_temp.id('s3')) $$, 'P0001', null,
   '[K12] preia_sesizare pe o sesizare deja in lucru ridica eroare');
