@@ -107,7 +107,7 @@ describe("reamintesteVot", () => {
     await expect(s.reamintesteVot(d.voturi[0].id)).rejects.toThrow();
   });
 
-  it.fails("[NOU-1] reamintirea pentru un vot inexistent da un mesaj clar", async () => {
+  it("[NOU-1] reamintirea pentru un vot inexistent da un mesaj clar", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.reamintesteVot("vot-0")).rejects.toThrow("Votul nu exista.");
   });

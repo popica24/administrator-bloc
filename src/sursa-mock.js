@@ -1151,8 +1151,8 @@ export function creeazaSursaMock() {
 
     async reamintesteVot(votId) {
       const { bloc } = cerAdmin();
+      const v = db.voturi.find((x) => x.id === votId && x.asociatieId === bloc.asociatieId) || eroare("Votul nu exista.");
       const auVotat = new Set(db.exprimate.filter((e) => e.votId === votId).map((e) => e.apartamentId));
-      const v = db.voturi.find((x) => x.id === votId);
       let n = 0;
       const tinta = db.apartamente.filter((a) => a.blocId === bloc.id && !auVotat.has(a.id));
       tinta.forEach((a) => locatariActivi(db, a.id).forEach((l) => {
