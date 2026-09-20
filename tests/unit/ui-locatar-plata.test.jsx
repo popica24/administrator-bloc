@@ -124,7 +124,7 @@ describe("Plata: lista curenta", () => {
     expect(text(cardTotal())).toContain("Total de plata18,09 lei");
   });
 
-  it.fails("[L6] grupa Apa contine doar apa, chiar daca salubritatea are codul C1", async () => {
+  it("[L6] grupa Apa contine doar apa, chiar daca salubritatea are codul C1", async () => {
     await laPlata({
       email: ELENA,
       modifica: (d) => {

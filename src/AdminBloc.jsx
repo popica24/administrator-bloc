@@ -215,9 +215,11 @@ const METODE = {
 
 /* Pe hartie fiecare factura este o coloana. Locatarul isi citeste randul mai
    usor in cateva grupe cu subtotal. O factura cu un cod nelistat aici ajunge
-   in grupa "Alte cheltuieli". */
+   in grupa "Alte cheltuieli". [L6] Codul (C1, C2, ...) este doar pozitia pe
+   lista de hartie a acestei asociatii si poate fi altul in alta asociatie
+   (de exemplu salubritatea pe C1); grupa "Apa" nu se poate baza pe cod. Se
+   bazeaza in schimb pe metoda "consum", singura folosita pentru apa. */
 const GRUPE_CHELTUIELI = [
-  { id: "apa", eticheta: "Apa", coduri: ["C1", "C2"] },
   { id: "bloc", eticheta: "Curent, lift si curatenie", coduri: ["C3", "C5", "C6", "C4", "C8"] },
   { id: "admin", eticheta: "Administrarea blocului", coduri: ["C7"] },
 ];
@@ -344,9 +346,11 @@ function defalcare(date, apId, listaId) {
   const linii = liniiLista(date, listaId, apId);
   const cheltuieli = linii.filter((l) => !l.esteFond);
   const cunoscute = GRUPE_CHELTUIELI.flatMap((g) => g.coduri);
+  const esteApa = (l) => l.metoda === "consum";
   const grupe = [
-    ...GRUPE_CHELTUIELI.map((g) => ({ id: g.id, eticheta: g.eticheta, linii: cheltuieli.filter((l) => g.coduri.includes(l.cod)) })),
-    { id: "alte", eticheta: "Alte cheltuieli", linii: cheltuieli.filter((l) => !cunoscute.includes(l.cod)) },
+    { id: "apa", eticheta: "Apa", linii: cheltuieli.filter(esteApa) },
+    ...GRUPE_CHELTUIELI.map((g) => ({ id: g.id, eticheta: g.eticheta, linii: cheltuieli.filter((l) => !esteApa(l) && g.coduri.includes(l.cod)) })),
+    { id: "alte", eticheta: "Alte cheltuieli", linii: cheltuieli.filter((l) => !esteApa(l) && !cunoscute.includes(l.cod)) },
   ]
     .filter((g) => g.linii.length > 0)
     .map((g) => ({ ...g, total: suma(g.linii, (l) => l.suma) }));
