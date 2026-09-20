@@ -433,6 +433,146 @@ describe("FisaApartament, consum si istoric", () => {
   });
 });
 
+describe("FisaApartament, corectarea fisei (C3/E4)", () => {
+  it("precompleteaza datele curente, salveaza corectia si actualizeaza fisa", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "schimbaFisaApartament");
+    const ap = await apDupaNumar(sursa, "1");
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    expect(screen.getByLabelText("Proprietar").value).toBe("Gheorghe Voicu");
+    expect(screen.getByLabelText("Etaj").value).toBe("0");
+    expect(screen.getByLabelText("Suprafata").value).toBe("42,5");
+    expect(screen.getByLabelText("Cota indiviza").value).toBe("4,01");
+    expect(screen.getByRole("button", { name: "Scutit de plata liftului" }).getAttribute("aria-pressed")).toBe("true");
+
+    await act(async () => {
+      scrie("Proprietar", "Ion Constantinescu");
+      scrie("Suprafata", "45");
+    });
+    await apasa("Salveaza corectia");
+    expect(spion).toHaveBeenCalledWith(ap.id, { proprietar: "Ion Constantinescu", cota: 4.01, mp: 45, scutitLift: true, etaj: 0 });
+    expect(toast().textContent).toBe("Fisa apartamentului a fost actualizata");
+    const f = inDialog("Apartament 1");
+    expect(f.getByText("Ion Constantinescu")).toBeTruthy();
+    expect(f.getByText("45,0 mp")).toBeTruthy();
+    expect(screen.queryByLabelText("Proprietar")).toBeNull();
+  });
+
+  it("un apartament fara suprafata declarata precompleteaza campul gol", async () => {
+    await pornesteAdmin({ tab: "Apartamente", modifica: (d) => { d.apartamente.find((a) => a.numar === "2").mp = null; } });
+    await deschideFisa("2");
+    await apasa("Corecteaza datele apartamentului");
+    expect(screen.getByLabelText("Suprafata").value).toBe("");
+  });
+
+  it("dezactiveaza scutirea de lift si trimite suprafata goala ca null", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "schimbaFisaApartament");
+    const ap = await apDupaNumar(sursa, "1");
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await act(async () => { scrie("Suprafata", ""); });
+    await apasa(screen.getByRole("button", { name: "Scutit de plata liftului" }));
+    await apasa("Salveaza corectia");
+    expect(spion).toHaveBeenCalledWith(ap.id, { proprietar: "Gheorghe Voicu", cota: 4.01, mp: null, scutitLift: false, etaj: 0 });
+  });
+
+  it("butonul Salveaza este dezactivat fara proprietar sau cu cota invalida", async () => {
+    await pornesteAdmin({ tab: "Apartamente" });
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await act(async () => { scrie("Proprietar", "   "); });
+    expect(dezactivat(buton("Salveaza corectia"))).toBe(true);
+    await act(async () => { scrie("Proprietar", "Cineva"); scrie("Cota indiviza", "0"); });
+    expect(dezactivat(buton("Salveaza corectia"))).toBe(true);
+    await act(async () => { scrie("Cota indiviza", "4,01"); scrie("Etaj", ""); });
+    expect(dezactivat(buton("Salveaza corectia"))).toBe(true);
+  });
+
+  it("o corectie refuzata de sursa lasa formularul deschis, cu mesajul ei", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    vi.spyOn(sursa, "schimbaFisaApartament").mockRejectedValue(new Error(
+      "Cotele blocului ar ajunge la 105.0000 din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.",
+    ));
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await act(async () => { scrie("Cota indiviza", "10"); });
+    await apasa("Salveaza corectia");
+    expect(toast().textContent).toBe("Cotele blocului ar ajunge la 105.0000 din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.");
+    expect(screen.getByLabelText("Cota indiviza").value).toBe("10");
+  });
+
+  it("renunta inchide formularul fara sa salveze", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "schimbaFisaApartament");
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await act(async () => { scrie("Proprietar", "Altcineva"); });
+    await apasa("Renunta");
+    expect(screen.queryByLabelText("Proprietar")).toBeNull();
+    expect(spion).not.toHaveBeenCalled();
+  });
+});
+
+describe("FisaApartament, redistribuirea cotelor blocului (C3/E4)", () => {
+  it("precompleteaza cota fiecarui apartament, arata totalul si blocheaza salvarea cat timp suma nu e 100", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "schimbaCoteleBlocului");
+    const date = await sursa.incarca();
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await apasa("Redistribuie cotele intregului bloc");
+
+    expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu").value).toBe("4,01");
+    expect(screen.getByLabelText("Ap. 2, Ana Petrescu").value).toBe("4,63");
+    expect(screen.getByText("100,00% din 100%")).toBeTruthy();
+    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(false);
+
+    await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
+    expect(screen.getByText("105,99% din 100%")).toBeTruthy();
+    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(true);
+
+    await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "5,01"); scrie("Ap. 2, Ana Petrescu", "3,63"); });
+    expect(screen.getByText("100,00% din 100%")).toBeTruthy();
+    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(false);
+
+    await apasa("Salveaza cotele blocului");
+    expect(spion).toHaveBeenCalledTimes(1);
+    const trimise = spion.mock.calls[0][0];
+    expect(trimise).toHaveLength(date.apartamente.length);
+    const ap1 = date.apartamente.find((a) => a.numar === "1");
+    const ap2 = date.apartamente.find((a) => a.numar === "2");
+    expect(trimise.find((c) => c.apartamentId === ap1.id).cota).toBe(5.01);
+    expect(trimise.find((c) => c.apartamentId === ap2.id).cota).toBe(3.63);
+    expect(toast().textContent).toBe("Cotele blocului au fost actualizate");
+    expect(screen.queryByLabelText("Ap. 1, Gheorghe Voicu")).toBeNull();
+  });
+
+  it("renunta inchide editorul de cote fara sa salveze", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "schimbaCoteleBlocului");
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await apasa("Redistribuie cotele intregului bloc");
+    await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
+    await apasa("Renunta");
+    expect(screen.queryByLabelText("Ap. 1, Gheorghe Voicu")).toBeNull();
+    expect(spion).not.toHaveBeenCalled();
+  });
+
+  it("o redistribuire refuzata de sursa lasa editorul deschis, cu mesajul ei", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    vi.spyOn(sursa, "schimbaCoteleBlocului").mockRejectedValue(new Error("Cotele trimise insumeaza 100.5000, nu 100. Corecteaza-le pe toate inainte de a le salva."));
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await apasa("Redistribuie cotele intregului bloc");
+    await apasa("Salveaza cotele blocului");
+    expect(toast().textContent).toBe("Cotele trimise insumeaza 100.5000, nu 100. Corecteaza-le pe toate inainte de a le salva.");
+    expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu")).toBeTruthy();
+  });
+});
+
 describe("FisaApartament, fisa goala", () => {
   it("un apartament disparut dupa reincarcare inchide fisa", async () => {
     let ascunde = false;

@@ -2832,7 +2832,10 @@ function ListaApartamente({ filtruInitial }) {
 
 /* Fisa apartamentului: tot ce stie asociatia despre el, cu actiunile lui */
 function FisaApartament({ apId, onClose }) {
-  const { date, inregistreazaNumerar, trimiteInstiintare, schimbaPersoane, invitaLocatar, inchideAcces, toastMsg } = useApp();
+  const {
+    date, inregistreazaNumerar, trimiteInstiintare, schimbaPersoane, invitaLocatar, inchideAcces,
+    schimbaFisaApartament, schimbaCoteleBlocului, toastMsg,
+  } = useApp();
   const [actiune, setActiune] = useState(null);
   const [sumaIncasata, setSumaIncasata] = useState("");
   const [plataNoua, setPlataNoua] = useState(null);
@@ -2841,19 +2844,38 @@ function FisaApartament({ apId, onClose }) {
   const [motiv, setMotiv] = useState("");
   const [calitate, setCalitate] = useState("proprietar");
   const [cod, setCod] = useState(null);
+  /* [C3/E4] Corectarea fisei apartamentului: proprietar, etaj, suprafata,
+     scutirea de lift si o cota mica. O corectie mai mare de cota, care ar
+     strica suma de 100% a blocului, se face din editorul de mai jos. */
+  const [proprietarEd, setProprietarEd] = useState("");
+  const [etajEd, setEtajEd] = useState("");
+  const [mpEd, setMpEd] = useState("");
+  const [cotaEd, setCotaEd] = useState("");
+  const [scutitLiftEd, setScutitLiftEd] = useState(false);
+  /* Redistribuirea cotelor intregului bloc: o cota text per apartament */
+  const [coteBloc, setCoteBloc] = useState({});
   const [eroare, setEroare] = useState(null);
   /* Un dublu apasat pe "Emite chitanta" nu trebuie sa emita doua chitante */
   const incasareInCurs = React.useRef(false);
   const [incaseaza, setIncaseaza] = useState(false);
 
   const ap = apId ? apartamentDupaId(date, apId) : null;
-  const inchide = () => { setActiune(null); setPlataNoua(null); setCod(null); setSumaIncasata(""); setPersoane(""); setMotiv(""); setEroare(null); onClose(); };
+  const inchide = () => {
+    setActiune(null); setPlataNoua(null); setCod(null); setSumaIncasata(""); setPersoane(""); setMotiv(""); setEroare(null);
+    setProprietarEd(""); setEtajEd(""); setMpEd(""); setCotaEd(""); setScutitLiftEd(false); setCoteBloc({});
+    onClose();
+  };
   if (!ap) return <Sheet open={false} onClose={inchide} titlu="" />;
 
   const lista = listaCurenta(date);
   const s = sold(date, ap.id);
   const deschise = datoriiDeschise(date, ap.id);
   const linii = lista ? liniiLista(date, lista.id, ap.id) : [];
+  const apOrdine = date.apartamente.slice().sort(ordineNumar);
+  const totalCote = round2(apOrdine.reduce((sm, a) => sm + (numarDin(coteBloc[a.id]) || 0), 0));
+  const coteValide = apOrdine.every((a) => numarDin(coteBloc[a.id]) > 0) && Math.abs(totalCote - 100) <= 0.01;
+  const fisaValida = proprietarEd.trim() && numarDin(cotaEd) > 0 && !Number.isNaN(numarDin(etajEd))
+    && (mpEd === "" || numarDin(mpEd) > 0);
   const lunaCitire = lunaDe(date.azi);
   const luniViitoare = [lunaDe(date.azi), lunaUrmatoare(lunaDe(date.azi)), lunaUrmatoare(lunaUrmatoare(lunaDe(date.azi)))]
     .filter((l) => !ap.istoricPersoane.some((p) => p.valabilDin === l));
@@ -2953,6 +2975,79 @@ function FisaApartament({ apId, onClose }) {
             </>
           )}
         </Card>
+      ) : actiune === "fisa" ? (
+        <Card gap={S.md}>
+          <Txt size={14} weight={700}>Corecteaza datele apartamentului</Txt>
+          <Field label="Proprietar" value={proprietarEd} onChange={setProprietarEd} placeholder="Numele proprietarului" />
+          <Box row gap={S.sm}>
+            <Box flex={1}><Field label="Etaj" value={etajEd} onChange={setEtajEd} placeholder="0 pentru parter" inputMode="numeric" /></Box>
+            <Box flex={1}><Field label="Suprafata" value={mpEd} onChange={setMpEd} placeholder="0,0" suffix="mp" inputMode="decimal" /></Box>
+          </Box>
+          <Field
+            label="Cota indiviza"
+            value={cotaEd}
+            onChange={setCotaEd}
+            placeholder="0,00"
+            suffix="%"
+            inputMode="decimal"
+            hint="O corectie mica se salveaza direct, cat timp suma cotelor blocului ramane 100%."
+          />
+          <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.md }}>
+            <Txt size={13} weight={600}>Scutit de plata liftului</Txt>
+            <Switch value={scutitLiftEd} onChange={setScutitLiftEd} label="Scutit de plata liftului" />
+          </Box>
+          <Eroare mesaj={eroare} />
+          <Box row gap={S.sm}>
+            <Btn label="Salveaza corectia" disabled={!fisaValida} onPress={async () => {
+              setEroare(null);
+              const r = await schimbaFisaApartament(ap.id, {
+                proprietar: proprietarEd.trim(), cota: numarDin(cotaEd), mp: mpEd === "" ? null : numarDin(mpEd),
+                scutitLift: scutitLiftEd, etaj: numarDin(etajEd),
+              });
+              if (r.ok) setActiune(null); else setEroare(r.mesaj);
+            }} />
+            <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
+          </Box>
+          <Btn
+            label="Redistribuie cotele intregului bloc"
+            variant="quiet"
+            full
+            onPress={() => {
+              setCoteBloc(Object.fromEntries(apOrdine.map((a) => [a.id, num(a.cota)])));
+              setActiune("cote-bloc");
+            }}
+          />
+        </Card>
+      ) : actiune === "cote-bloc" ? (
+        <Card gap={S.md}>
+          <Txt size={14} weight={700}>Redistribuie cotele blocului</Txt>
+          <Txt size={12.5} color={C.muted}>
+            Cotele tuturor apartamentelor trebuie sa insumeze 100%. Corecteaza cate apartamente e nevoie, apoi salveaza o singura data.
+          </Txt>
+          {apOrdine.map((a) => (
+            <Field
+              key={a.id}
+              label={`Ap. ${a.numar}, ${a.proprietar}`}
+              value={coteBloc[a.id]}
+              onChange={(t) => setCoteBloc({ ...coteBloc, [a.id]: t })}
+              suffix="%"
+              inputMode="decimal"
+            />
+          ))}
+          <Box row style={{ justifyContent: "space-between", alignItems: "center" }}>
+            <Txt size={13} weight={700}>Total</Txt>
+            <Txt size={14} weight={700} color={Math.abs(totalCote - 100) <= 0.01 ? C.ok : C.danger}>{num(totalCote)}% din 100%</Txt>
+          </Box>
+          <Eroare mesaj={eroare} />
+          <Box row gap={S.sm}>
+            <Btn label="Salveaza cotele blocului" disabled={!coteValide} onPress={async () => {
+              setEroare(null);
+              const r = await schimbaCoteleBlocului(apOrdine.map((a) => ({ apartamentId: a.id, cota: numarDin(coteBloc[a.id]) })));
+              if (r.ok) setActiune(null); else setEroare(r.mesaj);
+            }} />
+            <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
+          </Box>
+        </Card>
       ) : (
         <Box gap={S.sm}>
           <Btn label="Inregistreaza incasare cash" full onPress={() => { setSumaIncasata(s > 0 ? lei(s, false) : ""); setActiune("incasare"); }} />
@@ -2962,6 +3057,15 @@ function FisaApartament({ apId, onClose }) {
           }} />
           <Btn label="Modifica numarul de persoane" variant="secondary" full onPress={() => { setDinLuna(luniViitoare[0] || ""); setActiune("persoane"); }} />
           <Btn label="Invita un locatar in aplicatie" variant="secondary" full onPress={() => setActiune("invita")} />
+          <Btn
+            label="Corecteaza datele apartamentului"
+            variant="secondary"
+            full
+            onPress={() => {
+              setProprietarEd(ap.proprietar); setEtajEd(String(ap.etaj)); setMpEd(ap.mp != null ? num(ap.mp, 1) : "");
+              setCotaEd(num(ap.cota)); setScutitLiftEd(ap.scutitLift); setActiune("fisa");
+            }}
+          />
         </Box>
       )}
 
@@ -4313,6 +4417,9 @@ export default function AdminBloc() {
       schimbaPersoane: cmd((ap, n, l, m) => sursa.schimbaPersoane(ap, n, l, m), (r, ap, n, l) => `Din ${monthLabel(l)} se calculeaza ${n} persoane`),
       invitaLocatar: cmd((ap, c) => sursa.invitaLocatar(ap, c), "Codul de invitatie a fost generat"),
       inchideAcces: cmd((id) => sursa.inchideAcces(id), "Accesul a fost inchis"),
+      schimbaFisaApartament: cmd((ap, x) => sursa.schimbaFisaApartament(ap, x), "Fisa apartamentului a fost actualizata"),
+      schimbaCoteleBlocului: cmd((cote) => sursa.schimbaCoteleBlocului(cote), "Cotele blocului au fost actualizate"),
+      inregistreazaIesireFond: cmd((x) => sursa.inregistreazaIesireFond(x), "Iesirea din fond a fost inregistrata"),
       valideazaCitire: cmd((id, a, m) => sursa.valideazaCitire(id, a, m), (r, id, a) => (a ? "Citirea a fost validata" : "Citirea a fost respinsa, locatarul a fost anuntat")),
       citesteContorGeneral: cmd((l, t, i) => sursa.citesteContorGeneral(l, t, i), "Indexul contorului general a fost salvat"),
       estimeazaCitiri: cmd((l) => sursa.estimeazaCitiri(l)),
