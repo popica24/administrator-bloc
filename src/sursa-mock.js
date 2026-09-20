@@ -665,7 +665,7 @@ function proiecteaza(db, profilId, apartamentAles) {
 
   const documente = db.documente.filter((d) => d.asociatieId === asociatie.id && (esteAdmin || d.vizibilLocatarilor))
     .sort((a, b) => (a.creatLa < b.creatLa ? 1 : -1))
-    .map((d) => ({ id: d.id, titlu: d.titlu, tip: d.tip, creatLa: d.creatLa, vizibil: d.vizibilLocatarilor, areFisier: !!d.cale }));
+    .map((d) => ({ id: d.id, titlu: d.titlu, tip: d.tip, creatLa: d.creatLa, vizibil: d.vizibilLocatarilor }));
 
   const voturi = db.voturi.filter((v) => v.asociatieId === asociatie.id).sort((a, b) => (a.deschisLa < b.deschisLa ? 1 : -1)).map((v) => {
     const exprimate = db.exprimate.filter((e) => e.votId === v.id);
@@ -1321,8 +1321,6 @@ export function creeazaSursaMock() {
         const medie = ultimele.length ? round3(ultimele.reduce((s, x) => s + x.consum, 0) / ultimele.length) : 0;
         const anterior = istoric.length ? istoric[0].indexCurent
           : db.citiri.find((x) => x.contorId === c.id && x.sursa === "pornire").indexCurent;
-        const respinsa = db.citiri.find((x) => x.contorId === c.id && x.luna === luna && x.stare === "respinsa");
-        if (respinsa) respinsa.stare = "respinsa";
         db.adauga("citiri", {
           contorId: c.id, blocId: bloc.id, apartamentId: c.apartamentId, tip: c.tip, luna, indexAnterior: anterior,
           indexCurent: round3(anterior + medie), consum: medie, sursa: "estimat", stare: "validata", transmisaLa: acum(),

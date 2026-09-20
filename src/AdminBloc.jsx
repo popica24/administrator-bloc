@@ -1747,10 +1747,10 @@ function LocatarAcasa({ go }) {
   const citireFacuta = contoare.length > 0 && contoare.every((c) => { const x = citireLuna(date, c.id, lunaCitire); return x && x.stare !== "respinsa"; });
   const citireRespinsa = contoare.some((c) => { const x = citireLuna(date, c.id, lunaCitire); return x && x.stare === "respinsa"; });
 
-  /* [P1] Doar proprietarul poate vota (Legea 196/2018, migratia K3). Sursa
-     demonstrativa nu are inca eu.calitate (o va capata separat): pana atunci,
-     calitate absenta se trateaza ca "poate vota", ca sa nu ascunda sarcina
-     tuturor locatarilor in modul demonstrativ. */
+  /* [P1] Doar proprietarul poate vota (Legea 196/2018, migratia K3). Ambele
+     surse scriu eu.calitate la incarcare; `== null` e doar o plasa de
+     siguranta, ca o calitate lipsa sa nu ascunda tacut sarcina, nu o
+     asteptare reala azi. */
   const potVota = date.eu.calitate == null || date.eu.calitate === "proprietar";
   const votDeschis = potVota ? date.voturi.find((v) => !v.votulMeu && new Date(v.inchideLa) > new Date()) : null;
   /* [K8] Sursa trimite adunarile descrescator dupa data; sarcina trebuie sa

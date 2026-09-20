@@ -79,7 +79,7 @@ describe("salveazaCheltuiala", () => {
     const c = d.cheltuieli.find((x) => x.id === id);
     expect(c).toMatchObject({ furnizor: "Apa Noua SRL", tipApa: "rece", metoda: "consum" });
     expect(d.furnizori.find((f) => f.id === c.furnizorId)).toMatchObject({ denumire: "Apa Noua SRL", cui: null, categorie: "Apa rece", metoda: "consum", tipApa: "rece", cod: "C10" });
-    expect(d.documente.find((x) => x.id === c.documentId)).toMatchObject({ titlu: "Factura AN-7", tip: "factura", areFisier: true });
+    expect(d.documente.find((x) => x.id === c.documentId)).toMatchObject({ titlu: "Factura AN-7", tip: "factura" });
   });
 
   it("scanarea fara serie se numeste doar Factura; furnizorul nou fara apa are tipApa null", async () => {
