@@ -170,6 +170,14 @@ describe("Sesizari: sesizare noua", () => {
     expect(screen.getByLabelText("Sau scrie pe scurt problema").value).toBe("");
   });
 
+  /* [K10] Formularul trebuie sa avertizeze autorul ca alti locatari vad
+     descrierea (dar nu numele lui) la "Din tot blocul". */
+  it("[K10] formularul avertizeaza ca descrierea se vede fara numele autorului", async () => {
+    await laSesizari({ email: ELENA });
+    await apasaButon("Sesizare noua");
+    expect(within(foaie()).getByText(/Alti locatari vad titlul si descrierea la Din tot blocul, dar nu vad numele tau\./)).toBeTruthy();
+  });
+
   it("text liber, categoria aleasa si descrierea", async () => {
     const { sursa } = await laSesizari({ email: ELENA });
     const spion = vi.spyOn(sursa, "adaugaSesizare");
