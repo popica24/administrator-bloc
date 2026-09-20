@@ -616,6 +616,32 @@ describe("FisaApartament, redistribuirea cotelor blocului (C3/E4)", () => {
   });
 });
 
+describe("FisaApartament, panoul e pazit cand are ceva scris (G6)", () => {
+  it("o atingere pe fundal nu arunca la gunoi editorul de cote", async () => {
+    await pornesteAdmin({ tab: "Apartamente" });
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await apasa("Redistribuie cotele intregului bloc");
+    await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
+
+    const panou = dialog("Apartament 1");
+    await act(async () => { fireEvent.click(panou.parentElement); });
+    expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu").value).toBe("10");
+  });
+
+  it("tasta Escape nu arunca la gunoi editorul de cote", async () => {
+    await pornesteAdmin({ tab: "Apartamente" });
+    await deschideFisa("1");
+    await apasa("Corecteaza datele apartamentului");
+    await apasa("Redistribuie cotele intregului bloc");
+    await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
+
+    const panou = dialog("Apartament 1");
+    await act(async () => { fireEvent.keyDown(panou, { key: "Escape" }); });
+    expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu").value).toBe("10");
+  });
+});
+
 describe("FisaApartament, fisa goala", () => {
   it("un apartament disparut dupa reincarcare inchide fisa", async () => {
     let ascunde = false;

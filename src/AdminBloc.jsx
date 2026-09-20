@@ -1007,8 +1007,9 @@ function Switch({ value, onChange, label }) {
 const SELECTOR_FOCALIZABIL = 'a[href], button:not([disabled]), input:not([disabled]):not([type="file"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /* Panou care urca de jos. Este singura miscare de tip slide din aplicatie. */
-/* `pazit` inseamna ca formularul are ceva scris: atunci o atingere pe fundal
-   nu mai inchide panoul si nu mai arunca ce a scris omul. */
+/* `pazit` inseamna ca formularul are ceva scris: atunci nici o atingere pe
+   fundal, nici tasta Escape nu mai inchid panoul, ca sa nu arunce ce a scris
+   omul. */
 function Sheet({ open, onClose, titlu, pazit, children }) {
   const panou = React.useRef(null);
   /* [C18] Focusul dinainte de deschidere, ca sa revina acolo la inchidere,
@@ -1028,7 +1029,7 @@ function Sheet({ open, onClose, titlu, pazit, children }) {
   /* Sheet-ul are mereu macar butonul "Inchide" (tabindex 0) in antet, deci
      lista de mai jos nu este niciodata goala. */
   const peTasta = (e) => {
-    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "Escape") { if (!pazit) onClose(); return; }
     if (e.key !== "Tab") return;
     const focalizabile = Array.from(panou.current.querySelectorAll(SELECTOR_FOCALIZABIL));
     const prim = focalizabile[0];
@@ -2979,9 +2980,15 @@ function FisaApartament({ apId, onClose }) {
     .filter((l) => !ap.istoricPersoane.some((p) => p.valabilDin === l));
   const plata = plataNoua ? date.plati.find((p) => p.id === plataNoua) : null;
   const sumaCash = sumaDin(sumaIncasata);
+  /* [G6] Singura fisa fara pazit: o atingere pe fundal sau Escape arunca la
+     gunoi orice s-a scris, inclusiv editorul de cote cu cate un camp pentru
+     fiecare apartament din bloc. */
+  const pazitFisa = actiune === "cote-bloc"
+    ? Object.values(coteBloc).some((v) => areText(v))
+    : areText(sumaIncasata, persoane, motiv, proprietarEd, etajEd, mpEd, cotaEd);
 
   return (
-    <Sheet open={!!ap} onClose={inchide} titlu={`Apartament ${ap.numar}`}>
+    <Sheet open={!!ap} onClose={inchide} titlu={`Apartament ${ap.numar}`} pazit={pazitFisa}>
       <Card gap={S.sm}>
         <Txt size={16} weight={700}>{ap.proprietar}</Txt>
         <Box row gap={S.lg} style={{ flexWrap: "wrap" }}>
