@@ -2376,10 +2376,16 @@ function LocatarSesizari() {
 
 function RezultateVot({ vot }) {
   const total = vot.optiuni.reduce((s, o) => s + o.voturi, 0);
+  /* [K7] La numararea pe cota, castigatorul se decide dupa cote, nu dupa
+     numarul de apartamente care au votat: bara si procentul principal
+     trebuie sa fie procentul din cotele exprimate, nu din voturi. */
+  const totalCote = vot.numarare === "cota" ? vot.optiuni.reduce((s, o) => s + o.cote, 0) : 0;
   return (
     <Box gap={S.md}>
       {vot.optiuni.map((o) => {
-        const pct = total ? Math.round((o.voturi / total) * 100) : 0;
+        const pct = vot.numarare === "cota"
+          ? (totalCote ? Math.round((o.cote / totalCote) * 100) : 0)
+          : (total ? Math.round((o.voturi / total) * 100) : 0);
         const alMeu = vot.votulMeu === o.id;
         return (
           <Box key={o.id} gap={S.xs}>

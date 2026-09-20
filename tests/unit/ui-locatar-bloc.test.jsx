@@ -146,7 +146,7 @@ describe("Bloc: votul", () => {
     expect(randVarianta("Oferta A")).toBe(`${OFERTA_A}0%0 voturi`);
   });
 
-  it.fails("[K7] la numararea pe cota procentul este din cote, nu din apartamente", async () => {
+  it("[K7] la numararea pe cota procentul este din cote, nu din apartamente", async () => {
     await laBloc({
       email: ELENA,
       zi: new Date("2026-10-04T09:00:00"),
