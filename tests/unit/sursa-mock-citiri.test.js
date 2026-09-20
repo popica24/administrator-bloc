@@ -192,6 +192,30 @@ describe("valideazaCitiriApartament", () => {
     await expect(s.valideazaCitiriApartament(ap9, "2026-09", true, null))
       .rejects.toThrow("Nu mai sunt citiri de verificat pentru acest apartament si aceasta luna.");
   });
+
+  /* [paritate] contorizare.valideaza_citiri_apartament (si valideaza_citire,
+     pe un singur contor) refuza o luna a carei lista e deja publicata: banii
+     acelei luni au fost deja calculati din citirile validate pana atunci, o
+     validare/respingere ulterioara le-ar schimba dupa ce lista a iesit.
+     Lista curenta (septembrie) are o singura cheltuiala, fondul de reparatii
+     pe cota indiviza, deci se poate publica fara nicio citire validata:
+     ap. 9 ramane cu citirile "trimise" din CITIRI_LUNA_CURENTA. */
+  it("[paritate] refuza o luna a carei lista e deja publicata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap9 = apNr(d, "9").id;
+    const septembrie = d.liste.find((l) => l.luna === "2026-09");
+    expect(septembrie.stare).toBe("ciorna");
+    const trimiseInainte = d.citiri.filter((x) => x.apartamentId === ap9 && x.luna === "2026-09" && x.stare === "trimisa");
+    expect(trimiseInainte).toHaveLength(2);
+
+    await s.publicaLista(septembrie.id);
+
+    await expect(s.valideazaCitiriApartament(ap9, "2026-09", true, null))
+      .rejects.toThrow("Lista lunii 2026-09-01 este deja publicata; citirile nu se mai pot verifica.");
+    /* citirile raman neatinse, "trimise" */
+    const dupa = (await s.incarca()).citiri.filter((x) => x.apartamentId === ap9 && x.luna === "2026-09");
+    expect(dupa.every((x) => x.stare === "trimisa")).toBe(true);
+  });
 });
 
 describe("citesteContorGeneral", () => {

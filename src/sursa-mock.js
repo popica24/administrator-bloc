@@ -1072,6 +1072,12 @@ export function creeazaSursaMock() {
     async valideazaCitiriApartament(apartamentId, luna, accepta, motiv) {
       const { bloc } = cerAdmin();
       const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
+      /* [paritate] ca in contorizare.valideaza_citiri_apartament: o luna a
+         carei lista e deja publicata nu se mai poate verifica, altfel
+         schimbam citirile din spatele unor bani deja calculati si platiti. */
+      if (db.liste.some((l) => l.blocId === bloc.id && l.luna === luna && l.stare === "publicata")) {
+        eroare(`Lista lunii ${luna}-01 este deja publicata; citirile nu se mai pot verifica.`);
+      }
       if (!accepta && !(motiv || "").trim()) eroare("Scrie motivul, ca locatarul sa stie ce sa corecteze.");
       const citiri = db.citiri.filter((c) => c.apartamentId === ap.id && c.luna === luna && c.stare === "trimisa");
       if (citiri.length === 0) eroare("Nu mai sunt citiri de verificat pentru acest apartament si aceasta luna.");
