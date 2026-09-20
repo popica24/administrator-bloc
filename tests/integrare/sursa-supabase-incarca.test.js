@@ -24,6 +24,23 @@ const modifica = (fragment, transforma) => async (url, init, original) => {
   return json(transforma(await r.json()), r.status);
 };
 
+/* [J11] Ca modifica(), dar doar pentru prima pagina a paginarii pe cheie
+   (toate()): a doua cerere contine id=gt.<ultimul id primit>, calculat din
+   randul ramas pe ultima pozitie DUPA transformare. O transformare care doar
+   filtreaza pastreaza ordinea (deci id-ul cel mai mare ramane ultimul), dar
+   una care reordoneaza (ca inOrdine mai jos, pentru NOU-2) poate lasa pe
+   ultima pozitie un rand cu id mai mic decat altele deja intoarse — a doua
+   pagina ar cere din nou randuri cu id mai mare, deja intoarse (reordonate)
+   la prima pagina, si le-ar duplica. Paginile de continuare raman goale:
+   setul real e mic, deci tot ce conteaza a fost deja intors la prima
+   pagina. */
+const modificaPrimaPagina = (fragment, transforma) => async (url, init, original) => {
+  if (!url.includes(fragment) || (init.method && init.method !== "GET")) return undefined;
+  if (url.includes("id=gt.")) return json([], 200);
+  const r = await original(url, init);
+  return json(transforma(await r.json()), r.status);
+};
+
 describe("D14, administratorul (doar citire)", () => {
   let date;
   let blocId;
@@ -336,7 +353,7 @@ describe("bloc de test: ramurile maparii", () => {
     const ordine = ["10", "2A", "1", "2", "3"];
     const inOrdine = (randuri) => [...randuri].sort((a, b) => ordine.indexOf(a.numar) - ordine.indexOf(b.numar));
     const { s } = await intraCa(f.adminEmail, { incarca: false });
-    const date = await cuFetch(modifica("/apartamente?select", inOrdine), () => s.incarca());
+    const date = await cuFetch(modificaPrimaPagina("/apartamente?select", inOrdine), () => s.incarca());
     expect(date.apartamente.map((a) => a.numar)).toEqual(["1", "2", "2A", "3", "10"]);
   });
 

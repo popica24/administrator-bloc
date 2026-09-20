@@ -100,6 +100,23 @@ async function toate(construieste) {
   }
 }
 
+/* [J11] Ca toate(), dar cand filtrul e o lista de id-uri prea lunga pentru un
+   singur .in() (audit 2, P4: invitatii nu se poate lega de apartamente
+   printr-un join, doar printr-un filtru pe lista lor de id-uri) — o cerere
+   cu peste o mie de UUID-uri in URL pica cu "URI too long" inainte sa
+   ajunga la limita de randuri a raspunsului. Ceruta pe bucati de id-uri, cu
+   toate() pe fiecare bucata, functioneaza indiferent de cate id-uri sau
+   randuri sunt. */
+const BUCATA_IDURI = 200;
+async function toateDupaIduri(iduri, construieste) {
+  const rezultat = [];
+  for (let i = 0; i < iduri.length; i += BUCATA_IDURI) {
+    const bucataIduri = iduri.slice(i, i + BUCATA_IDURI);
+    rezultat.push(...await toate(() => construieste(bucataIduri)));
+  }
+  return rezultat;
+}
+
 /* Cele mai noi intai / cele mai vechi intai, dupa un camp de data.
    Ordonarea se face aici, nu in cerere: cererea este ordonata dupa id, ca
    paginarea pe cheie sa fie corecta. */
@@ -190,14 +207,14 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(cont.from("setari_contorizare").select("*").eq("bloc_id", bloc).maybeSingle()),
       ok(org.from("blocuri").select("*").eq("id", bloc).single()),
       ok(org.rpc("contacte_asociatie", { p_asociatie_id: asoc })),
-      ok(org.from("apartamente").select("*").eq("bloc_id", bloc)),
+      toate(() => org.from("apartamente").select("*").eq("bloc_id", bloc)),
       toate(() => org.from("apartamente_persoane").select("*, ap:apartamente!inner(bloc_id, id)")
         .eq("ap.bloc_id", bloc)),
       toate(() => intr.from("liste_lunare").select("*").eq("bloc_id", bloc)),
       toate(() => intr.from("cheltuieli").select("*, l:liste_lunare!inner(bloc_id)").eq("l.bloc_id", bloc)),
       ok(intr.from("furnizori").select("*").eq("asociatie_id", asoc)),
       toate(() => alMeu(intr.from("repartizari").select("*").eq("bloc_id", bloc))),
-      ok(alMeu(cont.from("contoare").select("*").eq("bloc_id", bloc).is("scos_la", null))),
+      toate(() => alMeu(cont.from("contoare").select("*").eq("bloc_id", bloc).is("scos_la", null))),
       toate(() => alMeu(cont.from("citiri").select("*").eq("bloc_id", bloc))),
       ok(cont.rpc("consum_mediu_bloc", { p_bloc_id: bloc })),
       toate(() => alMeu(fin.from("datorii_rest").select("*").eq("bloc_id", bloc))),
@@ -228,10 +245,12 @@ export function creeazaSursaSupabase(url, cheie) {
     ]);
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
        identitate.invitatii si organizare.apartamente sunt in scheme diferite,
-       iar PostgREST leaga doar tabele din aceeasi schema. Apartamentele sunt
-       putine, deci filtrul merge pe lista lor de id-uri (audit 2, P4). */
+       iar PostgREST leaga doar tabele din aceeasi schema, deci filtrul merge
+       pe lista de id-uri a apartamentelor (audit 2, P4). [J11] Pe bucati de
+       id-uri, cu paginare pe fiecare bucata: un bloc cu multe apartamente nu
+       mai pica cu "URI too long" si nu mai trunchiaza tacut la max_rows. */
     const invitatii = esteAdmin
-      ? await ok(id.from("invitatii").select("*").in("apartament_id", apartamente.map((a) => a.id))
+      ? await toateDupaIduri(apartamente.map((a) => a.id), (iduri) => id.from("invitatii").select("*").in("apartament_id", iduri)
         .is("folosita_la", null).is("revocata_la", null).gt("expira_la", new Date().toISOString()))
       : [];
 
