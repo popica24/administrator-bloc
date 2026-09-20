@@ -638,7 +638,6 @@ select throws_ok(
   '42501', null,
   'index_anterior: functie interna, fara drept de executie pentru authenticated');
 
-select todo('[A4] indexul anterior doar din citiri validate; nicio validare pe o luna publicata', 2);
 reset role;
 select pg_temp.serviciu();
 select is(contorizare.index_anterior(pg_temp.fx('c1c'), pg_temp.luna(1)), 50.000::numeric,
@@ -647,7 +646,7 @@ set local role authenticated;
 select pg_temp.ca('admin');
 select throws_ok(
   $$select contorizare.valideaza_citire((select id from contorizare.citiri where contor_id = pg_temp.fx('c2') and luna = pg_temp.luna(-3)), true)$$,
-  null, null,
+  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; citirea nu se mai poate verifica.',
   '[A4] refuza validarea unei citiri din luna unei liste publicate');
 
 select todo('[A6] estimarea nu porneste inainte de ziua limita a citirilor', 1);
