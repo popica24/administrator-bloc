@@ -198,6 +198,8 @@ describe("citesteContorGeneral", () => {
 
 describe("estimeazaCitiri", () => {
   it("estimeaza pe media ultimelor trei luni doar contoarele fara citire", async () => {
+    /* [A6] dupa termenul de citire (25 septembrie) */
+    ceasDemo(new Date("2026-09-26T09:00:00"));
     const { s, d } = await ca(ADMIN);
     const ap3 = apNr(d, "3").id;
     const { rece } = contoare(d, ap3);
@@ -222,6 +224,8 @@ describe("estimeazaCitiri", () => {
   });
 
   it("estimarea foloseste ultimele trei luni, chiar daca o luna veche a fost estimata dupa ele", async () => {
+    /* [A6] dupa termenul de citire al lunii octombrie (25 octombrie) */
+    ceasDemo(new Date("2026-10-26T09:00:00"));
     const { s, d } = await ca(ADMIN);
     const { rece } = contoare(d, apNr(d, "3").id);
     await s.estimeazaCitiri("2026-04");
@@ -241,12 +245,14 @@ describe("estimeazaCitiri", () => {
     await expect(s.estimeazaCitiri("2026-09")).rejects.toThrow("Doar administratorul poate face asta.");
   });
 
-  it.fails("[A6] estimarea inainte de termenul de citire este refuzata", async () => {
+  it("[A6] estimarea inainte de termenul de citire este refuzata", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.estimeazaCitiri("2026-09")).rejects.toThrow();
   });
 
   it("[A2] dupa o estimare prea mare, indexul real al lunii urmatoare este acceptat", async () => {
+    /* [A6] dupa termenul de citire (25 septembrie) */
+    ceasDemo(new Date("2026-09-26T09:00:00"));
     const { s } = await ca(ADMIN);
     await s.estimeazaCitiri("2026-09");
     await s.intra(ILIE, PAROLA);
@@ -259,6 +265,8 @@ describe("estimeazaCitiri", () => {
   });
 
   it("[A2] sub ultima citire reala indexul ramane refuzat, chiar dupa o estimare", async () => {
+    /* [A6] dupa termenul de citire (25 septembrie) */
+    ceasDemo(new Date("2026-09-26T09:00:00"));
     const { s } = await ca(ADMIN);
     await s.estimeazaCitiri("2026-09");
     await s.intra(ILIE, PAROLA);

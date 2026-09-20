@@ -205,7 +205,8 @@ describe("AdminCitiri, alta luna si estimari", () => {
   });
 
   it("estimarea cere confirmare si anunta cate citiri au fost estimate", async () => {
-    const { sursa } = await deschideCitiri();
+    /* [A6] dupa termenul de citire (25 septembrie) */
+    const { sursa } = await deschideCitiri({ zi: new Date("2026-09-26T09:00:00") });
     const spion = vi.spyOn(sursa, "estimeazaCitiri");
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     expect(screen.getByText("10 apartamente nu au transmis indexul")).toBeTruthy();
@@ -228,7 +229,7 @@ describe("AdminCitiri, alta luna si estimari", () => {
     expect(toast().textContent).toBe("Inca nu a trecut termenul");
   });
 
-  it.fails("[A6] estimarea nu se poate face inainte de termenul de citire", async () => {
+  it("[A6] estimarea nu se poate face inainte de termenul de citire", async () => {
     const { sursa } = await deschideCitiri();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     await apasa("Estimeaza citirile lipsa");

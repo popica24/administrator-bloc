@@ -1117,6 +1117,10 @@ export function creeazaSursaMock() {
 
     async estimeazaCitiri(luna) {
       const { bloc } = cerAdmin();
+      /* [A6] O estimare inainte de termenul de citire ii blocheaza pe cei
+         care n-au trimis inca indexul, desi mai au timp pana la termen. */
+      const termen = `${luna}-${pad(db.setari.ziLimitaCitire)}`;
+      if (aziIso() < termen) eroare(`Nu poti estima inainte de termenul de citire (${termen}).`);
       let n = 0;
       db.contoare.filter((c) => c.blocId === bloc.id && c.apartamentId).forEach((c) => {
         const areValida = db.citiri.some((x) => x.contorId === c.id && x.luna === luna && x.stare === "validata");
