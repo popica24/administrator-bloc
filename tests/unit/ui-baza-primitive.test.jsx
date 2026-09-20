@@ -437,8 +437,15 @@ describe("deschideUrl, descarcaPdf, confirma si documentul din RandLista", () =>
     await apasa("Exporta lista PDF");
     expect(pdf.descarcate).toHaveLength(1);
     expect(document.querySelector("a[download]")).toBeNull();
+    /* Un export dintr-un test anterior si-a lasat in urma un setTimeout
+       adevarat de 4 secunde. Pe o masina incarcata (CI, sub acoperire) acela
+       se declanseaza tocmai acum si loveste spionul de aici, desi n-are nicio
+       legatura cu exportul asta. Stergem ce s-a strans pana in clipa asta si
+       masuram doar ceasul fals, al carui timp il controlam noi. */
+    revoca.mockClear();
+    act(() => { vi.advanceTimersByTime(3999); });
     expect(revoca).not.toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(4000); });
+    act(() => { vi.advanceTimersByTime(1); });
     expect(revoca).toHaveBeenCalledWith("blob:test-1");
   });
 
