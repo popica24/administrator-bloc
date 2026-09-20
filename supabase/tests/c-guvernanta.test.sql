@@ -309,7 +309,6 @@ select set_eq(
   $$ values (pg_temp.id('a2')), (pg_temp.id('a3')) $$,
   'reaminteste_vot: emite VotReamintit cu apartamentele care nu au votat');
 select pg_temp.ca('adm');
-select todo('[K13] destinatarii numara si locatarii cu acces viitor', 1);
 select is((guvernanta.reaminteste_vot(pg_temp.id('v1')) ->> 'destinatari')::int, 2,
   '[K13] reaminteste_vot: destinatari = loc2 si nou3 (nu fostul, nu cel cu acces viitor)');
 select todo('[K11] reaminteste_vot nu trebuie sa accepte voturi inchise', 1);

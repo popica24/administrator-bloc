@@ -189,7 +189,6 @@ select results_eq(
   $$ select titlu, corp, tip, asociatie_id from comunicare.notificari where referinta ->> 'anunt_id' = pg_temp.id('an2')::text and profil_id = pg_temp.id('loc1') $$,
   $$ values ('Urgent: Oprire apa'::text, 'Maine intre 9 si 12'::text, 'anunt'::text, pg_temp.id('asoc')) $$,
   'publica_anunt: notificarea urgenta are titlul marcat');
-select todo('[K13] destinatarii anuntului urgent nu verifica activ_din', 1);
 select is(pg_temp.notificari('viitor', 'anunt'), 0, '[K13] publica_anunt: locatarul cu acces viitor nu este notificat');
 
 -- Anunt pentru toata asociatia si anunt pentru alt bloc al asociatiei.

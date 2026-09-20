@@ -152,7 +152,6 @@ select results_eq(
              'Vezi in aplicatie cat ai de plata si cum s-a calculat fiecare suma. Termenul de plata este 25 septembrie 2026.'::text,
              pg_temp.id('asoc'), pg_temp.id('lista')::text) $$,
   'la_lista_publicata: luna, termenul si lista in notificare');
-select todo('[K13] notificarea listei nu verifica activ_din', 1);
 select is(pg_temp.notificari('viitor', 'lista_publicata'), 0, '[K13] la_lista_publicata: locatarul cu acces viitor nu este notificat');
 
 select pg_temp.curata();
@@ -176,7 +175,6 @@ select results_eq(
   $$ select titlu, asociatie_id from comunicare.notificari where tip = 'lista_recalculata' and profil_id = pg_temp.id('loc2') $$,
   $$ values ('Lista pe august 2026 a fost corectata'::text, pg_temp.id('asoc')) $$,
   'la_lista_recalculata: titlul spune ce luna s-a corectat, asociatia vine din bloc');
-select todo('[K13] notificarea listei corectate nu verifica activ_din', 1);
 select is(pg_temp.notificari('viitor', 'lista_recalculata'), 0, '[K13] la_lista_recalculata: locatarul cu acces viitor nu este notificat');
 
 -- =============================================================================
@@ -263,7 +261,6 @@ select results_eq(
   $$ select titlu, corp, referinta ->> 'vot_id' from comunicare.notificari where tip = 'vot' and profil_id = pg_temp.id('loc2') $$,
   $$ values ('Vot nou: Schimbam usa'::text, 'Votul se inchide pe 20 decembrie 2026. Voteaza din aplicatie, la Bloc.'::text, pg_temp.id('v1')::text) $$,
   'la_vot VotDeschis: titlul si data inchiderii');
-select todo('[K13] notificarea votului nou nu verifica activ_din', 1);
 select is(pg_temp.notificari('viitor', 'vot'), 0, '[K13] la_vot VotDeschis: locatarul cu acces viitor nu este notificat');
 
 select pg_temp.curata();
@@ -299,7 +296,6 @@ select pg_temp.curata();
 select evenimente.proceseaza(pg_temp.eveniment('AdunareConvocata', pg_temp.id('ag2')));
 select ok((select corp like '12 decembrie 2026%' from comunicare.notificari where tip = 'adunare_generala' and profil_id = pg_temp.id('loc1')),
   '[K6] la_vot AdunareConvocata: 00:30 ora Romaniei este tot 12 decembrie, nu 11 (UTC)');
-select todo('[K13] convocarea AG nu verifica activ_din', 1);
 select is(pg_temp.notificari('viitor', 'adunare_generala'), 0, '[K13] la_vot AdunareConvocata: locatarul cu acces viitor nu este notificat');
 
 select pg_temp.curata();
@@ -433,7 +429,6 @@ select set_eq($$ select pg_temp.destinatari('adunare_generala') except select pg
 select is((select corp from comunicare.notificari where tip = 'adunare_generala' and profil_id = pg_temp.id('loc1')),
   'Adunarea generala are loc peste 10 zile. Confirma prezenta din aplicatie.',
   'trimite_remindere_zilnice adunare_generala: textul spune peste cate zile');
-select todo('[K13] reminderul AG nu verifica activ_din', 1);
 select is(pg_temp.notificari('viitor', 'adunare_generala'), 0, '[K13] trimite_remindere_zilnice adunare_generala: locatarul cu acces viitor nu este notificat');
 update comunicare.remindere_setari set zile = 9 where asociatie_id = pg_temp.id('asoc') and tip = 'adunare_generala';
 select pg_temp.zilnic();
