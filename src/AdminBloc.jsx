@@ -2134,7 +2134,10 @@ function LocatarConsum() {
   /* [R7] O citire completata automat nu este o citire verificata de om */
   const estimat = citiriLuna.some((x) => x.citire && x.citire.sursa === "estimat");
   const respinsa = citiriLuna.find((x) => x.citire && x.citire.stare === "respinsa");
-  const arataFormular = !toateTrimise || corecteaza;
+  /* [R5] Fara niciun contor, nu are ce sa apara: nici badge-ul de termen,
+     nici cererea de poza, nici "Trimite indexul" (care ar raspunde doar
+     "Scrie cel putin un index", fara nicio explicatie). */
+  const arataFormular = contoare.length > 0 && (!toateTrimise || corecteaza);
 
   /* Se completeaza doar contoarele care nu sunt deja validate pe luna [A1].
      Eroarea opreste trimiterea; indiciul doar explica. */
@@ -2178,6 +2181,13 @@ function LocatarConsum() {
   return (
     <Box gap={S.lg}>
       <AntetEcran eyebrow={`Apartament ${ap.numar}`} titlu="Contoare" />
+
+      {contoare.length === 0 && (
+        <Card gap={S.sm}>
+          <Txt size={15} weight={700}>Apartamentul tau nu are niciun contor de apa</Txt>
+          <Txt size={13} color={C.inkSoft}>Nu ai niciun index de transmis. Daca ai montat un contor, spune-i administratorului sa il inregistreze.</Txt>
+        </Card>
+      )}
 
       {toateTrimise && !corecteaza ? (
         <Card gap={S.sm} style={{ backgroundColor: estimat ? C.warnSoft : toateValidate ? C.okSoft : C.infoSoft, borderColor: estimat ? C.warnLine : toateValidate ? C.okLine : C.infoSoft }}>

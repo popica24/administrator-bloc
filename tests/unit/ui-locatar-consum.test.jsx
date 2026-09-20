@@ -29,6 +29,21 @@ const citireSept = (d, tip, extra) => {
   return { id: `cit-${tip}-${extra.stare}-${extra.id || ""}`, contorId: c.id, apartamentId: c.apartamentId, tip, luna: "2026-09", indexAnterior: tip === "rece" ? 244.5 : 133.72, indexCurent: tip === "rece" ? 250 : 140, consum: tip === "rece" ? 5.5 : 6.28, sursa: "locatar", pozaCale: null, motivRespingere: null, transmisaLa: "2026-09-17T10:00:00+03:00", ...extra };
 };
 
+/* [R5] Un apartament fara niciun contor primea tot formularul de citire
+   (badge de termen, cerere de poza, "Trimite indexul"), fara niciun camp de
+   index de completat: apasarea butonului raspundea doar "Scrie cel putin un
+   index", fara nicio explicatie ca apartamentul nu are contoare. */
+describe("[R5] Contoare: apartament fara niciun contor", () => {
+  it("arata plain ca apartamentul nu are contoare, nu formularul gol", async () => {
+    await laContoare({ email: ELENA, modifica: (d) => { d.contoare = d.contoare.filter((c) => c.apartamentId !== d.eu.apartamentId); } });
+    expect(screen.getByText("Apartamentul tau nu are niciun contor de apa")).toBeTruthy();
+    expect(screen.queryByText("Citirea pentru septembrie")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Trimite indexul" })).toBeNull();
+    expect(screen.queryByText(/Termen/)).toBeNull();
+    expect(screen.queryByText("Fotografiaza contoarele")).toBeNull();
+  });
+});
+
 describe("Contoare: formularul de citire", () => {
   it("arata termenul, contoarele cu indexul anterior si seria", async () => {
     await laContoare({ email: ELENA });
