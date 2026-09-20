@@ -211,7 +211,6 @@ select results_eq(
   $$ values (pg_temp.id('a1'), pg_temp.id('loc1')) $$,
   'voteaza: votul apartine apartamentului si pastreaza cine l-a dat');
 
-select todo('[K3] doar proprietarul voteaza pentru apartament (Legea 196/2018)', 2);
 select pg_temp.ca('chirias1');
 select throws_ok($$ select guvernanta.voteaza(pg_temp.id('v3'), pg_temp.optiune('v3', 'Nu'), pg_temp.id('a1')) $$,
   'P0001', null, '[K3] chiriasul nu poate vota pentru apartament');
