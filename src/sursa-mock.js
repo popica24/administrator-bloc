@@ -1284,6 +1284,14 @@ export function creeazaSursaMock() {
          care n-au trimis inca indexul, desi mai au timp pana la termen. */
       const termen = `${luna}-${pad(db.setari.ziLimitaCitire)}`;
       if (aziIso() < termen) eroare(`Nu poti estima inainte de termenul de citire (${termen}).`);
+      /* [J5] Aceeasi paza ca la cele trei surori (valideazaCitire,
+         valideazaCitiriApartament, citesteContorGeneral) si ca in
+         contorizare.estimeaza_citiri() (migratia H4): o luna a carei lista
+         e deja publicata nu se mai poate estima, altfel apar citiri noi
+         dupa ce banii lunii au fost deja calculati si inghetati. */
+      if (db.liste.some((l) => l.blocId === bloc.id && l.luna === luna && l.stare === "publicata")) {
+        eroare(`Lista lunii ${lunaText(luna)} este deja publicata; citirile nu se mai pot estima.`);
+      }
       let n = 0;
       db.contoare.filter((c) => c.blocId === bloc.id && c.apartamentId).forEach((c) => {
         const areValida = db.citiri.some((x) => x.contorId === c.id && x.luna === luna && x.stare === "validata");

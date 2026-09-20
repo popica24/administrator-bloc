@@ -371,6 +371,22 @@ describe("estimeazaCitiri", () => {
     await expect(s.estimeazaCitiri("2026-09")).rejects.toThrow();
   });
 
+  /* [J5] Cele trei surori (valideazaCitire, valideazaCitiriApartament,
+     citesteContorGeneral) refuza o luna a carei lista e deja publicata:
+     banii ei au fost deja calculati din citirile validate pana atunci.
+     estimeazaCitiri nu avea aceasta paza (nici sursa-mock.js, nici
+     contorizare.estimeaza_citiri() inainte de migratia H4): o estimare
+     tarzie ar fi adaugat o citire noua dupa ce lista iesise, iar ecranul
+     Contoare si lista publicata ar fi ajuns sa nu se mai potriveasca. */
+  it("[J5] refuza o luna a carei lista e deja publicata", async () => {
+    ceasDemo(new Date("2026-09-26T09:00:00"));
+    const { s, d } = await ca(ADMIN);
+    const septembrie = d.liste.find((l) => l.luna === "2026-09");
+    await s.publicaLista(septembrie.id);
+    await expect(s.estimeazaCitiri("2026-09"))
+      .rejects.toThrow("Lista lunii septembrie 2026 este deja publicata; citirile nu se mai pot estima.");
+  });
+
   it("[A2] dupa o estimare prea mare, indexul real al lunii urmatoare este acceptat", async () => {
     /* [A6] dupa termenul de citire (25 septembrie) */
     ceasDemo(new Date("2026-09-26T09:00:00"));
