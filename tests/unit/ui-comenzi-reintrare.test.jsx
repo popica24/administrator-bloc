@@ -5,7 +5,7 @@ import { act, fireEvent, screen } from "@testing-library/react";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 import { pornesteApp, ADMIN, LOCATAR } from "./ajutor.jsx";
-import { apasa, scrie, tab, toast } from "./ui-baza-ajutor.jsx";
+import { apasa, scrie, tab, toast, asteapta } from "./ui-baza-ajutor.jsx";
 
 /* O promisiune pe care testul o rezolva cand vrea, ca sa tina comanda in aer */
 function amanat() {
@@ -176,5 +176,30 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     await scrie("Continut", "Text");
     await apasa("Publica anuntul");
     expect(spion).toHaveBeenCalledTimes(2);
+  });
+
+  /* [G10] Deschiderea avizierului marcheaza fiecare anunt necitit ca citit
+     (LocatarBloc, useEffect). Cu al doilea anunt inca in curs cand primul
+     se termina si reincarca datele, efectul reporneste (alta referinta la
+     date.anunturi) si incearca sa marcheze din nou acelasi anunt, inca
+     "in curs" - o reintrare fireasca, de fundal, nu o apasare dubla a
+     omului. Ea nu are voie sa arate avertismentul de reintrare. */
+  it("[G10] al doilea anunt necitit din avizier nu declanseaza avertismentul de reintrare", async () => {
+    const { sursa } = await pornesteApp({
+      email: LOCATAR,
+      modifica: (d) => { d.anunturi[1].citit = false; },
+    });
+    const necitite = (await sursa.incarca()).anunturi.filter((a) => !a.citit);
+    expect(necitite.length).toBeGreaterThanOrEqual(2);
+    const idBlocat = necitite[1].id;
+
+    const hang = amanat();
+    const original = sursa.marcheazaAnuntCitit.bind(sursa);
+    vi.spyOn(sursa, "marcheazaAnuntCitit").mockImplementation((id) => (id === idBlocat ? hang.promisiune : original(id)));
+
+    await tab("Bloc");
+    await asteapta();
+
+    expect(toast()).toBeNull();
   });
 });

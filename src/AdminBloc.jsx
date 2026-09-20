@@ -4481,7 +4481,12 @@ export default function AdminBloc() {
   /* Fiecare comanda: apel catre sursa, apoi datele proaspete. Rezultatul este
      { ok, rezultat }, ca ecranul sa stie daca poate inchide formularul. */
   const comenzi = useMemo(() => {
-    const cmd = (fn, mesaj, reinc = true, unic = true) => {
+    /* `fundal`: comanda porneste singura, dintr-un efect, nu dintr-o apasare
+       a omului (de exemplu, marcarea ca citit a fiecarui anunt necitit cand
+       se deschide avizierul). O reintrare a unei asemenea comenzi, prinsa de
+       paza de mai jos, nu are ce sa-i explice omului: el nu a apasat nimic
+       de doua ori [G10]. */
+    const cmd = (fn, mesaj, reinc = true, unic = true, fundal = false) => {
       const comanda = async (...args) => {
         try {
           const rezultat = await fn(...args);
@@ -4495,6 +4500,7 @@ export default function AdminBloc() {
         }
       };
       comanda.esteComanda = unic;
+      comanda.fundal = fundal;
       return comanda;
     };
     const intrat = async () => {
@@ -4529,8 +4535,8 @@ export default function AdminBloc() {
       scrieMesaj: cmd((id, t) => sursa.scrieMesaj(id, t), "Mesajul a fost trimis"),
       voteaza: cmd((v, o, a) => sursa.voteaza(v, o, a), "Votul a fost inregistrat"),
       confirmaPrezenta: cmd((a, ap) => sursa.confirmaPrezenta(a, ap), "Prezenta a fost confirmata"),
-      marcheazaAnuntCitit: cmd((id) => sursa.marcheazaAnuntCitit(id)),
-      marcheazaNotificareCitita: cmd((id) => sursa.marcheazaNotificareCitita(id)),
+      marcheazaAnuntCitit: cmd((id) => sursa.marcheazaAnuntCitit(id), null, true, true, true),
+      marcheazaNotificareCitita: cmd((id) => sursa.marcheazaNotificareCitita(id), null, true, true, true),
 
       deschideLista: cmd((l) => sursa.deschideLista(l), (r, l) => `Lista pe ${monthLabel(l)} a fost inceputa`),
       salveazaCheltuiala: cmd((x) => sursa.salveazaCheltuiala(x), (r, x) => (x.id ? "Factura a fost modificata" : "Factura a fost adaugata in lista in lucru")),
@@ -4574,8 +4580,10 @@ export default function AdminBloc() {
            dupa. Doar aceeasi comanda cu aceleasi argumente se blocheaza. */
         const cheie = `${nume}:${JSON.stringify(args)}`;
         if (inCurs.current.has(cheie)) {
-          /* [E6] O reintrare blocata trebuie sa se simta, nu sa fie tacuta */
-          toastMsg("Asteapta sa se termine actiunea anterioara.");
+          /* [E6] O reintrare blocata trebuie sa se simta, nu sa fie tacuta -
+             dar doar cand omul a apasat ceva de doua ori. O comanda de
+             fundal [G10] care se reia singura nu are ce sa-i explice. */
+          if (!val.fundal) toastMsg("Asteapta sa se termine actiunea anterioara.");
           return { ok: false, inCurs: true, mesaj: null };
         }
         inCurs.current.add(cheie);
