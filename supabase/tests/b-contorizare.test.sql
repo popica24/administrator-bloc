@@ -5,7 +5,7 @@
 -- scrise pentru comportamentul corect si marcate todo.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(85);
+select plan(86);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -609,16 +609,29 @@ select results_eq(
   '[A2] citirea pleaca de la indexul real: consum 0 pe luna aceasta, lantul continua de la 330');
 select pg_temp.ca('loc3');
 
-select todo('[A3] contorul general nu se poate citi pe o luna viitoare sau deja publicata', 2);
 select pg_temp.ca('admin');
 select throws_ok(
   $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(1), 'rece', 1100)$$,
-  null, null,
+  'Nu poti citi contorul general pe o luna viitoare.',
   '[A3] refuza o luna viitoare');
 select throws_ok(
   $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(-3), 'rece', 1020)$$,
-  null, null,
+  'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; contorul general nu se mai poate schimba.',
   '[A3] refuza luna unei liste deja publicate');
+
+-- O citire deja inregistrata pe luna urmatoare fixeaza plafonul de sus:
+-- indexul de pe luna curenta nu poate trece de indexul de pornire al lunii
+-- urmatoare, altfel consumul lunii urmatoare ar iesi negativ.
+reset role;
+select pg_temp.serviciu();
+insert into contorizare.citiri (contor_id, tip, bloc_id, luna, index_anterior, index_curent, sursa, stare)
+values (pg_temp.fx('cg'), 'rece', pg_temp.fx('bloc'), (pg_temp.luna() + interval '1 month')::date, 1045, 1050, 'administrator', 'validata');
+set local role authenticated;
+select pg_temp.ca('admin');
+select throws_ok(
+  $$select contorizare.citeste_contor_general(pg_temp.fx('bloc'), pg_temp.luna(), 'rece', 1046)$$,
+  'Indexul nou (1046) nu poate fi mai mare decat indexul de pornire al lunii urmatoare (1045.000).',
+  '[A3] refuza un index mai mare decat indexul de pornire al lunii urmatoare');
 
 select throws_ok(
   $$select contorizare.index_anterior(pg_temp.fx('c1'), pg_temp.luna())$$,
