@@ -649,10 +649,9 @@ select throws_ok(
   'Lista lunii ' || pg_temp.luna(-3)::text || ' este deja publicata; citirea nu se mai poate verifica.',
   '[A4] refuza validarea unei citiri din luna unei liste publicate');
 
-select todo('[A6] estimarea nu porneste inainte de ziua limita a citirilor', 1);
 select throws_ok(
   $$select contorizare.estimeaza_citiri(pg_temp.fx('bloc'), pg_temp.luna(1))$$,
-  null, null,
+  'Poti estima citirile lunii ' || pg_temp.luna(1)::text || ' abia dupa ziua 20 a lunii.',
   '[A6] refuza estimarea inainte de termen (luna urmatoare)');
 
 select todo('[L5] consumul apartamentului cere cate o citire validata pe fiecare contor activ', 1);
