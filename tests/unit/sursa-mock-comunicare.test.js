@@ -142,6 +142,19 @@ describe("adunarea generala", () => {
     expect(dIlie.notificari[0].tip).toBe("adunare_generala");
   });
 
+  /* [J8] AdminBloc.jsx trimite dataOra ca new Date(`${data}T${ora}:00`).toISOString(),
+     adica un sir UTC ("...Z"), nu text local. Feliind direct caracterele
+     11-16 din acel sir se citea ora UTC, nu ora Romaniei aleasa in formular:
+     o adunare la 18:30 (ora Romaniei, vara +03:00) ajungea anuntata "ora
+     15:30", chiar langa cardul adunarii care arata corect 18:30 (oraRo). */
+  it("[J8] convocarea anunta ora Romaniei, nu ora UTC din sirul ISO trimis de ecran", async () => {
+    const { s } = await ca(ADMIN);
+    /* 2026-09-25 e vara: Romania e UTC+03:00, deci 18:30 Romania = 15:30 UTC */
+    await s.convoacaAdunare({ dataOra: "2026-09-25T15:30:00.000Z", loc: "Sala", ordineDeZi: "Buget" });
+    const { d } = await ca(LOCATAR, s);
+    expect(d.notificari[0].corp).toBe("25 septembrie 2026, ora 18:30, Sala. Buget");
+  });
+
   it("adunarile se ordoneaza de la cea mai indepartata", async () => {
     const { s } = await ca(ADMIN);
     await s.convoacaAdunare({ dataOra: "2026-09-25T18:00", loc: "Sala", ordineDeZi: "Urgenta" });

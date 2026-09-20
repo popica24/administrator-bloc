@@ -67,6 +67,17 @@ function offsetRomania(dataText) {
   return `+${ore.padStart(2, "0")}:00`;
 }
 const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
+/* [J8] Data si ora Romaniei ale unei clipe date, indiferent in ce fus a
+   ajuns scris sirul (ecranul trimite new Date(...).toISOString(), deci un
+   sir UTC ("...Z"), nu text local). Feliind direct caracterele unui sir
+   UTC s-ar citi ora UTC, nu ora Romaniei aleasa de om in formular. */
+function dataOraRomania(iso) {
+  const parti = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date(iso));
+  const p = Object.fromEntries(parti.map((x) => [x.type, x.value]));
+  return { data: `${p.year}-${p.month}-${p.day}`, ora: `${p.hour}:${p.minute}` };
+}
 /* Ora curenta, ca text local "AAAA-LL-ZZThh:mm" (acelasi fus ca aziIso()),
    pentru compararea cu un dataOra scris la fel (convoacaAdunare). */
 const oraCurentaText = () => { const d = new Date(); return `${aziIso()}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -1427,10 +1438,12 @@ export function creeazaSursaMock() {
          intreaga, nu doar data (altfel orice adunare de azi era refuzata). */
       if (!dataOra || dataOra < oraCurentaText()) eroare("Data adunarii trebuie sa fie in viitor.");
       const a = db.adauga("adunari", { asociatieId: bloc.asociatieId, dataOra, loc: loc.trim(), ordineDeZi: ordineDeZi.trim() });
-      /* [K6, paritate] convocarea trebuie sa spuna si ora adunarii, nu doar data. */
+      /* [K6, paritate] convocarea trebuie sa spuna si ora adunarii, nu doar
+         data. [J8] data si ora Romaniei, nu feliate direct din sirul primit. */
+      const { data: dataAdunarii, ora: oraAdunarii } = dataOraRomania(dataOra);
       db.locatari.filter((l) => l.blocId === bloc.id && !l.activPana).forEach((l) => notifica(db, {
         profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "adunare_generala", titlu: "Convocare la adunarea generala",
-        corp: `${dataText(dataOra.slice(0, 10))}, ora ${dataOra.slice(11, 16)}, ${loc.trim()}. ${ordineDeZi.trim()}`, referinta: { adunareId: a.id },
+        corp: `${dataText(dataAdunarii)}, ora ${oraAdunarii}, ${loc.trim()}. ${ordineDeZi.trim()}`, referinta: { adunareId: a.id },
       }));
       return a.id;
     },
