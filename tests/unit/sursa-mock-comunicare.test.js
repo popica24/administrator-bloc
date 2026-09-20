@@ -81,12 +81,12 @@ describe("deschideVot", () => {
     await expect(s.deschideVot({ titlu: "x", descriere: "", optiuni: ["a", "b"], inchideLa: "2026-10-10" })).rejects.toThrow("Doar administratorul poate face asta.");
   });
 
-  it.fails("[§8] un vot care se inchide azi seara este acceptat", async () => {
+  it("[§8] un vot care se inchide azi seara este acceptat", async () => {
     const { s } = await ca(ADMIN);
     await s.deschideVot({ titlu: "x", descriere: "", optiuni: ["a", "b"], inchideLa: "2026-09-19", numarare: "apartament" });
   });
 
-  it.fails("[§8] ora de inchidere iarna este 20:00 ora Romaniei (+02:00)", async () => {
+  it("[§8] ora de inchidere iarna este 20:00 ora Romaniei (+02:00)", async () => {
     const { s } = await ca(ADMIN);
     const id = await s.deschideVot({ titlu: "x", descriere: "", optiuni: ["a", "b"], inchideLa: "2026-12-10", numarare: "apartament" });
     expect((await s.incarca()).voturi.find((v) => v.id === id).inchideLa).toBe("2026-12-10T20:00:00+02:00");
@@ -124,7 +124,7 @@ describe("adunarea generala", () => {
     await expect(s.confirmaPrezenta(a.id, dIlie.eu.apartamentId)).rejects.toThrow("Nu ai acces la acest apartament.");
   });
 
-  it.fails("[§8] prezenta la o adunare trecuta sau inexistenta este refuzata", async () => {
+  it("[§8] prezenta la o adunare trecuta sau inexistenta este refuzata", async () => {
     const { s, d } = await ca(LOCATAR);
     await expect(s.confirmaPrezenta("adu-0", d.eu.apartamentId)).rejects.toThrow();
     ceasDemo(new Date("2026-10-10T09:00:00"));
@@ -137,7 +137,7 @@ describe("adunarea generala", () => {
     const a = (await s.incarca()).adunari.find((x) => x.id === id);
     expect(a).toMatchObject({ dataOra: "2026-11-05T18:00", loc: "Sala", ordineDeZi: "Buget 2027", convocataLa: ACUM, prezente: 0 });
     const { d } = await ca(LOCATAR, s);
-    expect(d.notificari[0]).toMatchObject({ tip: "adunare_generala", titlu: "Convocare la adunarea generala", corp: "2026-11-05, Sala. Buget 2027" });
+    expect(d.notificari[0]).toMatchObject({ tip: "adunare_generala", titlu: "Convocare la adunarea generala", corp: "5 noiembrie 2026, ora 18:00, Sala. Buget 2027" });
     const { d: dIlie } = await ca(ILIE, s);
     expect(dIlie.notificari[0].tip).toBe("adunare_generala");
   });
@@ -155,7 +155,7 @@ describe("adunarea generala", () => {
     await expect(s.convoacaAdunare({ ...x, dataOra: "2026-09-10T18:00" })).rejects.toThrow("Data adunarii trebuie sa fie in viitor.");
   });
 
-  it.fails("[§8] o adunare azi, mai tarziu, este acceptata", async () => {
+  it("[§8] o adunare azi, mai tarziu, este acceptata", async () => {
     const { s } = await ca(ADMIN);
     await s.convoacaAdunare({ dataOra: "2026-09-19T19:00", loc: "Sala", ordineDeZi: "x" });
   });

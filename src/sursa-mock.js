@@ -46,6 +46,22 @@ export const ETICHETA_CERE_CONFIRMARE = "+cere-confirmare";
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 const round4 = (n) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 const eroare = (mesaj) => { throw new Error(mesaj); };
+
+/* Ora Romaniei (+02:00 iarna, +03:00 vara) pentru ora serii (20:00) a unei
+   zile date, calculata cu Intl (nu depinde de fusul masinii care ruleaza
+   testele). Vot si adunare inchid/anunta seara, ora Romaniei, care e mereu
+   inainte de UTC (niciodata negativa). */
+function offsetRomania(dataText) {
+  const aprox = new Date(`${dataText}T20:00:00Z`);
+  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
+    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
+  return `+${ore.padStart(2, "0")}:00`;
+}
+const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
+/* Ora curenta, ca text local "AAAA-LL-ZZThh:mm" (acelasi fus ca aziIso()),
+   pentru compararea cu un dataOra scris la fel (convoacaAdunare). */
+const oraCurentaText = () => { const d = new Date(); return `${aziIso()}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
 /* Un camp gol din formular ("" sau necompletat) inseamna "fara valoare" */
 const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
 
@@ -858,7 +874,7 @@ export function creeazaSursaMock() {
     async voteaza(votId, optiuneId, apartamentId) {
       cerLocatarPe(apartamentId);
       const v = db.voturi.find((x) => x.id === votId) || eroare("Votul nu exista.");
-      if (acum() > new Date(v.inchideLa).toISOString()) eroare("Votul s-a inchis.");
+      if (acum() >= new Date(v.inchideLa).toISOString()) eroare("Votul s-a inchis.");
       if (db.exprimate.some((e) => e.votId === votId && e.apartamentId === apartamentId)) eroare("Apartamentul a votat deja.");
       cerProprietarPe(apartamentId);
       if (!db.optiuni.some((o) => o.id === optiuneId && o.votId === votId)) eroare("Optiunea nu apartine acestui vot.");
@@ -867,6 +883,10 @@ export function creeazaSursaMock() {
 
     async confirmaPrezenta(adunareId, apartamentId) {
       cerLocatarPe(apartamentId);
+      /* [paritate] guvernanta.confirma_prezenta cere o adunare care exista
+         si care nu a avut inca loc. */
+      const a = db.adunari.find((x) => x.id === adunareId);
+      if (!a || new Date(a.dataOra) <= new Date()) eroare("Adunarea nu exista sau a avut deja loc.");
       if (db.prezente.some((p) => p.adunareId === adunareId && p.apartamentId === apartamentId)) return;
       db.adauga("prezente", { adunareId, apartamentId, profilId: eu().id, confirmatLa: acum() });
     },
@@ -1227,8 +1247,10 @@ export function creeazaSursaMock() {
       const { bloc } = cerAdmin();
       const valide = optiuni.map((o) => o.trim()).filter(Boolean);
       if (valide.length < 2) eroare("Un vot are nevoie de cel putin doua variante.");
-      if (!inchideLa || inchideLa <= aziIso()) eroare("Data de inchidere trebuie sa fie in viitor.");
-      const v = db.adauga("voturi", { asociatieId: bloc.asociatieId, titlu: titlu.trim(), descriere: descriere.trim(), deschisLa: acum(), inchideLa: `${inchideLa}T20:00:00+03:00`, numarare, creatDe: eu().id });
+      /* [§8] un vot se inchide seara (20:00), deci "azi" e inca in viitor:
+         doar o data strict trecuta e refuzata. */
+      if (!inchideLa || inchideLa < aziIso()) eroare("Data de inchidere trebuie sa fie in viitor.");
+      const v = db.adauga("voturi", { asociatieId: bloc.asociatieId, titlu: titlu.trim(), descriere: descriere.trim(), deschisLa: acum(), inchideLa: oraSeriiRomania(inchideLa), numarare, creatDe: eu().id });
       valide.forEach((text, i) => db.adauga("optiuni", { votId: v.id, text, ordine: i + 1 }));
       return v.id;
     },
@@ -1249,11 +1271,14 @@ export function creeazaSursaMock() {
 
     async convoacaAdunare({ dataOra, loc, ordineDeZi }) {
       const { bloc } = cerAdmin();
-      if (!dataOra || dataOra.slice(0, 10) <= aziIso()) eroare("Data adunarii trebuie sa fie in viitor.");
+      /* [§8] o adunare mai tarziu in aceeasi zi e acceptata: se compara ora
+         intreaga, nu doar data (altfel orice adunare de azi era refuzata). */
+      if (!dataOra || dataOra < oraCurentaText()) eroare("Data adunarii trebuie sa fie in viitor.");
       const a = db.adauga("adunari", { asociatieId: bloc.asociatieId, dataOra, loc: loc.trim(), ordineDeZi: ordineDeZi.trim() });
+      /* [K6, paritate] convocarea trebuie sa spuna si ora adunarii, nu doar data. */
       db.locatari.filter((l) => l.blocId === bloc.id && !l.activPana).forEach((l) => notifica(db, {
         profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "adunare_generala", titlu: "Convocare la adunarea generala",
-        corp: `${dataOra.slice(0, 10)}, ${loc.trim()}. ${ordineDeZi.trim()}`, referinta: { adunareId: a.id },
+        corp: `${dataText(dataOra.slice(0, 10))}, ora ${dataOra.slice(11, 16)}, ${loc.trim()}. ${ordineDeZi.trim()}`, referinta: { adunareId: a.id },
       }));
       return a.id;
     },
