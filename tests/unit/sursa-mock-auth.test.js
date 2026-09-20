@@ -138,9 +138,10 @@ describe("cereVerificareAdministrator", () => {
     rand.stare = "respins";
     expect((await s.incarca()).eu.rol).toBe("respins");
 
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-1 corectat" });
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-1 corectat", fisier: new File(["x"], "atestat-nou.pdf") });
     expect((await s.incarca()).eu.rol).toBe("in_asteptare");
     expect(rand.numarAtestat).toBe("AT-1 corectat");
+    expect(rand.atestatCale).toMatch(/atestat-nou\.pdf$/);
   });
 
   it("[J4] o cerere de la cineva deja aprobat nu schimba nimic", async () => {
