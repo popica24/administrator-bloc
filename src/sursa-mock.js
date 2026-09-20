@@ -975,11 +975,13 @@ export function creeazaSursaMock() {
     },
 
     /* Iesire din fond: toate verificarile trec inainte sa se incarce
-       documentul (C6), ca niciun refuz sa nu lase un document orfan. In
-       sursa Supabase, verificarea ieftina in JS acopera doar suma, descrierea
-       si data (fara rotund suplimentar la server); existenta fondului ramane
-       verificata acolo de RPC, dupa upload. Mock-ul nu are cost de retea,
-       deci verifica totul, inclusiv fondul, inainte de "upload". */
+       documentul (C6), ca niciun refuz sa nu lase un document orfan. In sursa
+       Supabase, verificarea ieftina in JS acopera suma, descrierea, data si
+       soldul (G3, cel mai frecvent refuz, cunoscut deja de la ultimul
+       incarca()); doar existenta fondului ramane verificata acolo de RPC,
+       dupa upload — nu se poate verifica ieftin, fara o cerere in plus catre
+       server. Mock-ul nu are cost de retea, deci verifica totul, inclusiv
+       fondul, inainte de "upload". */
     async inregistreazaIesireFond({ fondId, suma, descriere, data, fisier }) {
       const { bloc } = cerAdmin();
       if (!fisier) eroare("Alege documentul care justifica iesirea din fond.");

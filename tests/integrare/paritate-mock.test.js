@@ -209,8 +209,9 @@ describe("inregistreazaIesireFond() in sursa demonstrativa", () => {
     await expect(s.inregistreazaIesireFond({ ...baza, data: null, fisier: fisier() })).rejects.toThrow("Data iesirii din fond nu poate fi in viitor.");
     await expect(s.inregistreazaIesireFond({ ...baza, fondId: "fon-inexistent", fisier: fisier() })).rejects.toThrow("Fondul nu exista sau nu este al unui bloc administrat de tine.");
     /* Divergenta fata de sursa Supabase (C6): acolo, existenta fondului se
-       verifica doar in RPC (dupa upload), pentru ca verificarea ieftina, fara
-       rotund suplimentar la server, se limiteaza la suma/descriere/data.
+       verifica doar in RPC (dupa upload) — nu se poate verifica ieftin, fara
+       o cerere in plus catre server. Soldul (G3, cel mai frecvent refuz) se
+       verifica ieftin si acolo, din datele stiute de la ultimul incarca().
        Mock-ul nu are cost de retea, deci poate verifica totul, inclusiv
        fondul, inainte sa "incarce" documentul: niciun caz nu lasa orfan aici. */
     expect((await s.incarca()).documente.length).toBe(inainte);

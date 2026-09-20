@@ -180,6 +180,10 @@ export function creeazaSursaSupabase(url, cheie) {
       : [];
 
     ctx.blocDenumire = blocRand.denumire;
+    /* Soldul fiecarui fond, retinut pentru verificarea ieftina din
+       inregistreazaIesireFond: evita o cerere in plus catre server doar ca sa
+       afle ce stie deja de la ultimul incarca() (G3). */
+    ctx.fonduriSold = Object.fromEntries(fonduri.map((f) => [f.id, nr(f.sold)]));
     /* Cererile sunt ordonate dupa id (paginare pe cheie), deci ordinea pe care
        o asteapta ecranele se face aici */
     dupaData(persoane, "valabil_din");
@@ -516,15 +520,21 @@ export function creeazaSursaSupabase(url, cheie) {
     /* Iesire din fond: suma, descrierea si data se verifica aici, ieftin,
        inainte sa se incarce documentul (C6) — altfel orice refuz din RPC (care
        reverifica aceleasi campuri) lasa un document orfan, vizibil locatarilor
-       prin comunicare.documente. Existenta fondului si dreptul de a-l atinge
-       raman verificate doar in RPC: nu se pot verifica ieftin, fara o cerere
-       in plus catre server, inaintea uploadului. */
+       prin comunicare.documente. La fel si soldul (G3): e cel mai frecvent
+       refuz, iar soldul fondului este deja cunoscut de la ultimul incarca()
+       (ctx.fonduriSold), deci se poate verifica fara nicio cerere in plus.
+       Existenta fondului si dreptul de a-l atinge raman verificate doar in
+       RPC: astea chiar nu se pot verifica ieftin, fara o cerere la server. */
     async inregistreazaIesireFond({ fondId, suma, descriere, data, fisier }) {
       if (!fisier) throw new Error("Alege documentul care justifica iesirea din fond.");
       const sumaNoua = numarSauNull(suma);
       if (sumaNoua == null || !(sumaNoua < 0)) throw new Error("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
       if (!(descriere || "").trim()) throw new Error("Scrie pentru ce au iesit banii din fond.");
       if (!data || data > aziIso()) throw new Error("Data iesirii din fond nu poate fi in viitor.");
+      const soldCunoscut = cerCtx().fonduriSold[fondId];
+      if (soldCunoscut != null && round2(soldCunoscut + sumaNoua) < 0) {
+        throw new Error(`Fondul are ${soldCunoscut.toFixed(2)} lei; o iesire de ${(-sumaNoua).toFixed(2)} lei l-ar duce pe minus.`);
+      }
       const doc = await document({ titlu: descriere.trim(), tip: "factura", fisier });
       return ok(fin.rpc("inregistreaza_iesire_fond", {
         p_fond_id: fondId, p_suma: sumaNoua, p_descriere: descriere, p_data: data, p_document_id: doc.id,

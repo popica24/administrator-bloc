@@ -84,8 +84,13 @@ describe("inregistreazaIesireFond()", () => {
     const inainte = await adm.incarca();
     const fond = inainte.fonduri.find((x) => x.tip === "reparatii");
     await ok(db("financiar").from("miscari_fond").insert({ fond_id: fond.id, data: inainte.azi, suma: 800, descriere: "Contributii fond reparatii" }));
+    /* Contributia de mai sus a intrat direct in baza, nu prin sursa: un admin
+       real ar vedea-o abia dupa urmatorul incarca() (asa cum face cmd() dupa
+       fiecare comanda), asa ca reincarcam inainte de iesire, ca soldul stiut
+       de sursa (folosit pentru verificarea ieftina, G3) sa fie cel proaspat. */
+    const cuContributie = await adm.incarca();
 
-    const id = await adm.inregistreazaIesireFond({ fondId: fond.id, suma: -300, descriere: "Reparatie instalatie", data: inainte.azi, fisier: pdf("factura-fond.pdf") });
+    const id = await adm.inregistreazaIesireFond({ fondId: fond.id, suma: -300, descriere: "Reparatie instalatie", data: cuContributie.azi, fisier: pdf("factura-fond.pdf") });
     expect(id).toEqual(expect.any(String));
 
     const dupa = await adm.incarca();
@@ -130,6 +135,26 @@ describe("inregistreazaIesireFond()", () => {
     const inainte = d.documente.length;
     await expect(adm.inregistreazaIesireFond({ fondId: fond.id, suma: 10, descriere: "Bani in plus", data: d.azi, fisier: pdf("x.pdf") }))
       .rejects.toThrow("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
+    expect((await adm.incarca()).documente.length).toBe(inainte);
+  });
+
+  it("un fond inexistent nu are sold cunoscut, deci verificarea ieftina se sare si refuzul vine din RPC (G3)", async () => {
+    await expect(adm.inregistreazaIesireFond({
+      fondId: "00000000-0000-4000-8000-000000000000", suma: -10, descriere: "Fond inexistent", data: (await adm.incarca()).azi, fisier: pdf("x.pdf"),
+    })).rejects.toThrow("Fondul nu exista sau nu este al unui bloc administrat de tine.");
+  });
+
+  it("refuza o iesire mai mare decat soldul fondului, fara sa incarce vreun document (G3)", async () => {
+    /* Refuzul de sold este cel mai frecvent (o iesire mai mare decat ce e in
+       fond). Daca documentul urca inainte ca soldul sa fie verificat, ramane
+       un document orfan, vizibil locatarilor la Acte, pentru o plata care nu
+       s-a intamplat niciodata. */
+    const d = await adm.incarca();
+    const fond = d.fonduri.find((x) => x.tip === "reparatii");
+    const inainte = d.documente.length;
+    await expect(adm.inregistreazaIesireFond({
+      fondId: fond.id, suma: -(fond.sold + 1000), descriere: "Prea mult", data: d.azi, fisier: pdf("prea-mult.pdf"),
+    })).rejects.toThrow(/l-ar duce pe minus/);
     expect((await adm.incarca()).documente.length).toBe(inainte);
   });
 });

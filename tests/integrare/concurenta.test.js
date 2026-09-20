@@ -121,6 +121,10 @@ describe("fondul de reparatii: doua iesiri simultane nu il duc pe minus (G1)", (
       asociatie_id: f.asociatieId, bloc_id: f.blocId, titlu: "Factura test concurenta G1", tip: "factura",
       cale: `${f.asociatieId}/${f.blocId}/concurenta-fond-${Date.now()}.pdf`, vizibil_locatarilor: true, incarcat_de: f.adminId,
     }).select().single());
+    /* Contributia de mai sus a intrat direct in baza: reincarcam, ca soldul
+       stiut de sursa (verificarea ieftina de sold, G3) sa fie cel proaspat,
+       nu unul dinainte de contributie. */
+    await adm.incarca();
 
     const a = sesiune();
     let inchisa = false;
