@@ -1,7 +1,7 @@
 -- Teste pgTAP: evenimente (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(34);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -258,9 +258,14 @@ select results_eq(
   $$values ('rece'::text, 1, 0)$$,
   'handlerele ApartamentCreat: fara index cald nu se creeaza contor cald; restanta 0 nu devine datorie');
 select contorizare.la_apartament_creat(jsonb_build_object('apartament_id', pg_temp.id('apA21'), 'bloc_id', pg_temp.id('blocA2'), 'luna', '2026-09-01'));
-select todo('[A11] apartamentul inrolat fara index de pornire nu primeste contor', 1);
-select isnt_empty($$select 1 from contorizare.contoare where apartament_id = pg_temp.id('apA21')$$,
-  '[A11] fara index de pornire, apartamentul primeste totusi contoarele');
+select results_eq(
+  $$select x.tip, index_anterior, index_curent, sursa, stare
+    from contorizare.contoare c join contorizare.citiri x on x.contor_id = c.id
+    where c.apartament_id = pg_temp.id('apA21')$$,
+  $$values ('rece'::text, 0::numeric(10,3), 0::numeric(10,3), 'pornire'::text, 'validata'::text)$$,
+  '[A11] fara index de pornire, apartamentul primeste totusi contorul de apa rece, cu index 0');
+select is_empty($$select 1 from contorizare.contoare where apartament_id = pg_temp.id('apA21') and tip = 'calda'$$,
+  '[A11] fara index cald, tot nu se creeaza contor cald');
 
 select is(evenimente.proceseaza(pg_temp.nr('creatGresit')), false, 'evenimente.proceseaza: un handler care cade intoarce false');
 select results_eq(
