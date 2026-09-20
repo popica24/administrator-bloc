@@ -38,6 +38,7 @@ const lunaText = (l) => `${LUNI[Number(l.slice(5, 7)) - 1]} ${l.slice(0, 4)}`;
 const dataText = (d) => `${Number(d.slice(8, 10))} ${LUNI[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const acum = () => new Date().toISOString();
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
+const round4 = (n) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 const eroare = (mesaj) => { throw new Error(mesaj); };
 /* Un camp gol din formular ("" sau necompletat) inseamna "fara valoare" */
 const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
@@ -938,6 +939,25 @@ export function creeazaSursaMock() {
         }
       }
       Object.assign(a, { proprietar: proprietar.trim(), cota: cotaNoua, mp: mpNou, scutitLift: !!scutitLift, etaj: etajNou });
+    },
+
+    /* Redistribuie cotele blocului dintr-o data, ca organizare.schimba_cotele_blocului (C4) */
+    async schimbaCoteleBlocului(cote) {
+      const { bloc } = cerAdmin();
+      const lista = cote || [];
+      if (!lista.length) eroare("Trimite cota fiecarui apartament din bloc.");
+      const apartamenteBloc = db.apartamente.filter((a) => a.blocId === bloc.id);
+      const idUnice = new Set(lista.map((c) => c.apartamentId));
+      const acopera = idUnice.size === lista.length && idUnice.size === apartamenteBloc.length
+        && apartamenteBloc.every((a) => idUnice.has(a.id));
+      if (!acopera) eroare("Lista trebuie sa contina o singura cota pentru fiecare apartament din bloc, fara lipsuri sau duplicate.");
+      const cote2 = lista.map((c) => ({ apartamentId: c.apartamentId, cota: numarSauNull(c.cota) }));
+      if (cote2.some((c) => !(c.cota > 0) || c.cota > 100)) eroare("Cota indiviza trebuie sa fie un numar intre 0 si 100.");
+      const suma = round4(cote2.reduce((s, c) => s + c.cota, 0));
+      if (Math.abs(suma - 100) > 0.01) {
+        eroare(`Cotele trimise insumeaza ${suma.toFixed(4)}, nu 100. Corecteaza-le pe toate inainte de a le salva.`);
+      }
+      cote2.forEach((c) => { apartamenteBloc.find((a) => a.id === c.apartamentId).cota = c.cota; });
     },
 
     /* Iesire din fond: documentul se incarca inainte, ca in sursa Supabase */

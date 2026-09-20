@@ -96,6 +96,41 @@ describe("schimbaFisaApartament() in sursa demonstrativa", () => {
   });
 });
 
+describe("schimbaCoteleBlocului() in sursa demonstrativa (C4)", () => {
+  beforeEach(() => intra(ADMIN));
+
+  it("redistribuie cotele tuturor apartamentelor dintr-o data, cu suma verificata o singura data", async () => {
+    const cote = date.apartamente.map((a, i) => ({ apartamentId: a.id, cota: i === 0 ? a.cota - 4 : i === 1 ? a.cota + 4 : a.cota }));
+    await s.schimbaCoteleBlocului(cote);
+    const dupa = await s.incarca();
+    expect(dupa.apartamente.find((a) => a.id === cote[0].apartamentId).cota).toBe(date.apartamente[0].cota - 4);
+    expect(dupa.apartamente.find((a) => a.id === cote[1].apartamentId).cota).toBe(date.apartamente[1].cota + 4);
+  });
+
+  it("refuza o suma diferita de 100, cu mesajul bazei, si nu schimba nimic", async () => {
+    const cote = date.apartamente.map((a) => ({ apartamentId: a.id, cota: a.cota }));
+    cote[0].cota += 7;
+    await expect(s.schimbaCoteleBlocului(cote)).rejects.toThrow(/^Cotele trimise insumeaza 107/);
+    const dupa = await s.incarca();
+    expect(dupa.apartamente.find((a) => a.id === cote[0].apartamentId).cota).toBe(date.apartamente[0].cota);
+  });
+
+  it("refuza o lista incompleta, una goala si o cota in afara intervalului", async () => {
+    const cote = date.apartamente.map((a) => ({ apartamentId: a.id, cota: a.cota }));
+    await expect(s.schimbaCoteleBlocului(cote.slice(1)))
+      .rejects.toThrow("Lista trebuie sa contina o singura cota pentru fiecare apartament din bloc, fara lipsuri sau duplicate.");
+    await expect(s.schimbaCoteleBlocului([])).rejects.toThrow("Trimite cota fiecarui apartament din bloc.");
+    const cuZero = cote.map((c, i) => (i === 0 ? { ...c, cota: 0 } : c));
+    await expect(s.schimbaCoteleBlocului(cuZero)).rejects.toThrow("Cota indiviza trebuie sa fie un numar intre 0 si 100.");
+  });
+
+  it("locatarul nu redistribuie cotele", async () => {
+    const cote = date.apartamente.map((a) => ({ apartamentId: a.id, cota: a.cota }));
+    await intra(LOCATAR);
+    await expect(s.schimbaCoteleBlocului(cote)).rejects.toThrow("Doar administratorul poate face asta.");
+  });
+});
+
 describe("inregistreazaIesireFond() in sursa demonstrativa", () => {
   beforeEach(() => intra(ADMIN));
 

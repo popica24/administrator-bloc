@@ -48,6 +48,33 @@ describe("schimbaFisaApartament()", () => {
   });
 });
 
+describe("schimbaCoteleBlocului() (C4)", () => {
+  it("redistribuie cotele tuturor apartamentelor blocului dintr-o data", async () => {
+    const inainte = await adm.incarca();
+    const cote = inainte.apartamente.map((a) => ({ apartamentId: a.id, cota: a.numar === "1" ? a.cota - 5 : a.numar === "2" ? a.cota + 5 : a.cota }));
+    await adm.schimbaCoteleBlocului(cote);
+    const dupa = await adm.incarca();
+    expect(dupa.apartamente.find((a) => a.numar === "1").cota).toBe(inainte.apartamente.find((a) => a.numar === "1").cota - 5);
+    expect(dupa.apartamente.find((a) => a.numar === "2").cota).toBe(inainte.apartamente.find((a) => a.numar === "2").cota + 5);
+  });
+
+  it("refuza o suma diferita de 100 si nu schimba nimic", async () => {
+    const inainte = await adm.incarca();
+    const cote = inainte.apartamente.map((a) => ({ apartamentId: a.id, cota: a.cota }));
+    cote[0].cota += 3;
+    await expect(adm.schimbaCoteleBlocului(cote)).rejects.toThrow(/insumeaza 103/);
+    const dupa = await adm.incarca();
+    expect(dupa.apartamente.find((a) => a.id === cote[0].apartamentId).cota).toBe(inainte.apartamente[0].cota);
+  });
+
+  it("refuza o lista incompleta", async () => {
+    const inainte = await adm.incarca();
+    const cote = inainte.apartamente.slice(1).map((a) => ({ apartamentId: a.id, cota: a.cota }));
+    await expect(adm.schimbaCoteleBlocului(cote))
+      .rejects.toThrow("Lista trebuie sa contina o singura cota pentru fiecare apartament din bloc, fara lipsuri sau duplicate.");
+  });
+});
+
 describe("inregistreazaIesireFond()", () => {
   it("incarca documentul justificativ si scade soldul fondului", async () => {
     const inainte = await adm.incarca();

@@ -499,6 +499,15 @@ export function creeazaSursaSupabase(url, cheie) {
       p_etaj: numarSauNull(etaj),
     })),
 
+    /* Redistribuie cotele blocului dintr-o data: pe un bloc activ, schimbaFisaApartament
+       nu poate muta procente de la un apartament la altul, pentru ca fiecare pas
+       intermediar ar strica suma de 100 (C4). cote: [{ apartamentId, cota }, ...],
+       cate o intrare pentru fiecare apartament al blocului. */
+    schimbaCoteleBlocului: (cote) => ok(org.rpc("schimba_cotele_blocului", {
+      p_bloc_id: cerCtx().blocId,
+      p_cote: (cote || []).map((c) => ({ apartament_id: c.apartamentId, cota: numarSauNull(c.cota) })),
+    })),
+
     /* Iesire din fond: documentul justificativ se incarca intai, ca sa aiba ce
        numar sa primeasca miscarea; comanda refuza orice iesire fara el. */
     async inregistreazaIesireFond({ fondId, suma, descriere, data, fisier }) {
