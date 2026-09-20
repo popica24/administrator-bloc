@@ -38,6 +38,24 @@ describe("inregistreaza() in sursa demonstrativa (C1)", () => {
   });
 });
 
+describe("folosesteInvitatie() in sursa demonstrativa: limita per cont (C15)", () => {
+  const PAROLA = "Parola12345";
+
+  it("limiteaza fiecare cont la 5 incercari gresite intr-un sfert de ora (C15)", async () => {
+    await intra(ADMIN);
+    const cod = await s.invitaLocatar(date.apartamente[0].id, "chirias");
+    await s.inregistreaza({ email: `atacator-${Math.random()}@adminbloc.test`, parola: PAROLA, nume: "Atacator" });
+    for (let i = 0; i < 5; i += 1) {
+      await expect(s.folosesteInvitatie(`ZZZZZZZ${i}`)).rejects.toThrow("Codul nu este valabil. Cere administratorului un cod nou.");
+    }
+    await expect(s.folosesteInvitatie("ZZZZZZZZ"))
+      .rejects.toThrow("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
+    /* Cat tine limita, nici codul bun al contului nu mai trece */
+    await expect(s.folosesteInvitatie(cod))
+      .rejects.toThrow("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
+  });
+});
+
 describe("schimbaFisaApartament() in sursa demonstrativa", () => {
   beforeEach(() => intra(ADMIN));
 
