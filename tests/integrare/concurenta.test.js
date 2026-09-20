@@ -10,7 +10,7 @@
    porneste `supabase start`. */
 import { execFile, spawn } from "node:child_process";
 import { beforeAll, describe, expect, it } from "vitest";
-import { creeazaBloc, db, intraCa, lunaDelta, ok, serviciu, zi1 } from "./fixture.js";
+import { creeazaBloc, db, intraCa, lunaDelta, ok, pdf, serviciu, zi1 } from "./fixture.js";
 
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER || "supabase_db_AdministratorBloc";
 const ARGS = ["exec", "-i", CONTAINER, "psql", "-U", "postgres", "-d", "postgres", "-qAt"];
@@ -100,6 +100,74 @@ describe("banii: doua incasari in acelasi moment", () => {
     /* Datoria s-a stins exact, fara sa fie platita de doua ori */
     const rest = await ok(db("financiar").from("datorii_rest").select("rest").eq("id", datorie.id).single());
     expect(Number(rest.rest)).toBe(0);
+  });
+});
+
+describe("fondul de reparatii: doua iesiri simultane nu il duc pe minus (G1)", () => {
+  /* financiar.inregistreaza_iesire_fond citea soldul cu un simplu sum(),
+     fara niciun lock, spre deosebire de restul codului de bani (conturi, for
+     update). Doua iesiri concurente, fiecare pentru tot soldul, vedeau
+     amandoua acelasi sold vechi, treceau amandoua verificarea si soldul
+     ajungea pe minus. Reprodus manual inainte de reparatie (doua sesiuni
+     psql, aceeasi logica, fara lock): soldul de 1000 a ajuns la -1000 dupa
+     doua iesiri de cate 1000, fiecare crezand ca e singura. */
+  it("a doua iesire asteapta lock-ul fondului si vede soldul proaspat, nu unul vechi", async () => {
+    const dinainte = await adm.incarca();
+    const fond = dinainte.fonduri.find((x) => x.tip === "reparatii");
+    await ok(db("financiar").from("miscari_fond").insert({
+      fond_id: fond.id, data: dinainte.azi, suma: 500, descriere: "Contributii pentru testul de concurenta",
+    }));
+    const doc = await ok(db("comunicare").from("documente").insert({
+      asociatie_id: f.asociatieId, bloc_id: f.blocId, titlu: "Factura test concurenta G1", tip: "factura",
+      cale: `${f.asociatieId}/${f.blocId}/concurenta-fond-${Date.now()}.pdf`, vizibil_locatarilor: true, incarcat_de: f.adminId,
+    }).select().single());
+
+    const a = sesiune();
+    let inchisa = false;
+    try {
+      const pidA = await pidSesiune(a);
+      a.scrie("begin;");
+      a.scrie(`select financiar.inregistreaza_iesire_fond('${fond.id}', -300, 'Iesire A concurenta', current_date, '${doc.id}');`);
+      /* A a executat iesirea si asteapta comanda urmatoare, tinand tranzactia
+         (si lock-ul luat inauntru) deschisa. */
+      const aTerminat = await pana(async () => (await psql(
+        `select state from pg_stat_activity where pid = ${pidA}`)) === "idle in transaction");
+      expect(aTerminat).toBe(true);
+
+      /* B cere mai mult decat ramane dupa A (500 - 300 = 200): daca ar vedea
+         soldul vechi de 500 (fara sa astepte lock-ul lui A), ar trece gresit.
+         Verificarea nu se uita la rezultatul lui B (ar trece si fara lock,
+         daca ar rula complet inaintea sau dupa A), ci la faptul ca backend-ul
+         lui B chiar asteapta un lock cat timp A tine tranzactia deschisa —
+         proba directa ca cererile pentru acelasi fond se serializeaza. */
+      /* .catch aici prinde rejectia imediat (poate sosi cat asteptam mai jos),
+         ca sa nu ramana "unhandled" intre momentul in care se intampla si
+         momentul in care o verificam. */
+      const b = adm.inregistreazaIesireFond({
+        fondId: fond.id, suma: -250, descriere: "Iesire B concurenta", data: dinainte.azi, fisier: pdf("iesire-b-concurenta.pdf"),
+      }).then((v) => ({ ok: true, v }), (e) => ({ ok: false, e }));
+      const bAsteapta = await pana(async () => (await psql(
+        `select count(*) from pg_stat_activity
+          where wait_event_type = 'Lock' and query like '%inregistreaza_iesire_fond%' and pid <> ${pidA}`)) !== "0");
+      expect(bAsteapta).toBe(true);
+
+      a.scrie("commit;");
+      inchisa = true;
+      await a.inchide();
+
+      const rezultatB = await b;
+      expect(rezultatB.ok).toBe(false);
+      expect(rezultatB.e.message).toMatch(/l-ar duce pe minus/);
+
+      const dupa = await adm.incarca();
+      const f2 = dupa.fonduri.find((x) => x.id === fond.id);
+      expect(f2.sold).toBe(200);
+    } finally {
+      if (!inchisa) {
+        a.scrie("rollback;");
+        await a.inchide();
+      }
+    }
   });
 });
 
