@@ -68,6 +68,23 @@ rezultatul se salveaza; ecranele doar il citesc. Banii sunt un registru in care 
 Interfata foloseste doar primitivele din sectiunea 5 (`Box`, `Txt`, `Btn`, ...), layout doar cu
 flexbox, fara librarii de UI. `Box` → `View`, `Txt` → `Text`, `Btn` → `Pressable`.
 
+## Punerea in productie
+
+Inainte de primul `supabase db push` si de primul deploy de Edge Functions,
+proiectul din productie are nevoie de doua secrete:
+
+```bash
+supabase secrets set SITE_URL=https://adresa-aplicatiei
+supabase secrets set PROCESATOR_SECRET=<cheia procesatorului de plati>
+```
+
+`SITE_URL` este adresa de la care raspund functiile: fara ea, antetele CORS
+cad pe `http://localhost:5173`, iar aplicatia reala primeste "Serverul nu
+raspunde" la plata cu cardul si la publicarea listei. Trebuie sa fie aceeasi
+adresa cu `auth.site_url` din `supabase/config.toml`. `PROCESATOR_SECRET`
+semneaza confirmarile de plata; fara el, functiile cad pe o valoare de
+dezvoltare, scrisa in cod, cu care oricine si-ar putea confirma singur plata.
+
 ## Stack
 
 React 19, Vite 7, Supabase (Postgres 17, Auth, Storage, Edge Functions, pg_cron, pg_net).

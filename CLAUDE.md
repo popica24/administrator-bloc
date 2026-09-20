@@ -85,6 +85,10 @@ One Postgres schema per bounded context: `organizare`, `identitate`, `intretiner
   (HMAC, simulated card processor), `proceseaza-eveniment`, `creeaza-asociatie`, `exporta-bloc`.
 - Storage buckets (private): `documente`, `poze` (1 MB, JPEG/WebP; the app shrinks photos),
   `atestate`.
+- Edge Function secrets, required in production (see README, "Punerea in productie"):
+  `SITE_URL` (the only origin the functions answer with CORS headers; without it they fall
+  back to `http://localhost:5173`) and `PROCESATOR_SECRET` (signs payment confirmations;
+  without it the code falls back to a development value that is in the repo).
 
 ## Conventions
 
