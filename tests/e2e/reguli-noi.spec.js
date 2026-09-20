@@ -9,7 +9,7 @@
 
 import { test, expect } from "@playwright/test";
 import {
-  buton, intraCa, intra, mergiLaTab, serviciu, blocD14, apartamentulNumarul, votDupaTitlu,
+  buton, intraCa, intra, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, stergeCont, profilDupaEmail,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, PAROLA, CONTURI,
 } from "./ajutor.js";
