@@ -4,9 +4,12 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, tab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, stergeCont, legaDeApartament, asteaptaToast, textEcran, CUVINTE_TEHNICE, fisierPoza,
+  asociatieD14, votDupaTitlu,
 } from "./ajutor.js";
 
-const ASOC = "51098af2-7ff6-4f35-86f4-e52cf87bbe23";
+/* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
+let ASOC;
+test.beforeAll(async () => { ASOC = await asociatieD14(); });
 
 async function stergeSesizarile(apartamentId, titluPrefix = "E2E") {
   const sb = serviciu();
@@ -149,7 +152,9 @@ test.describe("Bloc: avizier", () => {
 });
 
 test.describe("Bloc: vot si adunare", () => {
-  const VOT = "fd9ef314-d978-4555-947e-446aa929760b";
+  /* Votul demo, cautat dupa titlu: id-ul se schimba la fiecare reseed */
+  let VOT;
+  test.beforeAll(async () => { VOT = (await votDupaTitlu("Inlocuirea usii de la intrare")).id; });
 
   test.afterEach(async () => {
     const ap = await apartamentulNumarul(17);

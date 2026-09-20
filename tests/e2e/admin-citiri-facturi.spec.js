@@ -4,11 +4,17 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, fisierPdf,
+  listaLunara,
 } from "./ajutor.js";
 
 const LUNA = "2026-09-01";
-const LISTA_CIORNA = "53eeb2c3-9581-4fcc-90e3-f497a77359ad";
-const LISTA_AUGUST = "b01bc99c-747a-4f74-ad30-279829bec988";
+/* Listele se cauta in baza: un `db reset && npm run seed` le schimba id-ul */
+let LISTA_CIORNA;
+let LISTA_AUGUST;
+test.beforeAll(async () => {
+  LISTA_CIORNA = (await listaLunara({ stare: "ciorna" })).id;
+  LISTA_AUGUST = (await listaLunara({ luna: "2026-08-01" })).id;
+});
 
 async function citiri(apartamentId, luna = LUNA) {
   const { data } = await serviciu().schema("contorizare").from("citiri")

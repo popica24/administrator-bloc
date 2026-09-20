@@ -5,9 +5,12 @@ import { test, expect } from "@playwright/test";
 import {
   CONTURI, PAROLA, buton, intraCa, mergiLaTab, tab, serviciu, blocD14,
   apartamentulNumarul, asteaptaToast, textEcran, textTot, CUVINTE_TEHNICE,
+  asociatieD14,
 } from "./ajutor.js";
 
-const ASOC = "51098af2-7ff6-4f35-86f4-e52cf87bbe23";
+/* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
+let ASOC;
+test.beforeAll(async () => { ASOC = await asociatieD14(); });
 
 const TABURI_LOCATAR = ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"];
 const TABURI_ADMIN = ["Sumar", "Apartamente", "Facturi", "Sesizari", "Comunicare"];
@@ -293,7 +296,7 @@ test.describe("niciun mesaj tehnic pe ecran", () => {
   test("toate ecranele administratorului sunt pe romaneste", async ({ page }) => {
     await intraCa(page, "admin");
     const subtaburi = {
-      Apartamente: ["Apartamente", "Citiri contoare"],
+      Apartamente: ["Apartamente", "Citiri contoare", "Fonduri"],
       Comunicare: ["Anunturi", "Remindere", "Vot si AG", "Acte"],
       Sesizari: ["Deschise", "Rezolvate", "Toate"],
     };

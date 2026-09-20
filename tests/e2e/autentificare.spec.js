@@ -176,7 +176,12 @@ test.describe("cont nou", () => {
     await page.getByLabel("Alege o parola").fill(PAROLA);
     await page.getByLabel("Numarul atestatului").fill("ATE-2026-888");
     await buton(page, "Trimite cererea").click();
-    await asteaptaToast(page, "Confirma adresa de email");
+    /* Dupa reparatia E1 mesajul nu mai este un toast de 3,4 secunde, ci
+       ecranul care ramane pe loc si spune ce are omul de facut. */
+    await expect(page.getByText("Confirma adresa de email")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(email)).toBeVisible();
+    const text = await textEcran(page);
+    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul contine "${cuvant}"`).not.toContain(cuvant);
     await stergeCont(email);
   });
 

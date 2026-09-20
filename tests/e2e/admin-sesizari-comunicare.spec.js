@@ -4,9 +4,12 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, tab, serviciu, blocD14, apartamentulNumarul, profilDupaEmail,
   CONTURI, asteaptaToast, textEcran, CUVINTE_TEHNICE, fisierPdf,
+  asociatieD14,
 } from "./ajutor.js";
 
-const ASOC = "51098af2-7ff6-4f35-86f4-e52cf87bbe23";
+/* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
+let ASOC;
+test.beforeAll(async () => { ASOC = await asociatieD14(); });
 
 async function sesizareDeTest(titlu, stare = "noua") {
   const b = await blocD14();

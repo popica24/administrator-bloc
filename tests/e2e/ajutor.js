@@ -41,6 +41,34 @@ export async function blocD14() {
   return data;
 }
 
+/* Identificatorii din baza se schimba la fiecare `supabase db reset && npm run
+   seed`, deci niciun test nu are voie sa-i scrie de mana: se cauta aici, o
+   singura data pe rulare, dupa ceva stabil (denumirea blocului, luna listei,
+   titlul votului). */
+export async function asociatieD14() {
+  return (await blocD14()).asociatie_id;
+}
+
+/* Lista lunara a lui D14: dupa stare ("ciorna" / "publicata") sau dupa luna */
+export async function listaLunara({ stare, luna }) {
+  const b = await blocD14();
+  let q = serviciu().schema("intretinere").from("liste_lunare").select("*").eq("bloc_id", b.id);
+  if (stare) q = q.eq("stare", stare);
+  if (luna) q = q.eq("luna", luna);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  if (!data.length) throw new Error(`Nu gasesc lista ${stare || ""} ${luna || ""} a blocului D14`);
+  return data.sort((x, y) => String(y.luna).localeCompare(String(x.luna)))[0];
+}
+
+export async function votDupaTitlu(titlu) {
+  const { data, error } = await serviciu().schema("guvernanta").from("voturi")
+    .select("*").eq("asociatie_id", await asociatieD14()).eq("titlu", titlu).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(`Nu gasesc votul "${titlu}"`);
+  return data;
+}
+
 export async function apartamente() {
   const b = await blocD14();
   const { data, error } = await serviciu().schema("organizare").from("apartamente")
@@ -188,6 +216,63 @@ export function fisierPoza(nume = "contor.jpg") {
     + "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAA"
     + "AAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
   return { name: nume, mimeType: "image/jpeg", buffer: Buffer.from(base64, "base64") };
+}
+
+/* ---------- descarcari si PDF ---------- */
+
+/* Apasa butonul si intoarce { nume, octeti } ai fisierului descarcat */
+export async function descarca(page, actiune) {
+  const asteptare = page.waitForEvent("download");
+  await actiune();
+  const d = await asteptare;
+  const cale = await d.path();
+  const { readFile } = await import("node:fs/promises");
+  return { nume: d.suggestedFilename(), octeti: await readFile(cale) };
+}
+
+/* Textul unui PDF scris de src/pdf.js: fluxurile nu sunt comprimate, deci
+   ajunge sa adunam argumentele operatorului Tj. */
+export function textPdf(octeti) {
+  const brut = octeti.toString("latin1");
+  const bucati = [];
+  const re = /\(((?:[^()\\]|\\.)*)\)\s*Tj/g;
+  let m = re.exec(brut);
+  while (m) {
+    bucati.push(m[1].replace(/\\([()\\])/g, "$1"));
+    m = re.exec(brut);
+  }
+  return bucati.join("\n");
+}
+
+/* ---------- Mailpit: emailurile stack-ului local ---------- */
+
+export const URL_MAILPIT = "http://127.0.0.1:54324";
+
+/* Ultimul mesaj primit de adresa, cu textul si linkul de confirmare */
+export async function ultimulEmail(adresa, timeout = 20000) {
+  const pornire = Date.now();
+  for (;;) {
+    const r = await fetch(`${URL_MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${adresa}`)}&limit=5`);
+    const j = await r.json();
+    const mesaj = (j.messages || [])[0];
+    if (mesaj) {
+      const detaliu = await (await fetch(`${URL_MAILPIT}/api/v1/message/${mesaj.ID}`)).json();
+      const corp = `${detaliu.Text || ""}\n${detaliu.HTML || ""}`;
+      const link = (corp.match(/https?:\/\/[^\s"'<>)]+verify[^\s"'<>)]*/) || [])[0];
+      return { subiect: mesaj.Subject, corp, link: link && link.replace(/&amp;/g, "&") };
+    }
+    if (Date.now() - pornire > timeout) throw new Error(`Niciun email pentru ${adresa}`);
+    await new Promise((r2) => setTimeout(r2, 500));
+  }
+}
+
+/* ---------- limita de incercari la codul de invitatie ---------- */
+
+/* Incercarile se numara si pe adresa clientului, in tot stack-ul local: daca
+   raman in urma unui test, blocheaza si celelalte teste. Se sterg mereu. */
+export async function curataIncercariInvitatii() {
+  await serviciu().schema("identitate").from("incercari_invitatii")
+    .delete().gt("id", 0);
 }
 
 export function fisierPdf(nume = "factura.pdf") {

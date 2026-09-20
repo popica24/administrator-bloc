@@ -5,9 +5,12 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, stergeCont, legaDeApartament, textEcran, CUVINTE_TEHNICE,
+  asociatieD14,
 } from "./ajutor.js";
 
-const ASOC = "51098af2-7ff6-4f35-86f4-e52cf87bbe23";
+/* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
+let ASOC;
+test.beforeAll(async () => { ASOC = await asociatieD14(); });
 
 async function faceMembru(profilId, rol) {
   const { error } = await serviciu().schema("identitate").from("membri_asociatie")

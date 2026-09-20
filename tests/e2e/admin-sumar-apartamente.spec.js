@@ -334,22 +334,46 @@ test.describe("corectarea fisei si banii din fond", () => {
   /* Auditul 2 (X05, D5): fara iesiri, soldul fondului pe care il vad toti
      locatarii creste la nesfarsit. Documentul justificativ este obligatoriu,
      iar soldul nu are voie sa treaca sub zero. */
+  /* Testul scoate bani din fondul demo; fara curatenie, fiecare rulare il
+     subtiaza cu inca 250 de lei si soldul afisat nu mai e cel din seed. */
+  const DESCRIERE_IESIRE = "E2E iesire hidrofor";
+  async function curataIesireaDeTest() {
+    const sb = serviciu();
+    const { data } = await sb.schema("financiar").from("miscari_fond")
+      .select("id, document_id").eq("descriere", DESCRIERE_IESIRE);
+    for (const m of data || []) {
+      await sb.schema("financiar").from("miscari_fond").delete().eq("id", m.id);
+      if (m.document_id) {
+        const { data: doc } = await sb.schema("comunicare").from("documente")
+          .select("cale").eq("id", m.document_id).maybeSingle();
+        if (doc && doc.cale) await sb.storage.from("documente").remove([doc.cale]);
+        await sb.schema("comunicare").from("documente").delete().eq("id", m.document_id);
+      }
+    }
+    await sb.schema("comunicare").from("documente").delete().eq("titlu", DESCRIERE_IESIRE);
+  }
+
   test("[E5] iesirea din fond cere document si nu duce soldul sub zero", async ({ page }) => {
-    await intraCa(page, "admin");
-    await mergiLaTab(page, "Apartamente");
-    await page.getByRole("button", { name: "Fonduri" }).click();
-    await page.getByRole("button", { name: "Inregistreaza o iesire" }).first().click();
+    await curataIesireaDeTest();
+    try {
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: "Fonduri" }).click();
+      await page.getByRole("button", { name: "Inregistreaza o iesire" }).first().click();
 
-    await page.getByLabel("Suma iesita").fill("250");
-    await page.getByLabel("Pentru ce").fill("Reparatie hidrofor");
-    /* fara document, salvarea nu e disponibila */
-    await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
+      await page.getByLabel("Suma iesita").fill("250");
+      await page.getByLabel("Pentru ce").fill(DESCRIERE_IESIRE);
+      /* fara document, salvarea nu e disponibila */
+      await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
 
-    await page.setInputFiles("input[type=file]", {
-      name: "factura-hidrofor.jpg", mimeType: "image/jpeg", buffer: Buffer.from("jpeg-de-test"),
-    });
-    await buton(page, "Inregistreaza iesirea").click();
-    await expect(page.getByText("Reparatie hidrofor").first()).toBeVisible();
+      await page.setInputFiles("input[type=file]", {
+        name: "factura-hidrofor.jpg", mimeType: "image/jpeg", buffer: Buffer.from("jpeg-de-test"),
+      });
+      await buton(page, "Inregistreaza iesirea").click();
+      await expect(page.getByText(DESCRIERE_IESIRE).first()).toBeVisible();
+    } finally {
+      await curataIesireaDeTest();
+    }
   });
 });
 
