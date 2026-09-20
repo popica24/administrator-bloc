@@ -175,6 +175,21 @@ describe("inregistreazaIesireFond() in sursa demonstrativa", () => {
     await expect(s.inregistreazaIesireFond({ fondId: fond.id, suma: -10, descriere: "Reparatie", data: date.azi, fisier: fisier() }))
       .rejects.toThrow("Doar administratorul poate face asta.");
   });
+
+  it("refuza o iesire mai mare decat soldul fondului, fara sa scrie ceva (C5)", async () => {
+    const fond = date.fonduri.find((f) => f.tip === "reparatii");
+    await expect(s.inregistreazaIesireFond({ fondId: fond.id, suma: -(fond.sold + 1000), descriere: "Prea mult", data: date.azi, fisier: fisier() }))
+      .rejects.toThrow(/l-ar duce pe minus\.$/);
+    const dupa = await s.incarca();
+    expect(dupa.fonduri.find((f) => f.id === fond.id).sold).toBe(fond.sold);
+  });
+
+  it("accepta o iesire exact egala cu soldul fondului, pana la zero (C5)", async () => {
+    const fond = date.fonduri.find((f) => f.tip === "reparatii");
+    await s.inregistreazaIesireFond({ fondId: fond.id, suma: -fond.sold, descriere: "Tot ce mai e in fond", data: date.azi, fisier: fisier() });
+    const dupa = await s.incarca();
+    expect(dupa.fonduri.find((f) => f.id === fond.id).sold).toBe(0);
+  });
 });
 
 describe("transmiteCitire() cand toate citirile anterioare sunt estimari (R6)", () => {

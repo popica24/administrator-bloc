@@ -4,7 +4,7 @@
 --   financiar.inregistreaza_iesire_fond - banii care ies din fond, cu document.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(42);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-*; anulat la rollback).
@@ -139,6 +139,8 @@ begin
   perform set_config('fx.fond2', v_id::text, true);
   insert into financiar.miscari_fond (fond_id, data, suma, descriere)
   values (pg_temp.fx('fond'), current_date - 20, 1000, 'Contributii fond reparatii');
+  insert into financiar.miscari_fond (fond_id, data, suma, descriere)
+  values (pg_temp.fx('fond2'), current_date - 20, 100, 'Contributii fond reparatii');
 end;
 $$;
 
@@ -306,6 +308,24 @@ select throws_ok(
   $$select financiar.inregistreaza_iesire_fond(gen_random_uuid(), -10, 'Reparatie', current_date, pg_temp.fx('doc'))$$,
   'Fondul nu exista sau nu este al unui bloc administrat de tine.',
   'inregistreaza_iesire_fond: un fond inexistent este refuzat');
+
+-- C5: fondul nu poate ajunge pe minus. Soldul e acum 749.50; o iesire de 800
+-- ar merge pe -50.50 si e refuzata, fara sa scrie nimic.
+select throws_ok(
+  $$select financiar.inregistreaza_iesire_fond(pg_temp.fx('fond'), -800, 'Prea mult', current_date, pg_temp.fx('doc'))$$,
+  'Fondul are 749.50 lei; o iesire de 800.00 lei l-ar duce pe minus.',
+  'inregistreaza_iesire_fond: o iesire mai mare decat soldul fondului este refuzata (C5)');
+select is(
+  (select sold from financiar.fonduri_solduri where id = pg_temp.fx('fond')),
+  749.50::numeric,
+  'inregistreaza_iesire_fond: dupa refuz, soldul fondului ramane neatins (C5)');
+select lives_ok(
+  $$select financiar.inregistreaza_iesire_fond(pg_temp.fx('fond'), -749.50, 'Tot ce mai e in fond', current_date, pg_temp.fx('doc'))$$,
+  'inregistreaza_iesire_fond: o iesire exact egala cu soldul, pana la zero, este acceptata (C5)');
+select is(
+  (select sold from financiar.fonduri_solduri where id = pg_temp.fx('fond')),
+  0::numeric,
+  'inregistreaza_iesire_fond: soldul poate ajunge exact la zero (C5)');
 
 select pg_temp.ca('loc1');
 select throws_ok(

@@ -971,6 +971,11 @@ export function creeazaSursaMock() {
       const fond = db.fonduri.find((f) => f.id === fondId && f.blocId === bloc.id) || eroare("Fondul nu exista sau nu este al unui bloc administrat de tine.");
       const sumaNoua = numarSauNull(suma);
       if (sumaNoua == null || !(sumaNoua < 0)) eroare("Suma unei iesiri din fond este negativa: scrie cat au iesit din fond.");
+      /* Fondul nu poate ajunge pe minus (C5): banii care ies sunt cei adunati de locatari */
+      const soldFond = round2(db.miscari.filter((m) => m.fondId === fond.id).reduce((s, m) => s + m.suma, 0));
+      if (round2(soldFond + sumaNoua) < 0) {
+        eroare(`Fondul are ${soldFond.toFixed(2)} lei; o iesire de ${(-sumaNoua).toFixed(2)} lei l-ar duce pe minus.`);
+      }
       if (!(descriere || "").trim()) eroare("Scrie pentru ce au iesit banii din fond.");
       if (!data || data > aziIso()) eroare("Data iesirii din fond nu poate fi in viitor.");
       return db.adauga("miscari", {
