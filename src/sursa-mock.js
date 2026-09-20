@@ -765,7 +765,13 @@ export function creeazaSursaMock() {
         eroare("Codul nu este valabil. Cere administratorului un cod nou.");
       }
       const ap = db.apartamente.find((a) => a.id === inv.apartamentId);
-      db.adauga("locatari", { apartamentId: ap.id, blocId: ap.blocId, profilId: p.id, calitate: inv.calitate, activDin: aziIso(), activPana: null });
+      /* [paritate] identitate.foloseste_invitatie insereaza "on conflict do
+         nothing": daca omul e deja legat activ de acelasi apartament, codul
+         se consuma oricum, dar nu se dubleaza legatura. */
+      const legatAcum = db.locatari.some((l) => l.apartamentId === ap.id && l.profilId === p.id && !l.activPana);
+      if (!legatAcum) {
+        db.adauga("locatari", { apartamentId: ap.id, blocId: ap.blocId, profilId: p.id, calitate: inv.calitate, activDin: aziIso(), activPana: null });
+      }
       inv.folositaLa = acum();
       inv.folositaDe = p.id;
       db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.profilId !== p.id);

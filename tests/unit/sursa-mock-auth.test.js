@@ -160,7 +160,7 @@ describe("folosesteInvitatie", () => {
     expect(apNr(await s.incarca(), "11").invitatii).toEqual([]);
   });
 
-  it.fails("[§8] codul folosit de cineva deja legat de apartament nu dubleaza legatura", async () => {
+  it("[§8] codul folosit de cineva deja legat de apartament nu dubleaza legatura", async () => {
     const { s, cod } = await codPentru("17", "proprietar");
     await s.intra(LOCATAR, PAROLA);
     await s.folosesteInvitatie(cod).catch(() => {});
