@@ -197,7 +197,7 @@ describe("Contoare: starile citirii pe luna curenta", () => {
     expect(screen.queryByText("Trimis")).toBeNull();
   });
 
-  it.fails("[A10] dupa doua respingeri arata motivul celei mai noi", async () => {
+  it("[A10] dupa doua respingeri arata motivul celei mai noi", async () => {
     await laContoare({
       email: ELENA,
       modifica: (d) => {

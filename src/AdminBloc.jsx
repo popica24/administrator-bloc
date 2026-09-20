@@ -418,10 +418,15 @@ function istoricConsum(date, apId) {
   }));
 }
 
-/* Citirea curenta a unui contor (luna in curs), daca exista */
+/* Citirea curenta a unui contor (luna in curs), daca exista. [A10] Cand
+   exista mai multe respingeri pe aceeasi luna (respinsa, retrimisa,
+   respinsa din nou), se arata cea mai noua, nu prima gasita. */
 const citireLuna = (date, contorId, luna) => {
   const cit = date.citiri.filter((c) => c.contorId === contorId && c.luna === luna);
-  return cit.find((c) => c.stare !== "respinsa") || cit.find((c) => c.stare === "respinsa") || null;
+  const nerespinsa = cit.find((c) => c.stare !== "respinsa");
+  if (nerespinsa) return nerespinsa;
+  const respinse = cit.filter((c) => c.stare === "respinsa").sort((a, b) => Date.parse(b.transmisaLa) - Date.parse(a.transmisaLa));
+  return respinse[0] || null;
 };
 /* [R5] Momentele se compara ca momente: sirul ISO are decalajul in coada si
    se schimba la trecerea la ora de iarna. */
