@@ -164,6 +164,10 @@ describe("schimbaCoteleBlocului() in sursa demonstrativa (C4)", () => {
     await intra(LOCATAR);
     await expect(s.schimbaCoteleBlocului(cote)).rejects.toThrow("Doar administratorul poate face asta.");
   });
+
+  it("refuza lipsa listei", async () => {
+    await expect(s.schimbaCoteleBlocului()).rejects.toThrow("Trimite cota fiecarui apartament din bloc.");
+  });
 });
 
 describe("inregistreazaIesireFond() in sursa demonstrativa", () => {

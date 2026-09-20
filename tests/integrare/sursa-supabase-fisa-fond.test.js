@@ -73,6 +73,10 @@ describe("schimbaCoteleBlocului() (C4)", () => {
     await expect(adm.schimbaCoteleBlocului(cote))
       .rejects.toThrow("Lista trebuie sa contina o singura cota pentru fiecare apartament din bloc, fara lipsuri sau duplicate.");
   });
+
+  it("refuza lipsa listei", async () => {
+    await expect(adm.schimbaCoteleBlocului()).rejects.toThrow("Trimite cota fiecarui apartament din bloc.");
+  });
 });
 
 describe("inregistreazaIesireFond()", () => {
