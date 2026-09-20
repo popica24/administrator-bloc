@@ -1,9 +1,9 @@
 /* Autentificarea si accesul (harta-functii §2): intrare, iesire, cont nou,
    cod de invitatie, cererea de administrator. Conturile sunt create la fiecare
    rulare, cu emailuri unice. */
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  PAROLA_TEST, contNou, creeazaBloc, cuFetch, db, intraCa, json, lunaCurenta, ok, pdf, pozaJpeg, serviciu, sursaNoua, unic,
+  PAROLA_TEST, contNou, creeazaBloc, curataIncercariInvitatii, cuFetch, db, intraCa, json, lunaCurenta, ok, pdf, pozaJpeg, serviciu, sursaNoua, unic,
 } from "./fixture.js";
 
 const D14_ADMIN = "administrator@adminbloc.test";
@@ -136,6 +136,11 @@ describe("inregistreaza()", () => {
 });
 
 describe("folosesteInvitatie()", () => {
+  /* Fara asta, incercarile gresite ale rularii anterioare (toate de la aceeasi
+     adresa, in dezvoltare) pot bloca testele de aici. */
+  beforeAll(curataIncercariInvitatii);
+  afterAll(curataIncercariInvitatii);
+
   it("leaga contul nou de apartamentul din cod, cu calitatea din invitatie", async () => {
     await admin.incarca();
     const cod = await admin.invitaLocatar(f.ap["2"], "chirias");

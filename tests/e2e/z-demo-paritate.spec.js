@@ -122,7 +122,7 @@ test.describe("aceleasi cifre in ambele surse", () => {
      ajunge la alt apartament: pe Supabase, apartamentul 3 are pe august
      821,84 lei si un sold de 2.319,29; in modul demonstrativ, aceleasi date
      dau 821,91 si 2.319,36. Aceeasi lista publicata, alte cifre pe ecran. */
-  test.fixme("[R2] restantierul: acelasi sold, aceleasi penalizari, aceleasi zile", async ({ browser }) => {
+  test("[R2] restantierul: acelasi sold, aceleasi penalizari, aceleasi zile", async ({ browser }) => {
     await comparaPlimbarea(browser, CONTURI.ilie, {
       acasa: async () => {},
       plata: (p) => mergiLaTab(p, "Plata"),
@@ -132,7 +132,7 @@ test.describe("aceleasi cifre in ambele surse", () => {
 
   /* [R2] Acelasi banut, vazut de la nivelul blocului: "Restantele blocului
      sunt 7.013,73 lei" pe Supabase, 7.013,65 in modul demonstrativ. */
-  test.fixme("[R2] situatia blocului de la Fonduri arata acelasi total", async ({ browser }) => {
+  test("[R2] situatia blocului de la Fonduri arata acelasi total", async ({ browser }) => {
     await comparaPlimbarea(browser, CONTURI.elena, {
       bloc: (p) => mergiLaTab(p, "Bloc"),
       fonduri: async (p) => { await p.getByRole("button", { name: "Fonduri" }).click(); },
@@ -157,7 +157,7 @@ test.describe("aceleasi cifre in ambele surse", () => {
      restantelor blocului si trei apartamente au alte cifre in cele doua surse
      (ap. 3: 821,84 / 821,91; ap. 11: 1.021,96 / 1.021,97; ap. 15: 870,82 /
      870,74; restante bloc: 7.013,73 / 7.013,65). */
-  test.fixme("[R2] administratorul vede acelasi Sumar si aceleasi fise", async ({ browser }) => {
+  test("[R2] administratorul vede acelasi Sumar si aceleasi fise", async ({ browser }) => {
     await comparaPlimbarea(browser, CONTURI.admin, {
       sumar: async () => {},
       apartamente: (p) => mergiLaTab(p, "Apartamente"),

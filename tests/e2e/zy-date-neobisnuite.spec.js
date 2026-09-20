@@ -166,7 +166,7 @@ test.describe("ecrane pe date neobisnuite", () => {
      cererea de poza si butonul "Trimite indexul" — fara niciun camp de index,
      pentru ca nu exista contor. Cine incarca poza si apasa butonul primeste
      "Scrie cel putin un index", desi nu are unde sa-l scrie. */
-  test.fixme("[R5] apartamentul fara contoare nu primeste un formular pe care nu-l poate completa", async ({ page }) => {
+  test("[R5] apartamentul fara contoare nu primeste un formular pe care nu-l poate completa", async ({ page }) => {
     await intra(page, LOCATAR_GOL);
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Contoare");

@@ -305,6 +305,9 @@ const listaCiorna = (date) => date.liste.find((l) => l.stare === "ciorna") || nu
 const listaDupaId = (date, id) => date.liste.find((l) => l.id === id);
 const apartamentDupaId = (date, id) => date.apartamente.find((a) => a.id === id);
 const apartamentulMeu = (date) => apartamentDupaId(date, date.eu.apartamentId);
+/* Cheia de sortare a unei facturi dupa scadenta furnizorului: cele fara
+   scadenta se aseaza la urma */
+const scadentaSortare = (c) => c.scadentaFurnizor || "9999-99-99";
 const ordineCod = (a, b) => Number(a.cod.slice(1)) - Number(b.cod.slice(1)) || a.cod.localeCompare(b.cod);
 /* Apartamentele in ordinea de pe usa: 1, 2, 2A, 3, 10. Comparatia pe text cu
    cifrele citite ca numere este o ordine totala, deci rezultatul nu depinde de
@@ -501,7 +504,11 @@ function statisticiAdmin(date) {
     penalizari: suma(date.apartamente, (a) => penalizariDeschise(date, a.id)),
     sesizariDeschise: date.sesizari.filter((s) => s.stare !== "rezolvata").length,
     citiriDeVerificat: date.citiri.filter((c) => c.stare === "trimisa").length,
-    facturiNeachitate: date.cheltuieli.filter((c) => c.tip === "factura" && !c.achitataLa && (listaDupaId(date, c.listaId) || {}).stare === "publicata"),
+    /* Cea mai apropiata scadenta prima, ca administratorul sa stie ce plateste
+       intai; cele fara scadenta la urma. Sursa nu garanteaza nicio ordine. */
+    facturiNeachitate: date.cheltuieli
+      .filter((c) => c.tip === "factura" && !c.achitataLa && (listaDupaId(date, c.listaId) || {}).stare === "publicata")
+      .sort((a, b) => scadentaSortare(a).localeCompare(scadentaSortare(b)) || ordineCod(a, b)),
   };
 }
 

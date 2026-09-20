@@ -169,7 +169,7 @@ test.describe("browserul marit la 200%", () => {
      orizontala care sa-l aduca inapoi. La administrator, unde etichetele sunt
      mai lungi, mijlocul tabului "Sumar" este acoperit de tabul
      "Apartamente": cine apasa pe primul tab ajunge pe al doilea. */
-  test.fixme("[R3] bara de taburi incape pe ecran la 200% si fiecare tab raspunde la mijlocul lui", async ({ page }) => {
+  test("[R3] bara de taburi incape pe ecran la 200% si fiecare tab raspunde la mijlocul lui", async ({ page }) => {
     for (const cine of ["elena", "admin"]) {
       await intraCa(page, cine);
       const masura = await page.evaluate(() => {
@@ -274,7 +274,7 @@ test.describe("fiecare refuz spune ce are omul de facut", () => {
    nu stie daca a gresit adresa sau parola ramane fara urmatorul pas (verifica
    adresa, scrie parola din nou, cere o parola noua). */
 test.describe("refuzul de la intrarea in cont", () => {
-  test.fixme("[R4] parola gresita spune si ce are omul de facut", async ({ page }) => {
+  test("[R4] parola gresita spune si ce are omul de facut", async ({ page }) => {
     await page.goto("/");
     await page.getByLabel("Email").fill(CONTURI.elena);
     await page.getByLabel("Parola").fill("Parola-Gresita-1");

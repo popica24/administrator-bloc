@@ -92,8 +92,46 @@ describe("AdminSumar, cu datele demo", () => {
     expect(tabActiv()).toBe("Facturi");
   });
 
-  it("facturile neplatite furnizorilor, cu si fara scadenta", async () => {
-    await pornesteAdmin();
+  it("facturile fara scadenta stau la urma, iar doua scadente egale se aseaza dupa cod", async () => {
+    await pornesteAdmin({
+      modifica: (d) => {
+        const lista = d.liste.find((l) => l.stare === "publicata");
+        const neplatite = d.cheltuieli.filter((c) => c.listaId === lista.id && c.tip === "factura" && !c.achitataLa);
+        neplatite[0].scadentaFurnizor = null;
+        neplatite[1].scadentaFurnizor = "2026-10-01";
+        neplatite[2].scadentaFurnizor = "2026-10-01";
+        neplatite[1].cod = "C9";
+        neplatite[1].furnizor = "Zeta Servicii";
+        neplatite[2].cod = "C4";
+        neplatite[2].furnizor = "Alfa Servicii";
+      },
+    });
+    const zona = screen.getByText(/facturi de platit catre furnizori/).parentElement;
+    const randuri = [...zona.querySelectorAll("span")].map((x) => x.textContent)
+      .filter((t) => /Servicii|Salubritate 2000|Elmas|Deraton/.test(t));
+    /* aceeasi scadenta: codul decide (C4 inaintea lui C9); fara scadenta, la urma */
+    expect(randuri[0]).toContain("Alfa Servicii");
+    expect(randuri[1]).toContain("Zeta Servicii");
+    expect(randuri[2]).not.toContain("scadent");
+  });
+
+  it("facturile neplatite furnizorilor sunt in ordinea scadentei, cu si fara scadenta", async () => {
+    /* Ordinea nu are voie sa vina din ordinea randurilor din baza: cea mai
+       apropiata scadenta prima, ca administratorul sa stie ce plateste intai.
+       Sursa reala nu sorteaza cheltuielile, deci ordinea lor e arbitrara. */
+    await pornesteAdmin({
+      modifica: (d) => {
+        const publicate = d.liste.filter((l) => l.stare === "publicata").map((l) => l.id);
+        d.cheltuieli = d.cheltuieli.filter((c) => !publicate.includes(c.listaId) || c.achitataLa).concat(d.cheltuieli.filter((c) => publicate.includes(c.listaId) && !c.achitataLa).reverse());
+      },
+    });
+    const zona = screen.getByText(/facturi de platit catre furnizori/).parentElement;
+    const scadente = [...zona.querySelectorAll("span")].map((x) => x.textContent).filter((t) => /scadent/.test(t));
+    expect(scadente).toEqual([
+      "Deraton Serv, scadent 27 sep 2026",
+      "Salubritate 2000, scadent 30 sep 2026",
+      "Elmas Lift Service, scadent 5 oct 2026",
+    ]);
     expect(screen.getByText("3 facturi de platit catre furnizori")).toBeTruthy();
     expect(screen.getByText("Salubritate 2000, scadent 30 sep 2026")).toBeTruthy();
     expect(screen.getByText("Elmas Lift Service, scadent 5 oct 2026")).toBeTruthy();

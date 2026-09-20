@@ -209,3 +209,11 @@ export async function cuFetch(interceptor, fn) {
 }
 
 export const json = (corp, status = 200) => new Response(JSON.stringify(corp), { status, headers: { "Content-Type": "application/json" } });
+
+/* Limita impotriva ghicirii codurilor se numara pe adresa cererii, iar in
+   dezvoltare tot traficul vine de la aceeasi adresa (gateway-ul Docker).
+   Testele care incearca inadins coduri gresite isi sterg urmele, ca sa nu
+   blocheze rulari ulterioare fara legatura. */
+export async function curataIncercariInvitatii() {
+  await ok(db("identitate").from("incercari_invitatii").delete().not("id", "is", null));
+}

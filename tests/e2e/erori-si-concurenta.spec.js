@@ -170,7 +170,7 @@ test.describe("sesiunea expira cu formularul deschis", () => {
      anuntul scris se pierde. Cele doua reparatii se bat cap in cap — mesajul
      pe romaneste a ramas, ce scrisese omul nu. Testul a fost verificat de 8
      ori la rand: cade de fiecare data. */
-  test.fixme("[R1] sesiunea inchisa nu pierde ce s-a scris in formular", async ({ page }) => {
+  test("[R1] sesiunea inchisa nu pierde ce s-a scris in formular", async ({ page }) => {
     const panou = await anuntInceput(page);
     await inchideSesiuneaDinServer(page);
 
