@@ -119,7 +119,10 @@ export function creeazaSursaSupabase(url, cheie) {
 
   const cerCtx = () => ctx || arunca({ message: "Nu esti autentificat." });
 
-  async function incarca() {
+  /* [P5] apartamentAles: apartamentul pe care omul l-a ales ca "activ" (vezi
+     alegereApartament() mai jos), daca e legat de mai multe apartamente ale
+     aceluiasi bloc. Optional: fara el, se pastreaza alegerea lui identitate.eu(). */
+  async function incarca(apartamentAles) {
     const { data: sesiune } = await sb.auth.getSession();
     if (!sesiune.session) return null;
     const eu = await ok(id.rpc("eu"));
@@ -131,23 +134,41 @@ export function creeazaSursaSupabase(url, cheie) {
     const esteAdmin = eu.rol === "administrator";
     const bloc = eu.bloc_id;
     const asoc = eu.asociatie_id;
-    /* Locatarul vede pe ecrane doar apartamentul lui, chiar daca RLS ii da mai
-       mult (un presedinte sau cenzor care locuieste in bloc vede tot blocul) */
-    const alMeu = (q) => (esteAdmin ? q : q.eq("apartament_id", eu.apartament_id));
+    /* [P5] identitate.eu() alege un singur apartament, determinist, dar
+       acelasi om poate fi legat de mai multe apartamente ale aceluiasi bloc
+       (proprietar la unul, chirias la altul, de exemplu): fara legaturile
+       lui, alMeu() mai jos ar lasa afara datoriile, contoarele si sesizarile
+       celuilalt apartament, care ar ramane invizibile si neplatibile.
+       Interogarea sta inaintea marelui Promise.all, pentru ca alMeu() si
+       prin() (folosite in el) au nevoie de lista completa. */
+    const legaturileMele = esteAdmin ? [] : await ok(id.from("locatari").select("apartament_id, calitate")
+      .eq("profil_id", eu.profil_id).eq("bloc_id", bloc)
+      .lte("activ_din", azi).or(`activ_pana.is.null,activ_pana.gt.${azi}`));
+    const idApartamenteMele = legaturileMele.length ? legaturileMele.map((l) => l.apartament_id) : [eu.apartament_id];
+    /* Apartamentul "activ" este cel ales de om, daca e chiar unul de-al lui;
+       altfel ramane cel ales de identitate.eu(). */
+    if (!esteAdmin && apartamentAles && idApartamenteMele.includes(apartamentAles)) {
+      euUi.apartamentId = apartamentAles;
+      ctx.apartamentId = apartamentAles;
+    }
+    /* Locatarul vede pe ecrane doar apartamentele lui, chiar daca RLS ii da
+       mai mult (un presedinte sau cenzor care locuieste in bloc vede tot
+       blocul) */
+    const alMeu = (q) => (esteAdmin ? q : q.in("apartament_id", idApartamenteMele));
     /* Tabelele fara bloc_id se filtreaza prin randul-parinte, cu un join
        interior: altfel cererea aduce randurile intregii asociatii si le arunca
-       aici (audit 2, P4). Locatarul primeste in plus filtrul pe apartamentul
+       aici (audit 2, P4). Locatarul primeste in plus filtrul pe apartamentele
        lui, tot pe parinte. */
     const prin = (q, alias, camp = "apartament_id") => {
       const cu = q.eq(`${alias}.bloc_id`, bloc);
-      return esteAdmin ? cu : cu.eq(`${alias}.${camp}`, eu.apartament_id);
+      return esteAdmin ? cu : cu.in(`${alias}.${camp}`, idApartamenteMele);
     };
 
     const [
       asociatie, setariFin, setariCont, blocRand, contacte, apartamente, persoane, liste, cheltuieli, furnizori,
       repartizari, contoare, citiri, consumMediu, datorii, penalizari, plati, alocari, chitante, situatieBloc,
       fonduri, miscari, sesizari, mesaje, poze, sesizariBloc, anunturi, anunturiCitiri, documente, voturi, adunari,
-      remindere, notificari, locatari, profiluri, legaturaMea,
+      remindere, notificari, locatari, profiluri,
     ] = await Promise.all([
       ok(org.from("asociatii").select("*").eq("id", asoc).single()),
       ok(fin.from("setari_financiare").select("*").eq("asociatie_id", asoc).maybeSingle()),
@@ -185,12 +206,6 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? ok(id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
       toate(() => id.from("profiluri").select("id, nume, email, telefon")),
-      /* [P1] Legatura proprie a locatarului cu apartamentul, ca ecranele sa
-         stie calitatea lui (proprietar, chirias, membru al familiei) inainte
-         sa lase omul sa incerce o actiune rezervata proprietarului (votul,
-         Legea 196/2018) si sa fie refuzat abia la capat. RLS lasa oricine sa-si
-         vada propriul rand in identitate.locatari. */
-      esteAdmin ? Promise.resolve(null) : ok(id.from("locatari").select("calitate").eq("profil_id", eu.profil_id).eq("apartament_id", eu.apartament_id).maybeSingle()),
     ]);
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
        identitate.invitatii si organizare.apartamente sunt in scheme diferite,
@@ -201,7 +216,16 @@ export function creeazaSursaSupabase(url, cheie) {
         .is("folosita_la", null).is("revocata_la", null).gt("expira_la", new Date().toISOString()))
       : [];
 
-    if (!esteAdmin) euUi.calitate = legaturaMea ? legaturaMea.calitate : null;
+    if (!esteAdmin) {
+      /* [P1] Calitatea locatarului la apartamentul activ, ca ecranele sa
+         stie inainte sa lase omul sa incerce o actiune rezervata
+         proprietarului (votul, Legea 196/2018). */
+      const aMea = legaturileMele.find((l) => l.apartament_id === euUi.apartamentId);
+      euUi.calitate = aMea ? aMea.calitate : null;
+      /* [P5] Apartamentele lui in acest bloc, ca ecranele sa poata arata
+         alegerea intre ele (BaraSus arata deja "Apartament N"). */
+      euUi.apartamenteMele = idApartamenteMele;
+    }
     ctx.blocDenumire = blocRand.denumire;
     /* Soldul fiecarui fond, retinut pentru verificarea ieftina din
        inregistreazaIesireFond: evita o cerere in plus catre server doar ca sa

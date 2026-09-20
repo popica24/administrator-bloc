@@ -4250,10 +4250,18 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
   );
 }
 
-function BaraSus({ date, onIesi }) {
+function BaraSus({ date, onIesi, onAlegeApartament }) {
   const esteAdmin = date.eu.rol === "administrator";
   const ap = !esteAdmin ? apartamentulMeu(date) : null;
   const initiale = date.bloc.denumire.replace(/^Bloc\s+/i, "").split(/[\s,]/)[0].slice(0, 3).toUpperCase();
+  /* [P5] Un locatar legat de mai multe apartamente ale aceluiasi bloc
+     (proprietar la unul, chirias la altul, de exemplu) poate alege intre
+     ele; oricine are unul singur nu vede nimic in plus. */
+  const apartamenteMele = !esteAdmin && date.eu.apartamenteMele && date.eu.apartamenteMele.length > 1
+    ? date.eu.apartamenteMele.map((id) => date.apartamente.find((a) => a.id === id)).filter(Boolean)
+    : null;
+  const [alegeOpen, setAlegeOpen] = useState(false);
+  const eticheta = esteAdmin ? `Administrator, ${date.bloc.denumire}` : `Apartament ${ap.numar}, ${date.bloc.denumire}`;
   return (
     <Box
       row
@@ -4277,10 +4285,38 @@ function BaraSus({ date, onIesi }) {
         </Box>
         <Box gap={0} flex={1}>
           <Txt size={13} weight={700}>{date.eu.nume}</Txt>
-          <Txt size={11} color={C.muted}>{esteAdmin ? `Administrator, ${date.bloc.denumire}` : `Apartament ${ap.numar}, ${date.bloc.denumire}`}</Txt>
+          {apartamenteMele ? (
+            <Press onPress={() => setAlegeOpen(true)} label="Schimba apartamentul">
+              <Txt size={11} color={C.accent} weight={700}>{eticheta} · Schimba</Txt>
+            </Press>
+          ) : (
+            <Txt size={11} color={C.muted}>{eticheta}</Txt>
+          )}
         </Box>
       </Box>
       <Btn label="Iesi" size="sm" variant="secondary" onPress={onIesi} />
+      {apartamenteMele && (
+        <Sheet open={alegeOpen} onClose={() => setAlegeOpen(false)} titlu="Alege apartamentul">
+          <Txt size={12.5} color={C.muted}>Esti legat de mai multe apartamente din {date.bloc.denumire}. Alege pe care il vezi acum.</Txt>
+          <Box gap={S.sm}>
+            {apartamenteMele.map((a) => (
+              <Press
+                key={a.id}
+                label={`Apartament ${a.numar}`}
+                onPress={() => { setAlegeOpen(false); onAlegeApartament(a.id); }}
+              >
+                <Box row style={{
+                  border: `1px solid ${a.id === ap.id ? C.accent : C.lineStrong}`, borderRadius: R.md, padding: S.md,
+                  alignItems: "center", justifyContent: "space-between", backgroundColor: a.id === ap.id ? C.accentSoft : C.surface,
+                }}>
+                  <Txt size={14} weight={a.id === ap.id ? 700 : 500}>{`Apartament ${a.numar}`}</Txt>
+                  {a.id === ap.id && <Badge label="Activ" tone="accent" />}
+                </Box>
+              </Press>
+            ))}
+          </Box>
+        </Sheet>
+      )}
     </Box>
   );
 }
@@ -4530,6 +4566,11 @@ export default function AdminBloc() {
   const [sursa] = useState(() => creeazaSursa());
   const [sesiune, setSesiune] = useState(undefined);
   const [date, setDate] = useState(null);
+  /* [P5] Apartamentul ales de un locatar legat de mai multe apartamente ale
+     aceluiasi bloc (proprietar la unul, chirias la altul, de exemplu):
+     `null` inseamna "cel ales de identitate.eu()", care ramane alegerea
+     pentru toata lumea cu un singur apartament. */
+  const [apartamentAles, setApartamentAles] = useState(null);
   const [tab, setTab] = useState(null);
   const [parametri, setParametri] = useState(null);
   const [toast, setToast] = useState(null);
@@ -4549,9 +4590,9 @@ export default function AdminBloc() {
   /* [F7] Temporizatorul mesajului nu ramane in urma aplicatiei */
   useEffect(() => () => clearTimeout(temporizator.current), []);
 
-  const reincarca = useCallback(async () => {
+  const reincarca = useCallback(async (apartamentPreferat) => {
     try {
-      const d = await sursa.incarca();
+      const d = await sursa.incarca(apartamentPreferat !== undefined ? apartamentPreferat : apartamentAles);
       setDate(d);
       setEroareIncarcare(null);
       /* [C2] incarca() intoarce null cand sesiunea a expirat intre timp (nu o
@@ -4575,7 +4616,7 @@ export default function AdminBloc() {
       setEroareIncarcare(mesajEroare);
       return null;
     }
-  }, [sursa, toastMsg]);
+  }, [sursa, toastMsg, apartamentAles]);
 
   useEffect(() => {
     let viu = true;
@@ -4641,6 +4682,7 @@ export default function AdminBloc() {
       const s = await sursa.sesiuneCurenta();
       setSesiune(s);
       setTab(null);
+      setApartamentAles(null);
       window.history.replaceState({ tab: null, parametri: null }, "");
       if (s) await reincarca();
       return s;
@@ -4661,7 +4703,14 @@ export default function AdminBloc() {
         setSesiune(null);
         setDate(null);
         setTab(null);
+        setApartamentAles(null);
       },
+
+      /* [P5] Schimba apartamentul activ, pentru un locatar legat de mai
+         multe apartamente ale aceluiasi bloc: doar alegerea se schimba, nu
+         se pierde nimic — alMeu() aduce deja datele tuturor apartamentelor
+         lui la fiecare incarca(). */
+      aleseApartament: cmd(async (apartamentId) => { setApartamentAles(apartamentId); return reincarca(apartamentId); }, null, false),
 
       platesteCard: cmd((x) => sursa.platesteCard(x), (r) => (r.inAsteptare ? r.mesaj : "Plata a fost confirmata de banca")),
       transmiteCitire: cmd((x) => sursa.transmiteCitire(x), "Indexul a fost trimis administratorului"),
@@ -4801,7 +4850,7 @@ export default function AdminBloc() {
         acasa: date.notificari.filter((n) => !n.cititaLa).length,
       };
     cheie = `${date.eu.rol}-${tabActiv}`;
-    bara = <BaraSus date={date} onIesi={comenzi.iesi} />;
+    bara = <BaraSus date={date} onIesi={comenzi.iesi} onAlegeApartament={comenzi.aleseApartament} />;
     continut = (
       <div key={`${date.eu.rol}-${tabActiv}-${parametri ? parametri._n : ""}`} className="ab-fade">
         <Ecran go={go} parametri={parametri} />

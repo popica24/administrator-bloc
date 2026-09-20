@@ -1,7 +1,7 @@
 /* Shell-ul aplicatiei (sectiunile 10-11): incarcarea, TabBar cu insigne,
    BaraSus, navigarea go() si iesirea din cont. */
 import { describe, it, expect, vi } from "vitest";
-import { screen, act, render, fireEvent } from "@testing-library/react";
+import { screen, act, render, fireEvent, within } from "@testing-library/react";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 import AdminBloc from "../../src/AdminBloc.jsx";
@@ -117,6 +117,54 @@ describe("TabBar si BaraSus", () => {
     ]);
     expect(screen.getByText("Apartament 17, Bloc D14, scara A")).toBeTruthy();
     expect(screen.getByText("D14")).toBeTruthy();
+  });
+
+  /* [P5] Un locatar legat de mai multe apartamente ale aceluiasi bloc
+     (proprietar la unul, chirias la altul, de exemplu) poate alege pe care
+     il vede acum, din bara de sus, care arata deja "Apartament N". */
+  it("[P5] locatar cu doua apartamente: bara de sus permite schimbarea", async () => {
+    const { sursa } = await pornesteApp({
+      email: LOCATAR,
+      modifica: (d) => {
+        d.eu.apartamenteMele = [d.eu.apartamentId, "apa-99"];
+        d.apartamente.push({
+          id: "apa-99", numar: "99", etaj: 0, proprietar: "Alt Proprietar", cota: 0, mp: 0, scutitLift: false,
+          persoane: 0, istoricPersoane: [], locatari: [], invitatii: [],
+        });
+      },
+    });
+    const spion = vi.spyOn(sursa, "incarca");
+    expect(screen.getByText("Apartament 17, Bloc D14, scara A · Schimba")).toBeTruthy();
+    await apasa(screen.getByRole("button", { name: "Schimba apartamentul" }));
+    const dialog = screen.getByRole("dialog", { name: "Alege apartamentul" });
+    expect(within(dialog).getByRole("button", { name: "Apartament 17" })).toBeTruthy();
+    expect(within(within(dialog).getByRole("button", { name: "Apartament 17" })).getByText("Activ")).toBeTruthy();
+    await apasa(within(dialog).getByRole("button", { name: "Apartament 99" }));
+    expect(spion).toHaveBeenCalledWith("apa-99");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("un singur apartament: bara de sus nu ofera nimic de schimbat", async () => {
+    await pornesteApp({ email: LOCATAR });
+    expect(screen.queryByRole("button", { name: "Schimba apartamentul" })).toBeNull();
+  });
+
+  it("[P5] alegerea apartamentului se poate inchide fara sa schimbe nimic", async () => {
+    const { sursa } = await pornesteApp({
+      email: LOCATAR,
+      modifica: (d) => {
+        d.eu.apartamenteMele = [d.eu.apartamentId, "apa-99"];
+        d.apartamente.push({
+          id: "apa-99", numar: "99", etaj: 0, proprietar: "Alt Proprietar", cota: 0, mp: 0, scutitLift: false,
+          persoane: 0, istoricPersoane: [], locatari: [], invitatii: [],
+        });
+      },
+    });
+    const spion = vi.spyOn(sursa, "incarca");
+    await apasa(screen.getByRole("button", { name: "Schimba apartamentul" }));
+    await apasa(within(screen.getByRole("dialog", { name: "Alege apartamentul" })).getByRole("button", { name: "Inchide" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(spion).not.toHaveBeenCalled();
   });
 
   it("fara nimic nou nu apare nicio insigna; initialele vin din numele blocului", async () => {

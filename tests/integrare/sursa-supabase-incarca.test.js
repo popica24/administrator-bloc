@@ -160,6 +160,17 @@ describe("D14, locatarul (doar citire)", () => {
     expect(suma(date.datorii.map((d) => d.rest))).toBe(suma(datorii.map((d) => d.rest)));
   });
 
+  /* [P1/P5] Daca legaturile proprii nu gasesc niciun rand (o divergenta rara
+     intre "azi" calculat in JS si "current_date" din Postgres, la limita
+     zilei), calitate ramane necunoscuta in loc sa arunce: nu poate incerca sa
+     citeasca .calitate dintr-un rezultat gasit cand cautarea n-a gasit nimic. */
+  it("[P1/P5] fara nicio legatura gasita, calitate este null, nu o eroare", async () => {
+    const { s } = await intraCa("elena.marinescu@adminbloc.test", { incarca: false });
+    const d = await cuFetch(modifica("/rest/v1/locatari?", () => []), () => s.incarca());
+    expect(d.eu.calitate).toBeNull();
+    expect(d.eu.apartamenteMele).toEqual([d.eu.apartamentId]);
+  });
+
   it("nu primeste datele conducerii: furnizori, remindere, cititori, apartamente nevotate", () => {
     expect(date.furnizori).toEqual([]);
     expect(date.remindere).toEqual([]);
@@ -482,5 +493,63 @@ describe("asociatie fara setari salvate", () => {
     await ok(db("contorizare").from("setari_contorizare").delete().eq("bloc_id", f.blocId));
     const { date } = await intraCa(f.adminEmail);
     expect(date.setari).toEqual({ procentPenalizareZi: 0.02, zileGratie: 30, ziScadenta: 25, chitantaSerie: "", ziLimitaCitire: 25 });
+  });
+});
+
+/* [P5] identitate.eu() alege un singur apartament, determinist, dar acelasi
+   om poate fi legat de mai multe apartamente ale aceluiasi bloc (proprietar
+   la unul, chirias la altul). Fara nimic in plus, celalalt apartament era
+   invizibil de tot: nici in eu(), nici in datele filtrate de alMeu(). */
+describe("[P5] un locatar legat de doua apartamente in acelasi bloc", () => {
+  let f;
+  let s;
+  let ap1;
+  let ap2;
+  const an = new Date().getUTCFullYear();
+
+  beforeAll(async () => {
+    f = await creeazaBloc({
+      apartamente: [
+        { numar: "1", etaj: 0, persoane: 2, cota: 50, index_rece: 10, index_calda: 5 },
+        { numar: "2", etaj: 1, persoane: 1, cota: 50, index_rece: 20, index_calda: 8 },
+      ],
+      locatari: [{ cheie: "dubla", apartament: "1", activDin: `${an - 1}-01-01` }],
+    });
+    ap1 = f.ap["1"];
+    ap2 = f.ap["2"];
+    /* A doua legatura, in acelasi bloc, pe acelasi profil, activa mai
+       recent: identitate.eu() alege apartamentul cu activ_din mai vechi,
+       deci ap1 ramane implicit. */
+    await ok(db("identitate").from("locatari").insert({
+      apartament_id: ap2, bloc_id: f.blocId, profil_id: f.conturi.dubla.id, calitate: "chirias", activ_din: `${an - 1}-02-01`, activ_pana: null,
+    }));
+    ({ s } = await intraCa(f.conturi.dubla.email));
+  });
+
+  it("eu.apartamenteMele contine ambele apartamente, iar eu.apartamentId ramane cel implicit (ap1)", async () => {
+    const date = await s.incarca();
+    expect(date.eu.rol).toBe("locatar");
+    expect(date.eu.apartamentId).toBe(ap1);
+    expect([...date.eu.apartamenteMele].sort()).toEqual([ap1, ap2].sort());
+  });
+
+  it("datele celuilalt apartament (citirile de pornire) sunt deja incarcate, nu doar cele ale apartamentului implicit", async () => {
+    const date = await s.incarca();
+    const apCuCitiri = new Set(date.citiri.map((c) => c.apartamentId));
+    expect(apCuCitiri.has(ap1)).toBe(true);
+    expect(apCuCitiri.has(ap2)).toBe(true);
+  });
+
+  it("incarca(apartamentAles) muta apartamentul activ pe al doilea, fara sa piarda datele primului", async () => {
+    const date = await s.incarca(ap2);
+    expect(date.eu.apartamentId).toBe(ap2);
+    const apCuCitiri = new Set(date.citiri.map((c) => c.apartamentId));
+    expect(apCuCitiri.has(ap1)).toBe(true);
+    expect(apCuCitiri.has(ap2)).toBe(true);
+  });
+
+  it("un apartament strain este ignorat: ramane cel implicit", async () => {
+    const date = await s.incarca(f.blocId);
+    expect(date.eu.apartamentId).toBe(ap1);
   });
 });
