@@ -338,11 +338,12 @@ select is(comunicare.trimite_reminder(pg_temp.id('bloc'), 'restanta'), '{"aparta
 select is(comunicare.trimite_reminder(pg_temp.id('bloc'), 'plata'), '{"apartamente": 2, "destinatari": 3}'::jsonb,
   'trimite_reminder plata: apartamentele cu orice datorie neachitata');
 reset role;
-select results_eq($$ select titlu, corp from comunicare.notificari where tip = 'restanta' and profil_id = pg_temp.id('loc2') $$,
+-- distinct: apelul de mai sus (restanta) si redirectarea din 'plata' pentru
+-- acelasi apartament deja restant (K5) trimit acelasi text, catre acelasi om.
+select results_eq($$ select distinct titlu, corp from comunicare.notificari where tip = 'restanta' and profil_id = pg_temp.id('loc2') $$,
   $$ values ('Instiintare de plata'::text, 'Aveti sume neachitate trecute de scadenta. Va rugam sa le achitati ca sa opriti penalizarile.'::text) $$,
   'trimite_reminder restanta: textul instiintarii');
 select is(pg_temp.notificari('loc1', 'restanta'), 0, 'trimite_reminder restanta: cine nu e restant nu primeste instiintare');
-select todo('[K5] reminderul de plata trimis manual ajunge si la restantieri', 1);
 select is(pg_temp.notificari('loc2', 'plata'), 0, '[K5] trimite_reminder plata: restantierul nu primeste "se apropie termenul"');
 
 -- Refuzul: sub psql, session_user = postgres face private.este_serviciu() adevarata

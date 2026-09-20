@@ -138,7 +138,7 @@ describe("AdminSumar, cu datele demo", () => {
     expect(toast().textContent).toBe("Nu s-a putut trimite");
   });
 
-  it.fails("[K5] reminderul manual 'se apropie termenul' nu merge la cei deja restanti", async () => {
+  it("[K5] reminderul manual 'se apropie termenul' nu merge la cei deja restanti", async () => {
     /* Pe 26 septembrie toate datoriile sunt trecute de scadenta: nu se apropie niciun termen */
     const { sursa } = await pornesteAdmin({ zi: new Date("2026-09-26T09:00:00") });
     const spion = vi.spyOn(sursa, "trimiteReminder");

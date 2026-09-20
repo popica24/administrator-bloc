@@ -392,7 +392,6 @@ select pg_temp.zilnic();
 select results_eq($$ select profil_id, titlu from comunicare.notificari where tip = 'plata' and profil_id in (pg_temp.id('nou3'), pg_temp.id('loc1'), pg_temp.id('chirias1')) $$,
   $$ values (pg_temp.id('nou3'), 'Reamintire de plata'::text) $$,
   'trimite_remindere_zilnice plata: pleaca cu N zile inainte de scadenta listei, la cine are de platit (a1 are doar avans)');
-select todo('[K5] reminderul de plata ajunge si la restantieri', 1);
 select is(pg_temp.notificari('loc2', 'plata'), 0, '[K5] trimite_remindere_zilnice plata: restantierul nu primeste "se apropie termenul"');
 update intretinere.liste_lunare set scadenta = current_date + 4 where id = pg_temp.id('lista');
 select pg_temp.zilnic();

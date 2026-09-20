@@ -1142,7 +1142,10 @@ export function creeazaSursaMock() {
       } else if (tip === "restanta") {
         tinta = apBloc.filter((a) => db.datorii.some((d) => d.apartamentId === a.id && d.scadenta < azi && restDatorie(db, d) > 0));
       } else {
-        tinta = apBloc.filter((a) => db.datorii.some((d) => d.apartamentId === a.id && restDatorie(db, d) > 0));
+        /* [K5] reminderul de plata ("se apropie termenul") nu se trimite la
+           cine e deja restant: acela primeste instiintarea de restanta, nu
+           un mesaj care contrazice realitatea lui. */
+        tinta = apBloc.filter((a) => db.datorii.some((d) => d.apartamentId === a.id && d.scadenta >= azi && restDatorie(db, d) > 0));
       }
       const texte = {
         citire_contoare: ["Transmite indexul la apa", `Te rugam sa transmiti indexul contoarelor pana pe ${db.setari.ziLimitaCitire}.`],

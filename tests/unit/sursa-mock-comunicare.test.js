@@ -261,7 +261,7 @@ describe("remindere", () => {
     ]);
   });
 
-  it.fails("[K5] reminderul de plata nu merge la cine are doar datorii deja scadente", async () => {
+  it("[K5] reminderul de plata nu merge la cine are doar datorii deja scadente", async () => {
     ceasDemo(new Date("2026-09-26T09:00:00"));
     const { s } = await ca(ADMIN);
     expect(await s.trimiteReminder("plata")).toEqual({ apartamente: 0, destinatari: 0 });
