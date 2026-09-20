@@ -38,6 +38,20 @@ const FORMAT_BUCURESTI = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit",
 });
 export const azi = () => FORMAT_BUCURESTI.format(new Date());
+
+/* [J9] Ora serii (20:00) a unei zile date, ca ora a Romaniei — indiferent
+   de fusul masinii care ruleaza testul. Acelasi procedeu ca in
+   src/sursa-supabase.js (deschideVot) si src/sursa-mock.js
+   (offsetRomania/oraSeriiRomania): testele care verifica ora de inchidere a
+   unui vot trebuie sa astepte instantul UTC corect, chiar daca procesul de
+   test forteaza un alt TZ. */
+function offsetRomania(dataText) {
+  const aprox = new Date(`${dataText}T20:00:00Z`);
+  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
+    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
+  return `+${ore.padStart(2, "0")}:00`;
+}
+export const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
 export function lunaDelta(delta) {
   const [an, luna] = azi().split("-").map(Number);
   const t = new Date(Date.UTC(an, luna - 1 + delta, 1));

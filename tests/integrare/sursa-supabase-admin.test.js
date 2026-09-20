@@ -3,7 +3,7 @@
    motor, Edge Function publica-lista), bani, oameni, sesizari, comunicare si
    guvernanta. Testele din fisier ruleaza in ordine si continua acelasi flux. */
 import { beforeAll, describe, expect, it } from "vitest";
-import { PORNIRE_GENERAL, creeazaBloc, cuFetch, db, intraCa, json, lunaCurenta, lunaDelta, ok, pdf, serviciu, unic, zi1 } from "./fixture.js";
+import { PORNIRE_GENERAL, creeazaBloc, cuFetch, db, intraCa, json, lunaCurenta, lunaDelta, ok, oraSeriiRomania, pdf, serviciu, unic, zi1 } from "./fixture.js";
 
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const suma = (xs) => round2(xs.reduce((s, x) => s + Number(x), 0));
@@ -398,16 +398,38 @@ describe("comunicare si guvernanta", () => {
     await expect(adm.trimiteReminder("altceva")).rejects.toThrow("Reminderul altceva nu se trimite manual.");
   });
 
-  it("deschideVot(): variantele goale se ignora, inchiderea la ora 20 a zilei alese", async () => {
+  it("deschideVot(): variantele goale se ignora, inchiderea la ora 20 a zilei alese, ora Romaniei", async () => {
     const zi = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
     st.vot = await adm.deschideVot({ titlu: "Schimbam firma de curatenie?", descriere: "", optiuni: ["Da", " Nu ", "  "], inchideLa: zi, numarare: "cota" });
     const v = await ok(db("guvernanta").from("voturi").select("*").eq("id", st.vot).single());
     expect(v).toMatchObject({ asociatie_id: f.asociatieId, numarare: "cota", descriere: null, creat_de: f.adminId });
-    expect(Date.parse(v.inchide_la)).toBe(new Date(`${zi}T20:00:00`).getTime());
+    /* [J9] Ora 20:00 e a Romaniei, nu a masinii care ruleaza testul (aici
+       Bucuresti oricum) — verificarea foloseste acelasi calcul independent
+       de fus ca sursa-mock.js, nu new Date(`${zi}T20:00:00`), care ar
+       depinde de fusul local. */
+    expect(Date.parse(v.inchide_la)).toBe(new Date(oraSeriiRomania(zi)).getTime());
     const o = await ok(db("guvernanta").from("voturi_optiuni").select("text, ordine").eq("vot_id", st.vot).order("ordine"));
     expect(o).toEqual([{ text: "Da", ordine: 1 }, { text: "Nu", ordine: 2 }]);
     await expect(adm.deschideVot({ titlu: "X", descriere: "", optiuni: ["Doar una"], inchideLa: zi, numarare: "apartament" }))
       .rejects.toThrow("Un vot are nevoie de cel putin doua variante.");
+  });
+
+  it("[J9] deschideVot(): ora de inchidere e a Romaniei, indiferent de fusul dispozitivului", async () => {
+    /* Un dispozitiv intr-un fus mult inaintea Romaniei (Tokyo, +9) ar calcula
+       "20:00 local" ca un instant UTC mai devreme decat 20:00 Bucuresti — pe
+       zile apropiate, chiar unul deja trecut, refuzat de deschide_vot cu
+       "Data de inchidere trebuie sa fie in viitor." */
+    const ziOriginal = process.env.TZ;
+    const zi = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    let idVot;
+    try {
+      process.env.TZ = "Asia/Tokyo";
+      idVot = await adm.deschideVot({ titlu: "Vot cu telefonul pe alt fus", descriere: "", optiuni: ["Da", "Nu"], inchideLa: zi, numarare: "apartament" });
+    } finally {
+      process.env.TZ = ziOriginal;
+    }
+    const v = await ok(db("guvernanta").from("voturi").select("inchide_la").eq("id", idVot).single());
+    expect(Date.parse(v.inchide_la)).toBe(new Date(oraSeriiRomania(zi)).getTime());
   });
 
   it("reamintesteVot(): apartamentele care n-au votat si locatarii lor", async () => {
