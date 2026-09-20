@@ -279,6 +279,24 @@ describe("Sheet, Field, Picker si pozele alese", () => {
     expect(document.activeElement).toBe(ultim);
   });
 
+  it("[F5] Shift+Tab imediat dupa deschidere nu scoate focusul din panou", async () => {
+    /* La deschidere focusul este pe panoul insusi (tabIndex -1), nu pe primul
+       element focalizabil: capcana trebuie sa recunoasca si acest caz, nu
+       doar "activeElement === prim". */
+    await pornesteApp({ email: LOCATAR });
+    await tab("Sesizari");
+    await apasa("Sesizare noua");
+    const dialog = screen.getByRole("dialog");
+    expect(document.activeElement).toBe(dialog);
+    const focalizabile = [...dialog.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]):not([type="file"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )];
+    const ultim = focalizabile[focalizabile.length - 1];
+
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(ultim);
+  });
+
   it("campul pe mai multe randuri, lista de categorii si poza aleasa", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:sesizare");
     await pornesteApp({ email: LOCATAR });

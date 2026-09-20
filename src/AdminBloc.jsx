@@ -1034,7 +1034,10 @@ function Sheet({ open, onClose, titlu, pazit, children }) {
     const focalizabile = Array.from(panou.current.querySelectorAll(SELECTOR_FOCALIZABIL));
     const prim = focalizabile[0];
     const ultim = focalizabile[focalizabile.length - 1];
-    if (e.shiftKey && document.activeElement === prim) {
+    /* [F5] La deschidere focusul e pe panoul insusi (tabIndex -1), care nu e
+       in lista de mai sus: fara acest caz, primul Shift+Tab nu se potriveste
+       cu nicio conditie si scapa in ecranul din spate, ascuns sub scrim. */
+    if (e.shiftKey && (document.activeElement === prim || document.activeElement === panou.current)) {
       e.preventDefault();
       ultim.focus();
     } else if (!e.shiftKey && document.activeElement === ultim) {
