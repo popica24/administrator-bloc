@@ -421,7 +421,6 @@ select lives_ok(
 select is((select versiune from intretinere.liste_lunare where id = pg_temp.fx('lista')), 3::smallint,
   'salveaza_lista_publicata: versiunea 3');
 
-select todo('[L9] recalcularea trebuie sa actualizeze apartamente_repartizate', 1);
 select is((select apartamente_repartizate from intretinere.liste_lunare where id = pg_temp.fx('lista')), 4::smallint,
   '[L9] dupa recalcularea pe 4 apartamente, lista spune 4');
 
