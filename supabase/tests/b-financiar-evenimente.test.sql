@@ -270,7 +270,6 @@ select results_eq(
 select is((select count(*)::int from financiar.miscari_fond where lista_id = pg_temp.fx('lista2')), 0,
   'la_lista_publicata: fara fond de reparatii pe lista, nicio miscare in fond');
 
-select todo('[L16] data intrarii in fond este ziua publicarii in ora Romaniei', 1);
 select is((select data from financiar.miscari_fond where lista_id = pg_temp.fx('lista')), '2026-09-01'::date,
   '[L16] publicata la 01:30 pe 1 septembrie (ora Romaniei): intrarea este pe 1 septembrie');
 
