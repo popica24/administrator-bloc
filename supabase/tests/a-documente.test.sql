@@ -1,7 +1,7 @@
 -- Teste pgTAP: documente (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(50);
+select plan(52);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -240,8 +240,13 @@ select throws_ok($$insert into comunicare.documente (asociatie_id, titlu, tip, c
   '42501', null, 'politica "Administratorul incarca documente": nu in numele altcuiva');
 select is(pg_temp.randuri($$update comunicare.documente set titlu = 'Lista august 2026' where id = pg_temp.doc('Lista august')$$), 1,
   'politica "Administratorul modifica documente": administratorul asociatiei');
+-- [H5] Inainte de reparatia H5, mutarea intr-o asociatie neadministrata era
+-- oprita doar de RLS (with check), cu eroarea 42501. Acum trigger-ul
+-- comunicare.protejeaza_documentul() refuza orice schimbare de asociatie_id
+-- mai devreme, cu un mesaj clar, indiferent daca destinatia e administrata.
 select throws_ok($$update comunicare.documente set asociatie_id = pg_temp.id('asocB') where id = pg_temp.doc('Regulament')$$,
-  '42501', null, 'politica "Administratorul modifica documente": documentul nu se muta in alta asociatie');
+  'Asociatia documentului nu se poate schimba dupa incarcare.',
+  'politica "Administratorul modifica documente": documentul nu se muta in alta asociatie');
 select throws_ok($$delete from comunicare.documente where id = pg_temp.doc('Regulament')$$,
   '42501', null, 'comunicare.documente: documentele nu se sterg din aplicatie');
 reset role;
@@ -335,6 +340,17 @@ select throws_ok($$insert into comunicare.documente (asociatie_id, titlu, tip, c
   '[S7] calea documentului incepe cu asociatie_id/');
 select lives_ok($$update comunicare.documente set vizibil_locatarilor = true where id = pg_temp.doc('Contract lift')$$,
   '[S7] un document inca nevazut de locatari se poate publica (sensul invers ramane liber)');
+
+-- H5: RLS pe update verifica doar asociatie_id, nu si bloc_id. Fara paza in
+-- trigger, administratorul asociatiei A putea muta un document vazut de
+-- locatari (vizibil_locatarilor ramas true) din blocA in blocA2, scotandu-l
+-- din vederea locatarilor blocului A fara ca vizibil_locatarilor sa o arate.
+select throws_ok($$update comunicare.documente set bloc_id = pg_temp.id('blocA2') where id = pg_temp.doc('Lista august 2026')$$,
+  'Blocul documentului nu se poate schimba dupa incarcare.',
+  '[H5] documentul nu se muta in alt bloc dupa incarcare');
+select throws_ok($$update comunicare.documente set bloc_id = null where id = pg_temp.doc('Lista august 2026')$$,
+  'Blocul documentului nu se poate schimba dupa incarcare.',
+  '[H5] documentul nu se largeste la toata asociatia dupa incarcare');
 select has_trigger('comunicare', 'documente', 'documente_protejeaza',
   '[S7] exista trigger-ul comunicare.documente_protejeaza (functia comunicare.protejeaza_documentul)');
 reset role;
