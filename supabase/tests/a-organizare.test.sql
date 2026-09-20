@@ -440,8 +440,7 @@ reset role;
 select pg_temp.ca_serviciu();
 select lives_ok($$select organizare.activeaza_bloc(pg_temp.id('blocA2'))$$,
   'organizare.activeaza_bloc: serviciul activeaza un bloc complet');
-select todo('[NOU-2] activeaza_bloc pe un bloc inexistent nu da eroare (verificarile citesc null)', 1);
-select throws_ok($$select organizare.activeaza_bloc(gen_random_uuid())$$, null, null,
+select throws_ok($$select organizare.activeaza_bloc(gen_random_uuid())$$, 'P0001', 'Blocul nu exista.',
   '[NOU-2] activeaza_bloc refuza un bloc inexistent');
 
 -- -----------------------------------------------------------------------------
