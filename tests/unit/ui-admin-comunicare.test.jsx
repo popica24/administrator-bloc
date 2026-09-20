@@ -70,6 +70,24 @@ describe("Comunicare, anunturi", () => {
     expect(inDialog("Anunt nou")).toBeTruthy();
   });
 
+  /* [R1] O sesiune moarta la apasarea "Publica anuntul" trebuie sa duca omul
+     direct la autentificare (ca orice alta comanda cu sesiunea expirata,
+     [P3]) fara sa arunce ce a scris: textul ramane in formular, ascuns sub
+     ecranul de autentificare, gata sa fie publicat dupa ce omul intra din
+     nou in cont. */
+  it("[R1] sesiune expirata la publicarea anuntului: se cere reautentificare, dar textul scris ramane", async () => {
+    const { sursa } = await deschideComunicare();
+    vi.spyOn(sursa, "publicaAnunt").mockRejectedValue(new Error("Sesiunea a expirat. Intra din nou in cont."));
+    await apasa("Scrie un anunt");
+    await scrieIn("Anunt nou", "Titlu", "Curatenie generala");
+    await scrieIn("Anunt nou", "Continut", "Sambata la 10.");
+    await apasa(inDialog("Anunt nou").getByRole("button", { name: "Publica anuntul" }));
+    expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
+    expect(screen.getByText("Intra in cont")).toBeTruthy();
+    expect(inDialog("Anunt nou").getByLabelText("Titlu").value).toBe("Curatenie generala");
+    expect(inDialog("Anunt nou").getByLabelText("Continut").value).toBe("Sambata la 10.");
+  });
+
   it("fara locatari cu cont, bara de citire ramane goala", async () => {
     await deschideComunicare({ modifica: (d) => { d.anunturi.forEach((a) => { a.totalLocatari = 0; a.cititori = 0; }); } });
     expect(screen.getAllByText("Citit de 0 din 0 locatari cu cont")).toHaveLength(3);

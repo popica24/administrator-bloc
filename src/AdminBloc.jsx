@@ -4809,6 +4809,12 @@ export default function AdminBloc() {
   let tabBar = null;
   /* Cheia ecranului: la schimbarea ei granita de eroare se reaseaza */
   let cheie = "pornire";
+  /* [R1] O sesiune moarta in timpul folosirii (nu la prima incarcare) nu
+     trebuie sa arunce ecranul de dedesubt, cu tot ce a scris omul in el:
+     ecranul ramane montat, cu datele lui vechi, si doar se acopera cu
+     autentificarea, ca omul sa nu poata interactiona cu date invechite
+     [P3] dar sa gaseasca totul neatins dupa ce intra din nou in cont. */
+  const sesiuneMoartaPesteEcran = !sesiune && !!date;
   if (sesiune && !date && eroareIncarcare) {
     cheie = "incarcare-esuata";
     continut = (
@@ -4828,7 +4834,7 @@ export default function AdminBloc() {
         <Txt size={13} color={C.muted}>Se incarca...</Txt>
       </Box>
     );
-  } else if (!sesiune) {
+  } else if (!sesiune && !date) {
     continut = <EcranAutentificare />;
     cheie = "autentificare";
   } else if (date.eu.rol !== "administrator" && date.eu.rol !== "locatar") {
@@ -4883,6 +4889,13 @@ export default function AdminBloc() {
             <GranitaEroare key={cheie} onIesi={comenzi.iesi} onReincarca={reincarca}>{continut}</GranitaEroare>
           </div>
           {tabBar}
+          {/* [R1] Acopera ecranul vechi, nu-l inlocuieste: vezi
+              sesiuneMoartaPesteEcran mai sus. */}
+          {sesiuneMoartaPesteEcran && (
+            <div className="ab-fade" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 55, overflowY: "auto", backgroundColor: C.paper }}>
+              <EcranAutentificare />
+            </div>
+          )}
           <Toast mesaj={toast} />
         </Box>
       </div>
