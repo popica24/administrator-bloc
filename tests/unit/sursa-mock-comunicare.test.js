@@ -40,7 +40,7 @@ describe("voteaza", () => {
     await expect(s.voteaza(v.id, v.optiuni[0].id, d.eu.apartamentId)).rejects.toThrow("Votul s-a inchis.");
   });
 
-  it.fails("[K3] chiriasul nu voteaza in locul proprietarului", async () => {
+  it("[K3] chiriasul nu voteaza in locul proprietarului", async () => {
     const { s, d } = await ca(ADMIN);
     const cod = await s.invitaLocatar(apNr(d, "11").id, "chirias");
     await s.inregistreaza({ email: "chirias@x.ro", parola: "ParolaBuna1", nume: "Chirias" });

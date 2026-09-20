@@ -669,6 +669,11 @@ export function creeazaSursaMock() {
   const cerLocatarPe = (apartamentId) => {
     if (!locatariActivi(db, apartamentId).some((l) => l.profilId === eu().id)) eroare("Nu ai acces la acest apartament.");
   };
+  const cerProprietarPe = (apartamentId) => {
+    if (!locatariActivi(db, apartamentId).some((l) => l.profilId === eu().id && l.calitate === "proprietar")) {
+      eroare("Doar proprietarul apartamentului poate vota (Legea 196/2018).");
+    }
+  };
   const salveazaFisier = (fisier, prefix) => {
     if (!fisier) return null;
     const cale = `${prefix}/${Date.now()}-${fisier.name || "fisier"}`;
@@ -837,6 +842,7 @@ export function creeazaSursaMock() {
       const v = db.voturi.find((x) => x.id === votId) || eroare("Votul nu exista.");
       if (acum() > new Date(v.inchideLa).toISOString()) eroare("Votul s-a inchis.");
       if (db.exprimate.some((e) => e.votId === votId && e.apartamentId === apartamentId)) eroare("Apartamentul a votat deja.");
+      cerProprietarPe(apartamentId);
       if (!db.optiuni.some((o) => o.id === optiuneId && o.votId === votId)) eroare("Optiunea nu apartine acestui vot.");
       db.adauga("exprimate", { votId, optiuneId, apartamentId, profilId: eu().id });
     },
