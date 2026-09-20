@@ -95,6 +95,19 @@ for (const suma of [0, -5, "abc", undefined, null]) {
   });
 }
 
+// K14 (audit): suma era verificata cu "suma > 0" fara rotunjire, deci 0,004
+// lei trecea garda si lovea direct constrangerea bruta plati_suma_check din
+// baza de date. Aceeasi rotunjire ca la financiar.inregistreaza_plata (fixul
+// cash din migratia 20260920172457) si ca la sursa demo (round2(suma) > 0).
+Deno.test("[K14] plata-card: o suma care se rotunjeste la 0 lei (0,004) este refuzata politicos, nu doar cea scrisa 0", async () => {
+  await cuFetch(backend({}), async (f) => {
+    const r = await citeste(await plateste({ apartament_id: "a1", suma: 0.004, card: CARD_BUN }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Suma trebuie sa fie mai mare decat zero." });
+    assertEquals(f.catre(P.creeaza).length, 0);
+  });
+});
+
 for (const [caz, card] of [
   ["fara card", undefined],
   ["card fara numar", { expira: "12/30" }],

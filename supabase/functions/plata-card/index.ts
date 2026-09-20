@@ -9,6 +9,7 @@
 // Datele cardului trec prin functie spre procesator; nu se salveaza nicaieri.
 
 import { clientServiciu, clientUtilizator, eroare, porneste, raspuns, URL_SUPABASE } from "../_shared/server.ts";
+import { round2 } from "../_shared/motor.js";
 
 const PROCESATOR = "simulat";
 
@@ -20,7 +21,11 @@ porneste(async (req) => {
     const utilizator = clientUtilizator(req);
     const { data: u, error: eu } = await utilizator.auth.getUser();
     if (eu || !u.user) return eroare("Nu esti autentificat.", 401);
-    if (!(Number(suma) > 0)) return eroare("Suma trebuie sa fie mai mare decat zero.");
+    // [K14] verificarea trebuie facuta pe suma rotunjita la 2 zecimale, exact
+    // ca la insert (financiar.creeaza_plata_card / financiar.inregistreaza_plata):
+    // altfel o suma ca 0,004 trece garda si loveste direct constrangerea bruta
+    // plati_suma_check in loc de acest mesaj.
+    if (!(round2(Number(suma)) > 0)) return eroare("Suma trebuie sa fie mai mare decat zero.");
     if (!card || String(card.numar ?? "").replace(/\D/g, "").length < 13) return eroare("Numarul cardului nu este complet.");
 
     const admin = clientServiciu();
