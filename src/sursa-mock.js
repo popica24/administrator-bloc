@@ -818,7 +818,7 @@ export function creeazaSursaMock() {
     /* [J4] identitate.cere_verificare_administrator() (backend) lasa pe
        oricine nu e deja aprobat sa retrimita cererea, cu atestatul
        actualizat, si o intoarce mereu la in_asteptare -- inclusiv pe cineva
-       respins, ca sa aiba o cale inainte. Mock-ul refuza necondiționat a
+       respins, ca sa aiba o cale inainte. Mock-ul refuza neconditionat a
        doua cerere, ceea ce nu are corespondent in baza. O cerere de la
        cineva deja aprobat nu schimba nimic (nici in baza). */
     async cereVerificareAdministrator({ numarAtestat, fisier }) {
