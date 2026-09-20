@@ -38,7 +38,7 @@ describe("inregistreaza() in sursa demonstrativa (C1)", () => {
   });
 });
 
-describe("folosesteInvitatie() in sursa demonstrativa: limita per cont si plafonul global (C15, C16)", () => {
+describe("folosesteInvitatie() in sursa demonstrativa: limita per cont (C15)", () => {
   const PAROLA = "Parola12345";
 
   it("limiteaza fiecare cont la 5 incercari gresite intr-un sfert de ora (C15)", async () => {
@@ -55,21 +55,21 @@ describe("folosesteInvitatie() in sursa demonstrativa: limita per cont si plafon
       .rejects.toThrow("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
   });
 
-  it("un plafon global opreste un cont curat cu cod bun, dupa 20 de incercari gresite de la patru conturi (C16)", async () => {
+  it("un cont curat cu cod bun trece, oricat ar fi incercat altii (C16 reproiectat)", async () => {
     await intra(ADMIN);
     const cod = await s.invitaLocatar(date.apartamente[1].id, "chirias");
+    /* Patru conturi isi epuizeaza fiecare limita proprie: 20 de incercari
+       gresite in total. In baza, plafonul care nu depinde de cont se numara
+       pe adresa cererii, deci un om de pe alta adresa nu e atins; modul
+       demonstrativ nu are adrese, deci ramane doar limita pe cont. */
     for (let cont = 0; cont < 4; cont += 1) {
       await s.inregistreaza({ email: `atacator-${cont}-${Math.random()}@adminbloc.test`, parola: PAROLA, nume: "Atacator" });
       for (let i = 0; i < 5; i += 1) {
         await expect(s.folosesteInvitatie(`ZZZZZZZ${cont}${i}`)).rejects.toThrow("Codul nu este valabil. Cere administratorului un cod nou.");
       }
     }
-    /* Al cincilea cont e curat (nicio incercare proprie) si are codul bun,
-       dar plafonul global (20 de incercari gresite, de la celelalte patru
-       conturi) il opreste oricum */
     await s.inregistreaza({ email: `onest-${Math.random()}@adminbloc.test`, parola: PAROLA, nume: "Onest" });
-    await expect(s.folosesteInvitatie(cod))
-      .rejects.toThrow("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
+    await expect(s.folosesteInvitatie(cod)).resolves.toMatchObject({ apartamentNumar: date.apartamente[1].numar });
   });
 });
 

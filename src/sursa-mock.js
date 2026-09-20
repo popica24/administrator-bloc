@@ -711,18 +711,14 @@ export function creeazaSursaMock() {
       db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
     },
 
-    /* Doua limite la codul de invitatie, ca in identitate.foloseste_invitatie
-       (C15, C16): 5 incercari gresite pe cont intr-un sfert de ora, si un
-       plafon global de 20, numarat pe toate conturile la un loc, ca sa nu se
-       ocoleasca limita pe cont creand mereu conturi noi. Sub plafon, un cont
-       curat cu un cod bun trece neatins. */
+    /* Limita de 5 incercari gresite pe cont intr-un sfert de ora, ca in
+       identitate.foloseste_invitatie (C15). A doua limita din baza, cea pe
+       adresa de la care vine cererea, nu are corespondent aici: modul
+       demonstrativ ruleaza in pagina, fara cereri si fara antete. */
     async folosesteInvitatie(cod) {
       const p = eu();
       const fereastra = new Date(Date.now() - 15 * 60000).toISOString();
       db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.creatLa >= fereastra);
-      if (db.incercariInvitatii.length >= 20) {
-        eroare("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
-      }
       const gresite = db.incercariInvitatii.filter((x) => x.profilId === p.id).length;
       if (gresite >= 5) {
         eroare("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
