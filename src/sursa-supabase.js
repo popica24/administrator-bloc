@@ -139,7 +139,7 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(org.from("apartamente").select("*").eq("bloc_id", bloc)),
       toate(() => org.from("apartamente_persoane").select("*, ap:apartamente!inner(bloc_id, id)")
         .eq("ap.bloc_id", bloc)),
-      ok(intr.from("liste_lunare").select("*").eq("bloc_id", bloc).order("luna", { ascending: false })),
+      toate(() => intr.from("liste_lunare").select("*").eq("bloc_id", bloc)),
       toate(() => intr.from("cheltuieli").select("*, l:liste_lunare!inner(bloc_id)").eq("l.bloc_id", bloc)),
       ok(intr.from("furnizori").select("*").eq("asociatie_id", asoc)),
       toate(() => alMeu(intr.from("repartizari").select("*").eq("bloc_id", bloc))),
@@ -154,19 +154,19 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(fin.rpc("situatie_bloc", { p_bloc_id: bloc })),
       ok(fin.from("fonduri_solduri").select("*").eq("bloc_id", bloc)),
       toate(() => fin.from("miscari_fond").select("*, f:fonduri!inner(bloc_id)").eq("f.bloc_id", bloc)),
-      ok(alMeu(ses.from("sesizari").select("*").eq("bloc_id", bloc)).order("creat_la", { ascending: false })),
+      toate(() => alMeu(ses.from("sesizari").select("*").eq("bloc_id", bloc))),
       toate(() => prin(ses.from("sesizari_mesaje").select("*, s:sesizari!inner(bloc_id, apartament_id)"), "s")),
       toate(() => prin(ses.from("sesizari_poze").select("*, s:sesizari!inner(bloc_id, apartament_id)"), "s")),
       esteAdmin ? Promise.resolve([]) : ok(ses.rpc("sesizari_bloc", { p_bloc_id: bloc })),
-      ok(com.from("anunturi").select("*").eq("asociatie_id", asoc).order("publicat_la", { ascending: false })),
+      toate(() => com.from("anunturi").select("*").eq("asociatie_id", asoc)),
       toate(() => com.from("anunturi_citiri").select("*, a:anunturi!inner(asociatie_id)").eq("a.asociatie_id", asoc)),
-      ok(com.from("documente").select("*").eq("asociatie_id", asoc).order("creat_la", { ascending: false })),
+      toate(() => com.from("documente").select("*").eq("asociatie_id", asoc)),
       ok(guv.rpc("situatie_voturi", { p_asociatie_id: asoc })),
       ok(guv.rpc("situatie_adunari", { p_asociatie_id: asoc })),
       esteAdmin ? ok(com.from("remindere_setari").select("*").eq("asociatie_id", asoc)) : Promise.resolve([]),
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? ok(id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
-      ok(id.from("profiluri").select("id, nume, email, telefon")),
+      toate(() => id.from("profiluri").select("id, nume, email, telefon")),
     ]);
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
        identitate.invitatii si organizare.apartamente sunt in scheme diferite,
@@ -183,6 +183,9 @@ export function creeazaSursaSupabase(url, cheie) {
     dupaData(persoane, "valabil_din");
     dupaData(miscari, "data");
     dupaData(mesaje, "creat_la", true);
+    dupaData(liste, "luna");
+    dupaData(anunturi, "publicat_la");
+    dupaData(documente, "creat_la");
 
     const numeProfil = (pid) => (profiluri.find((p) => p.id === pid) || {}).nume || null;
     const lunaAzi = luna(azi);

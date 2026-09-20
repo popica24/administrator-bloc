@@ -7,7 +7,7 @@
    Testele se uita si la cererile trimise catre PostgREST, nu doar la rezultat:
    la nivelul lui `date` cele doua defecte nu se vad, doar in trafic. */
 import { beforeAll, describe, expect, it } from "vitest";
-import { creeazaBloc, cuFetch, db, intraCa, lunaCurenta, ok, zi1 } from "./fixture.js";
+import { creeazaBloc, cuFetch, db, intraCa, lunaCurenta, ok, unic, zi1 } from "./fixture.js";
 
 const luna = lunaCurenta();
 let f;
@@ -114,5 +114,30 @@ describe("P4: citirile pleaca filtrate pe blocul de pe ecran", () => {
     const persoane = cererileCu(cereri, "apartamente_persoane").flatMap((c) => c.randuri || []);
     expect(persoane.length).toBeGreaterThan(0);
     expect(new Set(persoane.map((p) => p.apartament_id))).toEqual(new Set([f.ap["1"]]));
+  });
+});
+
+describe("C11: sesizari, anunturi, documente, profiluri si liste_lunare pagineaza pe cheie", () => {
+  it("un tabel cu peste 1000 de randuri (documente) se intoarce intreg, fara sa se piarda sau sa se dubleze vreun rand", async () => {
+    const u = unic();
+    const randuri = [];
+    for (let i = 1; i <= 1100; i += 1) {
+      randuri.push({ asociatie_id: f.asociatieId, bloc_id: f.blocId, titlu: `Document C11 ${i}`, tip: "altul", cale: `c11/${u}/${i}.pdf` });
+    }
+    await ok(db("comunicare").from("documente").insert(randuri));
+    const date = await adm.incarca();
+    const aleMele = date.documente.filter((d) => d.titlu.startsWith("Document C11 "));
+    expect(aleMele.length).toBe(1100);
+    expect(new Set(aleMele.map((d) => d.id)).size).toBe(1100);
+  });
+
+  it("cererile catre sesizari, anunturi, documente, profiluri si liste_lunare pagineaza pe cheie, nu se opresc la 1000", async () => {
+    const { cereri } = await cuTrafic(() => adm.incarca());
+    for (const tabel of ["sesizari", "anunturi", "documente", "profiluri", "liste_lunare"]) {
+      const ale = cererileCu(cereri, tabel);
+      expect(ale.length).toBeGreaterThan(0);
+      ale.forEach((c) => expect(c.url).toMatch(/order=id\./));
+    }
+    expect(cereri.some((c) => /[?&]offset=/.test(c.url))).toBe(false);
   });
 });
