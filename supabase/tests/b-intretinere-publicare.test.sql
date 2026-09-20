@@ -307,7 +307,6 @@ select throws_ok(
 select is((select count(*)::int from intretinere.repartizari where lista_id = pg_temp.fx('lista')), 0,
   'salveaza_lista_publicata: un refuz nu lasa nicio repartizare');
 
-select todo('[NOU-1] un rand dublat care ascunde un apartament lipsa cade pe cheia unica, nu pe verificarea "impartita corect"', 1);
 select throws_like(
   $$select intretinere.salveaza_lista_publicata(pg_temp.fx('lista'),
       jsonb_build_object('repartizari', pg_temp.randuri_c1_f1() || jsonb_build_array(
