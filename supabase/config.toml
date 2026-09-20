@@ -253,6 +253,13 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# F1: emailul de confirmare implicit e in engleza si nu spune nimic despre
+# asociatie sau despre AdminBloc — primul lucru pe care il vede un utilizator
+# de 50+ ani, necunoscator de tehnologie, care tocmai a cerut un cont.
+[auth.email.template.confirmation]
+subject = "Confirma adresa de email pentru contul tau AdminBloc"
+content_path = "./supabase/templates/confirmare-email.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
