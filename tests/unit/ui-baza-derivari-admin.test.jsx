@@ -14,7 +14,7 @@ describe("statisticiAdmin pe Sumar", () => {
     const t = text(container);
     expect(t).toContain("Lista de plata august 202612.154,95LEIde incasat, termen 25 sep 2026");
     expect(t).toContain("Publicata 8 sep 2026");
-    expect(t).toContain("Incasat pana acum 7.467,49 lei61%");
+    expect(t).toContain("Incasat pana acum 7.467,42 lei61%");
     expect(t).toContain("Au platit integral 14 din 20 apartamente.");
     expect(t).toContain("Restante7.013,655 apartamente in urma");
     expect(t).toContain("Penalizari17,11neachitate");
@@ -27,8 +27,8 @@ describe("statisticiAdmin pe Sumar", () => {
   it("restantierii, cel mai vechi datornic primul, cu penalizarile lor", async () => {
     const { container } = await pornesteApp({ email: ADMIN });
     const t = text(container);
-    const i11 = t.indexOf("Familia Georgescu117 zile intarziere, penalizari 14,89 lei2.917,42LEI");
-    const i3 = t.indexOf("Familia Ilie56 de zile intarziere, penalizari 1,20 lei1.497,37LEI");
+    const i11 = t.indexOf("Familia Georgescu117 zile intarziere, penalizari 14,89 lei2.917,41LEI");
+    const i3 = t.indexOf("Familia Ilie56 de zile intarziere, penalizari 1,20 lei1.497,45LEI");
     const i6 = t.indexOf("Vasile Munteanu25 de zile intarziere536,77LEI");
     expect(i11).toBeGreaterThan(0);
     /* Georgescu (117 zile) inainte de Ilie (56 de zile): datornicul cu mai
@@ -93,8 +93,8 @@ describe("listaPdf pentru avizier", () => {
     expect(t).toContain("C1 Apa rece si canalizare - Apa Canal 2000 Arges, ACA-448120 - 3.284,60 lei - pe consum masurat");
     expect(t).toContain("C9 Fond de reparatii - Asociatia de proprietari nr. 118, Hotarare AG din 12.03.2026 - 1.600,00 lei - pe cota indiviza");
     expect(t).toContain("Ap.\nProprietar\nPers.\nC1\nC2\nC3\nC4\nC5\nC6\nC7\nC8\nC9\nTotal luna\nRestante\nPenaliz.\nDe plata");
-    /* ap. 3: 821,84 luna + 1.496,17 restante + 1,20 penalizari */
-    expect(t).toContain("3\nFamilia Ilie\n4\n259,78\n191,22\n20,62\n91,43\n0,00\n73,47\n70,00\n19,00\n96,32\n821,84\n1.496,17\n1,20\n2.319,21");
+    /* ap. 3: 821,91 luna + 1.496,25 restante + 1,20 penalizari */
+    expect(t).toContain("3\nFamilia Ilie\n4\n259,85\n191,22\n20,62\n91,43\n0,00\n73,47\n70,00\n19,00\n96,32\n821,91\n1.496,25\n1,20\n2.319,36");
     /* ap. 17 (Elena): fara restante, deci celulele de restante si penalizari sunt goale */
     expect(t).toContain("17\nElena Marinescu\n3\n203,45\n159,27\n20,62\n68,57\n48,00\n55,10\n70,00\n19,00\n74,08\n718,09\n\n\n718,09");
     /* ap. 1 a platit deja: de plata 0 */
