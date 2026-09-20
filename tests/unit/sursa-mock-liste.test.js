@@ -160,7 +160,7 @@ describe("dateMotor", () => {
     const { s, ciorna } = await admin();
     const x = await s.dateMotor(ciorna.id);
     expect(x.apartamente).toHaveLength(20);
-    expect(x.apartamente[0]).toEqual({ id: expect.any(String), persoane: 2, cota: 4.01, scutitLift: true });
+    expect(x.apartamente[0]).toEqual({ id: expect.any(String), numar: "1", persoane: 2, cota: 4.01, scutitLift: true });
     expect(x.cheltuieli).toEqual([{ id: expect.any(String), cod: "C9", suma: 1600, metoda: "cota", tipApa: null }]);
     /* in septembrie sunt validate 6 apartamente, iar contorul general nu e citit */
     expect(Object.keys(x.consum)).toHaveLength(6);

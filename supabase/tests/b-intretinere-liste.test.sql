@@ -320,10 +320,10 @@ select is(
 select is(
   intretinere.date_pentru_motor(pg_temp.fx('lista')) -> 'apartamente',
   jsonb_build_array(
-    jsonb_build_object('id', pg_temp.fx('ap1'), 'persoane', 2, 'cota', 30, 'scutitLift', true),
-    jsonb_build_object('id', pg_temp.fx('ap2'), 'persoane', 3, 'cota', 30, 'scutitLift', false),
-    jsonb_build_object('id', pg_temp.fx('ap3'), 'persoane', 1, 'cota', 40, 'scutitLift', false)),
-  'date_pentru_motor: apartamentele, in ordinea numarului, cu persoanele lunii');
+    jsonb_build_object('id', pg_temp.fx('ap1'), 'numar', '1', 'persoane', 2, 'cota', 30, 'scutitLift', true),
+    jsonb_build_object('id', pg_temp.fx('ap2'), 'numar', '2', 'persoane', 3, 'cota', 30, 'scutitLift', false),
+    jsonb_build_object('id', pg_temp.fx('ap3'), 'numar', '3', 'persoane', 1, 'cota', 40, 'scutitLift', false)),
+  'date_pentru_motor: apartamentele, in ordinea numarului, cu persoanele lunii si numarul (R2: motorul desparte egalitatile de rest dupa numar)');
 select is(
   intretinere.date_pentru_motor(pg_temp.fx('lista')) -> 'cheltuieli',
   (select jsonb_agg(jsonb_build_object('id', id, 'cod', cod, 'suma', suma, 'metoda', metoda, 'tipApa', tip_apa) order by cod)

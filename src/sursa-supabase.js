@@ -615,7 +615,7 @@ export function creeazaSursaSupabase(url, cheie) {
       const dm = await ok(intr.rpc("date_pentru_motor", { p_lista_id: listaId }));
       const numere = (o) => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([t, x]) => [t, Number(x)]))]));
       return {
-        apartamente: dm.apartamente.map((a) => ({ id: a.id, persoane: Number(a.persoane), cota: Number(a.cota), scutitLift: !!a.scutitLift })),
+        apartamente: dm.apartamente.map((a) => ({ id: a.id, numar: a.numar, persoane: Number(a.persoane), cota: Number(a.cota), scutitLift: !!a.scutitLift })),
         cheltuieli: dm.cheltuieli.map((x) => ({ id: x.id, cod: x.cod, suma: Number(x.suma), metoda: x.metoda, tipApa: x.tipApa })),
         consum: numere(dm.consum),
         contorGeneral: Object.fromEntries(Object.entries(dm.contorGeneral || {}).map(([t, x]) => [t, Number(x)])),

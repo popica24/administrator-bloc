@@ -216,7 +216,7 @@ function consumLuna(db, blocId, luna) {
 function dateMotor(db, lista) {
   const apartamente = db.apartamente
     .filter((a) => a.blocId === lista.blocId)
-    .map((a) => ({ id: a.id, persoane: persoaneInLuna(db, a.id, lista.luna), cota: a.cota, scutitLift: a.scutitLift }));
+    .map((a) => ({ id: a.id, numar: a.numar, persoane: persoaneInLuna(db, a.id, lista.luna), cota: a.cota, scutitLift: a.scutitLift }));
   const cheltuieli = db.cheltuieli
     .filter((c) => c.listaId === lista.id)
     .map((c) => ({ id: c.id, cod: c.cod, suma: c.suma, metoda: c.metoda, tipApa: c.tipApa }));

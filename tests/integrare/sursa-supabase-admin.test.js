@@ -236,8 +236,8 @@ describe("motorul si publicarea", () => {
   it("dateMotor(): datele listei, convertite la numere", async () => {
     const dm = await adm.dateMotor(listaId);
     expect(dm.apartamente).toEqual([
-      { id: f.ap["1"], persoane: 2, cota: 20, scutitLift: true }, { id: f.ap["10"], persoane: 4, cota: 35, scutitLift: false },
-      { id: f.ap["2"], persoane: 3, cota: 30, scutitLift: false }, { id: f.ap["2A"], persoane: 1, cota: 15, scutitLift: false },
+      { id: f.ap["1"], numar: "1", persoane: 2, cota: 20, scutitLift: true }, { id: f.ap["10"], numar: "10", persoane: 4, cota: 35, scutitLift: false },
+      { id: f.ap["2"], numar: "2", persoane: 3, cota: 30, scutitLift: false }, { id: f.ap["2A"], numar: "2A", persoane: 1, cota: 15, scutitLift: false },
     ]);
     expect(dm.cheltuieli.map((c) => [c.cod, c.suma, c.metoda, c.tipApa])).toEqual([["C1", 300, "consum", "rece"], ["C2", 210.5, "persoane", null], ["C9", 100, "cota", null]]);
     expect(dm.consum).toEqual({

@@ -39,8 +39,8 @@ porneste(async (req) => {
     let rezultat;
     try {
       rezultat = calculeazaLista({
-        apartamente: dm.apartamente.map((a: { id: string; persoane: unknown; cota: unknown; scutitLift: boolean }) => ({
-          id: a.id, persoane: Number(a.persoane), cota: Number(a.cota), scutitLift: !!a.scutitLift,
+        apartamente: dm.apartamente.map((a: { id: string; numar: string; persoane: unknown; cota: unknown; scutitLift: boolean }) => ({
+          id: a.id, numar: a.numar, persoane: Number(a.persoane), cota: Number(a.cota), scutitLift: !!a.scutitLift,
         })),
         cheltuieli: dm.cheltuieli.map((c: { id: string; cod: string; suma: unknown; metoda: string; tipApa: string | null }) => ({
           id: c.id, cod: c.cod, suma: Number(c.suma), metoda: c.metoda, tipApa: c.tipApa,
