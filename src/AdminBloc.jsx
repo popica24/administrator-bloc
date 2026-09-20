@@ -549,7 +549,12 @@ function grupeazaCheltuieliPdf(cheltuieli, identWidth, extraWidth) {
   const perGrupFinal = Math.max(1, Math.floor((disponibil - extraWidth) / LAT_LISTA.ch));
   const grupe = [];
   const ramase = cheltuieli.slice();
-  while (ramase.length > perGrupFinal) grupe.push(ramase.splice(0, perGrupNormal));
+  /* [G9] O felie normala nu are voie sa goleasca complet ce mai ramane: daca
+     ar face-o, grupul final (singurul cu Total/Restante/Penalizari/De plata)
+     ar iesi gol, adica o pagina in plus fara nicio coloana de cheltuiala.
+     Cat timp mai e ceva de facut, felia ia cel mult perGrupNormal, dar lasa
+     mereu macar o cheltuiala pentru grupul final. */
+  while (ramase.length > perGrupFinal) grupe.push(ramase.splice(0, Math.min(perGrupNormal, ramase.length - 1)));
   grupe.push(ramase);
   return grupe;
 }

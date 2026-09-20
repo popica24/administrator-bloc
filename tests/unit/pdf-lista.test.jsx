@@ -2,10 +2,11 @@
    antetul se repeta pe fiecare pagina, corpul tabelului este lizibil de pe
    perete, cuvintele lungi se rup si numele se scurteaza la cuvant. */
 import { describe, it, expect, vi } from "vitest";
+import { screen } from "@testing-library/react";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 import { pornesteApp, ADMIN } from "./ajutor.jsx";
-import { apasa, prindePdf, citesteBlob } from "./ui-baza-ajutor.jsx";
+import { apasa, prindePdf, citesteBlob, tab } from "./ui-baza-ajutor.jsx";
 import { latimeText, imparteText, scurteazaNume } from "../../src/pdf.js";
 
 const LATIME_PAGINA = 842;
@@ -40,6 +41,49 @@ async function listaPdf(numarCheltuieli, proprietar) {
   const { blob } = pdf.descarcate[pdf.descarcate.length - 1];
   return textePdf(await citesteBlob(blob));
 }
+
+/* Exporta PDF-ul de avizier al listei publicate pe august, cu cate
+   cheltuieli cere testul (aceeasi lista, alt buton, alta latime pe grup) */
+async function listaPdfAvizier(numarCheltuieli) {
+  await pornesteApp({
+    email: ADMIN,
+    modifica: (d) => {
+      const lista = d.liste.find((l) => l.stare === "publicata");
+      const model = d.cheltuieli.find((c) => c.listaId === lista.id);
+      for (let i = d.cheltuieli.filter((c) => c.listaId === lista.id).length; i < numarCheltuieli; i += 1) {
+        d.cheltuieli.push({ ...model, id: `che-plus-av-${i}`, cod: `C${20 + i}`, categorie: `Cheltuiala ${i}`, suma: 1234.56 });
+      }
+    },
+  });
+  await tab("Facturi");
+  await apasa(screen.getByText("aug 26"));
+  const pdf = prindePdf();
+  await apasa("Exporta PDF pentru avizier");
+  const { blob } = pdf.descarcate[pdf.descarcate.length - 1];
+  return textePdf(await citesteBlob(blob));
+}
+
+/* [G9] Cand o felie normala goleste exact ce mai ramane, grupeazaCheltuieliPdf
+   adauga un grup final gol: antetul sare direct de la ultima coloana de
+   identitate ("Pers." sau "Ap.") la "Total luna", fara nicio coloana de
+   cheltuiala intre ele - o pagina in plus, cu un rand pe apartament si un
+   TOTAL, dar nicio cheltuiala. Textul e citit in ordinea din PDF (nu pe
+   pagini: un grup poate incepe si continua pe aceeasi pagina cu precedentul). */
+function textOrdonat(pagini) {
+  return pagini.flat().map((t) => t.text).join("\n");
+}
+
+describe("[G9] ultimul grup de coloane nu ramane niciodata gol", () => {
+  it.each([10, 11, 12, 13, 23, 24, 25, 26])("uz intern, cu %i cheltuieli", async (n) => {
+    const text = textOrdonat(await listaPdf(n));
+    expect(text).not.toContain("Pers.\nTotal luna");
+  });
+
+  it("avizier, cu 16 cheltuieli", async () => {
+    const text = textOrdonat(await listaPdfAvizier(16));
+    expect(text).not.toContain("Ap.\nTotal luna");
+  });
+});
 
 describe("[F26] coloanele se calculeaza din latimea paginii", () => {
   it.each([8, 14, 24])("cu %i cheltuieli nimic nu iese din pagina", async (n) => {
