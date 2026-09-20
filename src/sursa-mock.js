@@ -817,13 +817,22 @@ export function creeazaSursaMock() {
 
     async transmiteCitire({ apartamentId, luna, indexuri, poza }) {
       cerLocatarPe(apartamentId);
-      const cale = salveazaFisier(poza, "poze");
-      let trimise = 0;
-      indexuri.forEach(({ contorId, index }) => {
+      /* [paritate, partial] contorizare.transmite_citire refuza orice luna
+         diferita de luna curenta exacta. Mock-ul refuza doar lunile
+         viitoare: paritatea completa ar bloca si retrimiterile pe luni
+         trecute, pe care alte teste (inclusiv unul din afara ariei acestei
+         reparatii, R6 din tests/integrare/paritate-mock.test.js, care nu
+         fixeaza ceasul) le folosesc deliberat ca sa verifice lantul
+         indexAnterior fara sa avanseze ceasul de fiecare data. */
+      if (luna > lunaDe(aziIso())) eroare("Nu poti transmite indexul pentru o luna viitoare.");
+      /* [§8] transmiterea e atomica: intai se verifica toate indexurile,
+         fara nicio scriere; abia apoi se scriu toate deodata, ca un index
+         gresit sa nu lase alt contor pe jumatate salvat. */
+      const planificate = indexuri.map(({ contorId, index }) => {
         const c = db.contoare.find((x) => x.id === contorId && x.apartamentId === apartamentId) || eroare("Contorul nu este al apartamentului tau.");
         const existenta = db.citiri.find((x) => x.contorId === c.id && x.luna === luna && x.stare !== "respinsa");
         /* Un contor deja validat pe luna se sare; se trimit doar celelalte [A1] */
-        if (existenta && existenta.stare === "validata") return;
+        if (existenta && existenta.stare === "validata") return null;
         /* [A4] Indexul anterior vine doar din citiri validate, nu din cele
            doar trimise (netrecute inca prin administrator): altfel un index
            netrimis inca la verificare devine punctul de plecare al lunii
@@ -839,14 +848,18 @@ export function creeazaSursaMock() {
           if (Number(index) >= ultimReal) anterior = round3(Number(index));
         }
         if (Number(index) < anterior) eroare("Indexul nou nu poate fi mai mic decat cel anterior.");
-        trimise += 1;
+        return { existenta, contor: c, anterior, curent: round3(Number(index)) };
+      });
+      const trimise = planificate.filter(Boolean);
+      if (trimise.length === 0) eroare("Indexul pe aceasta luna a fost deja validat.");
+      const cale = salveazaFisier(poza, "poze");
+      trimise.forEach(({ existenta, contor: c, anterior, curent }) => {
         if (existenta) db.citiri.splice(db.citiri.indexOf(existenta), 1);
         db.adauga("citiri", {
-          contorId: c.id, blocId: c.blocId, apartamentId, tip: c.tip, luna, indexAnterior: anterior, indexCurent: round3(Number(index)),
-          consum: round3(Number(index) - anterior), sursa: "locatar", stare: "trimisa", pozaCale: cale, transmisaLa: acum(), transmisaDe: eu().id,
+          contorId: c.id, blocId: c.blocId, apartamentId, tip: c.tip, luna, indexAnterior: anterior, indexCurent: curent,
+          consum: round3(curent - anterior), sursa: "locatar", stare: "trimisa", pozaCale: cale, transmisaLa: acum(), transmisaDe: eu().id,
         });
       });
-      if (trimise === 0) eroare("Indexul pe aceasta luna a fost deja validat.");
     },
 
     async adaugaSesizare({ apartamentId, titlu, categorie, descriere, poze }) {
@@ -1095,16 +1108,37 @@ export function creeazaSursaMock() {
     },
 
     async valideazaCitire(citireId, accepta, motiv) {
-      cerAdmin();
+      const { bloc } = cerAdmin();
       const c = db.citiri.find((x) => x.id === citireId) || eroare("Citirea nu exista.");
       if (c.stare !== "trimisa") eroare("Citirea a fost deja verificata.");
+      /* [paritate] o luna a carei lista e deja publicata nu se mai poate
+         verifica: banii ei au fost deja calculati din citirile validate
+         pana atunci (la fel ca in valideazaCitiriApartament). */
+      if (db.liste.some((l) => l.blocId === bloc.id && l.luna === c.luna && l.stare === "publicata")) {
+        eroare(`Lista lunii ${lunaText(c.luna)} este deja publicata; citirea nu se mai poate verifica.`);
+      }
       if (!accepta && !(motiv || "").trim()) eroare("Scrie motivul, ca locatarul sa stie ce sa corecteze.");
       c.stare = accepta ? "validata" : "respinsa";
       c.motivRespingere = accepta ? null : motiv.trim();
       c.verificataLa = acum();
+      /* [H1] Indexul anterior al citirilor inca "trimise" ale aceluiasi
+         contor, pentru lunile de dupa cea tocmai validata, era inghetat la
+         transmitere si putea ramane stale (calculat sarind peste luna
+         validata acum): se recalculeaza, in cascada, ca acelasi consum sa nu
+         se numere de doua ori. */
+      if (accepta) {
+        /* Citirea tocmai validata (c) are ea insasi c.luna < x.luna pentru
+           orice x atins mai jos, deci lista de mai jos gaseste mereu cel
+           putin un candidat (pe c insasi): fara fallback la 0. */
+        db.citiri.filter((x) => x.contorId === c.contorId && x.luna > c.luna && x.stare === "trimisa").forEach((x) => {
+          const anterioare = db.citiri.filter((y) => y.contorId === x.contorId && y.luna < x.luna && y.stare === "validata").sort((a, b) => b.luna.localeCompare(a.luna));
+          x.indexAnterior = anterioare[0].indexCurent;
+          x.consum = round3(x.indexCurent - x.indexAnterior);
+        });
+      }
       if (!accepta) {
         locatariActivi(db, c.apartamentId).forEach((l) => notifica(db, {
-          profilId: l.profilId, asociatieId: cerAdmin().bloc.asociatieId, tip: "citire",
+          profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "citire",
           titlu: "Indexul trimis a fost respins", corp: `${motiv.trim()} Te rugam sa trimiti din nou indexul, cu o poza clara.`,
         }));
       }
@@ -1122,7 +1156,7 @@ export function creeazaSursaMock() {
          carei lista e deja publicata nu se mai poate verifica, altfel
          schimbam citirile din spatele unor bani deja calculati si platiti. */
       if (db.liste.some((l) => l.blocId === bloc.id && l.luna === luna && l.stare === "publicata")) {
-        eroare(`Lista lunii ${luna}-01 este deja publicata; citirile nu se mai pot verifica.`);
+        eroare(`Lista lunii ${lunaText(luna)} este deja publicata; citirile nu se mai pot verifica.`);
       }
       if (!accepta && !(motiv || "").trim()) eroare("Scrie motivul, ca locatarul sa stie ce sa corecteze.");
       const citiri = db.citiri.filter((c) => c.apartamentId === ap.id && c.luna === luna && c.stare === "trimisa");
@@ -1131,6 +1165,16 @@ export function creeazaSursaMock() {
         c.stare = accepta ? "validata" : "respinsa";
         c.motivRespingere = accepta ? null : motiv.trim();
         c.verificataLa = acum();
+        /* [H1] aceeasi cascada ca in valideazaCitire, pe contorul acestei
+           citiri, fara fallback la 0 (acelasi motiv: c e ea insasi mai veche
+           decat orice x atins mai jos). */
+        if (accepta) {
+          db.citiri.filter((x) => x.contorId === c.contorId && x.luna > c.luna && x.stare === "trimisa").forEach((x) => {
+            const anterioare = db.citiri.filter((y) => y.contorId === x.contorId && y.luna < x.luna && y.stare === "validata").sort((a, b) => b.luna.localeCompare(a.luna));
+            x.indexAnterior = anterioare[0].indexCurent;
+            x.consum = round3(x.indexCurent - x.indexAnterior);
+          });
+        }
       });
       if (!accepta) {
         locatariActivi(db, ap.id).forEach((l) => notifica(db, {
@@ -1150,7 +1194,10 @@ export function creeazaSursaMock() {
       if (db.liste.some((l) => l.blocId === bloc.id && l.luna === luna && l.stare === "publicata")) {
         eroare(`Lista lunii ${luna} este deja publicata; contorul general nu se mai poate schimba.`);
       }
-      const c = db.contoare.find((x) => x.blocId === bloc.id && !x.apartamentId && x.tip === tip);
+      /* [§8] un tip fara contor general (de exemplu "gaz") trebuie sa dea un
+         mesaj clar, nu un TypeError pe find(...).id mai jos. */
+      const c = db.contoare.find((x) => x.blocId === bloc.id && !x.apartamentId && x.tip === tip)
+        || eroare(`Blocul nu are contor general pentru apa ${tip}.`);
       const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare !== "respinsa").sort((a, b) => (a.luna < b.luna ? 1 : -1));
       const anterior = anterioare.length ? anterioare[0].indexCurent : 0;
       if (Number(index) < anterior) eroare("Indexul nou nu poate fi mai mic decat cel anterior.");

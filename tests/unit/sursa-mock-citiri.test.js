@@ -83,13 +83,13 @@ describe("transmiteCitire", () => {
     await expect(s.transmiteCitire({ apartamentId: apNr(d, "17").id, luna: "2026-09", indexuri: [] })).rejects.toThrow("Nu ai acces la acest apartament.");
   });
 
-  it.fails("[§8] transmiterea pentru alta luna decat cea curenta este refuzata", async () => {
+  it("[§8] transmiterea pentru alta luna decat cea curenta este refuzata", async () => {
     const { s, d } = await ca(LOCATAR);
     const { rece, aug } = contoare(d, d.eu.apartamentId);
     await expect(s.transmiteCitire({ apartamentId: d.eu.apartamentId, luna: "2026-11", indexuri: [{ contorId: rece.id, index: aug.rece + 9 }] })).rejects.toThrow();
   });
 
-  it.fails("[§8] transmiterea este atomica: un index gresit nu salveaza nici celalalt", async () => {
+  it("[§8] transmiterea este atomica: un index gresit nu salveaza nici celalalt", async () => {
     const { s, d } = await ca(LOCATAR);
     const { rece, calda, aug } = contoare(d, d.eu.apartamentId);
     await s.transmiteCitire({ apartamentId: d.eu.apartamentId, luna: "2026-09", indexuri: [{ contorId: rece.id, index: aug.rece + 3 }, { contorId: calda.id, index: aug.calda - 1 }] }).catch(() => {});
@@ -115,6 +115,7 @@ describe("transmiteCitire", () => {
     const apId = d.eu.apartamentId;
     const { rece, aug } = contoare(d, apId);
     await s.transmiteCitire({ apartamentId: apId, luna: "2026-09", indexuri: [{ contorId: rece.id, index: aug.rece + 10 }] });
+    ceasDemo(new Date("2026-10-05T09:00:00"));
     await s.transmiteCitire({ apartamentId: apId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece + 15 }] });
     expect((await s.incarca()).citiri.find((x) => x.luna === "2026-10").indexAnterior).toBe(aug.rece);
   });
@@ -157,6 +158,37 @@ describe("valideazaCitire", () => {
     expect((await s.incarca()).notificari[0]).toMatchObject({
       tip: "citire", titlu: "Indexul trimis a fost respins", corp: "Cifrele nu se vad. Te rugam sa trimiti din nou indexul, cu o poza clara.", cititaLa: null,
     });
+  });
+
+  it("[paritate] refuza o luna a carei lista e deja publicata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap9 = apNr(d, "9").id;
+    const septembrie = d.liste.find((l) => l.luna === "2026-09");
+    const rece = d.citiri.find((x) => x.apartamentId === ap9 && x.luna === "2026-09" && x.tip === "rece");
+    await s.publicaLista(septembrie.id);
+    await expect(s.valideazaCitire(rece.id, true))
+      .rejects.toThrow("Lista lunii septembrie 2026 este deja publicata; citirea nu se mai poate verifica.");
+    expect((await s.incarca()).citiri.find((x) => x.id === rece.id).stare).toBe("trimisa");
+  });
+
+  it("[H1] validarea recalculeaza indexul anterior stale al lunilor de dupa, inca trimise", async () => {
+    const { s, d } = await ca(LOCATAR);
+    const apId = d.eu.apartamentId;
+    const { rece, aug } = contoare(d, apId);
+    await s.transmiteCitire({ apartamentId: apId, luna: "2026-09", indexuri: [{ contorId: rece.id, index: aug.rece + 10 }] });
+    ceasDemo(new Date("2026-10-05T09:00:00"));
+    /* Octombrie e transmis cat timp septembrie e inca "trimisa": indexul lui
+       anterior sare peste septembrie si ramane pe indexul lui august. */
+    await s.transmiteCitire({ apartamentId: apId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece + 25 }] });
+    const octInainte = (await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-10");
+    expect(octInainte).toMatchObject({ indexAnterior: aug.rece, consum: 25 });
+
+    await s.intra(ADMIN, PAROLA);
+    const sept = (await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-09");
+    await s.valideazaCitire(sept.id, true);
+
+    const octDupa = (await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-10");
+    expect(octDupa).toMatchObject({ indexAnterior: aug.rece + 10, consum: 15 });
   });
 });
 
@@ -211,10 +243,25 @@ describe("valideazaCitiriApartament", () => {
     await s.publicaLista(septembrie.id);
 
     await expect(s.valideazaCitiriApartament(ap9, "2026-09", true, null))
-      .rejects.toThrow("Lista lunii 2026-09-01 este deja publicata; citirile nu se mai pot verifica.");
+      .rejects.toThrow("Lista lunii septembrie 2026 este deja publicata; citirile nu se mai pot verifica.");
     /* citirile raman neatinse, "trimise" */
     const dupa = (await s.incarca()).citiri.filter((x) => x.apartamentId === ap9 && x.luna === "2026-09");
     expect(dupa.every((x) => x.stare === "trimisa")).toBe(true);
+  });
+
+  it("[H1] recalculeaza si ea indexul anterior stale al lunilor de dupa, inca trimise", async () => {
+    const { s, d } = await ca(LOCATAR);
+    const apId = d.eu.apartamentId;
+    const { rece, aug } = contoare(d, apId);
+    await s.transmiteCitire({ apartamentId: apId, luna: "2026-09", indexuri: [{ contorId: rece.id, index: aug.rece + 10 }] });
+    ceasDemo(new Date("2026-10-05T09:00:00"));
+    await s.transmiteCitire({ apartamentId: apId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece + 25 }] });
+
+    await s.intra(ADMIN, PAROLA);
+    await s.valideazaCitiriApartament(apId, "2026-09", true, null);
+
+    const octDupa = (await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-10");
+    expect(octDupa).toMatchObject({ indexAnterior: aug.rece + 10, consum: 15 });
   });
 });
 
@@ -264,7 +311,7 @@ describe("citesteContorGeneral", () => {
       .rejects.toThrow("nu poate fi mai mare decat indexul de pornire al lunii urmatoare");
   });
 
-  it.fails("[§8] un tip fara contor general da un mesaj clar", async () => {
+  it("[§8] un tip fara contor general da un mesaj clar", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.citesteContorGeneral("2026-09", "gaz", 10)).rejects.toThrow(/contor/i);
   });
@@ -332,6 +379,7 @@ describe("estimeazaCitiri", () => {
     await s.intra(ILIE, PAROLA);
     const d = await s.incarca();
     const { rece, aug } = contoare(d, d.eu.apartamentId);
+    ceasDemo(new Date("2026-10-05T09:00:00"));
     await s.transmiteCitire({ apartamentId: d.eu.apartamentId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece + 1 }] });
     /* citirea pleaca de la indexul real: consum 0, lantul continua de acolo */
     expect((await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-10"))
@@ -346,6 +394,7 @@ describe("estimeazaCitiri", () => {
     await s.intra(ILIE, PAROLA);
     const d = await s.incarca();
     const { rece, aug } = contoare(d, d.eu.apartamentId);
+    ceasDemo(new Date("2026-10-05T09:00:00"));
     await expect(s.transmiteCitire({ apartamentId: d.eu.apartamentId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece - 1 }] }))
       .rejects.toThrow("Indexul nou nu poate fi mai mic decat cel anterior.");
   });
@@ -355,6 +404,7 @@ describe("media consumului", () => {
   it("o luna cu un singur tip validat are media celuilalt null", async () => {
     const { s, d } = await ca(LOCATAR);
     const { rece, aug } = contoare(d, d.eu.apartamentId);
+    ceasDemo(new Date("2026-10-05T09:00:00"));
     await s.transmiteCitire({ apartamentId: d.eu.apartamentId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece + 12 }] });
     await s.intra(ADMIN, PAROLA);
     const c = (await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-10");
