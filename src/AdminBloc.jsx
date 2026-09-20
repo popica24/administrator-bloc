@@ -4424,10 +4424,23 @@ export default function AdminBloc() {
     sursa.sesiuneCurenta().then(async (s) => {
       if (!viu) return;
       setSesiune(s);
+      /* [E3] Punctul de plecare al istoricului taburilor: fara el, primul tab
+         nu are nicio urma in istoric si "Inapoi" nu se mai poate opri pe el. */
+      window.history.replaceState({ tab: null, parametri: null }, "");
       if (s) await reincarca();
     });
     return () => { viu = false; };
   }, [sursa, reincarca]);
+
+  /* [E3] Taburile nu lasau nicio urma in istoricul browserului: "Inapoi" iesea
+     direct din aplicatie, ca de pe o pagina obisnuita. Pe React Native tab
+     bar-ul de jos (@react-navigation/bottom-tabs) tine singur istoricul
+     ecranelor, deci acest efect nu are echivalent acolo. */
+  useEffect(() => {
+    const laInapoi = (e) => { setTab(e.state.tab); setParametri(e.state.parametri); };
+    window.addEventListener("popstate", laInapoi);
+    return () => window.removeEventListener("popstate", laInapoi);
+  }, []);
 
   /* Fiecare comanda: apel catre sursa, apoi datele proaspete. Rezultatul este
      { ok, rezultat }, ca ecranul sa stie daca poate inchide formularul. */
@@ -4452,6 +4465,7 @@ export default function AdminBloc() {
       const s = await sursa.sesiuneCurenta();
       setSesiune(s);
       setTab(null);
+      window.history.replaceState({ tab: null, parametri: null }, "");
       if (s) await reincarca();
       return s;
     };
@@ -4541,7 +4555,13 @@ export default function AdminBloc() {
 
   const api = useMemo(() => ({ ...comenzi, date }), [comenzi, date]);
 
-  const go = useCallback((t, p) => { setTab(t); setParametri(p ? { ...p, _n: Date.now() } : null); }, []);
+  const go = useCallback((t, p) => {
+    const parametriNoi = p ? { ...p, _n: Date.now() } : null;
+    setTab(t);
+    setParametri(parametriNoi);
+    /* [E3] pushState lasa o urma in istoric, ca "Inapoi" sa revina la tabul de dinainte */
+    window.history.pushState({ tab: t, parametri: parametriNoi }, "");
+  }, []);
 
   let continut;
   let bara = null;

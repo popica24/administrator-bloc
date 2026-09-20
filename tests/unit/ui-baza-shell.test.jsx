@@ -128,6 +128,24 @@ describe("TabBar si BaraSus", () => {
     expect(screen.getByText("Panou administrator")).toBeTruthy();
   });
 
+  /* popstate ajunge la fereastra ca o sarcina asincrona (nu ca o microsarcina),
+     deci se asteapta un ceas real, nu doar promisiuni rezolvate */
+  const inapoiInBrowser = async () => {
+    window.history.back();
+    await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
+  };
+
+  it("[E3] Inapoi in browser revine la tabul anterior, in loc sa iasa din aplicatie", async () => {
+    await pornesteApp({ email: ADMIN });
+    await tab("Facturi");
+    await tab("Sesizari");
+    expect(taburi()[3]).toEqual(["Sesizari1", "true"]);
+    await inapoiInBrowser();
+    expect(taburi()[2]).toEqual(["Facturi", "true"]);
+    await inapoiInBrowser();
+    expect(taburi()[0]).toEqual(["Sumar", "true"]);
+  });
+
   it("go() cu parametri: indicatorul Restante duce la apartamentele cu restanta", async () => {
     await pornesteApp({ email: ADMIN });
     await apasa("Restante");
