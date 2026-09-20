@@ -170,7 +170,9 @@ describe("listaPdf pentru avizier", () => {
     const pdf = prindePdf();
     await apasa("Exporta lista PDF");
     const { text: t } = await pdf.ultimul();
-    expect(t).toContain("\n1\nGheorghe Voicu\n\n\n\n\n\n\n\n\n\n\n0,00\n\n\n-504,86\n2\nAna Petrescu");
+    /* [L13] coloana Pers. arata persoanele apartamentului (2), chiar daca
+       apartamentul nu are nicio repartizare pe lista */
+    expect(t).toContain("\n1\nGheorghe Voicu\n2\n\n\n\n\n\n\n\n\n\n0,00\n\n\n-504,86\n2\nAna Petrescu");
   });
 
   /* Audit L12: Number("3A") este NaN, deci ordinea din PDF nu mai e cea de pe scara */
@@ -190,7 +192,7 @@ describe("listaPdf pentru avizier", () => {
   });
 
   /* Audit L13: coloana Pers. e goala cand lista nu are nicio cheltuiala pe persoane */
-  it.fails("[L13] coloana Pers. arata persoanele si fara metoda persoane", async () => {
+  it("[L13] coloana Pers. arata persoanele si fara metoda persoane", async () => {
     await pornesteApp({
       email: ADMIN,
       modifica: (d) => { d.cheltuieli.filter((c) => c.metoda === "persoane").forEach((c) => { c.metoda = "apartamente"; }); },

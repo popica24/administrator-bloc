@@ -609,7 +609,6 @@ function construiesteListaPdf(date, listaId, interna) {
     apartamente.forEach((ap, i) => {
       const linii = liniiLista(date, listaId, ap.id);
       const totalL = suma(linii, (l) => l.suma);
-      const pers = linii.find((l) => l.baza && l.baza.unitate === "persoane" && l.metoda === "persoane");
       const rest = arataDatorii ? suma(datoriiDeschise(date, ap.id).filter((d) => d.tip !== "penalizare" && d.listaId !== listaId), (d) => d.rest) : 0;
       const pen = arataDatorii ? penalizariDeschise(date, ap.id) : 0;
       const dl = datoriePeLista(date, listaId, ap.id);
@@ -619,7 +618,10 @@ function construiesteListaPdf(date, listaId, interna) {
         coloane: randGrup(grupCheltuieli, ultimulGrup, {
           ap: { text: ap.numar, latime: LAT_LISTA.ap },
           prop: { text: scurteazaNume(ap.proprietar, LAT_LISTA.prop - 4, MARIME_TABEL_LISTA), latime: LAT_LISTA.prop },
-          pers: { text: pers ? num(pers.baza.valoare, 0) : "", latime: LAT_LISTA.pers, dreapta: true },
+          /* [L13] Persoanele declarate ale apartamentului, nu baza unei
+             cheltuieli repartizate pe persoane: coloana era goala cand
+             nicio cheltuiala a lunii nu se imparte asa. */
+          pers: { text: num(ap.persoane, 0), latime: LAT_LISTA.pers, dreapta: true },
           cheltuiala: (c) => {
             const l = linii.find((x) => x.id === c.id);
             return { text: l ? lei(l.suma, false) : "", latime: LAT_LISTA.ch, dreapta: true };
