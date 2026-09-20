@@ -430,7 +430,7 @@ describe("bloc de test: ramurile maparii", () => {
 
   it("documentele: fara cele ale altui bloc; cel ascuns doar pentru conducere", () => {
     expect(admin.documente.map((d) => d.id).sort()).toEqual([ids.dAsoc, ids.dBloc, ids.dAscuns].sort());
-    expect(admin.documente.find((d) => d.id === ids.dAscuns)).toMatchObject({ vizibil: false, areFisier: true, tip: "altul" });
+    expect(admin.documente.find((d) => d.id === ids.dAscuns)).toMatchObject({ vizibil: false, tip: "altul" });
     expect(loc1.documente.map((d) => d.id).sort()).toEqual([ids.dAsoc, ids.dBloc].sort());
   });
 

@@ -52,7 +52,7 @@ const SESIUNE_EXPIRATA = "Sesiunea a expirat. Intra din nou in cont.";
 /* Mesajele tehnice ale serverului, spuse pe romaneste */
 function traduce(error) {
   const m = (error && (error.message || error.msg)) || "A aparut o eroare.";
-  if (/Invalid login credentials/i.test(m)) return "Emailul sau parola nu sunt corecte.";
+  if (/Invalid login credentials/i.test(m)) return "Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.";
   if (/Email not confirmed/i.test(m)) return "Confirma adresa de email inainte sa intri in cont.";
   if (/you can only request this after/i.test(m)) return "Ai trimis cererea de doua ori prea repede. Mai asteapta putin si incearca din nou.";
   if (/already registered|already been registered/i.test(m)) return "Exista deja un cont cu acest email.";
@@ -388,7 +388,7 @@ export function creeazaSursaSupabase(url, cheie) {
         totalLocatari: esteAdmin ? new Set(locatariActivi.map((l) => l.profil_id)).size : null,
       })),
       documente: documente.filter((d) => !d.bloc_id || d.bloc_id === bloc).map((d) => ({
-        id: d.id, titlu: d.titlu, tip: d.tip, creatLa: d.creat_la, vizibil: d.vizibil_locatarilor, areFisier: true,
+        id: d.id, titlu: d.titlu, tip: d.tip, creatLa: d.creat_la, vizibil: d.vizibil_locatarilor,
       })),
       voturi: voturi.map((v) => ({
         ...v,

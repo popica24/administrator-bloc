@@ -663,18 +663,9 @@ function proiecteaza(db, profilId, apartamentAles) {
       totalLocatari: esteAdmin ? profiluriLocatari.size : null,
     }));
 
-  /* [Curatenie] areFisier nu e citit de niciun ecran (nici pentru
-     Deschide/descarcaPdf, care merg dupa id, nu dupa acest camp) si cele
-     doua surse ii dau valori pe cai diferite: aici e calculat din !!d.cale,
-     in sursa-supabase.js e mereu true. Ramane totusi expus, neschimbat, ca
-     tests/integrare/contract-surse.test.js (in afara ariei acestei
-     reparatii) verifica exact ca cele doua surse au aceleasi chei: a-l
-     scoate doar dintr-o sursa ar sparge acel contract. Corect ar fi ca
-     ambele surse sa nu-l mai produca deloc, dar asta atinge
-     src/sursa-supabase.js, in afara ariei acestei reparatii. */
   const documente = db.documente.filter((d) => d.asociatieId === asociatie.id && (esteAdmin || d.vizibilLocatarilor))
     .sort((a, b) => (a.creatLa < b.creatLa ? 1 : -1))
-    .map((d) => ({ id: d.id, titlu: d.titlu, tip: d.tip, creatLa: d.creatLa, vizibil: d.vizibilLocatarilor, areFisier: !!d.cale }));
+    .map((d) => ({ id: d.id, titlu: d.titlu, tip: d.tip, creatLa: d.creatLa, vizibil: d.vizibilLocatarilor}));
 
   const voturi = db.voturi.filter((v) => v.asociatieId === asociatie.id).sort((a, b) => (a.deschisLa < b.deschisLa ? 1 : -1)).map((v) => {
     const exprimate = db.exprimate.filter((e) => e.votId === v.id);

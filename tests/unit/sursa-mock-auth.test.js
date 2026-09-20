@@ -385,7 +385,7 @@ describe("fisiere si documente", () => {
     const fisier = new File(["pdf"], "pv.pdf", { type: "application/pdf" });
     await s.incarcaDocument({ titlu: " PV adunare ", tip: "proces_verbal", fisier, vizibil: true });
     const doc = (await s.incarca()).documente[0];
-    expect(doc).toMatchObject({ titlu: "PV adunare", areFisier: true, vizibil: true });
+    expect(doc).toMatchObject({ titlu: "PV adunare", vizibil: true });
     expect(await s.deschideDocument(doc.id)).toBe("blob:fisier");
     expect(creat).toHaveBeenLastCalledWith(fisier);
   });
