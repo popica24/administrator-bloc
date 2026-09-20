@@ -53,43 +53,42 @@ describe("parola ceruta de backend", () => {
 });
 
 describe("[S4] confirmarea adresei de email inainte de pasul 2", () => {
-  /* Cand backend-ul cere confirmarea emailului, inregistrarea nu mai deschide
-     o sesiune, deci cererea cu atestatul nu are cum sa plece acum. */
-  async function inregistrareFaraSesiune() {
+  /* [E1] Cand backend-ul cere confirmarea emailului, inregistrarea nu mai
+     deschide o sesiune: inregistreaza() rezolva la null (nu arunca), fara sa
+     schimbe nimic in sursa. Testele foloseau inainte un dublu mock cu un
+     contract inventat (inregistreaza() rezolvat la `undefined`, plus
+     sesiuneCurenta() suprascris separat) pe care nicio sursa reala nu il are.
+     sursa-mock.js reproduce exact raspunsul surselor reale (null, fara
+     sesiune) pentru orice adresa cu eticheta "+cere-confirmare", asa ca
+     testele folosesc acum sursa nealterata, ca la o inregistrare adevarata. */
+  it("[E1] administratorul vede ce are de facut, nu o eroare tehnica, si numarul atestatului ramane vizibil", async () => {
     const s = sursaDemo();
-    const inregistreaza = vi.spyOn(s, "inregistreaza").mockResolvedValue(undefined);
-    vi.spyOn(s, "sesiuneCurenta").mockResolvedValue(null);
-    globalThis.sursaTest = s;
-    return { sursa: s, inregistreaza };
-  }
-
-  it("administratorul vede ce are de facut, nu o eroare tehnica", async () => {
-    const { sursa } = await inregistrareFaraSesiune();
-    const cerere = vi.spyOn(sursa, "cereVerificareAdministrator");
-    await pornesteApp({ sursa });
+    const cerere = vi.spyOn(s, "cereVerificareAdministrator");
+    await pornesteApp({ sursa: s });
     await screen.findByText("Intra in cont");
     await apasa("Sunt administrator si vreau cont");
     await scrie("Numele tau", "Dana Pop");
-    await scrie("Email", "dana@admin.ro");
+    await scrie("Email", "dana+cere-confirmare@admin.ro");
     await scrie("Alege o parola", "ParolaBuna1");
     await scrie("Numarul atestatului", "AT-1");
     await apasa("Trimite cererea");
 
     expect(screen.getByText("Confirma adresa de email")).toBeTruthy();
-    expect(screen.getByText(/dana@admin\.ro/)).toBeTruthy();
+    expect(screen.getByText(/dana\+cere-confirmare@admin\.ro/)).toBeTruthy();
+    expect(screen.getByText(/AT-1/)).toBeTruthy();
     expect(cerere).not.toHaveBeenCalled();
     expect(toast()).toBeNull();
   });
 
-  it("locatarul vede acelasi ecran, iar codul ramane de folosit dupa confirmare", async () => {
-    const { sursa } = await inregistrareFaraSesiune();
-    const foloseste = vi.spyOn(sursa, "folosesteInvitatie");
-    await pornesteApp({ sursa });
+  it("[E1] locatarul vede acelasi ecran, iar codul ramane vizibil si de folosit dupa confirmare", async () => {
+    const s = sursaDemo();
+    const foloseste = vi.spyOn(s, "folosesteInvitatie");
+    await pornesteApp({ sursa: s });
     await screen.findByText("Intra in cont");
     await apasa("Am un cod de la administrator");
     await scrie("Codul primit", "ABCD2345");
     await scrie("Numele tau", "Dana Pop");
-    await scrie("Email", "dana@locatar.ro");
+    await scrie("Email", "dana+cere-confirmare@locatar.ro");
     await scrie("Alege o parola", "ParolaBuna1");
     await apasa("Creeaza contul");
 
