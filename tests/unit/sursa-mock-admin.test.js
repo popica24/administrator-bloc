@@ -75,7 +75,7 @@ describe("schimbaPersoane", () => {
     await expect(s.schimbaPersoane(apNr(d, "1").id, 2.5, "2026-10")).rejects.toThrow();
   });
 
-  it.fails("[NOU-3] modificarea pe un apartament inexistent este refuzata", async () => {
+  it("[NOU-3] modificarea pe un apartament inexistent este refuzata", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.schimbaPersoane("apa-0", 2, "2026-10")).rejects.toThrow();
   });

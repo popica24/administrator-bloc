@@ -936,7 +936,8 @@ export function creeazaSursaMock() {
     },
 
     async schimbaPersoane(apartamentId, numar, dinLuna, motiv) {
-      cerAdmin();
+      const { bloc } = cerAdmin();
+      if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) eroare("Apartamentul nu exista sau nu este in blocul tau.");
       if (!(Number(numar) >= 0)) eroare("Numarul de persoane nu este valid.");
       const existent = db.persoane.find((p) => p.apartamentId === apartamentId && p.valabilDin === dinLuna);
       if (existent) eroare("Exista deja o modificare pentru luna aceasta. Istoricul nu se rescrie.");
