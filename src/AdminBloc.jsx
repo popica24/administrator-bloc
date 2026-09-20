@@ -1688,7 +1688,13 @@ function SheetPlataCard({ open, onClose, apartamentId, sumaDePlata }) {
               Chitanta {plata.chitanta ? numarChitanta(plata.chitanta) : ""} a fost emisa pe {dataLunga(plata.confirmataLa)}. O gasesti oricand in Plata, la Platile mele.
             </Txt>
           </Card>
-          <Btn label="Descarca chitanta" full size="lg" onPress={() => descarcaPdf(chitantaPdf(date, plata), `chitanta-${plata.chitanta.numar}.pdf`)} />
+          {/* [J14] plata.chitanta poate lipsi (nu inca emisa): textul de mai
+              sus deja o trateaza, dar butonul citea plata.chitanta.numar
+              neconditionat. Ascuns, ca la Platile mele si la fisa
+              apartamentului (p.chitanta &&). */}
+          {plata.chitanta && (
+            <Btn label="Descarca chitanta" full size="lg" onPress={() => descarcaPdf(chitantaPdf(date, plata), `chitanta-${plata.chitanta.numar}.pdf`)} />
+          )}
           <Btn label="Gata" variant="secondary" full onPress={inchide} />
         </>
       ) : (

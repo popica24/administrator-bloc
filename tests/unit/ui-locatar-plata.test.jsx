@@ -370,14 +370,20 @@ describe("Plata cu cardul", () => {
     expect(screen.getByRole("button", { name: "Plateste 718,09 lei" })).toBeTruthy();
   });
 
-  it("o plata confirmata fara chitanta inca emisa nu arata numarul", async () => {
+  /* [J14] "Descarca chitanta" se randa neconditionat, dar apasarea lui
+     citea plata.chitanta.numar: fara chitanta (acelasi caz ca la Platile
+     mele si la fisa apartamentului, unde butonul e ascuns cu p.chitanta &&),
+     apasarea arunca o eroare in loc sa nu arate deloc butonul. */
+  it("[J14] o plata confirmata fara chitanta inca emisa nu arata numarul si nici butonul de descarcare", async () => {
     let faraChitanta = false;
     await laPlata({ email: ELENA, modifica: (d) => { if (faraChitanta) d.plati.forEach((p) => { p.chitanta = null; }); } });
     faraChitanta = true;
     await apasaButon("Plateste 718,09 lei cu cardul");
     completeaza();
     await apasaButon("Plateste 718,09 lei");
-    expect(text(screen.getByRole("dialog", { name: "Plata a reusit" }))).toContain("Chitanta a fost emisa pe 19 septembrie 2026.");
+    const dialog = screen.getByRole("dialog", { name: "Plata a reusit" });
+    expect(text(dialog)).toContain("Chitanta a fost emisa pe 19 septembrie 2026.");
+    expect(within(dialog).queryByRole("button", { name: "Descarca chitanta" })).toBeNull();
   });
 
   it("[H7/F8] plata in asteptare: mesajul bancii, fara Plata a reusit, si nu se poate plati din nou fara sa inchida", async () => {
