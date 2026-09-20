@@ -6,7 +6,7 @@
 -- singura data suma lor, apoi le scrie pe toate intr-o singura actualizare.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(22);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in d-comenzi-fisa-fond.test.sql).
@@ -152,8 +152,8 @@ select throws_ok(
       jsonb_build_object('apartament_id', pg_temp.fx('ap1'), 'cota', 30),
       jsonb_build_object('apartament_id', pg_temp.fx('ap2'), 'cota', 35),
       jsonb_build_object('apartament_id', pg_temp.fx('ap3'), 'cota', 40)))$$,
-  'Cotele trimise insumeaza 105.0000, nu 100. Corecteaza-le pe toate inainte de a le salva.',
-  'schimba_cotele_blocului: suma diferita de 100 este refuzata');
+  'Cotele trimise insumeaza 105,00, nu 100. Corecteaza-le pe toate inainte de a le salva.',
+  'schimba_cotele_blocului: suma diferita de 100 este refuzata, mesajul in format romanesc (F2)');
 select is(
   (select cota_indiviza from organizare.apartamente where id = pg_temp.fx('ap1')),
   25.0000::numeric(7,4),
@@ -264,6 +264,12 @@ select throws_ok(
   '42501', null,
   'schimba_cotele_blocului: anon nu are drept de executie');
 reset role;
+
+-- public.numar_ro: formatul romanesc (virgula, doua zecimale) folosit in
+-- mesajele de refuz de mai sus (F2).
+select is(public.numar_ro(102.98), '102,98', 'numar_ro: doua zecimale, cu virgula');
+select is(public.numar_ro(105), '105,00', 'numar_ro: un numar intreg capata doua zecimale');
+select is(public.numar_ro(105.4, 0), '105', 'numar_ro: zero zecimale, fara virgula');
 
 select * from finish();
 rollback;

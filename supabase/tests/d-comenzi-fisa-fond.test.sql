@@ -181,8 +181,8 @@ select is(
 
 select throws_ok(
   $$select organizare.schimba_fisa_apartament(pg_temp.fx('ap1'), 'Ioana Unu-Noua', 35, null, false, 1::smallint)$$,
-  'Cotele blocului ar ajunge la 105.0000 din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.',
-  'schimba_fisa_apartament: pe un bloc activ, cota care strica suma de 100 este refuzata');
+  'Cotele blocului ar ajunge la 105,00 din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.',
+  'schimba_fisa_apartament: pe un bloc activ, cota care strica suma de 100 este refuzata, mesajul in format romanesc (F2)');
 select is(
   (select cota_indiviza from organizare.apartamente where id = pg_temp.fx('ap1')),
   30.0000::numeric(7,4),
