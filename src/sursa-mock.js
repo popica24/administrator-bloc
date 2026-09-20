@@ -802,7 +802,12 @@ export function creeazaSursaMock() {
         const existenta = db.citiri.find((x) => x.contorId === c.id && x.luna === luna && x.stare !== "respinsa");
         /* Un contor deja validat pe luna se sare; se trimit doar celelalte [A1] */
         if (existenta && existenta.stare === "validata") return;
-        const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare !== "respinsa").sort((a, b) => (a.luna < b.luna ? 1 : -1));
+        /* [A4] Indexul anterior vine doar din citiri validate, nu din cele
+           doar trimise (netrecute inca prin administrator): altfel un index
+           netrimis inca la verificare devine punctul de plecare al lunii
+           urmatoare, iar o respingere ulterioara lasa luna urmatoare
+           calculata pe o valoare pe care nimeni n-a validat-o. */
+        const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare === "validata").sort((a, b) => (a.luna < b.luna ? 1 : -1));
         let anterior = anterioare.length ? anterioare[0].indexCurent : 0;
         /* Sub o estimare prea mare se accepta indexul real, dar nu sub ultima
            citire reala [A2]. Cand nu exista nicio citire reala (toate cele
@@ -1086,10 +1091,22 @@ export function creeazaSursaMock() {
 
     async citesteContorGeneral(luna, tip, index) {
       const { bloc } = cerAdmin();
+      /* [A3] Nicio corectare pe o luna viitoare sau pe o luna a carei lista e
+         deja publicata: banii pentru acea luna au fost deja calculati din
+         vechea citire. */
+      if (luna > lunaDe(aziIso())) eroare("Nu poti citi contorul general pe o luna viitoare.");
+      if (db.liste.some((l) => l.blocId === bloc.id && l.luna === luna && l.stare === "publicata")) {
+        eroare(`Lista lunii ${luna} este deja publicata; contorul general nu se mai poate schimba.`);
+      }
       const c = db.contoare.find((x) => x.blocId === bloc.id && !x.apartamentId && x.tip === tip);
       const anterioare = db.citiri.filter((x) => x.contorId === c.id && x.luna < luna && x.stare !== "respinsa").sort((a, b) => (a.luna < b.luna ? 1 : -1));
       const anterior = anterioare.length ? anterioare[0].indexCurent : 0;
       if (Number(index) < anterior) eroare("Indexul nou nu poate fi mai mic decat cel anterior.");
+      /* [A3] Un index prea mare ar face consumul lunii urmatoare negativ */
+      const urmatoare = db.citiri.find((x) => x.contorId === c.id && x.luna === lunaUrmatoare(luna) && x.stare !== "respinsa");
+      if (urmatoare && Number(index) > urmatoare.indexAnterior) {
+        eroare(`Indexul nou (${index}) nu poate fi mai mare decat indexul de pornire al lunii urmatoare (${urmatoare.indexAnterior}).`);
+      }
       const existenta = db.citiri.find((x) => x.contorId === c.id && x.luna === luna);
       if (existenta) db.citiri.splice(db.citiri.indexOf(existenta), 1);
       db.adauga("citiri", {

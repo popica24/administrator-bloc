@@ -110,7 +110,7 @@ describe("transmiteCitire", () => {
     await s.transmiteCitire({ apartamentId: apId, luna: "2026-09", indexuri });
   });
 
-  it.fails("[A4] indexul anterior vine doar din citirile validate, nu din cele trimise", async () => {
+  it("[A4] indexul anterior vine doar din citirile validate, nu din cele trimise", async () => {
     const { s, d } = await ca(LOCATAR);
     const apId = d.eu.apartamentId;
     const { rece, aug } = contoare(d, apId);
@@ -185,7 +185,7 @@ describe("citesteContorGeneral", () => {
     await expect(s.citesteContorGeneral("2026-09", "rece", 1)).rejects.toThrow("Doar administratorul poate face asta.");
   });
 
-  it.fails("[A3] corectarea unei luni publicate este refuzata", async () => {
+  it("[A3] corectarea unei luni publicate este refuzata", async () => {
     const { s } = await ca(ADMIN);
     await expect(s.citesteContorGeneral("2026-06", "rece", 99999)).rejects.toThrow();
   });
