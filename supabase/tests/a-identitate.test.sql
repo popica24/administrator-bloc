@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(105);
+select plan(106);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -389,11 +389,13 @@ select results_eq(
   $$values ('in_asteptare'::text, 'AT-100'::text, pg_temp.id('candidat')::text || '/atestat.pdf')$$,
   'identitate.cere_verificare_administrator: numarul corectat, atestatul pastrat');
 select is(identitate.eu() ->> 'rol', 'in_asteptare', 'identitate.eu: cererea in asteptare');
-select todo('[S8] p_atestat_cale poate indica atestatul altui utilizator', 1);
 select throws_ok(
   $$select identitate.cere_verificare_administrator('AT-100', pg_temp.id('adminA')::text || '/atestat.pdf')$$,
-  null, null,
+  'P0001', 'Poza atestatului trebuie sa fie a ta.',
   '[S8] atestatul trebuie sa fie sub <auth.uid()>/');
+select lives_ok(
+  $$select identitate.cere_verificare_administrator('AT-100', pg_temp.id('candidat')::text || '/alt-atestat.pdf')$$,
+  '[S8] atestatul propriu, chiar cu alt nume de fisier, este acceptat');
 reset role;
 
 select pg_temp.ca('adminA');
