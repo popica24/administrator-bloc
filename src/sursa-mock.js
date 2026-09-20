@@ -786,9 +786,15 @@ export function creeazaSursaMock() {
 
     async platesteCard({ apartamentId, suma, card }) {
       cerLocatarPe(apartamentId);
-      const cifre = String(card.numar || "").replace(/\s/g, "");
-      if (cifre.length < 12) eroare("Numarul cardului nu este complet.");
-      if (cifre.endsWith("0002")) eroare("Banca a refuzat plata. Nu s-a retras niciun ban.");
+      /* [paritate] plata-card refuza mai intai o suma care nu e pozitiva. */
+      if (!(Number(suma) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
+      const cifre = String((card && card.numar) || "").replace(/\D/g, "");
+      if (cifre.length < 13) eroare("Numarul cardului nu este complet.");
+      /* [paritate] procesatorul de test refuza cardul care se termina in
+         0002 si orice card fara data de expirare in formatul LL/AA: ambele
+         raman "refuzata" de banca, nu erori distincte de formular. */
+      const expira = String((card && card.expira) || "");
+      if (cifre.endsWith("0002") || !/^\d{2}\/\d{2}$/.test(expira)) eroare("Banca a refuzat plata. Nu s-a retras niciun ban.");
       const plata = inregistreazaPlata(db, { apartamentId, suma, metoda: "card", la: acum(), platitaDe: eu().id });
       return { plataId: plata.id };
     },

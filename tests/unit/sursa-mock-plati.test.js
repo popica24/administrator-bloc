@@ -40,7 +40,7 @@ describe("platesteCard", () => {
     const deschise = d.datorii.filter((x) => x.rest > 0).sort((a, b) => (a.scadenta < b.scadenta ? -1 : 1));
     expect(deschise.map((x) => x.scadenta)).toEqual(["2026-07-25", "2026-08-25", "2026-09-01", "2026-09-25"]);
     const suma = Math.round((deschise[0].rest + 10) * 100) / 100;
-    const { plataId } = await s.platesteCard({ apartamentId: apId, suma, card: { numar: "5555555555554444" } });
+    const { plataId } = await s.platesteCard({ apartamentId: apId, suma, card: { numar: "5555555555554444", expira: "12/29" } });
     const p = (await s.incarca()).plati.find((x) => x.id === plataId);
     expect(p.alocari).toEqual([{ datorieId: deschise[0].id, suma: deschise[0].rest }, { datorieId: deschise[1].id, suma: 10 }]);
   });
@@ -67,17 +67,17 @@ describe("platesteCard", () => {
     expect((await s.incarca()).plati).toHaveLength(d.plati.length);
   });
 
-  it.fails("[§8] un numar de card de 12 cifre este refuzat, ca la procesator (minim 13)", async () => {
+  it("[§8] un numar de card de 12 cifre este refuzat, ca la procesator (minim 13)", async () => {
     const { s, d } = await ca(LOCATAR);
     await expect(s.platesteCard({ apartamentId: d.eu.apartamentId, suma: 10, card: { ...CARD_BUN, numar: "424242424242" } })).rejects.toThrow();
   });
 
-  it.fails("[§8] cardul fara data de expirare LL/AA este refuzat", async () => {
+  it("[§8] cardul fara data de expirare LL/AA este refuzat", async () => {
     const { s, d } = await ca(LOCATAR);
     await expect(s.platesteCard({ apartamentId: d.eu.apartamentId, suma: 10, card: { numar: "4242424242424242", expira: "" } })).rejects.toThrow();
   });
 
-  it.fails("[§8] o plata de 0 lei este refuzata", async () => {
+  it("[§8] o plata de 0 lei este refuzata", async () => {
     const { s, d } = await ca(LOCATAR);
     await expect(s.platesteCard({ apartamentId: d.eu.apartamentId, suma: 0, card: CARD_BUN })).rejects.toThrow();
   });

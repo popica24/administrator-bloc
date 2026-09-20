@@ -196,7 +196,7 @@ describe("publicaLista", () => {
     await s.intra(LOCATAR, PAROLA);
     const e = await s.incarca();
     const rest = e.datorii.reduce((t, x) => t + x.rest, 0);
-    await s.platesteCard({ apartamentId: e.eu.apartamentId, suma: rest + 50, card: { numar: "4242424242424242" } });
+    await s.platesteCard({ apartamentId: e.eu.apartamentId, suma: rest + 50, card: { numar: "4242424242424242", expira: "12/29" } });
     await s.intra(ADMIN, PAROLA);
     await s.publicaLista(ciorna.id);
     await s.intra(LOCATAR, PAROLA);
@@ -266,7 +266,7 @@ describe("liste in afara ordinii lunilor", () => {
     const { s, d } = await admin();
     /* o plata cu data mai veche decat platile rejucate, ca avansurile sa se ordoneze dupa data */
     await s.intra(LOCATAR, PAROLA);
-    await s.platesteCard({ apartamentId: apNr(d, "17").id, suma: 5, card: { numar: "4242424242424242" } });
+    await s.platesteCard({ apartamentId: apNr(d, "17").id, suma: 5, card: { numar: "4242424242424242", expira: "12/29" } });
     await s.intra(ADMIN, PAROLA);
     const id = await s.deschideLista("2026-04");
     await s.publicaLista(id);
