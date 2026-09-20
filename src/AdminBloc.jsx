@@ -3083,7 +3083,11 @@ function FisaApartament({ apId, onClose }) {
       {actiune === "incasare" ? (
         <Card gap={S.md}>
           <Txt size={14} weight={700}>Incasare in numerar</Txt>
-          <Field label="Suma primita" value={sumaIncasata} onChange={setSumaIncasata} placeholder={lei(Math.max(0, s), false)} suffix="lei" inputMode="decimal" hint="Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat." />
+          {/* [F8] Nu exista nicio cale de a anula o chitanta emisa (nici in
+             aplicatie, nici in registrul financiar): cel mai onest lucru pe
+             care il poate face ecranul e sa spuna asta inainte de emitere,
+             nu sa lase administratorul sa creada ca poate reveni. */}
+          <Field label="Suma primita" value={sumaIncasata} onChange={setSumaIncasata} placeholder={lei(Math.max(0, s), false)} suffix="lei" inputMode="decimal" hint="Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua." />
           <Eroare mesaj={eroare} />
           <Box row gap={S.sm}>
             <Btn label={incaseaza ? "Se emite..." : "Emite chitanta"} disabled={!(sumaCash > 0) || incaseaza} onPress={async () => {

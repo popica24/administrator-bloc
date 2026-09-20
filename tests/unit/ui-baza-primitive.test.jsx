@@ -33,7 +33,8 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     await apasa("Inregistreaza incasare cash");
     /* campul pleaca de la sold, scris romaneste, si se citeste inapoi exact */
     expect(screen.getByLabelText("Suma primita").value).toBe("3.939,99");
-    expect(screen.getByText("Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat.")).toBeTruthy();
+    /* [F8] nu exista nicio cale de a anula o chitanta emisa; ecranul o spune inainte de emitere */
+    expect(screen.getByText("Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua.")).toBeTruthy();
     expect(within(screen.getByRole("dialog")).getByText("lei")).toBeTruthy();
     await apasa("Emite chitanta");
     expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.99);
