@@ -104,7 +104,7 @@ describe("transmiteCitire()", () => {
     expect(c.index_curent).toBe(7);
   });
 
-  it.fails("[A8] o poza HEIC refuzata de bucket primeste un mesaj pe romaneste", async () => {
+  it("[A8] o poza HEIC refuzata de bucket primeste un mesaj pe romaneste", async () => {
     const poza = new Blob([await pozaJpeg().arrayBuffer()], { type: "image/heic" });
     await expect(s.transmiteCitire({ apartamentId: f.ap["1"], luna, indexuri: [{ contorId: f.contoare["1:calda"], index: 99 }], poza }))
       .rejects.toThrow(/poza/i);

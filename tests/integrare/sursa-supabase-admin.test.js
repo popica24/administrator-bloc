@@ -388,4 +388,14 @@ describe("comunicare si guvernanta", () => {
     await loc.incarca();
     await expect(loc.incarcaDocument({ titlu: "X", tip: "altul", fisier: pdf() })).rejects.toThrow("Nu ai drept sa faci aceasta operatie.");
   });
+
+  /* [A8] Mesajul romanesc pentru o poza refuzata de bucket e specific
+     bucket-ului "poze": un fisier refuzat din alt bucket (aici "documente",
+     care nu accepta text/plain) trece mai departe mesajul tehnic al
+     serverului, neschimbat. */
+  it("un fisier refuzat de bucket-ul documente nu primeste mesajul de poza", async () => {
+    const fisier = new File([Buffer.from("nu e un document acceptat")], "notite.txt", { type: "text/plain" });
+    await expect(adm.incarcaDocument({ titlu: "Notite", tip: "altul", fisier }))
+      .rejects.toThrow(/mime type/i);
+  });
 });

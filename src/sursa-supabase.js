@@ -325,8 +325,24 @@ export function creeazaSursaSupabase(url, cheie) {
     };
   }
 
+  /* [A8] O poza pe care telefonul n-a putut sa o decodeze (HEIC, pe unele
+     telefoane Android) sau al carei toBlob() a esuat ajunge la incarcare
+     neschimbata (micsoreazaPoza() intoarce fisierul original cand nu poate
+     produce un JPEG): fie intr-un format pe care bucket-ul "poze" nu il
+     accepta, fie prea mare pentru limita lui de 1 MB. Bucket-ul refuza
+     upload-ul cu un mesaj tehnic, in engleza ("mime type ... is not
+     supported", "the object exceeded the maximum allowed size"), pe care
+     omul nu-l poate folosi. Orice alt refuz (retea, drept de scriere)
+     trece mai departe prin traduce(), neschimbat. */
+  const ESEC_POZA = /mime type|not supported|maximum allowed size|payload too large/i;
   const incarcaFisier = async (bucket, cale, fisier) => {
-    await ok(sb.storage.from(bucket).upload(cale, fisier, { contentType: fisier.type || undefined, upsert: false }));
+    const { error } = await sb.storage.from(bucket).upload(cale, fisier, { contentType: fisier.type || undefined, upsert: false });
+    if (error) {
+      if (bucket === "poze" && ESEC_POZA.test(error.message)) {
+        throw new Error("Poza nu a putut fi trimisa: formatul ei sau dimensiunea ei nu sunt acceptate. Fa poza din nou (nu HEIC) sau alege alta poza si incearca iar.");
+      }
+      arunca(error);
+    }
     return cale;
   };
   const invoca = async (nume, corp) => {
