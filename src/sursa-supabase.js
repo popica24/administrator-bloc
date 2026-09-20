@@ -25,6 +25,15 @@ const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 /* Un camp gol din formular ("" sau necompletat) ajunge null in baza */
 const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
 
+/* [P3] O sesiune moarta (JWT expirat la 24h, sau dupa 8h de inactivitate,
+   supabase/config.toml) nu se mai reautorizeaza singura: cererea ajunge fara
+   token valid, iar Postgres/PostgREST refuza fie cu "JWT expired" (GoTrue),
+   fie cu "permission denied for schema ..." (rolul anon nu are drepturile
+   pe care le are authenticated). cmd() din AdminBloc.jsx cauta acest text
+   exact ca sa scoata omul la ecranul de autentificare, nu doar sa arate
+   toastul si sa-l lase pe ecranul vechi. */
+const SESIUNE_EXPIRATA = "Sesiunea a expirat. Intra din nou in cont.";
+
 /* Mesajele tehnice ale serverului, spuse pe romaneste */
 function traduce(error) {
   const m = (error && (error.message || error.msg)) || "A aparut o eroare.";
@@ -35,6 +44,7 @@ function traduce(error) {
   const lungime = m.match(/Password should be at least (\d+) characters/i);
   if (lungime) return `Parola trebuie sa aiba cel putin ${lungime[1]} caractere.`;
   if (/Password should contain at least one character of each/i.test(m)) return "Parola trebuie sa aiba si litere mici, si litere mari, si cifre.";
+  if (/JWT expired|invalid JWT|invalid claim|permission denied for schema/i.test(m)) return SESIUNE_EXPIRATA;
   if (/row-level security/i.test(m)) return "Nu ai drept sa faci aceasta operatie.";
   if (error && error.code === "23505") return "Exista deja o inregistrare identica.";
   if (/Failed to fetch|NetworkError/i.test(m)) return "Serverul nu raspunde. Verifica conexiunea la internet.";

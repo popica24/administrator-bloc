@@ -38,6 +38,21 @@ describe("mesajele serverului, pe romaneste", () => {
     await expect(s.scrieMesaj(SESIZARE, "x")).rejects.toThrow("Sesizarea nu exista.");
   });
 
+  /* [P3] Sesiunea moarta (JWT expirat, la 24h sau dupa 8h de inactivitate):
+     cererea ajunge fara token valid, iar Postgres refuza cu un mesaj tehnic
+     in engleza, pe schema, nu pe randul cerut (spre deosebire de RLS). */
+  it("[P3] schema refuzata (sesiune expirata): mesajul spune sa intre din nou in cont", async () => {
+    await cuFetch(rpc("scrie_mesaj", () => json({ message: "permission denied for schema comunicare", code: "42501" }, 403)), async () => {
+      await expect(s.scrieMesaj(SESIZARE, "x")).rejects.toThrow("Sesiunea a expirat. Intra din nou in cont.");
+    });
+  });
+
+  it("[P3] JWT expirat: acelasi mesaj", async () => {
+    await cuFetch(rpc("scrie_mesaj", () => json({ message: "JWT expired", code: "PGRST301" }, 401)), async () => {
+      await expect(s.scrieMesaj(SESIZARE, "x")).rejects.toThrow("Sesiunea a expirat. Intra din nou in cont.");
+    });
+  });
+
   it("[NOU-3] deschideDocument(): o eroare care nu e 'randul lipseste' (PGRST116) trece neschimbata", async () => {
     await cuFetch(tabel("documente", () => json({}, 500)), async () => {
       await expect(s.deschideDocument(SESIZARE)).rejects.toThrow("A aparut o eroare.");

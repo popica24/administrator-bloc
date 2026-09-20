@@ -82,6 +82,21 @@ describe("incarcarea", () => {
     await act(async () => {});
     expect(screen.getAllByRole("button").some((b) => /Iesi|Incearca din nou/.test(b.textContent))).toBe(true);
   });
+
+  /* [P3] O sesiune moarta chiar la prima incarcare (dupa un repornit al
+     aplicatiei cu o sesiune veche pe disc) nu are rost sa arate "Incearca
+     din nou": reincercarea va esua la fel. Omul merge direct la intrare, cu
+     toastul care explica de ce. */
+  it("[P3] daca prima incarcare cade cu sesiunea expirata, merge direct la intrare, fara cardul de reincercare", async () => {
+    const s = sursaDemo();
+    await s.intra(LOCATAR, PAROLA);
+    s.incarca = () => Promise.reject(new Error("Sesiunea a expirat. Intra din nou in cont."));
+    await pornesteApp({ sursa: s });
+    await act(async () => {});
+    expect(screen.getByText("Intra in cont")).toBeTruthy();
+    expect(screen.queryByText("Nu am putut deschide contul")).toBeNull();
+    expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
+  });
 });
 
 describe("TabBar si BaraSus", () => {

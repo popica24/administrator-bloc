@@ -278,6 +278,12 @@ const CALITATI = [
 ];
 const etichetaCalitate = (v) => (CALITATI.find((c) => c.value === v) || { label: v }).label;
 
+/* [P3] Acelasi text pe care traduce() din sursa-supabase.js il intoarce
+   pentru o sesiune moarta (JWT expirat sau "permission denied for schema").
+   cmd() il cauta exact, ca sa scoata omul la autentificare, nu doar sa arate
+   un toast si sa-l lase pe ecranul vechi. */
+const MESAJ_SESIUNE_EXPIRATA = "Sesiunea a expirat. Intra din nou in cont.";
+
 const ETICHETE_DATORII = {
   intretinere: "Intretinere",
   penalizare: "Penalizare",
@@ -4556,6 +4562,16 @@ export default function AdminBloc() {
     } catch (e) {
       const mesajEroare = e.message || "Datele nu au putut fi incarcate.";
       toastMsg(mesajEroare);
+      /* [P3] O sesiune moarta nu se arata doar intr-un toast, aici sau in
+         orice comanda care reincarca dupa ea: omul trebuie dus direct la
+         autentificare, cu ecranul care arata date invechite inlaturat.
+         `undefined` (distinct de `null`, folosit mai sus pentru sesiunea
+         golita fara eroare) ii spune lui cmd() ca toastul a fost deja aratat,
+         ca sa nu-l suprascrie cu mesajul de succes al comenzii. */
+      if (mesajEroare === MESAJ_SESIUNE_EXPIRATA) {
+        setSesiune(null);
+        return undefined;
+      }
       setEroareIncarcare(mesajEroare);
       return null;
     }
@@ -4598,12 +4614,22 @@ export default function AdminBloc() {
       const comanda = async (...args) => {
         try {
           const rezultat = await fn(...args);
-          if (reinc) await reincarca();
+          if (reinc) {
+            const d = await reincarca();
+            /* [P3] reincarca() a gasit sesiunea moarta: a aratat deja
+               toastul potrivit si a scos omul la autentificare. Mesajul de
+               succes al comenzii nu mai are ce sa explice pe un ecran care
+               oricum dispare. */
+            if (d === undefined) return { ok: true, rezultat };
+          }
           if (mesaj) toastMsg(typeof mesaj === "function" ? mesaj(rezultat, ...args) : mesaj);
           return { ok: true, rezultat };
         } catch (e) {
           const mesajEroare = e.message || "A aparut o eroare. Incearca din nou.";
           toastMsg(mesajEroare);
+          /* [P3] Comanda insasi a lovit sesiunea moarta (fara sa mai ajunga
+             la reincarcare): acelasi rezultat, direct la autentificare. */
+          if (mesajEroare === MESAJ_SESIUNE_EXPIRATA) setSesiune(null);
           return { ok: false, eroare: e, mesaj: mesajEroare };
         }
       };

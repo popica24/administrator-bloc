@@ -2,7 +2,7 @@
    datele si arata un mesaj; la eroare arata mesajul erorii. Plus
    deschideDocument (deschideDupa, deschideUrl) si disparitia mesajului. */
 import { describe, it, expect, vi } from "vitest";
-import { act, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 import { pornesteApp, ADMIN } from "./ajutor.jsx";
@@ -130,6 +130,42 @@ describe("cmd(): eroare", () => {
     vi.spyOn(sursa, "incarca").mockRejectedValueOnce(new Error("Sesiune expirata"));
     await act(async () => { d = await ctx().reincarca(); });
     expect(toast().textContent).toBe("Sesiune expirata");
+  });
+
+  /* [P3] Sesiunea moarta (JWT expirat sau "permission denied for schema",
+     traduse de sursa-supabase.js) nu trebuie doar aratata intr-un toast: omul
+     ramanea pe ecranul vechi, cu date invechite, si nicio comanda nu mai
+     mergea. cmd() trebuie sa observe exact acest mesaj si sa scoata omul la
+     autentificare, ca la "Iesi din cont". */
+  it("[P3] sesiune expirata: o comanda refuzata scoate omul la autentificare", async () => {
+    const { sursa, ctx } = await pornesteAdmin();
+    vi.spyOn(sursa, "scrieMesaj").mockRejectedValue(new Error("Sesiunea a expirat. Intra din nou in cont."));
+    let r;
+    await act(async () => { r = await ctx().scrieMesaj("ses-1", "x"); });
+    expect(r).toEqual({ ok: false, eroare: expect.any(Error), mesaj: "Sesiunea a expirat. Intra din nou in cont." });
+    expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
+    await screen.findByText("Intra in cont");
+  });
+
+  it("[P3] sesiune expirata la reincarcare (dupa o comanda reusita) scoate omul la autentificare", async () => {
+    const { sursa, ctx } = await pornesteAdmin();
+    vi.spyOn(sursa, "stergeCheltuiala").mockResolvedValue(undefined);
+    vi.spyOn(sursa, "incarca").mockRejectedValueOnce(new Error("Sesiunea a expirat. Intra din nou in cont."));
+    let r;
+    await act(async () => { r = await ctx().stergeCheltuiala("che-1"); });
+    expect(r.ok).toBe(true);
+    expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
+    await screen.findByText("Intra in cont");
+  });
+
+  it("[P3] o eroare de reincarcare care nu e sesiune moarta nu scoate omul din ecran", async () => {
+    const { sursa, ctx } = await pornesteAdmin();
+    vi.spyOn(sursa, "stergeCheltuiala").mockResolvedValue(undefined);
+    vi.spyOn(sursa, "incarca").mockRejectedValueOnce(new Error("Retea cazuta"));
+    let r;
+    await act(async () => { r = await ctx().stergeCheltuiala("che-1"); });
+    expect(r.ok).toBe(true);
+    expect(screen.queryByText("Intra in cont")).toBeNull();
   });
 });
 
