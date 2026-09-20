@@ -966,6 +966,9 @@ export function creeazaSursaMock() {
     async marcheazaFacturaPlatita(cheltuialaId, platita) {
       cerAdmin();
       const c = db.cheltuieli.find((x) => x.id === cheltuialaId) || eroare("Factura nu exista.");
+      /* [paritate] intretinere.marcheaza_factura_platita cere tip = 'factura':
+         randul fondului de reparatii nu se marcheaza platit catre furnizor. */
+      if (c.tip !== "factura") eroare("Factura nu exista.");
       c.achitataLa = platita ? aziIso() : null;
     },
 

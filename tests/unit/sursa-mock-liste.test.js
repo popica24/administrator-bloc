@@ -295,7 +295,7 @@ describe("marcheazaFacturaPlatita", () => {
     await expect(s.marcheazaFacturaPlatita("che-0", true)).rejects.toThrow("Factura nu exista.");
   });
 
-  it.fails("[§8] randul fondului de reparatii nu se poate marca platit", async () => {
+  it("[§8] randul fondului de reparatii nu se poate marca platit", async () => {
     const { s, d } = await admin();
     const fond = cheltuieliLista(d, listaLuna(d, "2026-08").id).find((c) => c.tip === "fond_reparatii");
     await expect(s.marcheazaFacturaPlatita(fond.id, true)).rejects.toThrow();
