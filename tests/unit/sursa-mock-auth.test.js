@@ -351,4 +351,16 @@ describe("fisiere si documente", () => {
     const s = await ca(LOCATAR);
     await expect(s.deschideDocument("doc-0")).rejects.toThrow("Documentul nu exista.");
   });
+
+  it("[paritate] un locatar nu poate deschide un document doar-admin, ca la RLS", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:contract");
+    const s = await ca(ADMIN);
+    await s.incarcaDocument({ titlu: "Contract ascuns", tip: "contract", fisier: new File(["x"], "c.pdf"), vizibil: false });
+    const doc = (await s.incarca()).documente.find((x) => x.titlu === "Contract ascuns");
+    await s.intra(LOCATAR, PAROLA);
+    await expect(s.deschideDocument(doc.id)).rejects.toThrow("Documentul nu mai exista sau nu este disponibil.");
+    /* administratorul il deschide fara probleme */
+    await s.intra(ADMIN, PAROLA);
+    await expect(s.deschideDocument(doc.id)).resolves.toBe("blob:contract");
+  });
 });

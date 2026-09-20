@@ -809,6 +809,12 @@ export function creeazaSursaMock() {
 
     async deschideDocument(documentId) {
       const d = db.documente.find((x) => x.id === documentId) || eroare("Documentul nu exista.");
+      /* [paritate] RLS pe comunicare.documente: un locatar vede doar
+         documentele vizibile locatarilor; un document doar-admin, deschis
+         direct dupa id, trebuie sa dea acelasi refuz ca la sursa Supabase
+         (unde randul pur si simplu nu mai vine din select). */
+      const esteAdmin = rolul(db, eu().id).rol === "administrator";
+      if (!esteAdmin && !d.vizibilLocatarilor) eroare("Documentul nu mai exista sau nu este disponibil.");
       if (d.cale && db.fisiere[d.cale]) return URL.createObjectURL(db.fisiere[d.cale]);
       const bytes = documentPdf({
         titlu: d.titlu,
