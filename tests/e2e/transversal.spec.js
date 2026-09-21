@@ -321,26 +321,38 @@ test.describe("doua actiuni diferite, una dupa alta", () => {
     const sb = serviciu();
     const { data: profil } = await sb.schema("identitate").from("profiluri")
       .select("id").eq("email", CONTURI.elena).single();
-    const { data: necitite } = await sb.schema("comunicare").from("notificari")
-      .select("id").eq("profil_id", profil.id).is("citita_la", null)
-      .order("trimisa_la", { ascending: false }).limit(3);
-    expect(necitite.length).toBeGreaterThanOrEqual(2);
+    /* Testul isi face singur cele doua notificari necitite. Cate are Elena
+       depinde de ziua in care s-a facut seed-ul (mai vechi de 14 zile sunt
+       citite) si de ce au facut testele rulate inainte in aceeasi baza: pe un
+       seed din 21 septembrie are una singura. Sunt cele mai noi, deci primele. */
+    const acum = Date.now();
+    const asociatie = await asociatieD14();
+    const { data: noi, error } = await sb.schema("comunicare").from("notificari").insert([
+      { profil_id: profil.id, asociatie_id: asociatie, tip: "reminder", titlu: "E2E E6 prima", trimisa_la: new Date(acum).toISOString() },
+      { profil_id: profil.id, asociatie_id: asociatie, tip: "reminder", titlu: "E2E E6 a doua", trimisa_la: new Date(acum - 1000).toISOString() },
+    ]).select("id");
+    if (error) throw new Error(`notificarile testului: ${error.message}`);
+    const iduri = noi.map((n) => n.id);
 
-    await intraCa(page, "elena");
-    const butoane = buton(page, "Am citit");
-    await expect(butoane).toHaveCount(3);
-    const unu = await butoane.nth(0).elementHandle();
-    const doi = await butoane.nth(1).elementHandle();
-    await unu.dispatchEvent("click");
-    /* fara pauza: cele doua apasari cad in aceeasi fereastra */
-    await doi.dispatchEvent("click");
+    try {
+      await intraCa(page, "elena");
+      const butoane = buton(page, "Am citit");
+      await expect(butoane.nth(1)).toBeVisible();
+      const unu = await butoane.nth(0).elementHandle();
+      const doi = await butoane.nth(1).elementHandle();
+      await unu.dispatchEvent("click");
+      /* fara pauza: cele doua apasari cad in aceeasi fereastra */
+      await doi.dispatchEvent("click");
 
-    await expect.poll(async () => {
-      const { count } = await sb.schema("comunicare").from("notificari")
-        .select("id", { count: "exact", head: true })
-        .in("id", [necitite[0].id, necitite[1].id]).not("citita_la", "is", null);
-      return count;
-    }, { timeout: 20000 }).toBe(2);
+      await expect.poll(async () => {
+        const { count } = await sb.schema("comunicare").from("notificari")
+          .select("id", { count: "exact", head: true })
+          .in("id", iduri).not("citita_la", "is", null);
+        return count;
+      }, { timeout: 20000 }).toBe(2);
+    } finally {
+      await sb.schema("comunicare").from("notificari").delete().in("id", iduri);
+    }
   });
 });
 
