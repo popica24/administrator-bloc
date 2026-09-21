@@ -173,9 +173,11 @@ export function creeazaSursaSupabase(url, cheie) {
        celuilalt apartament, care ar ramane invizibile si neplatibile.
        Interogarea sta inaintea marelui Promise.all, pentru ca alMeu() si
        prin() (folosite in el) au nevoie de lista completa. */
+    /* [K17] ordonate, ca alegerea apartamentului sa nu se reaseze la fiecare incarcare */
     const legaturileMele = esteAdmin ? [] : await ok(id.from("locatari").select("apartament_id, calitate")
       .eq("profil_id", eu.profil_id).eq("bloc_id", bloc)
-      .lte("activ_din", azi).or(`activ_pana.is.null,activ_pana.gt.${azi}`));
+      .lte("activ_din", azi).or(`activ_pana.is.null,activ_pana.gt.${azi}`)
+      .order("activ_din", { ascending: true }).order("apartament_id", { ascending: true }));
     const idApartamenteMele = legaturileMele.length ? legaturileMele.map((l) => l.apartament_id) : [eu.apartament_id];
     /* Apartamentul "activ" este cel ales de om, daca e chiar unul de-al lui;
        altfel ramane cel ales de identitate.eu(). */
@@ -212,7 +214,8 @@ export function creeazaSursaSupabase(url, cheie) {
         .eq("ap.bloc_id", bloc)),
       toate(() => intr.from("liste_lunare").select("*").eq("bloc_id", bloc)),
       toate(() => intr.from("cheltuieli").select("*, l:liste_lunare!inner(bloc_id)").eq("l.bloc_id", bloc)),
-      ok(intr.from("furnizori").select("*").eq("asociatie_id", asoc)),
+      /* [K17] prin toate(): peste max_rows se pierdeau tacut, in ordinea fizica */
+      toate(() => intr.from("furnizori").select("*").eq("asociatie_id", asoc)),
       toate(() => alMeu(intr.from("repartizari").select("*").eq("bloc_id", bloc))),
       toate(() => alMeu(cont.from("contoare").select("*").eq("bloc_id", bloc).is("scos_la", null))),
       toate(() => alMeu(cont.from("citiri").select("*").eq("bloc_id", bloc))),
@@ -223,7 +226,7 @@ export function creeazaSursaSupabase(url, cheie) {
       toate(() => prin(fin.from("alocari_plati").select("*, p:plati!inner(bloc_id, apartament_id)"), "p")),
       toate(() => prin(fin.from("chitante").select("*, p:plati!inner(bloc_id, apartament_id)"), "p")),
       ok(fin.rpc("situatie_bloc", { p_bloc_id: bloc })),
-      ok(fin.from("fonduri_solduri").select("*").eq("bloc_id", bloc)),
+      toate(() => fin.from("fonduri_solduri").select("*").eq("bloc_id", bloc)),
       toate(() => fin.from("miscari_fond").select("*, f:fonduri!inner(bloc_id)").eq("f.bloc_id", bloc)),
       toate(() => alMeu(ses.from("sesizari").select("*").eq("bloc_id", bloc))),
       toate(() => prin(ses.from("sesizari_mesaje").select("*, s:sesizari!inner(bloc_id, apartament_id)"), "s")),
@@ -240,7 +243,7 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(guv.rpc("situatie_adunari", { p_asociatie_id: asoc, p_apartament_id: euUi.apartamentId || null })),
       esteAdmin ? ok(com.from("remindere_setari").select("*").eq("asociatie_id", asoc)) : Promise.resolve([]),
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
-      esteAdmin ? ok(id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
+      esteAdmin ? toate(() => id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
       toate(() => id.from("profiluri").select("id, nume, email, telefon")),
     ]);
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:

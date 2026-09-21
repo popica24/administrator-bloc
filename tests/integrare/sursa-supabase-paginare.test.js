@@ -172,3 +172,38 @@ describe("C11: sesizari, anunturi, documente, profiluri si liste_lunare pagineaz
     expect(cereri.some((c) => /[?&]offset=/.test(c.url))).toBe(false);
   });
 });
+
+/* [K17] Furnizorii si locatarii blocului nu treceau prin toate(): peste
+   max_rows (1000) se pierdeau tacut, iar randurile veneau in ordinea fizica a
+   tabelei. Soldurile fondurilor si legaturile locatarului cu apartamentele lui
+   nu aveau nicio ordine, deci cardurile de fond si alegerea apartamentului se
+   puteau reaseza de la o incarcare la alta. */
+describe("[K17] furnizorii, locatarii, fondurile si legaturile vin intregi si in aceeasi ordine", () => {
+  beforeAll(async () => {
+    const randuri = [];
+    for (let i = 1; i <= 1100; i += 1) randuri.push({ asociatie_id: f.asociatieId, denumire: `Furnizor K17 ${i}` });
+    await ok(db("intretinere").from("furnizori").insert(randuri));
+  });
+
+  it("peste 1000 de furnizori se intorc toti, nu doar prima pagina", async () => {
+    const date = await adm.incarca();
+    expect(date.furnizori.filter((x) => x.denumire.startsWith("Furnizor K17 ")).length).toBe(1100);
+  });
+
+  it("locatarii si soldurile fondurilor se cer ordonate, la administrator", async () => {
+    const { cereri } = await cuTrafic(() => adm.incarca());
+    for (const cale of ["locatari", "fonduri_solduri"]) {
+      const ale = cererileCu(cereri, cale);
+      expect(ale.length, cale).toBeGreaterThan(0);
+      ale.forEach((c) => expect(c.url, cale).toMatch(/[?&]order=/));
+    }
+  });
+
+  it("legaturile locatarului cu apartamentele lui se cer ordonate", async () => {
+    const loc = (await intraCa(f.conturi.loc.email)).s;
+    const { cereri } = await cuTrafic(() => loc.incarca());
+    const ale = cererileCu(cereri, "locatari");
+    expect(ale.length).toBeGreaterThan(0);
+    ale.forEach((c) => expect(c.url).toMatch(/[?&]order=/));
+  });
+});
