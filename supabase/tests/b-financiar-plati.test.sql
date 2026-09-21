@@ -6,7 +6,7 @@
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(81);
+select plan(85);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -238,6 +238,26 @@ select lives_ok(
     select pg_temp.fx('ap21'), pg_temp.fx('bloc2'), 'corectie', pg_temp.luna(-6), id, 1, -5, current_date, 'Corectie test'
     from intretinere.liste_lunare where bloc_id = pg_temp.fx('bloc2') and luna = pg_temp.luna(-6)$$,
   'datorii: o corectie poate fi negativa');
+-- [K15] Trigger-ul J12 pazea doar randul de corectie: stergerea sau mutarea
+-- datoriei-sora refacea exact corectia orfana pe care J12 o interzice.
+savepoint k15_test;
+select throws_ok(
+  $$delete from financiar.datorii where apartament_id = pg_temp.fx('ap21') and tip = 'intretinere' and luna = pg_temp.luna(-6)$$,
+  'Datoria de intretinere are o corectie negativa pe aceeasi lista; fara ea, corectia ar ramane orfana.',
+  '[K15] financiar.pazeste_sora_corectiei: datoria-sora a unei corectii negative nu se sterge');
+select throws_ok(
+  $$update financiar.datorii set lista_id = null where apartament_id = pg_temp.fx('ap21') and tip = 'intretinere' and luna = pg_temp.luna(-6)$$,
+  'Datoria de intretinere are o corectie negativa pe aceeasi lista; fara ea, corectia ar ramane orfana.',
+  '[K15] ...si nu se muta de pe lista ei');
+select lives_ok(
+  $$update financiar.datorii set descriere = 'Intretinere sora, descriere noua' where apartament_id = pg_temp.fx('ap21') and tip = 'intretinere' and luna = pg_temp.luna(-6)$$,
+  '[K15] o modificare care nu o desparte de corectie ramane permisa');
+insert into financiar.datorii (apartament_id, bloc_id, tip, luna, suma, scadenta, descriere)
+values (pg_temp.fx('ap21'), pg_temp.fx('bloc2'), 'intretinere', pg_temp.luna(-7), 3, current_date, 'Fara corectie');
+select lives_ok(
+  $$delete from financiar.datorii where apartament_id = pg_temp.fx('ap21') and descriere = 'Fara corectie'$$,
+  '[K15] o datorie de intretinere fara corectie negativa se poate sterge, ca inainte');
+rollback to savepoint k15_test;
 select throws_like($$insert into financiar.datorii (apartament_id, bloc_id, tip, suma, scadenta, descriere) values (pg_temp.fx('ap21'), pg_temp.fx('bloc'), 'intretinere', 10, current_date, 'X')$$,
   '%datorii_cont_fk%', 'datorii: contul si blocul trebuie sa se potriveasca');
 insert into intretinere.liste_lunare (bloc_id, luna, stare, scadenta, publicata_la, total_repartizat)
