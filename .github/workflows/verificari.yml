@@ -2,17 +2,25 @@
 # fiecare pull request (audit 2026-09-20, X11: pana acum nu exista niciun CI,
 # deci suitele treceau doar daca isi amintea cineva sa le ruleze).
 #
-# Doua joburi:
+# Trei joburi, toate in paralel:
 #   - "aplicatie": ce merge fara baza de date (lint, teste unitare, teste Deno);
 #   - "baza": stiva Supabase locala in Docker, migratiile rulate de la zero,
-#     datele demo incarcate prin comenzile reale, apoi pgTAP si integrarea.
-# Al doilea e lent, deci e separat: daca pica lint-ul, se vede in doua minute.
+#     datele demo incarcate prin comenzile reale, apoi pgTAP si integrarea;
+#   - "e2e": aplicatia reala in browser, impartita pe patru masini, fiecare cu
+#     stiva ei. Pusa dupa "baza", pe o singura masina, suita dura peste 25 de
+#     minute; asa, verdictul unui pull request vine in aproximativ opt.
+#
+# Pe pull request, e2e ruleaza doar pe telefon, mediul real al aplicatiei.
+# Varianta desktop verifica doar ca aceeasi coloana arata bine pe ecran mare si
+# ruleaza la push pe main, dupa merge.
 
 name: Verificari
 
 on:
+  # Doar main: un push pe ramura unui pull request e deja acoperit de
+  # evenimentul pull_request, iar cu "**" fiecare push pornea doua rulari.
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
 
 # O singura rulare pe ramura: un push nou anuleaza rularea inceputa
@@ -99,17 +107,51 @@ jobs:
       - name: Acoperirea obiectelor SQL
         run: node scripts/acoperire-sql.mjs
 
+      - name: Jurnalele stivei, cand ceva a picat
+        if: failure()
+        run: supabase status && docker ps -a
+
+  e2e:
+    name: Teste end-to-end, partea ${{ matrix.parte }} din 4
+    runs-on: ubuntu-latest
+    strategy:
+      # O parte cazuta nu le opreste pe celelalte: vrem toata lista de esecuri
+      fail-fast: false
+      matrix:
+        parte: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Porneste stiva locala (aplica si migratiile)
+        run: supabase start
+
+      - name: Incarca blocul demonstrativ (D14) prin comenzile reale
+        run: npm run seed
+
       - name: Browserul pentru testele end-to-end
         run: npx playwright install --with-deps chromium
 
       - name: Teste end-to-end (Playwright, aplicatia reala peste stiva)
-        run: npm run test:e2e
+        run: >-
+          npx playwright test --shard=${{ matrix.parte }}/4
+          ${{ github.event_name == 'pull_request' && '--project=telefon' || '' }}
 
       - name: Raportul Playwright, cand ceva a picat
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: raport-playwright
+          name: raport-playwright-${{ matrix.parte }}
           path: |
             coverage/e2e
             test-results
