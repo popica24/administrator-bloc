@@ -175,6 +175,34 @@ describe("lista lunii: facturi", () => {
     });
   });
 
+  /* [K23] Furnizorul nou si factura se scriau in doua apeluri: la o cursa pe
+     acelasi cod, furnizorul celui refuzat ramanea orfan. Acum sunt un singur
+     apel (o tranzactie), iar cursa pierduta are acelasi mesaj ca L11. */
+  it("[K23] factura cu furnizor nou merge intr-un singur apel; cursa pe cod dublat are acelasi mesaj", async () => {
+    let apelat = false;
+    await cuFetch((url, init) => {
+      if (init.method === "POST" && url.includes("/furnizori")) throw new Error("furnizorul nu se mai insereaza separat");
+      if (url.includes("/rpc/adauga_factura_cu_furnizor_nou")) {
+        apelat = true;
+        return json({ message: 'duplicate key value violates unique constraint "cheltuieli_lista_cod_key"', code: "23505" }, 409);
+      }
+      return undefined;
+    }, async () => {
+      await expect(adm.salveazaCheltuiala({ listaId, furnizorNou: "Furnizor K23", categorie: "Cursa K23", cod: "C14", suma: 1, metoda: "apartamente" }))
+        .rejects.toThrow("Codul C14 exista deja pe lista.");
+    });
+    expect(apelat).toBe(true);
+  });
+
+  it("[K23] la editare, un furnizor nou se creeaza si randul trece pe el", async () => {
+    const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Editare K23", cod: "C15", suma: 2, metoda: "apartamente" });
+    await adm.salveazaCheltuiala({ id, listaId, furnizorNou: "  Furnizor nou la editare  ", categorie: "Editare K23", cod: "C15", suma: 2, metoda: "apartamente" });
+    const r = await ok(db("intretinere").from("cheltuieli").select("furnizor_id").eq("id", id).single());
+    const fz = await ok(db("intretinere").from("furnizori").select("denumire").eq("id", r.furnizor_id).single());
+    expect(fz.denumire).toBe("Furnizor nou la editare");
+    await adm.stergeCheltuiala(id);
+  });
+
   it("stergeCheltuiala() scoate randul din ciorna", async () => {
     const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Temporar", cod: "C8", suma: 9, metoda: "apartamente" });
     await adm.stergeCheltuiala(id);

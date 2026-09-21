@@ -568,8 +568,12 @@ export function creeazaSursaSupabase(url, cheie) {
         if (!rand) throw new Error("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
         if (rand.tip !== "factura") throw new Error("Randul fondului de reparatii nu se modifica din formularul de factura.");
       }
+      /* [K23] Factura noua cu furnizor nou: un singur apel, deci o singura
+         tranzactie. In doi pasi, o cursa pe acelasi cod lasa furnizorul celui
+         refuzat orfan, fara nicio factura. */
+      const cuFurnizorNou = !furnizorId && !cid;
       let fid = furnizorId;
-      if (!fid) {
+      if (!fid && cid) {
         const f = await ok(intr.from("furnizori").insert({
           asociatie_id: c.asociatieId, denumire: furnizorNou.trim(), categorie_implicita: categorie, metoda_implicita: metoda, tip_apa_implicit: tipApa || null, cod_implicit: cod,
         }).select().single());
@@ -581,11 +585,24 @@ export function creeazaSursaSupabase(url, cheie) {
         tip_apa: metoda === "consum" ? tipApa : null, data_emitere: emisa || null, scadenta_furnizor: scadentaFurnizor || null,
         ...(doc ? { document_id: doc.id } : {}),
       };
-      const { data, error } = cid
-        ? await intr.from("cheltuieli").update(valori).eq("id", cid).eq("tip", "factura").select().single()
-        : await intr.from("cheltuieli").insert(valori).select().single();
+      let rezultat;
+      if (cuFurnizorNou) {
+        rezultat = await intr.rpc("adauga_factura_cu_furnizor_nou", {
+          p_lista_id: listaId, p_denumire: furnizorNou.trim(), p_categorie: categorie, p_cod: cod, p_suma: suma, p_metoda: metoda,
+          p_tip_apa: tipApa || null, p_serie: serie || null, p_emisa: emisa || null, p_scadenta: scadentaFurnizor || null,
+          p_document_id: doc ? doc.id : null,
+        });
+        if (rezultat.data) rezultat = { ...rezultat, data: { id: rezultat.data } };
+      } else {
+        rezultat = cid
+          ? await intr.from("cheltuieli").update(valori).eq("id", cid).eq("tip", "factura").select().single()
+          : await intr.from("cheltuieli").insert(valori).select().single();
+      }
+      const { data, error } = rezultat;
       if (error) {
-        if (error.code === "23505") throw new Error(`Codul ${cod} exista deja pe lista.`);
+        /* [K23] Prin functie pot cadea doua chei unice: codul pe lista si
+           numele furnizorului nou; doar prima inseamna "cod dublat". */
+        if (error.code === "23505" && /cheltuieli_lista_cod_key/.test(error.message)) throw new Error(`Codul ${cod} exista deja pe lista.`);
         if (cid && error.code === "PGRST116") {
           /* [P4] Verificarea de mai sus a gasit randul, cu tipul "factura",
              inainte de a urca vreun scan: daca update-ul tot nu-l gaseste,
