@@ -154,7 +154,7 @@ describe("valideazaCitire", () => {
     return { s, d, rece: sept.find((x) => x.tip === "rece"), calda: sept.find((x) => x.tip === "calda") };
   }
 
-  it("valideaza sau respinge cu motiv; o citire verificata nu se mai schimba", async () => {
+  it("valideaza sau respinge cu motiv; o citire validata nu se accepta a doua oara", async () => {
     const { s, rece, calda } = await trimise();
     expect(rece.stare).toBe("trimisa");
     await s.valideazaCitire(rece.id, true);
@@ -162,7 +162,8 @@ describe("valideazaCitire", () => {
     const d = await s.incarca();
     expect(d.citiri.find((x) => x.id === rece.id)).toMatchObject({ stare: "validata", motivRespingere: null });
     expect(d.citiri.find((x) => x.id === calda.id)).toMatchObject({ stare: "respinsa", motivRespingere: "Poza neclara." });
-    await expect(s.valideazaCitire(rece.id, false, "x")).rejects.toThrow("Citirea a fost deja verificata.");
+    await expect(s.valideazaCitire(rece.id, true)).rejects.toThrow("Citirea a fost deja verificata.");
+    await expect(s.valideazaCitire(calda.id, false, "iar")).rejects.toThrow("Citirea a fost deja verificata.");
     await expect(s.valideazaCitire("cit-0", true)).rejects.toThrow("Citirea nu exista.");
   });
 
@@ -260,6 +261,47 @@ describe("valideazaCitire", () => {
     await s.valideazaCitire(declansator.id, true);
     const dupa = (await s.incarca()).citiri.find((x) => x.id === stricata.id);
     expect(dupa).toMatchObject({ indexAnterior: 111, consum: 111 });
+  });
+});
+
+describe("[K2] respingerea unei citiri validate din greseala", () => {
+  /* Ca in baza (e-k2-respinge-citire-validata.test.sql): dupa validare nu
+     mai exista nicio comanda care sa schimbe citirea, iar un index gresit
+     facea luna nepublicabila. Administratorul o poate respinge acum, cat timp
+     lista lunii nu este publicata. */
+  it("se respinge cu motiv, locatarul e anuntat, iar luna de dupa isi reface indexul anterior", async () => {
+    const { s, d } = await ca(LOCATAR);
+    const apId = d.eu.apartamentId;
+    const { rece, aug } = contoare(d, apId);
+    await s.transmiteCitire({ apartamentId: apId, luna: "2026-09", indexuri: [{ contorId: rece.id, index: aug.rece + 900 }] });
+    await s.intra(ADMIN, PAROLA);
+    const sept = (await s.incarca()).citiri.find((x) => x.contorId === rece.id && x.luna === "2026-09");
+    await s.valideazaCitire(sept.id, true);
+    ceasDemo(new Date("2026-10-05T09:00:00"));
+    await s.intra(LOCATAR, PAROLA);
+    await s.transmiteCitire({ apartamentId: apId, luna: "2026-10", indexuri: [{ contorId: rece.id, index: aug.rece + 950 }] });
+
+    await s.intra(ADMIN, PAROLA);
+    await s.valideazaCitire(sept.id, false, " Indexul pare scris gresit. ");
+    const dupa = await s.incarca();
+    expect(dupa.citiri.find((x) => x.id === sept.id)).toMatchObject({ stare: "respinsa", motivRespingere: "Indexul pare scris gresit." });
+    expect(dupa.citiri.find((x) => x.contorId === rece.id && x.luna === "2026-10")).toMatchObject({ indexAnterior: aug.rece, consum: 950 });
+    await s.intra(LOCATAR, PAROLA);
+    expect((await s.incarca()).notificari[0]).toMatchObject({ tip: "citire", titlu: "Indexul trimis a fost respins" });
+  });
+
+  it("raman refuzate: acceptarea a doua oara, pornirea, contorul general si luna publicata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap9 = apNr(d, "9").id;
+    const rece9 = d.contoare.find((c) => c.apartamentId === ap9 && c.tip === "rece");
+    const pornire = d.citiri.find((x) => x.contorId === rece9.id && x.sursa === "pornire");
+    const august = d.citiri.find((x) => x.contorId === rece9.id && x.luna === "2026-08");
+    const general = d.citiri.find((x) => !x.apartamentId && x.stare === "validata" && x.sursa !== "pornire");
+    await expect(s.valideazaCitire(august.id, true)).rejects.toThrow("Citirea a fost deja verificata.");
+    await expect(s.valideazaCitire(pornire.id, false, "gresit")).rejects.toThrow("Citirea a fost deja verificata.");
+    await expect(s.valideazaCitire(general.id, false, "gresit")).rejects.toThrow("Citirea a fost deja verificata.");
+    await expect(s.valideazaCitire(august.id, false, "gresit"))
+      .rejects.toThrow("Lista lunii august 2026 este deja publicata; citirea nu se mai poate verifica.");
   });
 });
 

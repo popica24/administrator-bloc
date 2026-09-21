@@ -370,10 +370,12 @@ select results_eq(
   $$values ('calda', 'respinsa', 'Poza neclara', pg_temp.fx('admin'), true),
            ('rece', 'validata', null, pg_temp.fx('admin'), true)$$,
   'valideaza_citire: starea, motivul curatat si cine a verificat');
+-- [K2] Respingerea unei citiri deja validate e permisa (e-k2-respinge-citire-validata);
+-- acceptarea a doua oara ramane refuzata.
 select throws_ok(
-  $$select contorizare.valideaza_citire((select id from contorizare.citiri where contor_id = pg_temp.fx('c1') and luna = pg_temp.luna()), false, 'alt motiv')$$,
+  $$select contorizare.valideaza_citire((select id from contorizare.citiri where contor_id = pg_temp.fx('c1') and luna = pg_temp.luna()), true)$$,
   'Citirea a fost deja verificata.',
-  'valideaza_citire: o citire verificata nu se mai schimba');
+  'valideaza_citire: o citire validata nu se accepta a doua oara');
 
 reset role;
 select pg_temp.serviciu();

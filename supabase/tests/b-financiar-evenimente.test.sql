@@ -4,7 +4,7 @@
 -- Bug-uri cunoscute: F2, F4, L16 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(66);
+select plan(72);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -324,6 +324,58 @@ select is(
   0.00::numeric,
   '[F2] ...si datoria din lista2, ramasa fara corectie');
 rollback to savepoint f2_plata_test;
+
+-- [K1] Corectia negativa pe o datorie deja platita elibereaza banii platiti in
+-- plus. ap1 plateste integral intretinerea din lista (33,34 lei), are o datorie
+-- noua, deschisa, pe lista3 (40 lei, scadenta mai tarzie), iar apoi lista se
+-- recalculeaza cu 10 lei mai putin pentru el. Inainte, cei 10 lei ramaneau
+-- blocati pe datoria veche (rest -10) si i se cereau in continuare 40 de lei.
+savepoint k1_test;
+insert into intretinere.liste_lunare (bloc_id, luna, scadenta) values (pg_temp.fx('bloc'), pg_temp.luna(0), current_date + 60);
+select set_config('fx.lista3', (select id from intretinere.liste_lunare where bloc_id = pg_temp.fx('bloc') and luna = pg_temp.luna(0))::text, true);
+insert into intretinere.cheltuieli (lista_id, tip, cod, categorie, furnizor_id, suma, metoda)
+values (pg_temp.fx('lista3'), 'factura', 'C3', 'Curatenie', (select id from intretinere.furnizori where asociatie_id = pg_temp.fx('asociatie')), 60, 'apartamente');
+select set_config('fx.ev_k1_pub', intretinere.salveaza_lista_publicata(pg_temp.fx('lista3'),
+  jsonb_build_object('repartizari', jsonb_build_array(
+    pg_temp.r('C3', 'ap1', 40, 'lista3'), pg_temp.r('C3', 'ap2', 10, 'lista3'), pg_temp.r('C3', 'ap3', 10, 'lista3'))))::text, true);
+select financiar.la_lista_publicata((select date from evenimente.coada where id = current_setting('fx.ev_k1_pub')::bigint));
+select financiar.inregistreaza_plata(pg_temp.fx('ap1'), 33.34, 'transfer');
+select is(
+  (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap1') and tip = 'intretinere'),
+  0.00::numeric,
+  '[K1] pregatire: plata de 33,34 inchide intretinerea din lista, cea cu scadenta mai veche');
+
+-- Recalcularea: fondul scade la 90 de lei, iar partea lui ap1 cu 10 lei.
+update intretinere.cheltuieli set suma = 90 where lista_id = pg_temp.fx('lista') and cod = 'F1';
+select set_config('fx.ev_k1', intretinere.salveaza_lista_publicata(pg_temp.fx('lista'),
+  jsonb_build_object('repartizari', jsonb_build_array(
+    pg_temp.r('C2', 'ap1', 0), pg_temp.r('C2', 'ap2', 120), pg_temp.r('C2', 'ap3', 0),
+    pg_temp.r('F1', 'ap1', 23.34), pg_temp.r('F1', 'ap2', 33.33), pg_temp.r('F1', 'ap3', 33.33))),
+  null, true)::text, true);
+select financiar.la_lista_recalculata((select date from evenimente.coada where id = current_setting('fx.ev_k1')::bigint));
+
+select is(
+  (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap1') and tip = 'intretinere'),
+  0.00::numeric,
+  '[K1] financiar.elibereaza_alocari_in_plus: datoria platita ramane inchisa, nu trece pe minus');
+select is(
+  (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista3') and apartament_id = pg_temp.fx('ap1') and tip = 'intretinere'),
+  30.00::numeric,
+  '[K1] cei 10 lei platiti in plus scad datoria deschisa: 40 - 10 = 30');
+select is(
+  (select sum(a.suma) from financiar.alocari_plati a join financiar.plati p on p.id = a.plata_id where p.apartament_id = pg_temp.fx('ap1')),
+  33.34::numeric,
+  '[K1] plata ramane alocata integral: niciun ban creat sau pierdut, doar mutat');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  (select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')),
+  '[K1] suma resturilor ramane egala cu soldul din registru');
+select financiar.la_lista_recalculata((select date from evenimente.coada where id = current_setting('fx.ev_k1')::bigint));
+select is(
+  (select rest from financiar.datorii_rest where lista_id = pg_temp.fx('lista3') and apartament_id = pg_temp.fx('ap1') and tip = 'intretinere'),
+  30.00::numeric,
+  '[K1] evenimentul livrat de doua ori nu elibereaza banii de doua ori');
+rollback to savepoint k1_test;
 
 -- =============================================================================
 -- financiar.situatie_bloc
