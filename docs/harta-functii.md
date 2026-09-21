@@ -122,6 +122,17 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 ### 2.5 Iesire
 - `BaraSus` → "Iesi" → `iesi()` (signOut, starea se goleste).
 
+### 2.6 Cum functioneaza aplicatia (`GhidAplicatie`)
+- **Unde:** butonul "Ajutor" din `BaraSus` (numele accesibil: "Cum functioneaza aplicatia") si
+  butonul cu acelasi nume de pe ecranul de intrare.
+- **Ce arata:** o fraza despre principiul aplicatiei, apoi cate o sectiune pentru fiecare tab al
+  rolului, plus "Contul tau". Fiecare sectiune se deschide la atingere, cu cateva fraze scurte.
+- **In cont:** doar rolul omului, iar fiecare sectiune are "Du-ma la ...", care deschide tabul ei.
+  **Pe ecranul de intrare:** un comutator Locatar / Administrator, fara navigare.
+- **Continut:** `GHID` si `GHID_INTRO`, in sectiunea 3 a `AdminBloc.jsx`. Testul
+  `ui-ghid.test.jsx` cere cate o sectiune pentru fiecare tab din bara de taburi, deci un tab nou
+  fara explicatie pica testul.
+
 ---
 
 ## 3. Locatar

@@ -295,6 +295,123 @@ const ETICHETE_DATORII = {
   corectie: "Corectie",
 };
 
+/* "Cum functioneaza aplicatia": cate o sectiune pentru fiecare tab al
+   rolului, plus contul. `tab` este cheia din TABURI_*, pentru "Du-ma acolo";
+   sectiunea contului nu duce nicaieri. Textul descrie ce face aplicatia azi
+   (docs/harta-functii.md), nu ce ar putea face. */
+const GHID_INTRO = "AdminBloc tine intretinerea blocului la vedere: orice suma se deschide in calculul, factura si documentul din spatele ei. Sumele se calculeaza o singura data, cand administratorul publica lista, deci toata lumea vede aceleasi cifre.";
+const GHID = {
+  locatar: [
+    {
+      tab: null, titlu: "Contul tau", rezumat: "Cum intri in aplicatie.",
+      puncte: [
+        "Primesti de la administrator un cod de 8 caractere. La inregistrare scrii codul, numele, telefonul, emailul si o parola.",
+        "Confirmi adresa de email din mesajul primit, apoi intri in cont cu emailul si parola.",
+        "Codul se foloseste o singura data si expira in 30 de zile. Daca nu merge, cere administratorului unul nou.",
+      ],
+    },
+    {
+      tab: "acasa", titlu: "Acasa", rezumat: "Ce ai de platit si ce ai de facut, dintr-o privire.",
+      puncte: [
+        "Sus vezi cat ai de plata acum si pana cand. Daca totul e platit, scrie Achitat; daca ai platit in plus, vezi si avansul, care se scade din urmatoarea lista.",
+        "O fraza iti spune cu cat platesti mai mult sau mai putin decat luna trecuta.",
+        "La De facut gasesti ce te asteapta: sa trimiti indexul la apa, sa platesti, sa votezi sau sa confirmi ca vii la adunare.",
+        "Mai jos: mesajele noi, anunturile de la avizier, consumul tau de apa fata de media blocului, sesizarile tale si pe cine suni.",
+      ],
+    },
+    {
+      tab: "plata", titlu: "Plata", rezumat: "Lista de plata, cu calculul din spatele fiecarei sume.",
+      puncte: [
+        "Alegi luna. Totalul e impartit in trei: cheltuielile lunii, fondurile si datoriile din lunile trecute.",
+        "Atinge orice rand ca sa vezi calculul complet: cat a costat factura, cum s-a impartit, cat ti-a revenit si documentul facturii.",
+        "Jos vezi verificarea: totalul facturilor este egal cu totalul impartit pe apartamente. Nimic nu ramane nealocat si nimic nu se plateste de doua ori.",
+        "Platesti cu cardul din aplicatie. Datele cardului nu ajung la asociatie, iar chitanta se descarca imediat.",
+        "La Platile mele vezi fiecare plata, ce a acoperit si chitanta ei. Banii acopera intai datoria cea mai veche.",
+      ],
+    },
+    {
+      tab: "consum", titlu: "Contoare", rezumat: "Indexul la apa, cu poza, si consumul tau.",
+      puncte: [
+        "Pana la termenul din luna scrii indexul fiecarui contor si faci o poza cu el. Poza este obligatorie.",
+        "Administratorul verifica indexul. Daca il respinge, vezi motivul si il trimiti din nou.",
+        "Daca nu trimiti la timp, administratorul poate trece un consum estimat, din media ultimelor trei luni. Pe lista apare scris Estimat.",
+        "Vezi graficul consumului pe ultimele luni si de ce blocul plateste mai multa apa decat arata contoarele.",
+      ],
+    },
+    {
+      tab: "sesizari", titlu: "Sesizari", rezumat: "Spui ce s-a stricat si vezi raspunsul.",
+      puncte: [
+        "Alegi o sesizare gata scrisa, de exemplu Bec ars pe scara, sau scrii tu, cu pana la trei poze.",
+        "La Ale mele vorbesti cu administratia pana cand problema e rezolvata.",
+        "La Din tot blocul vezi ce au semnalat vecinii, fara nume, ca sa nu scrii de doua ori despre acelasi lucru.",
+      ],
+    },
+    {
+      tab: "bloc", titlu: "Bloc", rezumat: "Avizierul, voturile, actele si fondurile blocului.",
+      puncte: [
+        "Avizier: anunturile administratiei si pe cine suni.",
+        "Vot si adunare: proprietarul voteaza o singura data pentru apartament, iar votul nu se mai poate schimba. Confirmi daca vii la adunarea generala.",
+        "Acte: documentele asociatiei, de exemplu facturi, contracte si procese verbale.",
+        "Fonduri: cati bani sunt in fondul de reparatii si in cel de rulment si unde s-au dus, fiecare cheltuiala cu documentul ei. Vezi si cate apartamente au datorii, fara nume.",
+      ],
+    },
+  ],
+  administrator: [
+    {
+      tab: null, titlu: "Contul tau", rezumat: "Cum ajungi sa administrezi blocul in aplicatie.",
+      puncte: [
+        "La inregistrare scrii numarul atestatului de administrator si poti adauga o poza a lui.",
+        "Contul se verifica inainte sa vada datele vreunei asociatii. Te anuntam pe email.",
+        "Daca cererea e respinsa, vezi motivul si o trimiti din nou, corectata.",
+      ],
+    },
+    {
+      tab: "sumar", titlu: "Sumar", rezumat: "Starea blocului, pe un singur ecran.",
+      puncte: [
+        "Cat e de incasat pe lista curenta si cat s-a incasat deja.",
+        "Restantele, penalizarile, citirile de verificat, sesizarile deschise si fondul de reparatii. Atinge oricare ca sa ajungi la ele.",
+        "Facturile de platit catre furnizori, cu scadenta lor, si restantierii, cu butonul de instiintare.",
+        "De aici trimiti reminderul de plata si exporti lista in PDF.",
+      ],
+    },
+    {
+      tab: "apartamente", titlu: "Apartamente", rezumat: "Fisa fiecarui apartament, citirile si fondurile.",
+      puncte: [
+        "Cauti un apartament dupa nume sau numar. Fisa lui arata datele, soldul la zi si fiecare datorie.",
+        "Din fisa incasezi numerar: banii acopera intai datoria cea mai veche, iar chitanta se emite pe loc. Tot de acolo schimbi numarul de persoane, corectezi datele si cotele, inviti un locatar cu un cod sau ii inchizi accesul.",
+        "Citiri contoare: citesti contorul general, validezi sau respingi indexurile, cu motiv, si estimezi ce lipseste dupa termen. O citire validata din greseala o poti respinge cat timp lista lunii nu e publicata.",
+        "Fonduri: vezi fiecare miscare si inregistrezi o cheltuiala din fond, cu documentul ei. Fondul nu poate ajunge sub zero.",
+      ],
+    },
+    {
+      tab: "facturi", titlu: "Facturi", rezumat: "Lista lunii, de la prima factura la publicare.",
+      puncte: [
+        "Incepi lista lunii; fondul de reparatii e deja trecut pe ea.",
+        "Adaugi facturile: furnizorul, suma, codul pe lista si cum se imparte, pe persoane, pe apartament, pe cota sau pe consum. Vezi pe loc cat revine fiecarui apartament, inainte sa salvezi.",
+        "Calculezi lista pe apartamente si verifici ca totalul impartit este egal cu totalul facturilor.",
+        "Publici lista dupa ce ai verificat toate citirile lunii. Dupa publicare sumele nu se mai schimba, iar locatarii sunt anuntati.",
+        "Exporti PDF-ul pentru avizier, fara nume si fara restante, si lista interna, cu toate datele. Marchezi facturile platite furnizorilor.",
+      ],
+    },
+    {
+      tab: "adminsesizari", titlu: "Sesizari", rezumat: "Problemele semnalate de locatari.",
+      puncte: [
+        "Cele deschise apar intai pe cele mai vechi, cu cate zile asteapta fiecare. Dupa trei zile apar cu rosu.",
+        "Preiei sesizarea, raspunzi, iar locatarul e anuntat, apoi o marchezi rezolvata.",
+      ],
+    },
+    {
+      tab: "adminbloc", titlu: "Comunicare", rezumat: "Anunturi, remindere, voturi, adunari si acte.",
+      puncte: [
+        "Anunturi: un anunt urgent ajunge imediat ca notificare la toti locatarii cu cont. Vezi cati l-au citit.",
+        "Remindere: alegi care pleaca singure si cu cate zile inainte, pentru citire, plata, restante si adunare. Le poti trimite si pe loc.",
+        "Vot si adunare: deschizi un vot, numarat pe apartament sau pe cota, vezi cine n-a votat si le reamintesti. Convoci adunarea generala.",
+        "Acte: incarci documente, vizibile locatarilor sau doar administratiei.",
+      ],
+    },
+  ],
+};
+
 /* =============================================================================
    4. DERIVARI
    Functii pure care citesc datele incarcate si intorc exact ce afiseaza un
@@ -875,7 +992,7 @@ function Press({ onPress, style, className = "", children, disabled, label, apas
   );
 }
 
-function Btn({ label, onPress, variant = "primary", size = "md", full, disabled, style }) {
+function Btn({ label, eticheta, onPress, variant = "primary", size = "md", full, disabled, style }) {
   const palete = {
     primary: { bg: C.accent, fg: C.white, bd: C.accent },
     secondary: { bg: C.surface, fg: C.ink, bd: C.lineStrong },
@@ -890,6 +1007,7 @@ function Btn({ label, onPress, variant = "primary", size = "md", full, disabled,
     <Press
       onPress={onPress}
       disabled={disabled}
+      label={eticheta}
       style={{
         backgroundColor: pal.bg,
         border: `1px solid ${pal.bd}`,
@@ -4366,7 +4484,54 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
   );
 }
 
-function BaraSus({ date, onIesi, onAlegeApartament }) {
+/* "Cum functioneaza aplicatia": o sectiune pe tab, care se deschide la
+   atingere. Cu `rol` (omul e in cont) arata doar rolul lui si are "Du-ma la"
+   spre tabul sectiunii; fara `rol` (ecranul de intrare) omul alege rolul. */
+function GhidAplicatie({ open, onClose, rol, go }) {
+  const [ales, setAles] = useState("locatar");
+  const [deschisa, setDeschisa] = useState(null);
+  const rolAfisat = rol || ales;
+  return (
+    <Sheet open={open} onClose={onClose} titlu="Cum functioneaza aplicatia">
+      <Txt size={13} color={C.inkSoft}>{GHID_INTRO}</Txt>
+      {!rol && (
+        <Segment
+          options={[{ value: "locatar", label: "Locatar" }, { value: "administrator", label: "Administrator" }]}
+          value={ales}
+          onChange={(v) => { setAles(v); setDeschisa(null); }}
+        />
+      )}
+      <Box gap={S.sm}>
+        {GHID[rolAfisat].map((sec) => {
+          const eDeschisa = deschisa === sec.titlu;
+          return (
+            <Card key={sec.titlu} pad={0}>
+              <Press desfasurat={eDeschisa} onPress={() => setDeschisa(eDeschisa ? null : sec.titlu)} style={{ padding: S.md }}>
+                <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.sm }}>
+                  <Box flex={1} gap={2}>
+                    <Txt size={15} weight={700}>{sec.titlu}</Txt>
+                    <Txt size={12.5} color={C.muted}>{sec.rezumat}</Txt>
+                  </Box>
+                  <Txt size={18} color={C.muted}>{eDeschisa ? "−" : "+"}</Txt>
+                </Box>
+              </Press>
+              {eDeschisa && (
+                <Box gap={S.sm} style={{ padding: S.md, paddingTop: 0 }}>
+                  {sec.puncte.map((pct) => <Txt key={pct} size={13.5} color={C.ink}>{pct}</Txt>)}
+                  {rol && sec.tab && (
+                    <Btn label={`Du-ma la ${sec.titlu}`} variant="secondary" size="sm" onPress={() => { onClose(); go(sec.tab); }} />
+                  )}
+                </Box>
+              )}
+            </Card>
+          );
+        })}
+      </Box>
+    </Sheet>
+  );
+}
+
+function BaraSus({ date, onIesi, onAlegeApartament, go }) {
   const esteAdmin = date.eu.rol === "administrator";
   const ap = !esteAdmin ? apartamentulMeu(date) : null;
   const initiale = date.bloc.denumire.replace(/^Bloc\s+/i, "").split(/[\s,]/)[0].slice(0, 3).toUpperCase();
@@ -4377,6 +4542,7 @@ function BaraSus({ date, onIesi, onAlegeApartament }) {
     ? date.eu.apartamenteMele.map((id) => date.apartamente.find((a) => a.id === id)).filter(Boolean)
     : null;
   const [alegeOpen, setAlegeOpen] = useState(false);
+  const [ghidOpen, setGhidOpen] = useState(false);
   const eticheta = esteAdmin ? `Administrator, ${date.bloc.denumire}` : `Apartament ${ap.numar}, ${date.bloc.denumire}`;
   return (
     <Box
@@ -4410,7 +4576,9 @@ function BaraSus({ date, onIesi, onAlegeApartament }) {
           )}
         </Box>
       </Box>
+      <Btn label="Ajutor" eticheta="Cum functioneaza aplicatia" size="sm" variant="secondary" onPress={() => setGhidOpen(true)} />
       <Btn label="Iesi" size="sm" variant="secondary" onPress={onIesi} />
+      <GhidAplicatie open={ghidOpen} onClose={() => setGhidOpen(false)} rol={esteAdmin ? "administrator" : "locatar"} go={go} />
       {apartamenteMele && (
         <Sheet open={alegeOpen} onClose={() => setAlegeOpen(false)} titlu="Alege apartamentul">
           <Txt size={12.5} color={C.muted}>Esti legat de mai multe apartamente din {date.bloc.denumire}. Alege pe care il vezi acum.</Txt>
@@ -4475,6 +4643,7 @@ class GranitaEroare extends React.Component {
 function EcranAutentificare() {
   const { intra, inregistreaza, folosesteInvitatie, cereVerificareAdministrator, modDemo } = useApp();
   const [mod, setMod] = useState("intrare");
+  const [ghidOpen, setGhidOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [parola, setParola] = useState("");
   const [nume, setNume] = useState("");
@@ -4607,7 +4776,9 @@ function EcranAutentificare() {
         {mod !== "intrare" && <Btn label="Am deja cont, vreau sa intru" variant="secondary" full onPress={() => setMod("intrare")} />}
         {mod !== "locatar" && <Btn label="Am un cod de la administrator" variant="secondary" full onPress={() => setMod("locatar")} />}
         {mod !== "administrator" && <Btn label="Sunt administrator si vreau cont" variant="quiet" full onPress={() => setMod("administrator")} />}
+        <Btn label="Cum functioneaza aplicatia" variant="quiet" full onPress={() => setGhidOpen(true)} />
       </Box>
+      <GhidAplicatie open={ghidOpen} onClose={() => setGhidOpen(false)} />
 
       {modDemo && (
         <Card gap={S.xs} pad={S.md} style={{ backgroundColor: C.infoSoft, borderColor: C.infoSoft }}>
@@ -4982,7 +5153,7 @@ export default function AdminBloc() {
         acasa: date.notificari.filter((n) => !n.cititaLa).length,
       };
     cheie = `${date.eu.rol}-${tabActiv}`;
-    bara = <BaraSus date={date} onIesi={comenzi.iesi} onAlegeApartament={comenzi.aleseApartament} />;
+    bara = <BaraSus date={date} onIesi={comenzi.iesi} onAlegeApartament={comenzi.aleseApartament} go={go} />;
     continut = (
       <div key={`${date.eu.rol}-${tabActiv}-${parametri ? parametri._n : ""}`} className="ab-fade">
         <Ecran go={go} parametri={parametri} />
