@@ -361,6 +361,12 @@ const datoriiDeschise = (date, apId) => datoriiApartament(date, apId).filter((d)
    mai e de platit). Fara acest credit in suma, soldul apare mai mare decat
    cel din registru. */
 const sold = (date, apId) => suma(datoriiApartament(date, apId), (d) => d.rest);
+/* [K9] Banii platiti si inca nealocati pe nicio datorie: un avans, care se
+   scade din urmatoarea lista. Soldul din registru (financiar.solduri) este
+   sold() minus acest avans; fara el, o plata facuta inainte de lista aparea
+   doar ca "Achitat", fara nicio urma a banilor platiti in plus. */
+const avans = (date, apId) => suma(date.plati.filter((p) => p.apartamentId === apId && p.stare === "confirmata"),
+  (p) => p.suma - suma(p.alocari, (a) => a.suma));
 const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.scadenta < date.azi), (d) => d.rest);
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
@@ -1830,6 +1836,9 @@ function LocatarAcasa({ go }) {
               : zile != null && zile >= 0 && !areRestanta ? <Badge label={zile === 0 ? "Scadent azi" : `Mai ai ${pluralZile(zile)}`} tone={zile > 5 ? "neutral" : "warn"} />
                 : <Badge label="Termen depasit" tone="danger" />}
           </Box>
+          {avans(date, ap.id) > 0 && (
+            <Txt size={12.5} color={C.ok} weight={600}>Ai platit in avans {lei(avans(date, ap.id))}. Se scad din urmatoarea lista.</Txt>
+          )}
           {lista && (
             <Txt size={12.5} color={C.muted}>
               Lista pe {monthLabel(lista.luna)}, termen de plata {dataLunga(scadenta)}. Dupa {date.setari.zileGratie} de zile de la scadenta se calculeaza penalizari de {num(date.setari.procentPenalizareZi)}% pe zi.
@@ -3194,6 +3203,9 @@ function FisaApartament({ apId, onClose }) {
           <Eyebrow>Sold la zi</Eyebrow>
           <Lei value={s} size={18} weight={700} color={restanta(date, ap.id) > 0 ? C.danger : C.ink} />
         </Box>
+        {avans(date, ap.id) > 0 && (
+          <Txt size={12.5} color={C.ok} weight={600}>Avans nealocat: {lei(avans(date, ap.id))}. Se scade din urmatoarea lista.</Txt>
+        )}
         {deschise.length === 0 ? (
           <Txt size={12.5} color={C.ok} weight={600}>Nu are nimic de plata.</Txt>
         ) : deschise.map((d) => (
