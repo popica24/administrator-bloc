@@ -298,6 +298,11 @@ export function creeazaSursaSupabase(url, cheie) {
       id: d.id, apartamentId: d.apartament_id, tip: d.tip, luna: luna(d.luna), listaId: d.lista_id, suma: nr(d.suma),
       scadenta: d.scadenta, descriere: d.descriere, rest: round2(nr(d.rest)), documentId: d.document_id, creatLa: d.creat_la,
     }));
+    /* [K13] Alocarile unei plati (randurile chitantei) in ordinea in care le-a
+       facut aloca_plata: scadenta, data datoriei, id. Veneau dupa id-ul
+       alocarii, un UUID aleator, deci lunile unei plati apareau amestecate. */
+    const cheieDatorie = new Map(datorii.map((d) => [d.id, `${d.scadenta}|${d.creat_la}|${d.id}`]));
+    const inOrdineaPlatii = (x, y) => String(cheieDatorie.get(x.datorie_id)).localeCompare(String(cheieDatorie.get(y.datorie_id)));
     const idDatorii = new Set(datorii.map((d) => d.id));
 
     return {
@@ -359,7 +364,7 @@ export function creeazaSursaSupabase(url, cheie) {
           id: p.id, apartamentId: p.apartament_id, suma: nr(p.suma), metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmata_la,
           referinta: p.referinta_procesator, inregistrataDe: p.inregistrata_de ? numeProfil(p.inregistrata_de) : null,
           chitanta: ch ? { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la } : null,
-          alocari: alocari.filter((a) => a.plata_id === p.id).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
+          alocari: alocari.filter((a) => a.plata_id === p.id).sort(inOrdineaPlatii).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
         };
       }),
       situatieBloc: { apartamente: situatieBloc.apartamente, faraRestanta: situatieBloc.faraRestanta, restanteTotal: nr(situatieBloc.restanteTotal) },
