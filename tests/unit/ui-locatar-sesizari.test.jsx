@@ -121,6 +121,31 @@ describe("Sesizari: mesaj catre administrator", () => {
     expect(text(card("Bec ars pe palier la etajul 4"))).toContain("Mesajul tau · 19 sep 2026Multumesc, astept");
   });
 
+  /* Acelasi defect ca la contorul general: la finalul trimiterii se punea
+     inapoi starea tuturor campurilor din clipa apasarii, deci ce scria omul
+     intre timp la alta sesizare disparea. */
+  it("mesajul scris la alta sesizare in timpul unei trimiteri ramane scris", async () => {
+    const { sursa } = await laSesizari({
+      email: ELENA,
+      modifica: (d) => {
+        const s = d.sesizari.find((x) => x.titlu === "Bec ars pe palier la etajul 4");
+        d.sesizari.push({ ...s, id: "ses-a-doua", titlu: "Usa de la intrare nu se inchide", mesaje: [] });
+      },
+    });
+    const real = sursa.scrieMesaj.bind(sursa);
+    let elibereaza;
+    vi.spyOn(sursa, "scrieMesaj").mockImplementation((...a) => new Promise((r) => { elibereaza = () => r(real(...a)); }));
+    const unu = card("Bec ars pe palier la etajul 4");
+    const doi = card("Usa de la intrare nu se inchide");
+    await act(async () => { fireEvent.change(within(unu).getByLabelText(MESAJ), { target: { value: "Multumesc" } }); });
+    await apasa(within(unu).getByRole("button", { name: "Trimite" }));
+    /* Trimiterea inca merge; omul scrie la cealalta sesizare */
+    await act(async () => { fireEvent.change(within(doi).getByLabelText(MESAJ), { target: { value: "Si usa scartaie" } }); });
+    await act(async () => { elibereaza(); });
+    expect(screen.getByRole("status").textContent).toBe("Mesajul a fost trimis");
+    expect(within(card("Usa de la intrare nu se inchide")).getByLabelText(MESAJ).value).toBe("Si usa scartaie");
+  });
+
   it("un mesaj refuzat ramane in camp", async () => {
     const { sursa } = await laSesizari({ email: ELENA });
     vi.spyOn(sursa, "scrieMesaj").mockRejectedValue(new Error("Fara retea"));

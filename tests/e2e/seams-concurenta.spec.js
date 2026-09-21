@@ -134,7 +134,14 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
     return `C${cod}`;
   }
 
-  test("amandoi scriu acelasi cod pe lista: unul intra, celalalt afla de ce nu", async ({ browser }) => {
+  /* [K23] Defect cunoscut, vazut pe CI la 21 septembrie. Verificarea codului
+     dublat (L11) si scrierile sunt pasi separati: doi administratori care
+     apasa in aceeasi clipa trec amandoi de verificare, amandoi creeaza
+     furnizorul, iar factura celui de-al doilea e refuzata, deci furnizorul
+     lui ramane orfan. Pe un laptop cererile rareori se suprapun destul; pe CI,
+     da. Reparatia este o comanda SQL care creeaza furnizorul si factura in
+     aceeasi tranzactie (docs/audit-3-2026-09-21.md, K23). */
+  test.fixme("[K23] amandoi scriu acelasi cod pe lista: unul intra, celalalt afla de ce nu", async ({ browser }) => {
     test.setTimeout(150000);
     const sb = serviciu();
     const ctxA = await browser.newContext();

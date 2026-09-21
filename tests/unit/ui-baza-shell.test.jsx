@@ -193,9 +193,15 @@ describe("TabBar si BaraSus", () => {
 
   /* popstate ajunge la fereastra ca o sarcina asincrona (nu ca o microsarcina),
      deci se asteapta un ceas real, nu doar promisiuni rezolvate */
+  /* In jsdom, history.back() declanseaza popstate abia dupa doua setImmediate
+     imbricate. Un setTimeout(0), adica 1 ms in Node, il intrecea pe o masina
+     lenta, iar testul verifica tabul inainte de navigare (CI, 21 sep). Se
+     asteapta chiar evenimentul; ascultatorul aplicatiei, pus la montare,
+     ruleaza inaintea celui de aici. */
   const inapoiInBrowser = async () => {
+    const gata = new Promise((r) => { window.addEventListener("popstate", () => r(), { once: true }); });
     window.history.back();
-    await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
+    await act(async () => { await gata; });
   };
 
   it("[E3] Inapoi in browser revine la tabul anterior, in loc sa iasa din aplicatie", async () => {

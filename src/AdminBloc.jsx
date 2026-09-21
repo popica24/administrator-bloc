@@ -2485,7 +2485,11 @@ function LocatarSesizari() {
                     label="Trimite"
                     size="sm"
                     disabled={!(raspunsuri[s.id] || "").trim()}
-                    onPress={async () => { const r = await scrieMesaj(s.id, raspunsuri[s.id]); if (r.ok) setRaspunsuri({ ...raspunsuri, [s.id]: "" }); }}
+                    onPress={async () => {
+                      const r = await scrieMesaj(s.id, raspunsuri[s.id]);
+                      /* Din starea de acum, ca sa ramana ce s-a scris intre timp la alta sesizare */
+                      if (r.ok) setRaspunsuri((x) => ({ ...x, [s.id]: "" }));
+                    }}
                   />
                 </Box>
               )}
@@ -3474,7 +3478,9 @@ function AdminCitiri() {
                 </Box>
                 <Btn label="Salveaza" size="sm" disabled={v === "" || Number.isNaN(n) || n < anterior} onPress={async () => {
                   const r = await citesteContorGeneral(luna, c.tip, n);
-                  if (r.ok) setGeneral({ ...general, [c.id]: "" });
+                  /* Din starea de acum, nu din cea de la apasare: altfel se
+                     pierde ce s-a scris la celalalt contor in timpul salvarii */
+                  if (r.ok) setGeneral((g) => ({ ...g, [c.id]: "" }));
                 }} />
               </Box>
             </Box>
