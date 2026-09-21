@@ -563,6 +563,8 @@ function proiecteaza(db, profilId, apartamentAles) {
   const { rol, mandat, legaturi } = rolul(db, profilId);
   const azi = aziIso();
   const eu = { profilId, nume: profil.nume, telefon: profil.telefon, email: profil.email, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
+  /* [K21] ca identitate.eu(): doar omul respins afla motivul */
+  if (rol === "respins") eu.motivRespingere = db.administratori.find((a) => a.profilId === profilId).motivRespingere;
   if (rol !== "administrator" && rol !== "locatar") return { azi, eu };
 
   const esteAdmin = rol === "administrator";
@@ -873,6 +875,8 @@ export function creeazaSursaMock() {
         existent.numarAtestat = numarAtestat;
         if (fisier) existent.atestatCale = salveazaFisier(fisier, "atestate");
         existent.stare = "in_asteptare";
+        /* [K21] ca in baza (20260920172454): cererea noua sterge motivul vechi */
+        existent.motivRespingere = null;
       } else {
         db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
       }

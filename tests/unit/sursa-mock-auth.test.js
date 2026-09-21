@@ -136,10 +136,14 @@ describe("cereVerificareAdministrator", () => {
     const { profilId } = await s.sesiuneCurenta();
     const rand = s.db.administratori.find((a) => a.profilId === profilId);
     rand.stare = "respins";
-    expect((await s.incarca()).eu.rol).toBe("respins");
+    rand.motivRespingere = "Atestatul nu se citeste.";
+    /* [K21] ca identitate.eu(): motivul ajunge la omul respins */
+    expect((await s.incarca()).eu).toMatchObject({ rol: "respins", motivRespingere: "Atestatul nu se citeste." });
 
     await s.cereVerificareAdministrator({ numarAtestat: "AT-1 corectat", fisier: new File(["x"], "atestat-nou.pdf") });
     expect((await s.incarca()).eu.rol).toBe("in_asteptare");
+    expect((await s.incarca()).eu).not.toHaveProperty("motivRespingere");
+    expect(rand.motivRespingere).toBeNull();
     expect(rand.numarAtestat).toBe("AT-1 corectat");
     expect(rand.atestatCale).toMatch(/atestat-nou\.pdf$/);
   });

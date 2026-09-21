@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(115);
+select plan(117);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -302,7 +302,7 @@ select is(
   'identitate.numeste_administrator: il aproba si pastreaza atestatul existent');
 -- adminResp revine la respins, pentru testele eu() de mai jos
 delete from identitate.membri_asociatie where profil_id = pg_temp.id('adminResp');
-update identitate.administratori set stare = 'respins' where profil_id = pg_temp.id('adminResp');
+update identitate.administratori set stare = 'respins', motiv_respingere = 'Atestat expirat' where profil_id = pg_temp.id('adminResp');
 
 -- -----------------------------------------------------------------------------
 -- identitate.eu
@@ -334,10 +334,13 @@ reset role;
 select pg_temp.ca('candidat');
 set local role authenticated;
 select is(identitate.eu() ->> 'rol', 'fara_apartament', 'identitate.eu: un cont fara legaturi este fara_apartament');
+select ok(not identitate.eu() ? 'motiv_respingere', '[K21] identitate.eu: celelalte roluri nu primesc cheia motivului');
 reset role;
 select pg_temp.ca('adminResp');
 set local role authenticated;
 select is(identitate.eu() ->> 'rol', 'respins', 'identitate.eu: administratorul respins');
+select is(identitate.eu() ->> 'motiv_respingere', 'Atestat expirat',
+  '[K21] identitate.eu: administratorul respins afla si motivul, ca sa-si poata corecta cererea');
 reset role;
 select pg_temp.ca('adminFost');
 set local role authenticated;

@@ -160,6 +160,8 @@ export function creeazaSursaSupabase(url, cheie) {
     const eu = await ok(id.rpc("eu"));
     const azi = aziIso();
     const euUi = { profilId: eu.profil_id, nume: eu.nume, telefon: eu.telefon, email: eu.email, rol: eu.rol, apartamentId: eu.apartament_id };
+    /* [K21] doar pentru rolul "respins" trimite identitate.eu() motivul */
+    if (eu.rol === "respins") euUi.motivRespingere = eu.motiv_respingere;
     ctx = { profilId: eu.profil_id, rol: eu.rol, blocId: eu.bloc_id, asociatieId: eu.asociatie_id, apartamentId: eu.apartament_id };
     if (eu.rol !== "administrator" && eu.rol !== "locatar") return { azi, eu: euUi };
 

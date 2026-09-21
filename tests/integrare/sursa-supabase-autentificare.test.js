@@ -203,6 +203,19 @@ describe("cereVerificareAdministrator()", () => {
     expect(date).toEqual({ azi: date.azi, eu: expect.objectContaining({ rol: "in_asteptare", apartamentId: null }) });
   });
 
+  /* [K21] Ecranul administratorului respins (K19) arata motivul, dar
+     identitate.eu() nu il trimitea niciodata, deci campul lipsea mereu. */
+  it("[K21] administratorul respins primeste motivul; dupa retrimitere nu il mai are", async () => {
+    const { s, profilId } = await contNou({ email: `adm-${unic()}@adminbloc.test`, nume: "Admin Respins" });
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-5", fisier: null });
+    await ok(db("identitate").from("administratori").update({ stare: "respins", motiv_respingere: "Atestatul nu se citeste." }).eq("profil_id", profilId));
+    expect((await s.incarca()).eu).toMatchObject({ rol: "respins", motivRespingere: "Atestatul nu se citeste." });
+    await s.cereVerificareAdministrator({ numarAtestat: "AT-5 corectat", fisier: null });
+    const eu = (await s.incarca()).eu;
+    expect(eu.rol).toBe("in_asteptare");
+    expect(eu).not.toHaveProperty("motivRespingere");
+  });
+
   it("cu atestat PDF: fisierul urca in atestate/<profil>/ si calea ajunge in cerere", async () => {
     const { s, profilId } = await contNou({ email: `adm-${unic()}@adminbloc.test`, nume: "Admin Pdf" });
     const cont = { profilId };
