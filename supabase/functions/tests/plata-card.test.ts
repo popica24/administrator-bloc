@@ -23,6 +23,19 @@ const P = {
 
 const plateste = (corp: unknown, token: string | null = JWT_UTILIZATOR) => plataCard(cerere("plata-card", { token: token ?? undefined, corp }));
 
+// Nimic din card nu ajunge in baza de date. Referinta platii e aleatoare (hex)
+// si poate contine din intamplare "123" sau "4242", deci se scoate din text
+// inainte de cautare; altfel testul pica o data la ~500 de rulari (CI, 21 sep).
+function faraDateCard(apeluri: Apel[], referinta: string) {
+  for (const a of apeluri.filter((x) => x.url.pathname.startsWith("/rest/"))) {
+    const text = a.text.replaceAll(referinta, "");
+    const cautare = a.url.search.replaceAll(referinta, "");
+    for (const s of ["4242", "123", "12/30", "Ion Pop"]) {
+      assertEquals(text.includes(s) || cautare.includes(s), false, `"${s}" a ajuns in ${a.url.pathname}`);
+    }
+  }
+}
+
 // Backend fals configurabil pentru un singur test.
 function backend(o: {
   user?: () => Response;
@@ -158,13 +171,26 @@ Deno.test("plata-card: plata confirmata -> 200 cu chitanta; cardul merge doar la
       webhook: `${URL_TEST}/functions/v1/plata-card-webhook`,
     });
 
-    // nimic din card nu ajunge in baza de date
-    for (const a of f.apeluri.filter((x) => x.url.pathname.startsWith("/rest/"))) {
-      for (const s of ["4242", "123", "12/30", "Ion Pop"]) assertEquals(a.text.includes(s) || a.url.search.includes(s), false);
-    }
+    faraDateCard(f.apeluri, creeaza.corp.p_referinta);
     assertEquals(f.catre(P.plati)[0].url.searchParams.get("id"), "eq.plata-1");
     assertEquals(f.catre(P.chitante)[0].url.searchParams.get("plata_id"), "eq.plata-1");
   });
+});
+
+Deno.test("plata-card: o referinta care contine din intamplare cifre de card nu e luata drept scurgere", async () => {
+  const original = crypto.randomUUID;
+  crypto.randomUUID = () => "bbe123fd-4242-4000-8000-000000000000";
+  try {
+    await cuFetch(backend({ stare: "confirmata", chitanta: { serie: "D14", numar: 7 } }), async (f) => {
+      const r = await citeste(await plateste({ apartament_id: "ap-3", suma: 10, card: CARD_BUN }));
+      assertEquals(r.status, 200);
+      const [creeaza] = f.catre(P.creeaza);
+      assertEquals(creeaza.corp.p_referinta, "SIM-BBE123FD-4242");
+      faraDateCard(f.apeluri, creeaza.corp.p_referinta);
+    });
+  } finally {
+    crypto.randomUUID = original;
+  }
 });
 
 Deno.test("plata-card: procesatorul refuza -> 402", async () => {
