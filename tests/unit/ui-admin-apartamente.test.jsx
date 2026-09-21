@@ -10,6 +10,26 @@ const apDupaNumar = async (sursa, numar) => (await sursa.incarca()).apartamente.
 const deschideFisa = (numar) => apasa(buton(`Apartament ${numar}`));
 const randuri = () => butoane(/^Apartament /).map((b) => b.getAttribute("aria-label").replace("Apartament ", ""));
 
+/* [K9] Fisa arata "Sold la zi" din resturi; un avans (bani platiti si inca
+   nealocati pe nicio datorie) nu aparea nicaieri. */
+describe("[K9] fisa apartamentului, avansul", () => {
+  it("arata avansul nealocat, cand exista", async () => {
+    await pornesteAdmin({
+      tab: "Apartamente",
+      modifica: (d) => {
+        const ap = d.apartamente.find((a) => a.numar === "1");
+        d.plati.push({
+          id: "pla-avans-k9", apartamentId: ap.id, suma: 250, metoda: "transfer", stare: "confirmata",
+          confirmataLa: "2026-09-18T10:00:00Z", referinta: null, inregistrataDe: null, chitanta: null, alocari: [],
+        });
+      },
+    });
+    await deschideFisa("1");
+    const f = inDialog("Apartament 1");
+    expect(f.getByText("Avans nealocat: 250,00 lei. Se scade din urmatoarea lista.")).toBeTruthy();
+  });
+});
+
 describe("ListaApartamente", () => {
   it("arata toate apartamentele in ordine, cu etaj, persoane, cota si badge", async () => {
     await pornesteAdmin({ tab: "Apartamente" });

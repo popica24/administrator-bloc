@@ -15,6 +15,8 @@
 import { calculeazaLista, round2 } from "../supabase/functions/_shared/motor.js";
 import * as D from "./date-demo.js";
 import { documentPdf } from "./pdf.js";
+/* [K22] seara unei zile, ora Romaniei: acelasi calcul ca sursa Supabase si ecranul */
+import { oraSeriiRomania } from "./ora-romania.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -56,17 +58,6 @@ function numarRo(n) {
   return `${intreg.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${zecimal}`;
 }
 
-/* Ora Romaniei (+02:00 iarna, +03:00 vara) pentru ora serii (20:00) a unei
-   zile date, calculata cu Intl (nu depinde de fusul masinii care ruleaza
-   testele). Vot si adunare inchid/anunta seara, ora Romaniei, care e mereu
-   inainte de UTC (niciodata negativa). */
-function offsetRomania(dataText) {
-  const aprox = new Date(`${dataText}T20:00:00Z`);
-  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
-    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
-  return `+${ore.padStart(2, "0")}:00`;
-}
-const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
 /* [J8] Data si ora Romaniei ale unei clipe date, indiferent in ce fus a
    ajuns scris sirul (ecranul trimite new Date(...).toISOString(), deci un
    sir UTC ("...Z"), nu text local). Feliind direct caracterele unui sir
@@ -281,6 +272,12 @@ function dateMotor(db, lista) {
 function publica(db, listaId, la, deCine) {
   const lista = db.liste.find((l) => l.id === listaId) || eroare("Lista nu exista.");
   if (lista.stare !== "ciorna") eroare("Lista este deja publicata.");
+  /* [K6] ca trigger-ul din baza: dupa publicare, o citire trimisa nu mai
+     poate fi verificata de nicio comanda si ar ramane blocata */
+  const trimise = db.citiri.filter((c) => c.blocId === lista.blocId && c.luna === lista.luna && c.stare === "trimisa").length;
+  if (trimise === 1) eroare(`Pe ${lunaText(lista.luna)} mai este o citire de verificat. Valideaza-o sau respinge-o, apoi publica lista.`);
+  const de = trimise >= 20 && (trimise % 100 === 0 || trimise % 100 > 19) ? " de" : "";
+  if (trimise > 1) eroare(`Pe ${lunaText(lista.luna)} mai sunt ${trimise}${de} citiri de verificat. Valideaza-le sau respinge-le, apoi publica lista.`);
   const cheltuieli = db.cheltuieli.filter((c) => c.listaId === lista.id);
   if (cheltuieli.length === 0) eroare("Lista nu are nicio cheltuiala.");
   const rezultat = calculeazaLista(dateMotor(db, lista));
@@ -557,6 +554,8 @@ function proiecteaza(db, profilId, apartamentAles) {
   const { rol, mandat, legaturi } = rolul(db, profilId);
   const azi = aziIso();
   const eu = { profilId, nume: profil.nume, telefon: profil.telefon, email: profil.email, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
+  /* [K21] ca identitate.eu(): doar omul respins afla motivul */
+  if (rol === "respins") eu.motivRespingere = db.administratori.find((a) => a.profilId === profilId).motivRespingere;
   if (rol !== "administrator" && rol !== "locatar") return { azi, eu };
 
   const esteAdmin = rol === "administrator";
@@ -671,7 +670,8 @@ function proiecteaza(db, profilId, apartamentAles) {
   const situatieBloc = {
     apartamente: apBloc.length,
     faraRestanta: apBloc.filter((a) => restantaAp(a.id) <= 0).length,
-    restanteTotal: round2(apBloc.reduce((s, a) => s + restantaAp(a.id), 0)),
+    /* [K4] ca in baza: doar cine datoreaza; un rest negativ nu scade restantele celorlalti */
+    restanteTotal: round2(apBloc.reduce((s, a) => s + Math.max(restantaAp(a.id), 0), 0)),
   };
 
   const fonduri = db.fonduri.filter((f) => f.blocId === bloc.id).map((f) => {
@@ -866,6 +866,8 @@ export function creeazaSursaMock() {
         existent.numarAtestat = numarAtestat;
         if (fisier) existent.atestatCale = salveazaFisier(fisier, "atestate");
         existent.stare = "in_asteptare";
+        /* [K21] ca in baza (20260920172454): cererea noua sterge motivul vechi */
+        existent.motivRespingere = null;
       } else {
         db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
       }

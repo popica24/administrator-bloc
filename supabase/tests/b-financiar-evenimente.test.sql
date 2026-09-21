@@ -4,7 +4,7 @@
 -- Bug-uri cunoscute: F2, F4, L16 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(72);
+select plan(73);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -401,6 +401,21 @@ select is(financiar.situatie_bloc(pg_temp.fx('bloc')),
 select pg_temp.ca('admin');
 select is(financiar.situatie_bloc(pg_temp.fx('bloc')) ->> 'restanteTotal', '40.00',
   'situatie_bloc: administratorul vede aceeasi situatie');
+
+-- [K4] situatie_bloc isi calcula singura restul (suma - alocari), fara
+-- corectiile negative ale listei (F2): ecranele Bloc si Sumar aratau alt
+-- total restant decat ecranul Plata. ap1: intretinere scadenta de 30 de lei,
+-- cu o corectie de -12 inca nescadenta; restul real este 18.
+savepoint k4_test;
+reset role;
+insert into financiar.datorii (apartament_id, bloc_id, tip, luna, lista_id, versiune, suma, scadenta, descriere)
+values (pg_temp.fx('ap1'), pg_temp.fx('bloc'), 'intretinere', pg_temp.luna(-2), pg_temp.fx('lista2'), 1, 30, current_date - 3, 'Intretinere K4'),
+       (pg_temp.fx('ap1'), pg_temp.fx('bloc'), 'corectie', pg_temp.luna(-2), pg_temp.fx('lista2'), 2, -12, current_date + 10, 'Corectie K4');
+set local role authenticated;
+select pg_temp.ca('admin');
+select is(financiar.situatie_bloc(pg_temp.fx('bloc')) ->> 'restanteTotal', '58.00',
+  '[K4] situatie_bloc: restul unei datorii scadente include corectia ei negativa (40 + 18), ca pe ecranul Plata');
+rollback to savepoint k4_test;
 
 -- =============================================================================
 -- RLS

@@ -75,6 +75,28 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     expect(screen.queryByText("Mai ai 6 zile")).toBeNull();
   });
 
+  /* [K9] Soldul afisat era doar suma resturilor: o plata facuta inainte de
+     lista (registrul: sold -250) aparea ca "0,00 lei, Achitat", fara nicio
+     urma a banilor platiti in plus. */
+  it("[K9] o plata facuta in avans apare ca avans, nu se pierde in Achitat", async () => {
+    await pornesteApp({
+      email: VOICU,
+      modifica: (d) => {
+        d.plati.push({
+          id: "pla-avans-k9", apartamentId: d.eu.apartamentId, suma: 250, metoda: "transfer", stare: "confirmata",
+          confirmataLa: "2026-09-18T10:00:00Z", referinta: null, inregistrataDe: null, chitanta: null, alocari: [],
+        });
+      },
+    });
+    expect(screen.getByText("Achitat")).toBeTruthy();
+    expect(screen.getByText("Ai platit in avans 250,00 lei. Se scad din urmatoarea lista.")).toBeTruthy();
+  });
+
+  it("[K9] fara bani platiti in plus, nu spune nimic despre avans", async () => {
+    await pornesteApp({ email: VOICU });
+    expect(screen.queryByText(/in avans/)).toBeNull();
+  });
+
   it("cand totul e platit arata Achitat si descarca ultima chitanta", async () => {
     const descarcari = prindeDescarcari();
     await pornesteApp({ email: VOICU });

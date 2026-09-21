@@ -193,6 +193,17 @@ test.describe("locatarul duce la capat tot ce are de facut, fara server", () => 
 test.describe("administratorul duce la capat o luna intreaga, fara server", () => {
   test("factura noua, previzualizare, publicare si cele doua PDF-uri", async ({ page }) => {
     await intraDemo(page, CONTURI.admin);
+
+    /* [K6] Lista nu se publica peste citiri trimise: administratorul le
+       verifica intai, apartament cu apartament, ca in aplicatia reala */
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Citiri contoare" }).click();
+    const valideaza = page.getByRole("button", { name: "Valideaza", exact: true });
+    for (let ramase = await valideaza.count(); ramase > 0; ramase -= 1) {
+      await valideaza.first().click();
+      await expect(valideaza).toHaveCount(ramase - 1, { timeout: 15000 });
+    }
+
     await mergiLaTab(page, "Facturi");
     await expect(page.getByText(/in lucru/i).first()).toBeVisible();
 

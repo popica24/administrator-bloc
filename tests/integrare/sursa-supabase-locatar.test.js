@@ -254,3 +254,22 @@ describe("fisiere semnate", () => {
     expect(d.documente.map((x) => x.id)).not.toContain(docAscuns.id);
   });
 });
+
+/* [K13] Randurile unei chitante (alocarile platii) veneau in ordinea id-ului,
+   un UUID aleator, deci o plata pe mai multe luni isi afisa lunile amestecat.
+   Acum sunt in ordinea in care le-a platit aloca_plata: cea mai veche scadenta
+   intai, ca in sursa demo. */
+describe("[K13] alocarile unei plati", () => {
+  it("vin de la datoria cea mai veche la cea mai noua", async () => {
+    const zile = [40, 10, 50, 20, 30];
+    const inserate = await ok(db("financiar").from("datorii").insert(zile.map((z) => ({
+      apartament_id: f.ap["2"], bloc_id: f.blocId, tip: "sold_initial", suma: 10,
+      scadenta: new Date(Date.now() - z * 86400000).toISOString().slice(0, 10), descriere: `Restanta K13, acum ${z} zile`,
+    }))).select("id, scadenta"));
+    const vecin = (await intraCa(f.conturi.vecin.email)).s;
+    const r = await vecin.platesteCard({ apartamentId: f.ap["2"], suma: 50, card: CARD_BUN });
+    const plata = (await vecin.incarca()).plati.find((p) => p.id === r.plataId);
+    const asteptat = [...inserate].sort((a, b) => a.scadenta.localeCompare(b.scadenta)).map((d) => d.id);
+    expect(plata.alocari.map((a) => a.datorieId)).toEqual(asteptat);
+  });
+});

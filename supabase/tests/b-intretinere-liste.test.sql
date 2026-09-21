@@ -4,7 +4,7 @@
 -- Publicarea si recalcularea sunt in b-intretinere-publicare.test.sql.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(89);
+select plan(94);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -523,6 +523,34 @@ select pg_temp.ca('strain');
 select is((select count(*)::int from intretinere.repartizari), 0, '"Repartizarile: apartamentul propriu si blocurile conduse": strainul nu vede nimic');
 select throws_ok($$select intretinere.salveaza_lista_publicata(pg_temp.fx('lista'), '{"repartizari": []}'::jsonb)$$,
   '42501', null, 'salveaza_lista_publicata: doar service_role o poate apela');
+
+-- =============================================================================
+-- [K23] intretinere.adauga_factura_cu_furnizor_nou
+-- =============================================================================
+-- Furnizorul nou si factura se scriau in doua apeluri separate: doi
+-- administratori care salvau in aceeasi clipa acelasi cod treceau amandoi de
+-- verificarea codului, iar furnizorul celui refuzat ramanea orfan. Acum sunt
+-- un singur apel, deci o singura tranzactie; RLS se aplica ca la insert direct.
+select pg_temp.ca('admin');
+select lives_ok(
+  $$select set_config('fx.k23', intretinere.adauga_factura_cu_furnizor_nou(pg_temp.fx('lista'), '  Furnizor K23  ', 'Curatenie', 'C23', 50, 'apartamente', null, 'K23-1', null, null, null)::text, true)$$,
+  '[K23] intretinere.adauga_factura_cu_furnizor_nou: administratorul adauga factura cu un furnizor nou');
+select results_eq(
+  $$select f.denumire, f.categorie_implicita, f.metoda_implicita, f.cod_implicit, c.cod, c.suma, c.serie_numar
+    from intretinere.cheltuieli c join intretinere.furnizori f on f.id = c.furnizor_id where c.id = pg_temp.fx('k23')$$,
+  $$values ('Furnizor K23'::text, 'Curatenie'::text, 'apartamente'::text, 'C23'::text, 'C23'::text, 50.00::numeric(12,2), 'K23-1'::text)$$,
+  '[K23] furnizorul si factura sunt create impreuna, cu valorile implicite ale furnizorului');
+select throws_ok(
+  $$select intretinere.adauga_factura_cu_furnizor_nou(pg_temp.fx('lista'), 'Furnizor K23 doi', 'Curatenie', 'C23', 60, 'apartamente', null, null, null, null, null)$$,
+  '23505', null,
+  '[K23] un cod deja folosit pe lista refuza factura...');
+select is((select count(*)::int from intretinere.furnizori where denumire = 'Furnizor K23 doi'), 0,
+  '[K23] ...si nu lasa in urma furnizorul nou, fara factura');
+select pg_temp.ca('loc1');
+select throws_ok(
+  $$select intretinere.adauga_factura_cu_furnizor_nou(pg_temp.fx('lista'), 'Furnizor strain', 'X', 'C24', 1, 'apartamente', null, null, null, null, null)$$,
+  'Lista nu exista sau nu este din blocul tau.',
+  '[K23] locatarul nu vede lista in lucru, deci nu adauga nimic pe ea');
 
 select * from finish();
 rollback;

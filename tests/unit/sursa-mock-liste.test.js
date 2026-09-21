@@ -28,6 +28,13 @@ const factura = (listaId, extra = {}) => ({
 
 beforeEach(() => ceasDemo());
 
+/* [K6] Lista nu se publica peste citiri trimise: administratorul le verifica
+   intai. In datele demo, septembrie are cateva inca neverificate. */
+async function verificaCitirile(s, luna = "2026-09") {
+  const d = await s.incarca();
+  for (const c of d.citiri.filter((x) => x.luna === luna && x.stare === "trimisa")) await s.valideazaCitire(c.id, true);
+}
+
 describe("deschideLista", () => {
   it("intoarce lista existenta a lunii", async () => {
     const { s, ciorna } = await admin();
@@ -173,6 +180,7 @@ describe("dateMotor", () => {
 describe("publicaLista", () => {
   it("publica: repartizari, datorii, fond, scadenta implicita si notificari", async () => {
     const { s, ciorna } = await admin();
+    await verificaCitirile(s);
     await s.publicaLista(ciorna.id);
     const d = await s.incarca();
     const l = listaLuna(d, "2026-09");
@@ -198,6 +206,7 @@ describe("publicaLista", () => {
     const rest = e.datorii.reduce((t, x) => t + x.rest, 0);
     await s.platesteCard({ apartamentId: e.eu.apartamentId, suma: rest + 50, card: { numar: "4242424242424242", expira: "12/29" } });
     await s.intra(ADMIN, PAROLA);
+    await verificaCitirile(s);
     await s.publicaLista(ciorna.id);
     await s.intra(LOCATAR, PAROLA);
     const d = await s.incarca();
@@ -210,6 +219,7 @@ describe("publicaLista", () => {
     await s.seteazaReminder("lista_publicata", false);
     await s.stergeCheltuiala(cheltuieliLista(d, ciorna.id)[0].id);
     await s.salveazaCheltuiala(factura(ciorna.id, { furnizorId: furnizor("C5").id, cod: "C5", metoda: "persoane_fara_lift", suma: 640 }));
+    await verificaCitirile(s);
     await s.publicaLista(ciorna.id);
     const dupa = await s.incarca();
     const l = listaLuna(dupa, "2026-09");
@@ -224,6 +234,7 @@ describe("publicaLista", () => {
 
   it("refuza: lista inexistenta, deja publicata, fara cheltuieli, date incomplete pentru motor", async () => {
     const { s, d, ciorna, furnizor } = await admin();
+    await verificaCitirile(s);
     await expect(s.publicaLista("lis-0")).rejects.toThrow("Lista nu exista.");
     await expect(s.publicaLista(listaLuna(d, "2026-08").id)).rejects.toThrow("Lista este deja publicata.");
     await s.stergeCheltuiala(cheltuieliLista(d, ciorna.id)[0].id);
@@ -233,8 +244,40 @@ describe("publicaLista", () => {
     expect(listaLuna(await s.incarca(), "2026-09").stare).toBe("ciorna");
   });
 
+  /* [K6] Ca trigger-ul din baza: dupa publicare, o citire trimisa nu mai
+     poate fi verificata de nicio comanda si ar ramane blocata. */
+  it("[K6] refuza publicarea cat timp luna are citiri trimise, la plural si la singular", async () => {
+    const { s, d, ciorna } = await admin();
+    const trimise = d.citiri.filter((x) => x.luna === "2026-09" && x.stare === "trimisa");
+    expect(trimise.length).toBeGreaterThan(1);
+    await expect(s.publicaLista(ciorna.id)).rejects.toThrow(
+      `Pe septembrie 2026 mai sunt ${trimise.length} citiri de verificat. Valideaza-le sau respinge-le, apoi publica lista.`);
+    for (const c of trimise.slice(1)) await s.valideazaCitire(c.id, true);
+    await expect(s.publicaLista(ciorna.id)).rejects.toThrow(
+      "Pe septembrie 2026 mai este o citire de verificat. Valideaza-o sau respinge-o, apoi publica lista.");
+    expect(listaLuna(await s.incarca(), "2026-09").stare).toBe("ciorna");
+    await s.valideazaCitire(trimise[0].id, false, "Poza neclara.");
+    await s.publicaLista(ciorna.id);
+    expect(listaLuna(await s.incarca(), "2026-09").stare).toBe("publicata");
+  });
+
+  it("[K6] de la 20 de citiri in sus, mesajul spune \"de citiri\", ca in baza", async () => {
+    const { s, d, ciorna } = await admin();
+    const trimise = d.citiri.filter((x) => x.luna === "2026-09" && x.stare === "trimisa").length;
+    const ap = apNr(d, "9");
+    for (let i = trimise; i < 20; i += 1) {
+      s.db.adauga("citiri", {
+        contorId: `ctr-k6-${i}`, blocId: d.bloc.id, apartamentId: ap.id, tip: "rece", luna: "2026-09",
+        indexAnterior: 0, indexCurent: 1, consum: 1, sursa: "locatar", stare: "trimisa", pozaCale: null,
+      });
+    }
+    await expect(s.publicaLista(ciorna.id)).rejects.toThrow(
+      "Pe septembrie 2026 mai sunt 20 de citiri de verificat. Valideaza-le sau respinge-le, apoi publica lista.");
+  });
+
   it("refuza un rezultat al motorului care nu se inchide la ban", async () => {
     const { s, ciorna } = await admin();
+    await verificaCitirile(s);
     const real = (await vi.importActual("../../supabase/functions/_shared/motor.js")).calculeazaLista;
     motor.calculeazaLista.mockImplementationOnce((date) => ({ ...real(date), totalRepartizat: 1599.99 }));
     await expect(s.publicaLista(ciorna.id)).rejects.toThrow("Totalul repartizat nu este egal cu totalul facturilor.");

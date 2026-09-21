@@ -71,3 +71,19 @@ describe("plafonul penalizarilor", () => {
     expect(total).toBe(50);
   });
 });
+
+describe("situatieBloc", () => {
+  /* [K4] Ca financiar.situatie_bloc: totalul restantelor aduna doar
+     apartamentele care datoreaza. Un apartament cu rest negativ (o corectie
+     mai mare decat datoria lui) nu scade din restantele celorlalti. */
+  it("[K4] un apartament cu rest scadent negativ nu micsoreaza restantele blocului", async () => {
+    const { s, d } = await admin();
+    const inainte = d.situatieBloc;
+    s.db.adauga("datorii", {
+      apartamentId: apNr(d, "9").id, blocId: d.bloc.id, tip: "corectie", luna: "2026-06", listaId: "lst-k4-orfana",
+      suma: -75, scadenta: "2026-07-25", descriere: "Corectie mai mare decat datoria",
+    });
+    const dupa = (await s.incarca()).situatieBloc;
+    expect(dupa.restanteTotal).toBe(inainte.restanteTotal);
+  });
+});

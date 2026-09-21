@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { pornesteAdmin, apasa, buton, butoane, toast, inDialog, dezactivat } from "./ui-admin-ajutor.js";
-import { sursaDemo, zonaCu, ADMIN, PAROLA } from "./ajutor.jsx";
+import { sursaDemo, ceasDemo, zonaCu, ADMIN, PAROLA } from "./ajutor.jsx";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 
@@ -21,7 +21,42 @@ function amanata() {
 
 const idLista = async (sursa, luna) => (await sursa.incarca()).liste.find((l) => l.luna === luna).id;
 
+/* [K6] Lista nu se publica peste citiri trimise: sursa demo cu citirile din
+   septembrie deja verificate, cum le-ar lasa administratorul inainte de publicare */
+async function sursaCuCitiriVerificate() {
+  ceasDemo();
+  const s = sursaDemo();
+  await s.intra(ADMIN, PAROLA);
+  const d = await s.incarca();
+  for (const c of d.citiri.filter((x) => x.luna === "2026-09" && x.stare === "trimisa")) await s.valideazaCitire(c.id, true);
+  return s;
+}
+
 describe("AdminFacturi, lista in lucru", () => {
+  /* [K6] Avertismentul despre citiri aparea doar daca lista avea apa, adica
+     lipsea tocmai cand administratorul scotea apa de pe lista si publica */
+  it("[K6] cardul listei spune cate citiri mai sunt de verificat, chiar fara apa pe lista", async () => {
+    const { sursa } = await deschideFacturi();
+    const trimise = (await sursa.incarca()).citiri.filter((x) => x.luna === "2026-09" && x.stare === "trimisa").length;
+    expect(trimise).toBeGreaterThan(1);
+    expect(screen.getByText(`Mai sunt ${trimise} citiri de verificat. Lista se publica dupa ce le validezi sau le respingi, din Apartamente, la Citiri contoare.`)).toBeTruthy();
+  });
+
+  it("[K6] la singular, cand mai ramane una", async () => {
+    ceasDemo();
+    const s = sursaDemo();
+    await s.intra(ADMIN, PAROLA);
+    const [, ...restul] = (await s.incarca()).citiri.filter((x) => x.luna === "2026-09" && x.stare === "trimisa");
+    for (const c of restul) await s.valideazaCitire(c.id, true);
+    await deschideFacturi({ sursa: s });
+    expect(screen.getByText("Mai este o citire de verificat. Lista se publica dupa ce o validezi sau o respingi, din Apartamente, la Citiri contoare.")).toBeTruthy();
+  });
+
+  it("[K6] fara citiri de verificat, cardul nu mai spune nimic despre ele", async () => {
+    await deschideFacturi({ sursa: await sursaCuCitiriVerificate() });
+    expect(screen.queryByText(/de verificat\. Lista se publica/)).toBeNull();
+  });
+
   it("arata ciorna pe septembrie cu fondul de reparatii", async () => {
     await deschideFacturi();
     expect(screen.getByText("septembrie 2026 · in lucru")).toBeTruthy();
@@ -204,7 +239,7 @@ describe("AdminFacturi, lista in lucru", () => {
 
 describe("AdminFacturi, publicare", () => {
   it("confirmarea arata numarul de cheltuieli, suma si termenul, apoi publica", async () => {
-    const { sursa } = await deschideFacturi();
+    const { sursa } = await deschideFacturi({ sursa: await sursaCuCitiriVerificate() });
     const spion = vi.spyOn(sursa, "publicaLista");
     const listaId = await idLista(sursa, "2026-09");
     await apasa("Calculeaza lista pe apartamente");
@@ -257,7 +292,7 @@ describe("AdminFacturi, publicare", () => {
   });
 
   it("incepe lista pe luna urmatoare dupa publicare", async () => {
-    const { sursa } = await deschideFacturi();
+    const { sursa } = await deschideFacturi({ sursa: await sursaCuCitiriVerificate() });
     const spion = vi.spyOn(sursa, "deschideLista");
     await apasa("Publica lista");
     await apasa(inDialog("Publica lista").getByRole("button", { name: "Da, publica lista" }));

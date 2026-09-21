@@ -12,6 +12,8 @@
 ============================================================================= */
 
 import { createClient } from "@supabase/supabase-js";
+/* [J9, K22] seara unei zile, ora Romaniei, oricare ar fi fusul dispozitivului */
+import { oraSeriiRomania } from "./ora-romania.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 const aziIso = () => {
@@ -21,20 +23,6 @@ const aziIso = () => {
 const luna = (data) => (data ? String(data).slice(0, 7) : null);
 const zi1 = (l) => `${l}-01`;
 
-/* [J9] Ora serii (20:00) a unei zile date, ca ora a Romaniei — baza de date
-   ruleaza pe ora Bucurestiului (migratia fus_orar_romania) si sursa
-   demonstrativa (src/sursa-mock.js, offsetRomania/oraSeriiRomania) calculeaza
-   la fel. `new Date(`${zi}T20:00:00`)` interpreteaza ora ca ora LOCALA a
-   dispozitivului: pe un telefon cu alt fus decat Romania, deschideVot ar
-   trimite un alt instant decat cel afisat ("20:00"), uneori chiar unul pe
-   care deschide_vot il refuza deja ca fiind trecut. */
-function offsetRomania(dataText) {
-  const aprox = new Date(`${dataText}T20:00:00Z`);
-  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
-    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
-  return `+${ore.padStart(2, "0")}:00`;
-}
-const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
 const nr = (x) => (x == null ? null : Number(x));
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 /* Un camp gol din formular ("" sau necompletat) ajunge null in baza */
@@ -160,6 +148,8 @@ export function creeazaSursaSupabase(url, cheie) {
     const eu = await ok(id.rpc("eu"));
     const azi = aziIso();
     const euUi = { profilId: eu.profil_id, nume: eu.nume, telefon: eu.telefon, email: eu.email, rol: eu.rol, apartamentId: eu.apartament_id };
+    /* [K21] doar pentru rolul "respins" trimite identitate.eu() motivul */
+    if (eu.rol === "respins") euUi.motivRespingere = eu.motiv_respingere;
     ctx = { profilId: eu.profil_id, rol: eu.rol, blocId: eu.bloc_id, asociatieId: eu.asociatie_id, apartamentId: eu.apartament_id };
     if (eu.rol !== "administrator" && eu.rol !== "locatar") return { azi, eu: euUi };
 
@@ -173,9 +163,11 @@ export function creeazaSursaSupabase(url, cheie) {
        celuilalt apartament, care ar ramane invizibile si neplatibile.
        Interogarea sta inaintea marelui Promise.all, pentru ca alMeu() si
        prin() (folosite in el) au nevoie de lista completa. */
+    /* [K17] ordonate, ca alegerea apartamentului sa nu se reaseze la fiecare incarcare */
     const legaturileMele = esteAdmin ? [] : await ok(id.from("locatari").select("apartament_id, calitate")
       .eq("profil_id", eu.profil_id).eq("bloc_id", bloc)
-      .lte("activ_din", azi).or(`activ_pana.is.null,activ_pana.gt.${azi}`));
+      .lte("activ_din", azi).or(`activ_pana.is.null,activ_pana.gt.${azi}`)
+      .order("activ_din", { ascending: true }).order("apartament_id", { ascending: true }));
     const idApartamenteMele = legaturileMele.length ? legaturileMele.map((l) => l.apartament_id) : [eu.apartament_id];
     /* Apartamentul "activ" este cel ales de om, daca e chiar unul de-al lui;
        altfel ramane cel ales de identitate.eu(). */
@@ -212,7 +204,8 @@ export function creeazaSursaSupabase(url, cheie) {
         .eq("ap.bloc_id", bloc)),
       toate(() => intr.from("liste_lunare").select("*").eq("bloc_id", bloc)),
       toate(() => intr.from("cheltuieli").select("*, l:liste_lunare!inner(bloc_id)").eq("l.bloc_id", bloc)),
-      ok(intr.from("furnizori").select("*").eq("asociatie_id", asoc)),
+      /* [K17] prin toate(): peste max_rows se pierdeau tacut, in ordinea fizica */
+      toate(() => intr.from("furnizori").select("*").eq("asociatie_id", asoc)),
       toate(() => alMeu(intr.from("repartizari").select("*").eq("bloc_id", bloc))),
       toate(() => alMeu(cont.from("contoare").select("*").eq("bloc_id", bloc).is("scos_la", null))),
       toate(() => alMeu(cont.from("citiri").select("*").eq("bloc_id", bloc))),
@@ -223,7 +216,7 @@ export function creeazaSursaSupabase(url, cheie) {
       toate(() => prin(fin.from("alocari_plati").select("*, p:plati!inner(bloc_id, apartament_id)"), "p")),
       toate(() => prin(fin.from("chitante").select("*, p:plati!inner(bloc_id, apartament_id)"), "p")),
       ok(fin.rpc("situatie_bloc", { p_bloc_id: bloc })),
-      ok(fin.from("fonduri_solduri").select("*").eq("bloc_id", bloc)),
+      toate(() => fin.from("fonduri_solduri").select("*").eq("bloc_id", bloc)),
       toate(() => fin.from("miscari_fond").select("*, f:fonduri!inner(bloc_id)").eq("f.bloc_id", bloc)),
       toate(() => alMeu(ses.from("sesizari").select("*").eq("bloc_id", bloc))),
       toate(() => prin(ses.from("sesizari_mesaje").select("*, s:sesizari!inner(bloc_id, apartament_id)"), "s")),
@@ -240,9 +233,19 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(guv.rpc("situatie_adunari", { p_asociatie_id: asoc, p_apartament_id: euUi.apartamentId || null })),
       esteAdmin ? ok(com.from("remindere_setari").select("*").eq("asociatie_id", asoc)) : Promise.resolve([]),
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
-      esteAdmin ? ok(id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
+      esteAdmin ? toate(() => id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
       toate(() => id.from("profiluri").select("id, nume, email, telefon")),
     ]);
+    /* [K17] toate() ordoneaza dupa id, pentru paginare; id-ul e un UUID
+       aleator, deci ordinea aceea nu inseamna nimic pentru om si difera de la
+       o baza la alta (pe CI, ecranul Fonduri ajungea sa inregistreze iesirea
+       in celalalt fond). Listele pe care omul le vede in ordinea sursei primesc
+       ordinea din sursa demo: furnizorii si locatarii in ordinea adaugarii,
+       fondurile reparatii, apoi rulment. */
+    const inOrdineaAdaugarii = (x, y) => `${x.creat_la}|${x.id}`.localeCompare(`${y.creat_la}|${y.id}`);
+    furnizori.sort(inOrdineaAdaugarii);
+    locatari.sort(inOrdineaAdaugarii);
+    fonduri.sort((x, y) => x.tip.localeCompare(y.tip));
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
        identitate.invitatii si organizare.apartamente sunt in scheme diferite,
        iar PostgREST leaga doar tabele din aceeasi schema, deci filtrul merge
@@ -295,6 +298,11 @@ export function creeazaSursaSupabase(url, cheie) {
       id: d.id, apartamentId: d.apartament_id, tip: d.tip, luna: luna(d.luna), listaId: d.lista_id, suma: nr(d.suma),
       scadenta: d.scadenta, descriere: d.descriere, rest: round2(nr(d.rest)), documentId: d.document_id, creatLa: d.creat_la,
     }));
+    /* [K13] Alocarile unei plati (randurile chitantei) in ordinea in care le-a
+       facut aloca_plata: scadenta, data datoriei, id. Veneau dupa id-ul
+       alocarii, un UUID aleator, deci lunile unei plati apareau amestecate. */
+    const cheieDatorie = new Map(datorii.map((d) => [d.id, `${d.scadenta}|${d.creat_la}|${d.id}`]));
+    const inOrdineaPlatii = (x, y) => String(cheieDatorie.get(x.datorie_id)).localeCompare(String(cheieDatorie.get(y.datorie_id)));
     const idDatorii = new Set(datorii.map((d) => d.id));
 
     return {
@@ -356,7 +364,7 @@ export function creeazaSursaSupabase(url, cheie) {
           id: p.id, apartamentId: p.apartament_id, suma: nr(p.suma), metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmata_la,
           referinta: p.referinta_procesator, inregistrataDe: p.inregistrata_de ? numeProfil(p.inregistrata_de) : null,
           chitanta: ch ? { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la } : null,
-          alocari: alocari.filter((a) => a.plata_id === p.id).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
+          alocari: alocari.filter((a) => a.plata_id === p.id).sort(inOrdineaPlatii).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
         };
       }),
       situatieBloc: { apartamente: situatieBloc.apartamente, faraRestanta: situatieBloc.faraRestanta, restanteTotal: nr(situatieBloc.restanteTotal) },
@@ -568,8 +576,12 @@ export function creeazaSursaSupabase(url, cheie) {
         if (!rand) throw new Error("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
         if (rand.tip !== "factura") throw new Error("Randul fondului de reparatii nu se modifica din formularul de factura.");
       }
+      /* [K23] Factura noua cu furnizor nou: un singur apel, deci o singura
+         tranzactie. In doi pasi, o cursa pe acelasi cod lasa furnizorul celui
+         refuzat orfan, fara nicio factura. */
+      const cuFurnizorNou = !furnizorId && !cid;
       let fid = furnizorId;
-      if (!fid) {
+      if (!fid && cid) {
         const f = await ok(intr.from("furnizori").insert({
           asociatie_id: c.asociatieId, denumire: furnizorNou.trim(), categorie_implicita: categorie, metoda_implicita: metoda, tip_apa_implicit: tipApa || null, cod_implicit: cod,
         }).select().single());
@@ -581,11 +593,24 @@ export function creeazaSursaSupabase(url, cheie) {
         tip_apa: metoda === "consum" ? tipApa : null, data_emitere: emisa || null, scadenta_furnizor: scadentaFurnizor || null,
         ...(doc ? { document_id: doc.id } : {}),
       };
-      const { data, error } = cid
-        ? await intr.from("cheltuieli").update(valori).eq("id", cid).eq("tip", "factura").select().single()
-        : await intr.from("cheltuieli").insert(valori).select().single();
+      let rezultat;
+      if (cuFurnizorNou) {
+        rezultat = await intr.rpc("adauga_factura_cu_furnizor_nou", {
+          p_lista_id: listaId, p_denumire: furnizorNou.trim(), p_categorie: categorie, p_cod: cod, p_suma: suma, p_metoda: metoda,
+          p_tip_apa: tipApa || null, p_serie: serie || null, p_emisa: emisa || null, p_scadenta: scadentaFurnizor || null,
+          p_document_id: doc ? doc.id : null,
+        });
+        if (rezultat.data) rezultat = { ...rezultat, data: { id: rezultat.data } };
+      } else {
+        rezultat = cid
+          ? await intr.from("cheltuieli").update(valori).eq("id", cid).eq("tip", "factura").select().single()
+          : await intr.from("cheltuieli").insert(valori).select().single();
+      }
+      const { data, error } = rezultat;
       if (error) {
-        if (error.code === "23505") throw new Error(`Codul ${cod} exista deja pe lista.`);
+        /* [K23] Prin functie pot cadea doua chei unice: codul pe lista si
+           numele furnizorului nou; doar prima inseamna "cod dublat". */
+        if (error.code === "23505" && /cheltuieli_lista_cod_key/.test(error.message)) throw new Error(`Codul ${cod} exista deja pe lista.`);
         if (cid && error.code === "PGRST116") {
           /* [P4] Verificarea de mai sus a gasit randul, cu tipul "factura",
              inainte de a urca vreun scan: daca update-ul tot nu-l gaseste,

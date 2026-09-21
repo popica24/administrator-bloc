@@ -38,6 +38,8 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { calculeazaLista, verificaDate } from "../supabase/functions/_shared/motor.js";
 import { documentPdf, scurteazaNume } from "./pdf.js";
 import { creeazaSursa } from "./sursa.js";
+/* [K12, K22] ora aleasa in formular, ca ora a Romaniei, nu a dispozitivului */
+import { instantRomania } from "./ora-romania.js";
 
 /* =============================================================================
    1. TOKENS
@@ -177,20 +179,6 @@ const ziLocala = (iso) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
 
-/* [K12] Instantul (ISO) al unei date si ore alese in formular, ca ora a
-   Romaniei (+02:00 iarna, +03:00 vara), calculat cu Intl - nu cu fusul
-   dispozitivului. La fel ca offsetRomania()/oraSeriiRomania() din
-   sursa-mock.js si sursa-supabase.js (fix J9, pentru ora fixa de inchidere
-   a votului): convoacaAdunare trimitea data si ora adunarii cu
-   `new Date(\`${data}T${ora}:00\`)`, care le citeste in fusul dispozitivului
-   - un locatar aflat in strainatate vedea o alta ora decat cea aleasa de
-   administrator. */
-function instantRomania(dataText, oraText) {
-  const aprox = new Date(`${dataText}T${oraText}:00Z`);
-  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
-    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
-  return new Date(`${dataText}T${oraText}:00+${ore.padStart(2, "0")}:00`).toISOString();
-}
 
 const dataRo = (iso) => {
   const [y, m, d] = (iso.length > 10 ? ziLocala(iso) : iso).split("-");
@@ -361,6 +349,12 @@ const datoriiDeschise = (date, apId) => datoriiApartament(date, apId).filter((d)
    mai e de platit). Fara acest credit in suma, soldul apare mai mare decat
    cel din registru. */
 const sold = (date, apId) => suma(datoriiApartament(date, apId), (d) => d.rest);
+/* [K9] Banii platiti si inca nealocati pe nicio datorie: un avans, care se
+   scade din urmatoarea lista. Soldul din registru (financiar.solduri) este
+   sold() minus acest avans; fara el, o plata facuta inainte de lista aparea
+   doar ca "Achitat", fara nicio urma a banilor platiti in plus. */
+const avans = (date, apId) => suma(date.plati.filter((p) => p.apartamentId === apId && p.stare === "confirmata"),
+  (p) => p.suma - suma(p.alocari, (a) => a.suma));
 const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.scadenta < date.azi), (d) => d.rest);
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
@@ -1830,6 +1824,9 @@ function LocatarAcasa({ go }) {
               : zile != null && zile >= 0 && !areRestanta ? <Badge label={zile === 0 ? "Scadent azi" : `Mai ai ${pluralZile(zile)}`} tone={zile > 5 ? "neutral" : "warn"} />
                 : <Badge label="Termen depasit" tone="danger" />}
           </Box>
+          {avans(date, ap.id) > 0 && (
+            <Txt size={12.5} color={C.ok} weight={600}>Ai platit in avans {lei(avans(date, ap.id))}. Se scad din urmatoarea lista.</Txt>
+          )}
           {lista && (
             <Txt size={12.5} color={C.muted}>
               Lista pe {monthLabel(lista.luna)}, termen de plata {dataLunga(scadenta)}. Dupa {date.setari.zileGratie} de zile de la scadenta se calculeaza penalizari de {num(date.setari.procentPenalizareZi)}% pe zi.
@@ -3194,6 +3191,9 @@ function FisaApartament({ apId, onClose }) {
           <Eyebrow>Sold la zi</Eyebrow>
           <Lei value={s} size={18} weight={700} color={restanta(date, ap.id) > 0 ? C.danger : C.ink} />
         </Box>
+        {avans(date, ap.id) > 0 && (
+          <Txt size={12.5} color={C.ok} weight={600}>Avans nealocat: {lei(avans(date, ap.id))}. Se scade din urmatoarea lista.</Txt>
+        )}
         {deschise.length === 0 ? (
           <Txt size={12.5} color={C.ok} weight={600}>Nu are nimic de plata.</Txt>
         ) : deschise.map((d) => (
@@ -3765,6 +3765,8 @@ function AdminFacturi() {
   })).length : 0;
   const generalCitit = lista ? date.contoare.filter((c) => !c.apartamentId).every((c) => { const x = citireLuna(date, c.id, lista.luna); return x && x.stare === "validata"; }) : false;
   const areApa = cheltuieli.some((c) => c.metoda === "consum");
+  /* [K6] Citirile trimise ale lunii opresc publicarea, cu sau fara apa pe lista */
+  const deVerificat = lista ? date.citiri.filter((c) => c.luna === lista.luna && c.stare === "trimisa").length : 0;
 
   return (
     <Box gap={S.lg}>
@@ -3792,6 +3794,13 @@ function AdminFacturi() {
               <Txt size={12} color={C.info}>
                 Adauga facturile lunii, verifica previzualizarea si publica. Dupa publicare, sumele nu se mai schimba; o corectura se face doar printr-o recalculare, vizibila pentru locatari.
               </Txt>
+              {deVerificat > 0 && (
+                <Txt size={12} color={C.warn} weight={600}>
+                  {deVerificat === 1
+                    ? "Mai este o citire de verificat. Lista se publica dupa ce o validezi sau o respingi, din Apartamente, la Citiri contoare."
+                    : `Mai sunt ${plural(deVerificat, "citire", "citiri")} de verificat. Lista se publica dupa ce le validezi sau le respingi, din Apartamente, la Citiri contoare.`}
+                </Txt>
+              )}
               {areApa && (
                 <Txt size={12} color={generalCitit && citiriValidate === date.apartamente.length ? C.ok : C.warn} weight={600}>
                   Citiri validate: {citiriValidate} din {date.apartamente.length} apartamente. Contorul general: {generalCitit ? "citit" : "necitit"}.
