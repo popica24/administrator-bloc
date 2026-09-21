@@ -198,6 +198,13 @@ export async function deschide(page) {
 export async function intra(page, email, parola = PAROLA) {
   await page.goto("/");
   await page.getByRole("heading", { name: "Intra in cont" }).or(page.getByText("Intra in cont").first()).first().waitFor();
+  /* Testele de aici verifica aplicatia peste stack-ul local. Daca ea a pornit
+     fara adresa serverului, merge pe date din memorie: ecranele arata la fel,
+     dar nimic nu ajunge in baza, iar sute de teste pica fara sa spuna de ce.
+     Asa a fost pe CI pana la 21 septembrie. Mai bine un singur mesaj limpede. */
+  if (await page.getByText("Mod demonstrativ, fara server").isVisible()) {
+    throw new Error("Aplicatia a pornit in modul demonstrativ: lipsesc VITE_SUPABASE_URL si VITE_SUPABASE_ANON_KEY (vezi webServer.env in playwright.config.js).");
+  }
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Parola").fill(parola);
   await page.getByRole("button", { name: "Intra", exact: true }).click();
