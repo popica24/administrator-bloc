@@ -122,28 +122,14 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 ### 2.5 Iesire
 - `BaraSus` → "Iesi" → `iesi()` (signOut, starea se goleste).
 
-### 2.6 Cum functioneaza aplicatia (`GhidAplicatie`)
-- **Unde:** butonul "Ajutor" din `BaraSus` (numele accesibil: "Cum functioneaza aplicatia") si
-  butonul cu acelasi nume de pe ecranul de intrare.
-- **Ce arata:** o fraza despre principiul aplicatiei, apoi cate o sectiune pentru fiecare tab al
-  rolului, plus "Contul tau". Fiecare sectiune se deschide la atingere, cu cateva fraze scurte.
-- **In cont:** doar rolul omului, iar fiecare sectiune are "Du-ma la ...", care deschide tabul ei.
-  **Pe ecranul de intrare:** un comutator Locatar / Administrator, fara navigare.
-- **Continut:** `GHID` si `GHID_INTRO`, in sectiunea 3 a `AdminBloc.jsx`. Testul
-  `ui-ghid.test.jsx` cere cate o sectiune pentru fiecare tab din bara de taburi, deci un tab nou
-  fara explicatie pica testul.
-
----
-
-### 2.7 Pagina publica "Cum functioneaza AdminBloc" (`cum-functioneaza/`)
+### 2.6 Pagina publica "Cum functioneaza AdminBloc" (`cum-functioneaza/`)
 - **Unde:** `/cum-functioneaza/`, a doua pagina a site-ului, fara cont. Build-ul are doua intrari
   (`vite.config.js`): aplicatia si pagina aceasta.
 - **Ce arata:** lista de intretinere pe ultima luna publicata a blocului demonstrativ, calculata in
   pagina cu sursa demo si motorul real; orice suma se deschide in socoteala ei, pe baza pe care a
   pastrat-o motorul. Sub ea: verificarea "facturi = impartit", principiul aplicatiei, pasii unei
   luni, ce vede fiecare rol, datele oamenilor si stadiul proiectului.
-- **Continut comun:** explicatiile pe roluri vin din `src/ghid.js`, aceleasi cu ecranul "Cum
-  functioneaza aplicatia" din aplicatie.
+- **Continut:** explicatiile pe roluri vin din `src/ghid.js`.
 - **Nu face parte din aplicatie:** HTML si CSS simplu (`src/pagina-publica.jsx`,
   `src/pagina-publica.css`), deci regula de portabilitate spre React Native nu i se aplica.
 

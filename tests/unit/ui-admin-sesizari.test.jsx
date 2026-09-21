@@ -7,7 +7,7 @@ vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest 
 
 const deschideSesizari = (opt) => pornesteAdmin({ tab: "Sesizari", ...opt });
 /* Cardurile de sesizare sunt butoane cu titlul drept eticheta */
-const titluri = () => butoane(/./).map((b) => b.getAttribute("aria-label")).filter((t) => t && !["Inchide", "Iesi", "Cum functioneaza aplicatia"].includes(t));
+const titluri = () => butoane(/./).map((b) => b.getAttribute("aria-label")).filter((t) => t && !["Inchide", "Iesi"].includes(t));
 const idSesizare = async (sursa, titlu) => (await sursa.incarca()).sesizari.find((s) => s.titlu === titlu).id;
 
 describe("AdminSesizari, lista", () => {

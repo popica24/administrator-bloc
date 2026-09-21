@@ -40,8 +40,6 @@ import { documentPdf, scurteazaNume } from "./pdf.js";
 import { creeazaSursa } from "./sursa.js";
 /* [K12, K22] ora aleasa in formular, ca ora a Romaniei, nu a dispozitivului */
 import { instantRomania } from "./ora-romania.js";
-/* Explicatiile fiecarei functii, comune cu pagina publica (cum-functioneaza/) */
-import { GHID, GHID_INTRO } from "./ghid.js";
 
 /* =============================================================================
    1. TOKENS
@@ -878,7 +876,7 @@ function Press({ onPress, style, className = "", children, disabled, label, apas
   );
 }
 
-function Btn({ label, eticheta, onPress, variant = "primary", size = "md", full, disabled, style }) {
+function Btn({ label, onPress, variant = "primary", size = "md", full, disabled, style }) {
   const palete = {
     primary: { bg: C.accent, fg: C.white, bd: C.accent },
     secondary: { bg: C.surface, fg: C.ink, bd: C.lineStrong },
@@ -893,7 +891,6 @@ function Btn({ label, eticheta, onPress, variant = "primary", size = "md", full,
     <Press
       onPress={onPress}
       disabled={disabled}
-      label={eticheta}
       style={{
         backgroundColor: pal.bg,
         border: `1px solid ${pal.bd}`,
@@ -4370,54 +4367,7 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
   );
 }
 
-/* "Cum functioneaza aplicatia": o sectiune pe tab, care se deschide la
-   atingere. Cu `rol` (omul e in cont) arata doar rolul lui si are "Du-ma la"
-   spre tabul sectiunii; fara `rol` (ecranul de intrare) omul alege rolul. */
-function GhidAplicatie({ open, onClose, rol, go }) {
-  const [ales, setAles] = useState("locatar");
-  const [deschisa, setDeschisa] = useState(null);
-  const rolAfisat = rol || ales;
-  return (
-    <Sheet open={open} onClose={onClose} titlu="Cum functioneaza aplicatia">
-      <Txt size={13} color={C.inkSoft}>{GHID_INTRO}</Txt>
-      {!rol && (
-        <Segment
-          options={[{ value: "locatar", label: "Locatar" }, { value: "administrator", label: "Administrator" }]}
-          value={ales}
-          onChange={(v) => { setAles(v); setDeschisa(null); }}
-        />
-      )}
-      <Box gap={S.sm}>
-        {GHID[rolAfisat].map((sec) => {
-          const eDeschisa = deschisa === sec.titlu;
-          return (
-            <Card key={sec.titlu} pad={0}>
-              <Press desfasurat={eDeschisa} onPress={() => setDeschisa(eDeschisa ? null : sec.titlu)} style={{ padding: S.md }}>
-                <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.sm }}>
-                  <Box flex={1} gap={2}>
-                    <Txt size={15} weight={700}>{sec.titlu}</Txt>
-                    <Txt size={12.5} color={C.muted}>{sec.rezumat}</Txt>
-                  </Box>
-                  <Txt size={18} color={C.muted}>{eDeschisa ? "−" : "+"}</Txt>
-                </Box>
-              </Press>
-              {eDeschisa && (
-                <Box gap={S.sm} style={{ padding: S.md, paddingTop: 0 }}>
-                  {sec.puncte.map((pct) => <Txt key={pct} size={13.5} color={C.ink}>{pct}</Txt>)}
-                  {rol && sec.tab && (
-                    <Btn label={`Du-ma la ${sec.titlu}`} variant="secondary" size="sm" onPress={() => { onClose(); go(sec.tab); }} />
-                  )}
-                </Box>
-              )}
-            </Card>
-          );
-        })}
-      </Box>
-    </Sheet>
-  );
-}
-
-function BaraSus({ date, onIesi, onAlegeApartament, go }) {
+function BaraSus({ date, onIesi, onAlegeApartament }) {
   const esteAdmin = date.eu.rol === "administrator";
   const ap = !esteAdmin ? apartamentulMeu(date) : null;
   const initiale = date.bloc.denumire.replace(/^Bloc\s+/i, "").split(/[\s,]/)[0].slice(0, 3).toUpperCase();
@@ -4428,7 +4378,6 @@ function BaraSus({ date, onIesi, onAlegeApartament, go }) {
     ? date.eu.apartamenteMele.map((id) => date.apartamente.find((a) => a.id === id)).filter(Boolean)
     : null;
   const [alegeOpen, setAlegeOpen] = useState(false);
-  const [ghidOpen, setGhidOpen] = useState(false);
   const eticheta = esteAdmin ? `Administrator, ${date.bloc.denumire}` : `Apartament ${ap.numar}, ${date.bloc.denumire}`;
   return (
     <Box
@@ -4462,9 +4411,7 @@ function BaraSus({ date, onIesi, onAlegeApartament, go }) {
           )}
         </Box>
       </Box>
-      <Btn label="Ajutor" eticheta="Cum functioneaza aplicatia" size="sm" variant="secondary" onPress={() => setGhidOpen(true)} />
       <Btn label="Iesi" size="sm" variant="secondary" onPress={onIesi} />
-      <GhidAplicatie open={ghidOpen} onClose={() => setGhidOpen(false)} rol={esteAdmin ? "administrator" : "locatar"} go={go} />
       {apartamenteMele && (
         <Sheet open={alegeOpen} onClose={() => setAlegeOpen(false)} titlu="Alege apartamentul">
           <Txt size={12.5} color={C.muted}>Esti legat de mai multe apartamente din {date.bloc.denumire}. Alege pe care il vezi acum.</Txt>
@@ -4529,7 +4476,6 @@ class GranitaEroare extends React.Component {
 function EcranAutentificare() {
   const { intra, inregistreaza, folosesteInvitatie, cereVerificareAdministrator, modDemo } = useApp();
   const [mod, setMod] = useState("intrare");
-  const [ghidOpen, setGhidOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [parola, setParola] = useState("");
   const [nume, setNume] = useState("");
@@ -4662,9 +4608,7 @@ function EcranAutentificare() {
         {mod !== "intrare" && <Btn label="Am deja cont, vreau sa intru" variant="secondary" full onPress={() => setMod("intrare")} />}
         {mod !== "locatar" && <Btn label="Am un cod de la administrator" variant="secondary" full onPress={() => setMod("locatar")} />}
         {mod !== "administrator" && <Btn label="Sunt administrator si vreau cont" variant="quiet" full onPress={() => setMod("administrator")} />}
-        <Btn label="Cum functioneaza aplicatia" variant="quiet" full onPress={() => setGhidOpen(true)} />
       </Box>
-      <GhidAplicatie open={ghidOpen} onClose={() => setGhidOpen(false)} />
 
       {modDemo && (
         <Card gap={S.xs} pad={S.md} style={{ backgroundColor: C.infoSoft, borderColor: C.infoSoft }}>
@@ -5039,7 +4983,7 @@ export default function AdminBloc() {
         acasa: date.notificari.filter((n) => !n.cititaLa).length,
       };
     cheie = `${date.eu.rol}-${tabActiv}`;
-    bara = <BaraSus date={date} onIesi={comenzi.iesi} onAlegeApartament={comenzi.aleseApartament} go={go} />;
+    bara = <BaraSus date={date} onIesi={comenzi.iesi} onAlegeApartament={comenzi.aleseApartament} />;
     continut = (
       <div key={`${date.eu.rol}-${tabActiv}-${parametri ? parametri._n : ""}`} className="ab-fade">
         <Ecran go={go} parametri={parametri} />
