@@ -281,6 +281,12 @@ function dateMotor(db, lista) {
 function publica(db, listaId, la, deCine) {
   const lista = db.liste.find((l) => l.id === listaId) || eroare("Lista nu exista.");
   if (lista.stare !== "ciorna") eroare("Lista este deja publicata.");
+  /* [K6] ca trigger-ul din baza: dupa publicare, o citire trimisa nu mai
+     poate fi verificata de nicio comanda si ar ramane blocata */
+  const trimise = db.citiri.filter((c) => c.blocId === lista.blocId && c.luna === lista.luna && c.stare === "trimisa").length;
+  if (trimise === 1) eroare(`Pe ${lunaText(lista.luna)} mai este o citire de verificat. Valideaza-o sau respinge-o, apoi publica lista.`);
+  const de = trimise >= 20 && (trimise % 100 === 0 || trimise % 100 > 19) ? " de" : "";
+  if (trimise > 1) eroare(`Pe ${lunaText(lista.luna)} mai sunt ${trimise}${de} citiri de verificat. Valideaza-le sau respinge-le, apoi publica lista.`);
   const cheltuieli = db.cheltuieli.filter((c) => c.listaId === lista.id);
   if (cheltuieli.length === 0) eroare("Lista nu are nicio cheltuiala.");
   const rezultat = calculeazaLista(dateMotor(db, lista));

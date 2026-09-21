@@ -17,7 +17,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, listaLunara, soldApartament, uitaCache,
-  descarca, textPdf, CONTURI, profilDupaEmail,
+  descarca, textPdf, CONTURI, profilDupaEmail, verificaCitirileLunii,
 } from "./ajutor.js";
 
 const LUNA_1 = "2026-09-01";
@@ -89,6 +89,7 @@ test.describe("doua luni la rand, fara derive", () => {
   test("1. prima luna se publica si intra in registru", async ({ page }) => {
     const sb = serviciu();
     await adaugaFacturile(LISTE[LUNA_1]);
+    await verificaCitirileLunii(BLOC.id, LUNA_1);
     const fondInainte = Number((await ok(sb.schema("financiar").from("fonduri_solduri")
       .select("sold").eq("bloc_id", BLOC.id).eq("tip", "reparatii").single(), "fond")).sold);
 

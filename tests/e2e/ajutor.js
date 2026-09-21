@@ -62,6 +62,17 @@ export async function blocD14() {
    seed`, deci niciun test nu are voie sa-i scrie de mana: se cauta aici, o
    singura data pe rulare, dupa ceva stabil (denumirea blocului, luna listei,
    titlul votului). */
+/* [K6] O lista nu se mai publica peste citiri trimise. Testele care nu sunt
+   despre citiri le trec pe validate cu cheia de serviciu, ca dupa un
+   administrator care a terminat deja ecranul "Citiri contoare". `luna` este
+   prima zi a lunii ("2026-09-01"). */
+export async function verificaCitirileLunii(blocId, luna) {
+  const { error } = await serviciu().schema("contorizare").from("citiri")
+    .update({ stare: "validata", verificata_la: new Date().toISOString() })
+    .eq("bloc_id", blocId).eq("luna", luna).eq("stare", "trimisa");
+  if (error) throw new Error(`verificaCitirileLunii: ${error.message}`);
+}
+
 export async function asociatieD14() {
   return (await blocD14()).asociatie_id;
 }

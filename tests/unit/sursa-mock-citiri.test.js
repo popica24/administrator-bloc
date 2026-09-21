@@ -23,6 +23,19 @@ function contoare(d, apId) {
 
 beforeEach(() => ceasDemo());
 
+/* [K6] O lista nu se mai publica peste citiri trimise, deci o citire trimisa
+   pe o luna publicata nu mai apare prin comenzi. Pazele pentru ea raman, ca
+   aparare pentru datele de dinainte de reparatie, iar testele lor refac starea
+   aceea direct: citirile trimise trec pe "validata" cat se publica lista,
+   apoi revin pe "trimisa". */
+async function publicaPesteCitiriTrimise(s, listaId) {
+  const lista = s.db.liste.find((l) => l.id === listaId);
+  const trimise = s.db.citiri.filter((c) => c.luna === lista.luna && c.stare === "trimisa");
+  trimise.forEach((c) => { c.stare = "validata"; });
+  await s.publicaLista(listaId);
+  trimise.forEach((c) => { c.stare = "trimisa"; });
+}
+
 describe("transmiteCitire", () => {
   it("salveaza ambele indexuri ca trimise, cu poza si consumul fata de august", async () => {
     const { s, d } = await ca(LOCATAR);
@@ -106,7 +119,7 @@ describe("transmiteCitire", () => {
   it("[J2] refuza transmiterea pe o luna a carei lista e deja publicata", async () => {
     const { s, d } = await ca(ADMIN);
     const septembrie = d.liste.find((l) => l.luna === "2026-09");
-    await s.publicaLista(septembrie.id);
+    await publicaPesteCitiriTrimise(s, septembrie.id);
     await s.intra(LOCATAR, PAROLA);
     const dd = await s.incarca();
     const { rece, aug } = contoare(dd, dd.eu.apartamentId);
@@ -191,7 +204,7 @@ describe("valideazaCitire", () => {
     const ap9 = apNr(d, "9").id;
     const septembrie = d.liste.find((l) => l.luna === "2026-09");
     const rece = d.citiri.find((x) => x.apartamentId === ap9 && x.luna === "2026-09" && x.tip === "rece");
-    await s.publicaLista(septembrie.id);
+    await publicaPesteCitiriTrimise(s, septembrie.id);
     await expect(s.valideazaCitire(rece.id, true))
       .rejects.toThrow("Lista lunii septembrie 2026 este deja publicata; citirea nu se mai poate verifica.");
     expect((await s.incarca()).citiri.find((x) => x.id === rece.id).stare).toBe("trimisa");
@@ -353,7 +366,7 @@ describe("valideazaCitiriApartament", () => {
     const trimiseInainte = d.citiri.filter((x) => x.apartamentId === ap9 && x.luna === "2026-09" && x.stare === "trimisa");
     expect(trimiseInainte).toHaveLength(2);
 
-    await s.publicaLista(septembrie.id);
+    await publicaPesteCitiriTrimise(s, septembrie.id);
 
     await expect(s.valideazaCitiriApartament(ap9, "2026-09", true, null))
       .rejects.toThrow("Lista lunii septembrie 2026 este deja publicata; citirile nu se mai pot verifica.");
@@ -552,7 +565,7 @@ describe("estimeazaCitiri", () => {
     ceasDemo(new Date("2026-09-26T09:00:00"));
     const { s, d } = await ca(ADMIN);
     const septembrie = d.liste.find((l) => l.luna === "2026-09");
-    await s.publicaLista(septembrie.id);
+    await publicaPesteCitiriTrimise(s, septembrie.id);
     await expect(s.estimeazaCitiri("2026-09"))
       .rejects.toThrow("Lista lunii septembrie 2026 este deja publicata; citirile nu se mai pot estima.");
   });

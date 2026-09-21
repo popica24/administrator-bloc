@@ -3765,6 +3765,8 @@ function AdminFacturi() {
   })).length : 0;
   const generalCitit = lista ? date.contoare.filter((c) => !c.apartamentId).every((c) => { const x = citireLuna(date, c.id, lista.luna); return x && x.stare === "validata"; }) : false;
   const areApa = cheltuieli.some((c) => c.metoda === "consum");
+  /* [K6] Citirile trimise ale lunii opresc publicarea, cu sau fara apa pe lista */
+  const deVerificat = lista ? date.citiri.filter((c) => c.luna === lista.luna && c.stare === "trimisa").length : 0;
 
   return (
     <Box gap={S.lg}>
@@ -3792,6 +3794,13 @@ function AdminFacturi() {
               <Txt size={12} color={C.info}>
                 Adauga facturile lunii, verifica previzualizarea si publica. Dupa publicare, sumele nu se mai schimba; o corectura se face doar printr-o recalculare, vizibila pentru locatari.
               </Txt>
+              {deVerificat > 0 && (
+                <Txt size={12} color={C.warn} weight={600}>
+                  {deVerificat === 1
+                    ? "Mai este o citire de verificat. Lista se publica dupa ce o validezi sau o respingi, din Apartamente, la Citiri contoare."
+                    : `Mai sunt ${plural(deVerificat, "citire", "citiri")} de verificat. Lista se publica dupa ce le validezi sau le respingi, din Apartamente, la Citiri contoare.`}
+                </Txt>
+              )}
               {areApa && (
                 <Txt size={12} color={generalCitit && citiriValidate === date.apartamente.length ? C.ok : C.warn} weight={600}>
                   Citiri validate: {citiriValidate} din {date.apartamente.length} apartamente. Contorul general: {generalCitit ? "citit" : "necitit"}.

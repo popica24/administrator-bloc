@@ -16,7 +16,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, listaLunara, soldApartament, uitaCache,
-  descarca, textPdf, CONTURI, profilDupaEmail, URL_SUPABASE, CHEIE_SERVICIU,
+  descarca, textPdf, CONTURI, profilDupaEmail, URL_SUPABASE, CHEIE_SERVICIU, verificaCitirileLunii,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -77,6 +77,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
       const id = await ok(serviciu().schema("intretinere").rpc("deschide_lista", { p_bloc_id: BLOC.id, p_luna: l.luna }), `deschide ${l.luna}`);
       LISTE[l.luna] = id;
       await adaugaFacturile(id, l.luna.slice(0, 7));
+      await verificaCitirileLunii(BLOC.id, l.luna);
       await publicaPrinFunctie(id, l.publicata);
     }
   });
