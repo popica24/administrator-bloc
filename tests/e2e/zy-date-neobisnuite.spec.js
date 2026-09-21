@@ -74,8 +74,19 @@ async function creeazaBloc({ eticheta, cui, apartamente, contoareGenerale }) {
      scot aici, ca ecranele sa fie vazute chiar fara niciun contor. */
   for (const a of apartamente.filter((x) => x.faraContoare)) {
     const apId = apsBd.find((x) => x.numar === a.numar).id;
-    const { data: cont } = await db.schema("contorizare").from("contoare").select("id").eq("apartament_id", apId);
-    for (const c of cont || []) {
+    /* Contorul implicit il creeaza evenimentul ApartamentCreat, procesat si
+       asincron, prin webhook: daca webhook-ul apuca evenimentul inaintea
+       apelului de mai sus, contorul apare abia dupa stergere, iar apartamentul
+       "fara contoare" are unul (asa a picat [R5] pe CI, 21 septembrie). Se
+       asteapta sa apara; evenimentul se proceseaza o singura data, deci nu
+       mai revine dupa stergere. */
+    let cont = [];
+    for (let i = 0; i < 40 && cont.length === 0; i += 1) {
+      cont = await ok(db.schema("contorizare").from("contoare").select("id").eq("apartament_id", apId), "contor implicit");
+      if (cont.length === 0) await new Promise((r) => { setTimeout(r, 500); });
+    }
+    if (cont.length === 0) throw new Error("contorul implicit al apartamentului n-a aparut in 20 de secunde");
+    for (const c of cont) {
       await db.schema("contorizare").from("citiri").delete().eq("contor_id", c.id);
       await ok(db.schema("contorizare").from("contoare").delete().eq("id", c.id), "sterge contor");
     }
