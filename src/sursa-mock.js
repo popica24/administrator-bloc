@@ -671,7 +671,8 @@ function proiecteaza(db, profilId, apartamentAles) {
   const situatieBloc = {
     apartamente: apBloc.length,
     faraRestanta: apBloc.filter((a) => restantaAp(a.id) <= 0).length,
-    restanteTotal: round2(apBloc.reduce((s, a) => s + restantaAp(a.id), 0)),
+    /* [K4] ca in baza: doar cine datoreaza; un rest negativ nu scade restantele celorlalti */
+    restanteTotal: round2(apBloc.reduce((s, a) => s + Math.max(restantaAp(a.id), 0), 0)),
   };
 
   const fonduri = db.fonduri.filter((f) => f.blocId === bloc.id).map((f) => {
