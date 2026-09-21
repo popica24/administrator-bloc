@@ -38,6 +38,8 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { calculeazaLista, verificaDate } from "../supabase/functions/_shared/motor.js";
 import { documentPdf, scurteazaNume } from "./pdf.js";
 import { creeazaSursa } from "./sursa.js";
+/* [K12, K22] ora aleasa in formular, ca ora a Romaniei, nu a dispozitivului */
+import { instantRomania } from "./ora-romania.js";
 
 /* =============================================================================
    1. TOKENS
@@ -177,20 +179,6 @@ const ziLocala = (iso) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
 
-/* [K12] Instantul (ISO) al unei date si ore alese in formular, ca ora a
-   Romaniei (+02:00 iarna, +03:00 vara), calculat cu Intl - nu cu fusul
-   dispozitivului. La fel ca offsetRomania()/oraSeriiRomania() din
-   sursa-mock.js si sursa-supabase.js (fix J9, pentru ora fixa de inchidere
-   a votului): convoacaAdunare trimitea data si ora adunarii cu
-   `new Date(\`${data}T${ora}:00\`)`, care le citeste in fusul dispozitivului
-   - un locatar aflat in strainatate vedea o alta ora decat cea aleasa de
-   administrator. */
-function instantRomania(dataText, oraText) {
-  const aprox = new Date(`${dataText}T${oraText}:00Z`);
-  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
-    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
-  return new Date(`${dataText}T${oraText}:00+${ore.padStart(2, "0")}:00`).toISOString();
-}
 
 const dataRo = (iso) => {
   const [y, m, d] = (iso.length > 10 ? ziLocala(iso) : iso).split("-");

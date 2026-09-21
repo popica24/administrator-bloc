@@ -15,6 +15,8 @@
 import { calculeazaLista, round2 } from "../supabase/functions/_shared/motor.js";
 import * as D from "./date-demo.js";
 import { documentPdf } from "./pdf.js";
+/* [K22] seara unei zile, ora Romaniei: acelasi calcul ca sursa Supabase si ecranul */
+import { oraSeriiRomania } from "./ora-romania.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -56,17 +58,6 @@ function numarRo(n) {
   return `${intreg.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${zecimal}`;
 }
 
-/* Ora Romaniei (+02:00 iarna, +03:00 vara) pentru ora serii (20:00) a unei
-   zile date, calculata cu Intl (nu depinde de fusul masinii care ruleaza
-   testele). Vot si adunare inchid/anunta seara, ora Romaniei, care e mereu
-   inainte de UTC (niciodata negativa). */
-function offsetRomania(dataText) {
-  const aprox = new Date(`${dataText}T20:00:00Z`);
-  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
-    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
-  return `+${ore.padStart(2, "0")}:00`;
-}
-const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
 /* [J8] Data si ora Romaniei ale unei clipe date, indiferent in ce fus a
    ajuns scris sirul (ecranul trimite new Date(...).toISOString(), deci un
    sir UTC ("...Z"), nu text local). Feliind direct caracterele unui sir

@@ -12,6 +12,8 @@
 ============================================================================= */
 
 import { createClient } from "@supabase/supabase-js";
+/* [J9, K22] seara unei zile, ora Romaniei, oricare ar fi fusul dispozitivului */
+import { oraSeriiRomania } from "./ora-romania.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 const aziIso = () => {
@@ -21,20 +23,6 @@ const aziIso = () => {
 const luna = (data) => (data ? String(data).slice(0, 7) : null);
 const zi1 = (l) => `${l}-01`;
 
-/* [J9] Ora serii (20:00) a unei zile date, ca ora a Romaniei — baza de date
-   ruleaza pe ora Bucurestiului (migratia fus_orar_romania) si sursa
-   demonstrativa (src/sursa-mock.js, offsetRomania/oraSeriiRomania) calculeaza
-   la fel. `new Date(`${zi}T20:00:00`)` interpreteaza ora ca ora LOCALA a
-   dispozitivului: pe un telefon cu alt fus decat Romania, deschideVot ar
-   trimite un alt instant decat cel afisat ("20:00"), uneori chiar unul pe
-   care deschide_vot il refuza deja ca fiind trecut. */
-function offsetRomania(dataText) {
-  const aprox = new Date(`${dataText}T20:00:00Z`);
-  const ore = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", timeZoneName: "shortOffset", hour12: false })
-    .formatToParts(aprox).find((p) => p.type === "timeZoneName").value.replace("GMT+", "");
-  return `+${ore.padStart(2, "0")}:00`;
-}
-const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
 const nr = (x) => (x == null ? null : Number(x));
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 /* Un camp gol din formular ("" sau necompletat) ajunge null in baza */
