@@ -3434,7 +3434,7 @@ function FisaApartament({ apId, onClose }) {
 }
 
 function AdminCitiri() {
-  const { date, valideazaCitiriApartament, citesteContorGeneral, estimeazaCitiri, toastMsg } = useApp();
+  const { date, valideazaCitire, valideazaCitiriApartament, citesteContorGeneral, estimeazaCitiri, toastMsg } = useApp();
   const luniCuCitiri = [...new Set([lunaDe(date.azi), ...date.citiri.filter((c) => c.sursa !== "pornire").map((c) => c.luna)])].sort().reverse();
   const [luna, setLuna] = useState(luniCuCitiri[0]);
   const [respinge, setRespinge] = useState(null);
@@ -3449,6 +3449,10 @@ function AdminCitiri() {
   const transmise = toate.filter((x) => x.contoare.every((c) => c.citire && c.citire.stare !== "respinsa")).length;
   const deVerificat = toate.filter((x) => x.contoare.some((c) => c.citire && c.citire.stare === "trimisa"));
   const termen = `${luna}-${pad2(date.setari.ziLimitaCitire)}`;
+  const lunaPublicata = date.liste.some((l) => l.luna === luna && l.stare === "publicata");
+  /* [K2] Citirile validate care se mai pot respinge: ale apartamentului, nu
+     pornirea, si doar cat timp lista lunii nu este publicata */
+  const validateDeRespins = (x) => (lunaPublicata ? [] : x.contoare.filter((c) => c.citire && c.citire.stare === "validata" && c.citire.sursa !== "pornire"));
 
   return (
     <Box gap={S.lg}>
@@ -3528,12 +3532,18 @@ function AdminCitiri() {
                   <Btn label="Respinge" size="sm" variant="danger" onPress={() => { setRespinge(x); setMotiv(""); }} />
                 </Box>
               )}
+              {!x.contoare.some((c) => c.citire && c.citire.stare === "trimisa") && validateDeRespins(x).length > 0 && (
+                <Btn label="Respinge citirea validata" size="sm" variant="secondary" onPress={() => { setRespinge({ ...x, validate: validateDeRespins(x) }); setMotiv(""); }} />
+              )}
             </Box>
           </Box>
         ))}
       </Card>
 
       <Sheet open={!!respinge} onClose={() => setRespinge(null)} titlu={respinge ? `Respinge citirea, ap. ${respinge.ap.numar}` : ""} pazit={areText(motiv)}>
+        {respinge && respinge.validate && (
+          <Txt size={12.5} color={C.inkSoft}>Citirea a fost deja validata. Daca indexul este gresit, respinge-o: lista lunii nu s-a publicat inca, deci se mai poate corecta.</Txt>
+        )}
         <Txt size={12.5} color={C.inkSoft}>Locatarul primeste motivul in aplicatie si poate trimite din nou indexul cu o poza noua.</Txt>
         <Box row gap={S.xs} style={{ flexWrap: "wrap" }}>
           {["Poza este neclara, nu se vad cifrele.", "Indexul nu corespunde cu poza.", "Poza nu arata contorul apartamentului."].map((m) => (
@@ -3544,6 +3554,16 @@ function AdminCitiri() {
         </Box>
         <Field label="Motivul" value={motiv} onChange={setMotiv} multiline placeholder="Ce trebuie sa corecteze locatarul" />
         <Btn label="Respinge citirea" variant="danger" full disabled={!motiv.trim()} onPress={async () => {
+          if (respinge.validate) {
+            /* Citire cu citire: o respingere refuzata la jumatate lasa o
+               stare valida (una respinsa, una validata), care se reia */
+            for (const { citire } of respinge.validate) {
+              const r = await valideazaCitire(citire.id, false, motiv.trim());
+              if (!r.ok) return;
+            }
+            setRespinge(null);
+            return;
+          }
           const r = await valideazaCitiriApartament(respinge.ap.id, luna, false, motiv.trim());
           if (r.ok) setRespinge(null);
         }} />

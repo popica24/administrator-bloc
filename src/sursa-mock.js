@@ -1262,7 +1262,11 @@ export function creeazaSursaMock() {
     async valideazaCitire(citireId, accepta, motiv) {
       const { bloc } = cerAdmin();
       const c = db.citiri.find((x) => x.id === citireId) || eroare("Citirea nu exista.");
-      if (c.stare !== "trimisa") eroare("Citirea a fost deja verificata.");
+      /* [K2] O citire de apartament validata din greseala se mai poate
+         respinge (nu si accepta a doua oara); pornirea si contorul general,
+         nu. Altfel un index gresit facea luna nepublicabila. */
+      const corectie = c.stare === "validata" && !accepta && c.sursa !== "pornire" && !!c.apartamentId;
+      if (c.stare !== "trimisa" && !corectie) eroare("Citirea a fost deja verificata.");
       /* [paritate] o luna a carei lista e deja publicata nu se mai poate
          verifica: banii ei au fost deja calculati din citirile validate
          pana atunci (la fel ca in valideazaCitiriApartament). */
@@ -1278,7 +1282,7 @@ export function creeazaSursaMock() {
          transmitere si putea ramane stale (calculat sarind peste luna
          validata acum): se recalculeaza, in cascada, ca acelasi consum sa nu
          se numere de doua ori -- vezi recalculeazaViitorul. */
-      if (accepta) recalculeazaViitorul(db, c.contorId, bloc.id, c.luna);
+      if (accepta || corectie) recalculeazaViitorul(db, c.contorId, bloc.id, c.luna);
       if (!accepta) {
         locatariActivi(db, c.apartamentId).forEach((l) => notifica(db, {
           profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "citire",

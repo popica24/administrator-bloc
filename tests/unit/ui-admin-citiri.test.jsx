@@ -212,6 +212,46 @@ describe("AdminCitiri, contorul general", () => {
   });
 });
 
+/* [K2] O citire validata din greseala nu mai putea fi schimbata din nicio
+   parte a aplicatiei, iar un index gresit facea luna nepublicabila. */
+describe("[K2] AdminCitiri, citirea validata din greseala", () => {
+  it("se respinge cu motiv cat timp luna nu e publicata; locatarul o trimite din nou", async () => {
+    const { sursa } = await deschideCitiri();
+    const spion = vi.spyOn(sursa, "valideazaCitire");
+    expect(randAp("1").getAllByText("Validat")).toHaveLength(2);
+    await apasa(randAp("1").getByRole("button", { name: "Respinge citirea validata" }));
+    const foaie = inDialog("Respinge citirea, ap. 1");
+    expect(foaie.getByText(/deja validata/)).toBeTruthy();
+    await act(async () => { fireEvent.change(foaie.getByLabelText("Motivul"), { target: { value: "Indexul pare scris gresit." } }); });
+    await apasa(foaie.getByRole("button", { name: "Respinge citirea" }));
+    expect(spion).toHaveBeenCalledTimes(2);
+    for (const [, accepta, motiv] of spion.mock.calls) expect([accepta, motiv]).toEqual([false, "Indexul pare scris gresit."]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(randAp("1").getAllByText("Respins")).toHaveLength(2);
+    expect(randAp("1").queryByRole("button", { name: "Respinge citirea validata" })).toBeNull();
+  });
+
+  it("un refuz la prima citire opreste respingerea si lasa foaia deschisa, cu motivul", async () => {
+    const { sursa } = await deschideCitiri();
+    const spion = vi.spyOn(sursa, "valideazaCitire").mockRejectedValueOnce(new Error("Lista lunii septembrie 2026 este deja publicata; citirea nu se mai poate verifica."));
+    await apasa(randAp("1").getByRole("button", { name: "Respinge citirea validata" }));
+    const foaie = inDialog("Respinge citirea, ap. 1");
+    await act(async () => { fireEvent.change(foaie.getByLabelText("Motivul"), { target: { value: "Indexul pare scris gresit." } }); });
+    await apasa(foaie.getByRole("button", { name: "Respinge citirea" }));
+    expect(spion).toHaveBeenCalledTimes(1);
+    expect(toast().textContent).toBe("Lista lunii septembrie 2026 este deja publicata; citirea nu se mai poate verifica.");
+    expect(inDialog("Respinge citirea, ap. 1").getByLabelText("Motivul").value).toBe("Indexul pare scris gresit.");
+    expect(randAp("1").getAllByText("Validat")).toHaveLength(2);
+  });
+
+  it("nu se ofera pe o luna publicata", async () => {
+    await deschideCitiri();
+    await act(async () => { fireEvent.change(screen.getByLabelText("Luna"), { target: { value: "2026-08" } }); });
+    expect(randAp("1").getAllByText("Validat")).toHaveLength(2);
+    expect(randAp("1").queryByRole("button", { name: "Respinge citirea validata" })).toBeNull();
+  });
+});
+
 describe("AdminCitiri, alta luna si estimari", () => {
   it("august: toate transmise, nimic de verificat, contorul general citit", async () => {
     await deschideCitiri();
