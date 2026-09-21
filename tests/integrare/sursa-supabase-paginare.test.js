@@ -190,6 +190,27 @@ describe("[K17] furnizorii, locatarii, fondurile si legaturile vin intregi si in
     expect(date.furnizori.filter((x) => x.denumire.startsWith("Furnizor K17 ")).length).toBe(1100);
   });
 
+  /* Ordonate dupa id (un UUID aleator), fondurile ajungeau pe CI in alta
+     ordine decat pe un laptop, iar ecranul inregistra iesirea in celalalt
+     fond. Ordinea trebuie sa aiba sens si sa fie cea din sursa demo:
+     furnizorii in ordinea adaugarii, fondurile reparatii apoi rulment. Id-urile
+     alese aici fac ordinea dupa id sa fie exact invers. */
+  it("furnizorii vin in ordinea adaugarii, fondurile reparatii apoi rulment, nu dupa id", async () => {
+    /* primele 8 caractere stabilesc ordinea dupa id; restul, unic la fiecare rulare */
+    const cuPrefix = (p) => `${p}${crypto.randomUUID().slice(8)}`;
+    const primul = cuPrefix("ffffffff");
+    const alDoilea = cuPrefix("00000000");
+    await ok(db("intretinere").from("furnizori").insert({ id: primul, asociatie_id: f.asociatieId, denumire: "K17 adaugat primul" }));
+    await ok(db("intretinere").from("furnizori").insert({ id: alDoilea, asociatie_id: f.asociatieId, denumire: "K17 adaugat al doilea" }));
+    await ok(db("financiar").from("fonduri").update({ id: cuPrefix("00000000") }).eq("bloc_id", f.blocId).eq("tip", "rulment"));
+    await ok(db("financiar").from("fonduri").update({ id: cuPrefix("ffffffff") }).eq("bloc_id", f.blocId).eq("tip", "reparatii"));
+
+    const date = await adm.incarca();
+    const ids = date.furnizori.map((x) => x.id);
+    expect(ids.indexOf(primul)).toBeLessThan(ids.indexOf(alDoilea));
+    expect(date.fonduri.map((x) => x.tip)).toEqual(["reparatii", "rulment"]);
+  });
+
   it("locatarii si soldurile fondurilor se cer ordonate, la administrator", async () => {
     const { cereri } = await cuTrafic(() => adm.incarca());
     for (const cale of ["locatari", "fonduri_solduri"]) {

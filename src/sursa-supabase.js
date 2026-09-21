@@ -236,6 +236,16 @@ export function creeazaSursaSupabase(url, cheie) {
       esteAdmin ? toate(() => id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
       toate(() => id.from("profiluri").select("id, nume, email, telefon")),
     ]);
+    /* [K17] toate() ordoneaza dupa id, pentru paginare; id-ul e un UUID
+       aleator, deci ordinea aceea nu inseamna nimic pentru om si difera de la
+       o baza la alta (pe CI, ecranul Fonduri ajungea sa inregistreze iesirea
+       in celalalt fond). Listele pe care omul le vede in ordinea sursei primesc
+       ordinea din sursa demo: furnizorii si locatarii in ordinea adaugarii,
+       fondurile reparatii, apoi rulment. */
+    const inOrdineaAdaugarii = (x, y) => `${x.creat_la}|${x.id}`.localeCompare(`${y.creat_la}|${y.id}`);
+    furnizori.sort(inOrdineaAdaugarii);
+    locatari.sort(inOrdineaAdaugarii);
+    fonduri.sort((x, y) => x.tip.localeCompare(y.tip));
     /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
        identitate.invitatii si organizare.apartamente sunt in scheme diferite,
        iar PostgREST leaga doar tabele din aceeasi schema, deci filtrul merge
