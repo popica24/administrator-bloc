@@ -181,6 +181,26 @@ describe("AdminCitiri, contorul general", () => {
     expect(spion).toHaveBeenLastCalledWith("2026-09", "calda", 8100);
   });
 
+  /* Pe CI, testul e2e al ciclului lunii astepta degeaba sa salveze apa calda:
+     indexul scris cat timp se salva apa rece disparea la finalul salvarii,
+     fiindca aceasta punea inapoi starea formularului din clipa apasarii. Pe
+     un telefon cu internet slab, administratorul pierdea ce scrisese. */
+  it("indexul scris la alt contor in timpul unei salvari ramane scris", async () => {
+    const { sursa } = await deschideCitiri();
+    const real = sursa.citesteContorGeneral.bind(sursa);
+    let elibereaza;
+    vi.spyOn(sursa, "citesteContorGeneral").mockImplementation((...a) => new Promise((r) => { elibereaza = () => r(real(...a)); }));
+    const [rece, calda] = screen.getAllByLabelText("Index nou");
+    await act(async () => { fireEvent.change(rece, { target: { value: "19800" } }); });
+    await apasa(butoane("Salveaza")[0]);
+    /* Salvarea apei reci inca merge; administratorul trece la apa calda */
+    await act(async () => { fireEvent.change(calda, { target: { value: "8100" } }); });
+    await act(async () => { elibereaza(); });
+    expect(toast().textContent).toBe("Indexul contorului general a fost salvat");
+    expect(screen.getByLabelText("Index nou").value).toBe("8100");
+    expect(dezactivat(butoane("Salveaza")[1])).toBe(false);
+  });
+
   it("salvarea esuata pastreaza indexul scris", async () => {
     const { sursa } = await deschideCitiri();
     vi.spyOn(sursa, "citesteContorGeneral").mockRejectedValue(new Error("Refuzat"));
