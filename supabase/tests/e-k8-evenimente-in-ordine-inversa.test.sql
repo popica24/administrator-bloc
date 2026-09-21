@@ -98,8 +98,8 @@ select results_eq(
            (pg_temp.fx('ap1'), 'corectie'::text, -10.00::numeric(12,2)), (pg_temp.fx('ap2'), 'corectie'::text, 10.00::numeric(12,2))$$,
   '[K8] ...aplica intai publicarea (60 / 40), apoi corectiile (-10 / +10)');
 select results_eq(
-  $$select apartament_id, sum(rest) from financiar.datorii_rest where lista_id = pg_temp.fx('lista') group by apartament_id order by 2$$,
-  $$values (pg_temp.fx('ap1'), 50.00::numeric), (pg_temp.fx('ap2'), 50.00::numeric)$$,
+  $$select apartament_id, sum(rest) from financiar.datorii_rest where lista_id = pg_temp.fx('lista') group by apartament_id order by apartament_id$$,
+  $$select v.a, v.s from (values (pg_temp.fx('ap1'), 50.00::numeric), (pg_temp.fx('ap2'), 50.00::numeric)) v(a, s) order by v.a$$,
   '[K8] registrul ajunge la sumele recalculate, 50 / 50');
 
 -- ListaPublicata vine apoi, cu intarziere: nu dubleaza nimic.
