@@ -1,0 +1,348 @@
+/* Pagina publica "Cum functioneaza AdminBloc". Peretele unei scari de bloc:
+   var sus, vopsea de ulei verde jos, cu braul inchis intre ele; pe el, foaia
+   listei de la avizier. Albastrul de pix e al administratorului: suma aleasa
+   si socoteala ei, scrisa pe foaie. */
+
+:root {
+  --var: #f1f4f0;
+  --vopsea: #2f5d50;
+  --vopsea-brau: #1e3f36;
+  --vopsea-text: #dce9e3;
+  --hartie: #ffffff;
+  --cerneala: #1a1d1b;
+  --cerneala-moale: #4a4f4b;
+  --pix: #2140a6;
+  --pix-fond: #eef1fb;
+  --grila: #d5d9d3;
+
+  --text: "Literata", Georgia, "Times New Roman", serif;
+  --cifre: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--var);
+  color: var(--cerneala);
+  font-family: var(--text);
+  font-size: 18px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--pix);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- peretele */
+
+.perete {
+  /* var pana la brau, apoi vopseaua de ulei, ca pe scara blocului */
+  background:
+    linear-gradient(to bottom,
+      var(--var) 0, var(--var) 46%,
+      var(--vopsea-brau) 46%, var(--vopsea-brau) calc(46% + 8px),
+      var(--vopsea) calc(46% + 8px), var(--vopsea) 100%);
+  padding: 56px 20px 48px;
+}
+
+.perete-text {
+  /* aceeasi margine stanga ca foaia; randurile raman scurte, prin .intro si h1 */
+  max-width: 64rem;
+  margin: 0 auto 36px;
+}
+
+.marca {
+  font-family: var(--cifre);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--vopsea);
+  margin: 0 0 18px;
+}
+
+h1 {
+  font-family: var(--text);
+  font-weight: 600;
+  font-size: clamp(34px, 6vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0 0 20px;
+  max-width: 20ch;
+}
+
+.intro {
+  font-size: 19px;
+  color: var(--cerneala-moale);
+  margin: 0;
+  max-width: 38rem;
+}
+
+.se-calculeaza,
+.despre-lista {
+  max-width: 64rem;
+  margin: 20px auto 0;
+  font-family: var(--cifre);
+  font-size: 14px;
+  color: var(--vopsea-text);
+}
+
+/* ------------------------------------------------------------ foaia listei */
+
+.avizier {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.foaie {
+  background: var(--hartie);
+  padding: 22px 22px 18px;
+  /* o foaie lipita pe perete, nu un card: umbra scurta, colturi drepte */
+  box-shadow: 0 1px 1px rgba(20, 40, 34, 0.18), 0 6px 18px rgba(20, 40, 34, 0.22);
+}
+
+.foaie-derulare {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lista {
+  border-collapse: collapse;
+  font-family: var(--cifre);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  min-width: 720px;
+}
+
+.lista caption {
+  text-align: left;
+  font-family: var(--cifre);
+  font-weight: 700;
+  font-size: 15px;
+  padding-bottom: 12px;
+}
+
+.lista th,
+.lista td {
+  border: 1px solid var(--grila);
+  padding: 0;
+  text-align: right;
+}
+
+.lista thead th {
+  padding: 6px 8px;
+  font-weight: 700;
+  background: #f6f7f5;
+}
+
+.lista abbr {
+  text-decoration: none;
+  cursor: help;
+}
+
+.lista tbody th {
+  padding: 4px 8px;
+  text-align: center;
+  font-weight: 700;
+  background: #f6f7f5;
+}
+
+.lista .total {
+  padding: 4px 8px;
+  font-weight: 700;
+}
+
+.suma {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.suma:hover {
+  background: var(--pix-fond);
+}
+
+/* suma aleasa: incercuita cu pixul, ca pe foaia de hartie */
+.suma.aleasa {
+  color: var(--pix);
+  font-weight: 700;
+  background: transparent;
+  outline: 2px solid var(--pix);
+  outline-offset: -3px;
+  border-radius: 48% 52% 46% 54% / 60% 44% 56% 40%;
+}
+
+.verificare {
+  font-family: var(--cifre);
+  font-size: 13px;
+  color: var(--cerneala-moale);
+  margin: 12px 0 0;
+}
+
+/* socoteala, scrisa de administrator pe marginea foii */
+.adnotare {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--grila);
+  color: var(--pix);
+  font-family: var(--text);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.55;
+  max-width: 44rem;
+}
+
+.calcul-titlu { margin: 0 0 8px; }
+
+.calcul-pasi {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+.calcul-pasi li { margin-bottom: 4px; }
+
+.calcul-rezultat {
+  font-style: normal;
+  font-weight: 600;
+  font-family: var(--cifre);
+  font-variant-numeric: tabular-nums;
+}
+
+.calcul-nota {
+  margin: 8px 0 0;
+  font-size: 15px;
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 18px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--grila);
+  font-family: var(--cifre);
+  font-size: 12px;
+  color: var(--cerneala-moale);
+}
+
+.legenda div { display: flex; gap: 6px; }
+.legenda dt { font-weight: 700; color: var(--cerneala); }
+.legenda dd { margin: 0; }
+
+/* --------------------------------------------------------------- documentul */
+
+.document {
+  /* aliniat la foaia de sus; textul ramane intr-o coloana de citit */
+  max-width: calc(64rem + 40px);
+  margin: 0 auto;
+  padding: 64px 20px 88px;
+}
+
+.document > * { max-width: 44rem; }
+
+.document section { margin-bottom: 56px; }
+
+h2 {
+  font-family: var(--text);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 0 0 16px;
+}
+
+.document p,
+.document li { margin: 0 0 14px; }
+
+.document ul { padding-left: 1.2em; margin: 0; }
+
+/* o luna e o succesiune de pasi, deci numerele au sens */
+.pasi {
+  list-style: none;
+  counter-reset: pas;
+  padding: 0;
+  margin: 0;
+}
+
+.pasi li {
+  counter-increment: pas;
+  position: relative;
+  padding-left: 56px;
+  margin-bottom: 22px;
+}
+
+.pasi li::before {
+  content: counter(pas);
+  position: absolute;
+  left: 0;
+  top: -6px;
+  font-family: var(--cifre);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--vopsea);
+  font-variant-numeric: tabular-nums;
+}
+
+.rol {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 8px solid var(--vopsea);
+}
+
+h3 {
+  font-family: var(--text);
+  font-weight: 600;
+  font-size: 24px;
+  margin: 0 0 8px;
+}
+
+.functie { margin-top: 24px; }
+
+h4 {
+  font-family: var(--cifre);
+  font-weight: 700;
+  font-size: 17px;
+  margin: 0;
+}
+
+.functie-rezumat {
+  font-style: italic;
+  color: var(--cerneala-moale);
+  margin: 2px 0 8px !important;
+}
+
+.deschide a {
+  display: inline-block;
+  font-family: var(--cifre);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--hartie);
+  background: var(--vopsea);
+  padding: 14px 22px;
+  text-decoration: none;
+}
+
+.deschide a:hover { background: var(--vopsea-brau); }
+
+@media (max-width: 640px) {
+  body { font-size: 17px; }
+  .perete { padding: 36px 16px 32px; }
+  .foaie { padding: 16px 14px 14px; }
+  .document { padding: 48px 16px 64px; }
+  h2 { font-size: 26px; }
+  .pasi li { padding-left: 44px; }
+  .pasi li::before { font-size: 26px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

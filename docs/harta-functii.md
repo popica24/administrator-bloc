@@ -135,6 +135,18 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 
 ---
 
+### 2.7 Pagina publica "Cum functioneaza AdminBloc" (`cum-functioneaza/`)
+- **Unde:** `/cum-functioneaza/`, a doua pagina a site-ului, fara cont. Build-ul are doua intrari
+  (`vite.config.js`): aplicatia si pagina aceasta.
+- **Ce arata:** lista de intretinere pe ultima luna publicata a blocului demonstrativ, calculata in
+  pagina cu sursa demo si motorul real; orice suma se deschide in socoteala ei, pe baza pe care a
+  pastrat-o motorul. Sub ea: verificarea "facturi = impartit", principiul aplicatiei, pasii unei
+  luni, ce vede fiecare rol, datele oamenilor si stadiul proiectului.
+- **Continut comun:** explicatiile pe roluri vin din `src/ghid.js`, aceleasi cu ecranul "Cum
+  functioneaza aplicatia" din aplicatie.
+- **Nu face parte din aplicatie:** HTML si CSS simplu (`src/pagina-publica.jsx`,
+  `src/pagina-publica.css`), deci regula de portabilitate spre React Native nu i se aplica.
+
 ## 3. Locatar
 
 ### 3.1 Acasa (`LocatarAcasa`)
