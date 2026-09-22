@@ -71,7 +71,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # O versiune fixa: "latest" intreaba API-ul GitHub, care refuza
+          # cand se depaseste limita de cereri, si pica tot jobul.
+          version: 2.116.0
 
       - uses: denoland/setup-deno@v2
         with:
@@ -131,7 +133,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # O versiune fixa: "latest" intreaba API-ul GitHub, care refuza
+          # cand se depaseste limita de cereri, si pica tot jobul.
+          version: 2.116.0
 
       - name: Porneste stiva locala (aplica si migratiile)
         run: supabase start
