@@ -58,9 +58,6 @@ function numarRo(n) {
   return `${intreg.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${zecimal}`;
 }
 
-/* Ora curenta, ca text local "AAAA-LL-ZZThh:mm" (acelasi fus ca aziIso()),
-   pentru compararea cu un dataOra scris la fel (convoacaAdunare). */
-const oraCurentaText = () => { const d = new Date(); return `${aziIso()}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
 /* Un camp gol din formular ("" sau necompletat) inseamna "fara valoare" */
 const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
@@ -1508,8 +1505,9 @@ export function creeazaSursaMock() {
     async convoacaAdunare({ dataOra, loc, ordineDeZi }) {
       const { bloc } = cerAdmin();
       /* [§8] o adunare mai tarziu in aceeasi zi e acceptata: se compara ora
-         intreaga, nu doar data (altfel orice adunare de azi era refuzata). */
-      if (!dataOra || dataOra < oraCurentaText()) eroare("Data adunarii trebuie sa fie in viitor.");
+         intreaga, nu doar data (altfel orice adunare de azi era refuzata).
+         Se compara momente, nu texte: ecranul trimite ora in UTC ("...Z"). */
+      if (!dataOra || new Date(dataOra) < new Date()) eroare("Data adunarii trebuie sa fie in viitor.");
       const a = db.adauga("adunari", { asociatieId: bloc.asociatieId, dataOra, loc: loc.trim(), ordineDeZi: ordineDeZi.trim() });
       /* [K6, paritate] convocarea trebuie sa spuna si ora adunarii, nu doar
          data. [J8] data si ora Romaniei, nu feliate direct din sirul primit. */
