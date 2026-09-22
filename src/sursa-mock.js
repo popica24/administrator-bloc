@@ -121,7 +121,13 @@ const alocatPlata = (db, plataId) => round2(db.alocari.filter((a) => a.plataId =
 const areDatorieSora = (db, d) => db.datorii.some((s) => s.tip === "intretinere" && s.listaId === d.listaId && s.apartamentId === d.apartamentId);
 const restDatorie = (db, d) => {
   if (d.tip === "corectie" && d.suma < 0 && areDatorieSora(db, d)) return 0;
+  /* [K7] ca in financiar.datorii_rest: anularea nu are rest propriu, ci se
+     scade din penalizarea ei */
+  if (d.tip === "anulare_penalizare") return 0;
   const propriu = round2(d.suma - alocatDatorie(db, d.id));
+  if (d.tip === "penalizare") {
+    return round2(propriu + db.datorii.filter((x) => x.anuleazaDatorieId === d.id).reduce((s, x) => s + x.suma, 0));
+  }
   if (d.tip !== "intretinere") return propriu;
   const reducere = db.datorii
     .filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId)
@@ -652,6 +658,7 @@ function proiecteaza(db, profilId, apartamentAles) {
   const datorii = db.datorii.filter((d) => d.blocId === bloc.id && alMeu(d.apartamentId)).map((d) => ({
     id: d.id, apartamentId: d.apartamentId, tip: d.tip, luna: d.luna, listaId: d.listaId, suma: d.suma,
     scadenta: d.scadenta, descriere: d.descriere, rest: restDatorie(db, d), documentId: d.documentId || null, creatLa: d.creatLa,
+    anuleazaDatorieId: d.anuleazaDatorieId || null,
   }));
   const idDatorii = datorii.map((d) => d.id);
   const penalizari = db.penalizari.filter((p) => idDatorii.includes(p.datorieId)).map((p) => ({ ...p }));

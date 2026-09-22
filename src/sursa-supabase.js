@@ -297,6 +297,8 @@ export function creeazaSursaSupabase(url, cheie) {
     const datoriiUi = datorii.map((d) => ({
       id: d.id, apartamentId: d.apartament_id, tip: d.tip, luna: luna(d.luna), listaId: d.lista_id, suma: nr(d.suma),
       scadenta: d.scadenta, descriere: d.descriere, rest: round2(nr(d.rest)), documentId: d.document_id, creatLa: d.creat_la,
+      /* [K7] doar la o anulare de penalizare: penalizarea pe care o reduce */
+      anuleazaDatorieId: d.anuleaza_datorie_id,
     }));
     /* [K13] Alocarile unei plati (randurile chitantei) in ordinea in care le-a
        facut aloca_plata: scadenta, data datoriei, id. Veneau dupa id-ul

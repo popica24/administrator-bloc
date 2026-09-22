@@ -203,6 +203,23 @@ describe("lista lunii: facturi", () => {
     await adm.stergeCheltuiala(id);
   });
 
+  /* [K7] Anularea unei penalizari ajunge pe ecran legata de penalizarea ei,
+     iar restul penalizarii scade cu ea (financiar.datorii_rest). */
+  it("[K7] o anulare de penalizare ajunge pe ecran legata de penalizarea ei, iar restul scade", async () => {
+    const pen = await ok(db("financiar").from("datorii").insert({
+      apartament_id: f.ap["1"], bloc_id: f.blocId, tip: "penalizare", luna: zi1(luna), suma: 30, scadenta: zi1(luna), descriere: "Penalizare test K7",
+    }).select().single());
+    const anulare = await ok(db("financiar").from("datorii").insert({
+      apartament_id: f.ap["1"], bloc_id: f.blocId, tip: "anulare_penalizare", luna: zi1(luna), suma: -10, scadenta: zi1(luna),
+      descriere: "Penalizare anulata dupa recalcularea listei", anuleaza_datorie_id: pen.id,
+    }).select().single());
+    const date = await adm.incarca();
+    expect(date.datorii.find((x) => x.id === pen.id)).toMatchObject({ rest: 20, anuleazaDatorieId: null });
+    expect(date.datorii.find((x) => x.id === anulare.id)).toMatchObject({ rest: 0, anuleazaDatorieId: pen.id });
+    await ok(db("financiar").from("datorii").delete().eq("id", anulare.id));
+    await ok(db("financiar").from("datorii").delete().eq("id", pen.id));
+  });
+
   it("stergeCheltuiala() scoate randul din ciorna", async () => {
     const id = await adm.salveazaCheltuiala({ listaId, furnizorId: st.salubris.id, categorie: "Temporar", cod: "C8", suma: 9, metoda: "apartamente" });
     await adm.stergeCheltuiala(id);
