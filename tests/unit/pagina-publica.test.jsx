@@ -105,7 +105,7 @@ describe("pagina publica, continutul", () => {
     expect(pasi[3].textContent).toMatch(/publica lista/);
   });
 
-  it("fiecare functie a fiecarui rol apare, din aceeasi sursa ca ecranul din aplicatie", async () => {
+  it("fiecare functie a fiecarui rol apare, din src/ghid.js", async () => {
     await deschide();
     for (const [rol, titlu] of [["locatar", "Ce vede locatarul"], ["administrator", "Ce vede administratorul"]]) {
       const zona = within(screen.getByRole("region", { name: titlu }));

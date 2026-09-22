@@ -1,21 +1,16 @@
 /* =============================================================================
-   Cum functioneaza aplicatia: explicatiile fiecarei functii, pe roluri
+   Cum functioneaza AdminBloc: explicatiile fiecarei functii, pe roluri
    -----------------------------------------------------------------------------
-   Folosite de ecranul "Cum functioneaza aplicatia" din AdminBloc.jsx si de
-   pagina publica cum-functioneaza/, ca aceeasi explicatie sa nu existe in doua
-   versiuni care se pot desparti. Textul descrie ce face aplicatia azi
-   (docs/harta-functii.md), nu ce ar putea face.
+   Folosite de pagina publica cum-functioneaza/. Textul descrie ce face
+   aplicatia azi (docs/harta-functii.md), nu ce ar putea face.
 ============================================================================= */
 
-/* "Cum functioneaza aplicatia": cate o sectiune pentru fiecare tab al
-   rolului, plus contul. `tab` este cheia din TABURI_*, pentru "Du-ma acolo";
-   sectiunea contului nu duce nicaieri. Textul descrie ce face aplicatia azi
-   (docs/harta-functii.md), nu ce ar putea face. */
+/* Cate o sectiune pentru fiecare tab al rolului, plus contul. */
 export const GHID_INTRO = "AdminBloc tine intretinerea blocului la vedere: orice suma se deschide in calculul, factura si documentul din spatele ei. Sumele se calculeaza o singura data, cand administratorul publica lista, deci toata lumea vede aceleasi cifre.";
 export const GHID = {
   locatar: [
     {
-      tab: null, titlu: "Contul tau", rezumat: "Cum intri in aplicatie.",
+      titlu: "Contul tau", rezumat: "Cum intri in aplicatie.",
       puncte: [
         "Primesti de la administrator un cod de 8 caractere. La inregistrare scrii codul, numele, telefonul, emailul si o parola.",
         "Confirmi adresa de email din mesajul primit, apoi intri in cont cu emailul si parola.",
@@ -23,7 +18,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "acasa", titlu: "Acasa", rezumat: "Ce ai de platit si ce ai de facut, dintr-o privire.",
+      titlu: "Acasa", rezumat: "Ce ai de platit si ce ai de facut, dintr-o privire.",
       puncte: [
         "Sus vezi cat ai de plata acum si pana cand. Daca totul e platit, scrie Achitat; daca ai platit in plus, vezi si avansul, care se scade din urmatoarea lista.",
         "O fraza iti spune cu cat platesti mai mult sau mai putin decat luna trecuta.",
@@ -32,7 +27,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "plata", titlu: "Plata", rezumat: "Lista de plata, cu calculul din spatele fiecarei sume.",
+      titlu: "Plata", rezumat: "Lista de plata, cu calculul din spatele fiecarei sume.",
       puncte: [
         "Alegi luna. Totalul e impartit in trei: cheltuielile lunii, fondurile si datoriile din lunile trecute.",
         "Atinge orice rand ca sa vezi calculul complet: cat a costat factura, cum s-a impartit, cat ti-a revenit si documentul facturii.",
@@ -42,7 +37,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "consum", titlu: "Contoare", rezumat: "Indexul la apa, cu poza, si consumul tau.",
+      titlu: "Contoare", rezumat: "Indexul la apa, cu poza, si consumul tau.",
       puncte: [
         "Pana la termenul din luna scrii indexul fiecarui contor si faci o poza cu el. Poza este obligatorie.",
         "Administratorul verifica indexul. Daca il respinge, vezi motivul si il trimiti din nou.",
@@ -51,7 +46,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "sesizari", titlu: "Sesizari", rezumat: "Spui ce s-a stricat si vezi raspunsul.",
+      titlu: "Sesizari", rezumat: "Spui ce s-a stricat si vezi raspunsul.",
       puncte: [
         "Alegi o sesizare gata scrisa, de exemplu Bec ars pe scara, sau scrii tu, cu pana la trei poze.",
         "La Ale mele vorbesti cu administratia pana cand problema e rezolvata.",
@@ -59,7 +54,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "bloc", titlu: "Bloc", rezumat: "Avizierul, voturile, actele si fondurile blocului.",
+      titlu: "Bloc", rezumat: "Avizierul, voturile, actele si fondurile blocului.",
       puncte: [
         "Avizier: anunturile administratiei si pe cine suni.",
         "Vot si adunare: proprietarul voteaza o singura data pentru apartament, iar votul nu se mai poate schimba. Confirmi daca vii la adunarea generala.",
@@ -70,7 +65,7 @@ export const GHID = {
   ],
   administrator: [
     {
-      tab: null, titlu: "Contul tau", rezumat: "Cum ajungi sa administrezi blocul in aplicatie.",
+      titlu: "Contul tau", rezumat: "Cum ajungi sa administrezi blocul in aplicatie.",
       puncte: [
         "La inregistrare scrii numarul atestatului de administrator si poti adauga o poza a lui.",
         "Contul se verifica inainte sa vada datele vreunei asociatii. Te anuntam pe email.",
@@ -78,7 +73,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "sumar", titlu: "Sumar", rezumat: "Starea blocului, pe un singur ecran.",
+      titlu: "Sumar", rezumat: "Starea blocului, pe un singur ecran.",
       puncte: [
         "Cat e de incasat pe lista curenta si cat s-a incasat deja.",
         "Restantele, penalizarile, citirile de verificat, sesizarile deschise si fondul de reparatii. Atinge oricare ca sa ajungi la ele.",
@@ -87,7 +82,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "apartamente", titlu: "Apartamente", rezumat: "Fisa fiecarui apartament, citirile si fondurile.",
+      titlu: "Apartamente", rezumat: "Fisa fiecarui apartament, citirile si fondurile.",
       puncte: [
         "Cauti un apartament dupa nume sau numar. Fisa lui arata datele, soldul la zi si fiecare datorie.",
         "Din fisa incasezi numerar: banii acopera intai datoria cea mai veche, iar chitanta se emite pe loc. Tot de acolo schimbi numarul de persoane, corectezi datele si cotele, inviti un locatar cu un cod sau ii inchizi accesul.",
@@ -96,7 +91,7 @@ export const GHID = {
       ],
     },
     {
-      tab: "facturi", titlu: "Facturi", rezumat: "Lista lunii, de la prima factura la publicare.",
+      titlu: "Facturi", rezumat: "Lista lunii, de la prima factura la publicare.",
       puncte: [
         "Incepi lista lunii; fondul de reparatii e deja trecut pe ea.",
         "Adaugi facturile: furnizorul, suma, codul pe lista si cum se imparte, pe persoane, pe apartament, pe cota sau pe consum. Vezi pe loc cat revine fiecarui apartament, inainte sa salvezi.",
@@ -106,14 +101,14 @@ export const GHID = {
       ],
     },
     {
-      tab: "adminsesizari", titlu: "Sesizari", rezumat: "Problemele semnalate de locatari.",
+      titlu: "Sesizari", rezumat: "Problemele semnalate de locatari.",
       puncte: [
         "Cele deschise apar intai pe cele mai vechi, cu cate zile asteapta fiecare. Dupa trei zile apar cu rosu.",
         "Preiei sesizarea, raspunzi, iar locatarul e anuntat, apoi o marchezi rezolvata.",
       ],
     },
     {
-      tab: "adminbloc", titlu: "Comunicare", rezumat: "Anunturi, remindere, voturi, adunari si acte.",
+      titlu: "Comunicare", rezumat: "Anunturi, remindere, voturi, adunari si acte.",
       puncte: [
         "Anunturi: un anunt urgent ajunge imediat ca notificare la toti locatarii cu cont. Vezi cati l-au citit.",
         "Remindere: alegi care pleaca singure si cu cate zile inainte, pentru citire, plata, restante si adunare. Le poti trimite si pe loc.",

@@ -217,7 +217,7 @@ export default function PaginaPublica() {
 
         <section aria-labelledby="functii">
           <h2 id="functii">Ce face fiecare parte a aplicatiei</h2>
-          <p>Fiecare om vede aplicatia rolului lui. Explicatiile de mai jos sunt aceleasi cu cele din aplicatie, de la butonul Ajutor.</p>
+          <p>Fiecare om vede aplicatia rolului lui: locatarul, apartamentul sau; administratorul, tot blocul.</p>
           <Rol id="rol-locatar" titlu="Ce vede locatarul" sectiuni={GHID.locatar} />
           <Rol id="rol-administrator" titlu="Ce vede administratorul" sectiuni={GHID.administrator} />
         </section>
