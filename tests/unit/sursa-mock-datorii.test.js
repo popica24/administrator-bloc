@@ -87,3 +87,23 @@ describe("situatieBloc", () => {
     expect(dupa.restanteTotal).toBe(inainte.restanteTotal);
   });
 });
+
+describe("[K7] anularea unei penalizari", () => {
+  /* Ca financiar.datorii_rest: anularea se scade din restul penalizarii ei si
+     nu are rest propriu. Sursa demo nu are recalculari, deci anularile nu
+     apar din comenzi; regula ramane aceeasi, ca sursele sa fie un contract. */
+  it("scade din restul penalizarii ei, nu are rest propriu si arata spre ea", async () => {
+    const { s, d } = await admin();
+    const ap = apNr(d, "9").id;
+    const pen = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "penalizare", luna: "2026-09", suma: 30, scadenta: "2026-09-01", descriere: "Penalizare test",
+    });
+    const anulare = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "anulare_penalizare", luna: "2026-09", suma: -10, scadenta: "2026-09-10",
+      descriere: "Penalizare anulata dupa recalcularea listei", anuleazaDatorieId: pen.id,
+    });
+    const dupa = await s.incarca();
+    expect(dupa.datorii.find((x) => x.id === pen.id)).toMatchObject({ rest: 20, anuleazaDatorieId: null });
+    expect(dupa.datorii.find((x) => x.id === anulare.id)).toMatchObject({ rest: 0, anuleazaDatorieId: pen.id });
+  });
+});

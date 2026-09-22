@@ -116,6 +116,23 @@ describe("defalcare pe lista curenta", () => {
     });
   });
 
+  /* [K7] Formula arata calculul initial (131,39 × 0,02% × 8 zile = 1,50), iar
+     suma afisata e restul, redus de anulare: fara un rand care sa spuna de ce,
+     locatarul ar vedea doua cifre care nu se potrivesc. */
+  it("[K7] o penalizare redusa dupa recalculare spune cat s-a anulat si de ce", async () => {
+    await plata((d) => {
+      d.datorii.find((x) => x.id === "dat-704").rest = 131.39;
+      d.datorii.push(datorie({ id: "dat-p1", tip: "penalizare", luna: "2026-09", suma: 1.5, rest: 1, scadenta: "2026-09-01", descriere: "Penalizare pentru intretinere iulie 2026" }));
+      d.datorii.push(datorie({
+        id: "dat-anulare", tip: "anulare_penalizare", luna: "2026-09", suma: -0.5, rest: 0, scadenta: "2026-09-10",
+        descriere: "Penalizare anulata dupa recalcularea listei", anuleazaDatorieId: "dat-p1",
+      }));
+      d.penalizari.push({ id: "pen-1", datorieId: "dat-p1", restNeachitat: 131.39, zileIntarziere: 38, zileGratie: 30, zileTaxate: 8, procentZi: 0.02, suma: 1.5 });
+    });
+    expect(screen.getByText("Din ea s-au anulat 0,50 lei dupa recalcularea listei, fiindca datoria pe care fusese calculata s-a micsorat.")).toBeTruthy();
+    expect(calcul("3. Datorii din lunile trecute")).toContain("132,39 lei");
+  });
+
   it("aduna restantele si penalizarile, cu zilele de intarziere si calculul penalizarii", async () => {
     await plata((d) => {
       d.datorii.find((x) => x.id === "dat-704").rest = 131.39;
@@ -131,6 +148,7 @@ describe("defalcare pe lista curenta", () => {
     /* scadenta azi: 0 zile, fara "intarziere" */
     expect(screen.getByText("Restanta preluata azi")).toBeTruthy();
     expect(screen.getByText("scadenta 19 sep 2026")).toBeTruthy();
+    expect(screen.queryByText(/s-au anulat/)).toBeNull();
     const pen = screen.getAllByText("Penalizare calculata pe 1 septembrie 2026");
     expect(pen).toHaveLength(2);
     expect(screen.getByText("131,39 × 0,02% × 8 zile")).toBeTruthy();

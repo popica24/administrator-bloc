@@ -362,6 +362,9 @@ const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => 
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
 const explicatiePenalizare = (date, datorieId) => date.penalizari.find((p) => p.datorieId === datorieId) || null;
+/* [K7] Cat s-a anulat dintr-o penalizare dupa recalcularea listei (negativ) */
+const anulatDinPenalizare = (date, datorieId) =>
+  suma(date.datorii.filter((d) => d.tip === "anulare_penalizare" && d.anuleazaDatorieId === datorieId), (d) => d.suma);
 /* Corectiile aceleiasi liste (create de o recalculare): datorii sora ale
    datoriei de intretinere, cu acelasi apartament si aceeasi lista. */
 const corectiiListei = (date, listaId, apId) => date.datorii.filter((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "corectie");
@@ -2087,6 +2090,11 @@ function LocatarPlata({ parametri }) {
                         {d.calcul && (
                           <Txt size={11.5} color={C.muted}>
                             {d.descriere}. Suma neplatita era {lei(d.calcul.restNeachitat)}, cu {pluralZile(d.calcul.zileIntarziere)} de la scadenta; primele {pluralZile(d.calcul.zileGratie)} nu se penalizeaza.
+                          </Txt>
+                        )}
+                        {anulatDinPenalizare(date, d.id) < 0 && (
+                          <Txt size={11.5} color={C.muted}>
+                            Din ea s-au anulat {lei(-anulatDinPenalizare(date, d.id))} dupa recalcularea listei, fiindca datoria pe care fusese calculata s-a micsorat.
                           </Txt>
                         )}
                       </RandSuma>

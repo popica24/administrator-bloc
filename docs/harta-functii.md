@@ -413,7 +413,9 @@ calculeaza din datorii minus plati (`financiar.datorii_rest`, `financiar.solduri
 ### 6.1 Datorii
 - **Tipuri:** `intretinere` (una pe lista si apartament, la publicare), `penalizare`,
   `sold_initial` (restanta preluata de pe hartie, cu documentul ei), `corectie` (dupa o
-  recalculare, poate fi negativa), `fond_rulment` (declarat, dar negenerat).
+  recalculare, poate fi negativa), `fond_rulment` (declarat, dar negenerat),
+  `anulare_penalizare` (negativa, legata prin `anuleaza_datorie_id` de penalizarea pe care o
+  reduce; nu are rest propriu, ci se scade din restul penalizarii).
 - Fiecare operatie pe bani blocheaza contul apartamentului (`financiar.conturi`, `for update`),
   asa ca platile simultane se executa pe rand.
 
@@ -454,6 +456,13 @@ Locatar ─► plata-card (JWT) ─► creeaza_plata_card (in_asteptare)
 - **Nu se capitalizeaza:** penalizarile nu genereaza penalizari. **Nu depasesc datoria.**
 - Parametrii folositi se ingheata in `financiar.penalizari`. Locatarul vede formula cu cifrele lui.
 - Valorile implicite sunt 0,02% pe zi, 30 de zile de gratie si scadenta pe 25.
+- **Recalcularea in jos anuleaza penalizarea in plus** (K7, varianta A): cand o recalculare a
+  listei scade datoria, fiecare penalizare calculata pe ea se reface cu parametrii ei inghetati,
+  pe datoria corectata, ca si cum lista ar fi fost corecta de la inceput. Diferenta intra in
+  registru ca `anulare_penalizare` (`financiar.anuleaza_penalizari_in_plus`), iar platile alocate
+  pe partea anulata se elibereaza si se realoca. Doar in jos: o corectie care mareste datoria nu
+  mareste retroactiv penalizarea. Plafonul "nu depasesc datoria" se socoteste pe penalizarile
+  nete. Locatarul vede sub penalizare "Din ea s-au anulat X lei dupa recalcularea listei".
 
 ### 6.7 Fonduri
 - Fondul de reparatii se alimenteaza automat la publicare, cu o miscare "Contributii fond
