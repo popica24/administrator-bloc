@@ -39,7 +39,7 @@ import { calculeazaLista, verificaDate } from "../supabase/functions/_shared/mot
 import { documentPdf, scurteazaNume } from "./pdf.js";
 import { creeazaSursa } from "./sursa.js";
 /* [K12, K22] ora aleasa in formular, ca ora a Romaniei, nu a dispozitivului */
-import { instantRomania } from "./ora-romania.js";
+import { instantRomania, dataOraRomania } from "./ora-romania.js";
 /* Explicatiile fiecarei functii, comune cu pagina publica (cum-functioneaza/) */
 import { GHID, GHID_INTRO } from "./ghid.js";
 
@@ -176,10 +176,8 @@ const lunaDe = (iso) => iso.slice(0, 7);
 /* Datele calendaristice se compara ca zile intregi, fara ore si fus orar */
 const ziMs = (iso) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
 const zileIntre = (dela, pana) => Math.round((ziMs(pana) - ziMs(dela)) / 86400000);
-const ziLocala = (iso) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-};
+/* [K24] Ziua unei clipe, pe ora Romaniei, nu a telefonului */
+const ziLocala = (iso) => dataOraRomania(iso).data;
 
 
 const dataRo = (iso) => {
@@ -190,10 +188,7 @@ const dataLunga = (iso) => {
   const [y, m, d] = (iso.length > 10 ? ziLocala(iso) : iso).split("-");
   return `${Number(d)} ${LUNI[Number(m) - 1]} ${y}`;
 };
-const oraRo = (iso) => {
-  const d = new Date(iso);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-};
+const oraRo = (iso) => dataOraRomania(iso).ora;
 
 /* Formularul are ceva scris in el? Folosit ca sa nu se piarda la o atingere
    gresita pe fundal. */

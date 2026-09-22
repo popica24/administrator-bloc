@@ -13,13 +13,10 @@
 
 import { createClient } from "@supabase/supabase-js";
 /* [J9, K22] seara unei zile, ora Romaniei, oricare ar fi fusul dispozitivului */
-import { oraSeriiRomania } from "./ora-romania.js";
+import { oraSeriiRomania, aziRomania } from "./ora-romania.js";
 
-const pad = (n) => String(n).padStart(2, "0");
-const aziIso = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
+/* [K24] ziua Romaniei, nu a telefonului */
+const aziIso = aziRomania;
 const luna = (data) => (data ? String(data).slice(0, 7) : null);
 const zi1 = (l) => `${l}-01`;
 

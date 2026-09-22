@@ -265,6 +265,21 @@ describe("descriereAlocari si chitanta", () => {
     expect(screen.getAllByRole("button", { name: "Descarca chitanta" })).toHaveLength(3);
   });
 
+  /* [K24] Chitanta poarta ora Romaniei, oricare ar fi fusul telefonului */
+  it("[K24] pe un telefon din alt fus, chitanta are data si ora Romaniei", async () => {
+    const fus = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      await plata();
+      await apasa("Platile mele");
+      const pdf = prindePdf();
+      await apasa("Descarca chitanta", 0);
+      expect((await pdf.ultimul()).text).toContain("Data: 12 august 2026, ora 21:03");
+    } finally {
+      process.env.TZ = fus;
+    }
+  });
+
   it("chitanta cu cardul are antetul asociatiei, platitorul, alocarile si referinta", async () => {
     await plata((d) => { d.plati.find((p) => p.id === "pla-727").referinta = "SIM-204W0EKK"; });
     await apasa("Platile mele");
