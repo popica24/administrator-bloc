@@ -85,14 +85,16 @@ One Postgres schema per bounded context: `organizare`, `identitate`, `intretiner
   pg_cron job). Balance is always computed (`financiar.datorii_rest`, `financiar.solduri`).
 - Cross-context effects are events in `evenimente.coada`, processed by `evenimente.proceseaza`
   (called by the `proceseaza-eveniment` Edge Function via a pg_net webhook, and by pg_cron).
-- Edge Functions: `publica-lista`, `plata-card` + `procesator-simulat` + `plata-card-webhook`
-  (HMAC, simulated card processor), `proceseaza-eveniment`, `creeaza-asociatie`, `exporta-bloc`.
+- Edge Functions: `publica-lista`, `cont-locatar` (the administrator creates a tenant account on
+  a phone number, or gives them a new password), `proceseaza-eveniment`, `creeaza-asociatie`,
+  `exporta-bloc`. There is no card payment: the administrator confirms the money received
+  (`financiar.inregistreaza_incasare`, cash or bank transfer).
 - Storage buckets (private): `documente`, `poze` (1 MB, JPEG/WebP; the app shrinks photos),
   `atestate`.
-- Edge Function secrets, required in production (see README, "Punerea in productie"):
+- Edge Function secret, required in production (see README, "Punerea in productie"):
   `SITE_URL` (the only origin the functions answer with CORS headers; without it they fall
-  back to `http://localhost:5173`) and `PROCESATOR_SECRET` (signs payment confirmations;
-  without it the code falls back to a development value that is in the repo).
+  back to `http://localhost:5173`). Also in production: `[auth] enable_signup = false` — nobody
+  creates their own account, the administrator does it.
 
 ## Conventions
 

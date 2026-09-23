@@ -334,7 +334,7 @@ describe("Plata: Platile mele", () => {
       email: ELENA,
       modifica: (d) => {
         /* presedintele care locuieste in bloc primeste prin RLS platile tuturor */
-        d.plati.push({ id: "pla-strain", apartamentId: "apa-alt", suma: 300, metoda: "card", stare: "confirmata", confirmataLa: "2026-09-18T10:00:00+03:00", chitanta: null, alocari: [] });
+        d.plati.push({ id: "pla-strain", apartamentId: "apa-alt", suma: 300, metoda: "transfer", stare: "confirmata", confirmataLa: "2026-09-18T10:00:00+03:00", chitanta: null, alocari: [] });
       },
     });
     await alegeSegment("Platile mele");
