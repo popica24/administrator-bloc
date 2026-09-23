@@ -447,14 +447,27 @@ starile `in_asteptare` / `esuata`.
 
 ### 6.4 Confirmarea banilor primiti (numerar sau transfer)
 - `inregistreaza_incasare`: doar administratorul blocului, si doar cu metoda `numerar` sau
-  `transfer`. Plata se inregistreaza direct
-  `confirmata`, cu `inregistrata_de`, si trece prin aceeasi alocare, chitanta si notificare.
+  `transfer`. Plata se inregistreaza direct `confirmata`, cu `inregistrata_de`, si trece prin
+  aceeasi alocare, chitanta si notificare.
+- **Cheia cererii** [B2]: ecranul face un identificator cand se deschide formularul si il trimite
+  la fiecare incercare. A doua cerere cu aceeasi cheie intoarce plata deja inregistrata, deci un
+  raspuns pierdut pe drum nu mai poate face doua plati si doua chitante pe aceiasi bani; un index
+  unic pe `(apartament_id, cheie_client)` opreste si doua cereri simultane.
+- **Ziua in care au intrat banii** [B5]: pentru transfer, ecranul cere data din extrasul de cont
+  (implicit azi). Nu poate fi in viitor si nu poate fi mai veche de sase luni. Penalizarea
+  calculata intre timp peste acele zile nu se recalculeaza inca (vezi
+  `docs/audit-4-2026-09-24.md`).
 
 ### 6.5 Chitante
 - Numerotare **fara goluri** pe asociatie: `setari_financiare.chitanta_ultimul_numar` se
   incrementeaza cu blocare in aceeasi tranzactie. Formatul este `SERIE nr. 000123`.
+- **Continutul este inghetat la emitere** [B6, S4]: `chitante.randuri` tine ce a acoperit plata
+  atunci, iar `chitante.emis_pentru` tine apartamentul, blocul si proprietarul de atunci. O
+  recalculare de lista muta banii in registru, dar nu schimba documentul; o vanzare a
+  apartamentului nu retipareste chitantele vechi pe numele noului proprietar.
 - PDF-ul se genereaza in browser (`chitantaPdf` → `src/pdf.js`, PDF 1.4 fara librarii). Contine
-  datele asociatiei, platitorul, alocarea si modalitatea de plata.
+  datele asociatiei, apartamentul si proprietarul de la emitere, randurile inghetate si
+  modalitatea de plata.
 
 ### 6.6 Penalizari
 - Job `calculeaza-penalizari`, pe 1 ale lunii la 00:05.
