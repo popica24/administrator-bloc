@@ -3280,7 +3280,10 @@ function FisaApartament({ apId, onClose }) {
               <Txt size={12.5} color={C.inkSoft}>
                 {contNou.parola
                   ? "Contul este gata. Da-i omului numarul si parola de mai jos, pe hartie sau la telefon. Parola nu se mai poate vedea dupa ce inchizi."
-                  : "Omul avea deja cont pe acest numar, asa ca l-am legat si de apartamentul acesta. Intra cu parola pe care o stie deja."}
+                  /* [A7] Daca nu stie nimeni parola veche (un cont ramas de
+                     la o incercare cazuta la mijloc), butonul "Parola noua"
+                     de pe fisa o inlocuieste. */
+                  : "Omul avea deja cont pe acest numar, asa ca l-am legat si de apartamentul acesta. Intra cu parola pe care o stie deja; daca nu o mai stie, apasa \"Parola noua\"."}
               </Txt>
               <Box style={{ backgroundColor: C.accentSoft, borderRadius: R.md, padding: S.md, gap: 4 }}>
                 <Txt size={13} color={C.accentInk}>Intra cu numarul {telefonAfisat(contNou.telefon)}</Txt>
@@ -4290,7 +4293,7 @@ function AdminBlocEcran({ parametri }) {
               <Txt size={13} color={C.accentInk}>
                 {contNou.parola
                   ? `Contul este gata. Intra cu numarul ${telefonAfisat(contNou.telefon)} si parola de mai jos; da-i-le pe hartie sau la telefon.`
-                  : `Persoana avea deja cont pe numarul ${telefonAfisat(contNou.telefon)}. Intra cu parola pe care o stie.`}
+                  : `Persoana avea deja cont pe numarul ${telefonAfisat(contNou.telefon)}. Intra cu parola pe care o stie; daca nu o mai stie, i-o schimba administratorul de pe fisa apartamentului.`}
               </Txt>
               {contNou.parola && <Txt size={22} weight={700} mono color={C.accentInk}>{contNou.parola}</Txt>}
               <Btn label="Gata" variant="secondary" size="sm" onPress={() => setContNou(null)} />

@@ -149,11 +149,20 @@ Deno.test("cont-locatar: acelasi numar a doua oara -> mesaj pe romaneste", async
   });
 });
 
-Deno.test("cont-locatar: alta eroare Auth se spune ca atare", async () => {
+// [A9] Mesajele Auth sunt in engleza si vorbesc despre adresa, pe care omul nu
+// o are: administratorul primeste ceva ce poate citi si ce poate face.
+Deno.test("cont-locatar: o eroare Auth necunoscuta se spune pe romaneste", async () => {
   await cuFetch(backend({ creare: () => json({ msg: "Database error creating new user" }, 500) }), async () => {
     const r = await citeste(await trimite(NOU));
     assertEquals(r.status, 400);
-    assertEquals(r.corp, { eroare: "Database error creating new user" });
+    assertEquals(r.corp, { eroare: "Contul nu a putut fi facut acum. Incearca din nou peste cateva minute." });
+  });
+});
+
+Deno.test("cont-locatar: numarul luat deja se spune pe romaneste", async () => {
+  await cuFetch(backend({ creare: () => json({ msg: "A user with this email address has already been registered" }, 422) }), async () => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.corp, { eroare: "Exista deja un cont cu acest numar de telefon." });
   });
 });
 
@@ -231,7 +240,7 @@ Deno.test("cont-locatar: daca Auth refuza parola noua, mesajul lui ajunge la adm
   await cuFetch(backend({ parolaNoua: () => json({ msg: "Password is too short" }, 422) }), async () => {
     const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
     assertEquals(r.status, 400);
-    assertEquals(r.corp, { eroare: "Password is too short" });
+    assertEquals(r.corp, { eroare: "Parola este prea scurta pentru regulile serverului." });
   });
 });
 
@@ -369,8 +378,8 @@ Deno.test("cont-locatar: conducere, cautarea contului cazuta se spune ca atare",
 });
 
 Deno.test("cont-locatar: conducere, Auth refuza crearea contului", async () => {
-  await cuFetch(backend({ creare: () => json({ msg: "Database error creating new user" }, 500) }), async () => {
+  await cuFetch(backend({ creare: () => json({ msg: "Too many requests" }, 429) }), async () => {
     const r = await citeste(await trimite(CONDUCERE));
-    assertEquals(r.corp, { eroare: "Database error creating new user" });
+    assertEquals(r.corp, { eroare: "Prea multe incercari intr-un timp scurt. Asteapta cateva minute si incearca din nou." });
   });
 });

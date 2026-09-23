@@ -20,6 +20,7 @@
 // leaga de apartamentul nou si raspunsul vine fara parola.
 
 import { adresaContului, normalizeazaTelefon } from "../_shared/telefon.js";
+import { traduceAuth } from "../_shared/mesaje.js";
 import { genereazaParola } from "../_shared/parola.js";
 import { clientServiciu, clientUtilizator, eroare, porneste, raspuns } from "../_shared/server.ts";
 
@@ -67,7 +68,7 @@ porneste(async (req) => {
           phone_confirm: true,
           user_metadata: { nume: String(nume).trim(), telefon: numar },
         });
-        if (eCont) return eroare(eCont.message);
+        if (eCont) return eroare(traduceAuth(eCont.message));
         profilId = cont.user.id;
       }
 
@@ -98,7 +99,7 @@ porneste(async (req) => {
         return eroare("Locatarul nu mai are acces la acest apartament.");
       }
       const { error: e2 } = await admin.auth.admin.updateUserById(locatar.profil_id, { password: parola });
-      if (e2) return eroare(e2.message);
+      if (e2) return eroare(traduceAuth(e2.message));
       // [A4] ... si cine era inauntru cu parola veche iese
       const { error: e5 } = await admin.schema("identitate").rpc("inchide_sesiunile", { p_profil_id: locatar.profil_id });
       if (e5) return eroare(e5.message);
@@ -131,12 +132,9 @@ porneste(async (req) => {
       phone_confirm: true,
       user_metadata: { nume: String(nume).trim(), telefon: numar },
     });
-    if (e3) {
-      // Acelasi numar nu poate avea doua conturi: mesajul Auth este in engleza
-      // si vorbeste despre adresa, care pentru om nu exista.
-      if (/already/i.test(e3.message)) return eroare("Exista deja un cont cu acest numar de telefon.");
-      return eroare(e3.message);
-    }
+    // Mesajele Auth sunt in engleza si vorbesc despre adresa, care pentru om
+    // nu exista: traduceAuth le da pe romaneste [A9].
+    if (e3) return eroare(traduceAuth(e3.message));
 
     const { data: locatarId, error: e4 } = await admin.schema("identitate").rpc("leaga_locatar", {
       p_profil_id: cont.user.id, p_apartament_id: apartament_id, p_calitate: calitate,
