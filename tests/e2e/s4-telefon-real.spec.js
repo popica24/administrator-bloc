@@ -53,7 +53,7 @@ test.describe("ecran de 320 px cu tastatura deschisa", () => {
 
   test("intrarea in cont se poate duce la capat cu tastatura pe ecran", async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel("Email").fill(CONTURI.elena);
+    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
     await page.getByLabel("Parola").fill(PAROLA);
     await faraDerulareOrizontala(page);
     const intraBtn = page.getByRole("button", { name: "Intra", exact: true });

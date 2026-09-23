@@ -151,16 +151,16 @@ test.describe("transmiterea indexului", () => {
 });
 
 test.describe("stari ale citirii", () => {
-  const EMAIL = "e2e-citire-respinsa@adminbloc.test";
+  const TELEFON = "0798833251";
 
   test("citirea respinsa arata motivul si lasa retrimiterea", async ({ page }) => {
     const ap = await apartamentulNumarul(6);
-    const pid = await creeazaCont(EMAIL, "Vasile Munteanu");
+    const pid = await creeazaCont(TELEFON, "Vasile Munteanu");
     await legaDeApartament(pid, ap.id);
     const citiri = await citiriDin(ap.id);
     expect(citiri.every((c) => c.stare === "respinsa")).toBe(true);
 
-    await intra(page, EMAIL);
+    await intra(page, TELEFON);
     await expect(page.getByRole("tab", { name: "Contoare" })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText("Trimite din nou indexul")).toBeVisible();
     await mergiLaTab(page, "Contoare");

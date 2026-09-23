@@ -12,9 +12,9 @@ export const GHID = {
     {
       titlu: "Contul tau", rezumat: "Cum intri in aplicatie.",
       puncte: [
-        "Primesti de la administrator un cod de 8 caractere. La inregistrare scrii codul, numele, telefonul, emailul si o parola.",
-        "Confirmi adresa de email din mesajul primit, apoi intri in cont cu emailul si parola.",
-        "Codul se foloseste o singura data si expira in 30 de zile. Daca nu merge, cere administratorului unul nou.",
+        "Contul ti-l face administratorul, pe numarul tau de telefon. El iti spune si parola, pe hartie sau la telefon.",
+        "Intri in aplicatie cu numarul tau de telefon si cu parola primita. Numarul se poate scrie cu spatii sau fara.",
+        "Daca ai uitat parola, cere-i administratorului alta: apasa un buton si iti da una noua.",
       ],
     },
     {
@@ -67,9 +67,9 @@ export const GHID = {
     {
       titlu: "Contul tau", rezumat: "Cum ajungi sa administrezi blocul in aplicatie.",
       puncte: [
-        "La inregistrare scrii numarul atestatului de administrator si poti adauga o poza a lui.",
-        "Contul se verifica inainte sa vada datele vreunei asociatii. Te anuntam pe email.",
-        "Daca cererea e respinsa, vezi motivul si o trimiti din nou, corectata.",
+        "Contul de administrator ti-l facem noi, pe numarul tau de telefon, dupa ce verificam atestatul si asociatia.",
+        "Intri cu numarul tau de telefon si cu parola primita.",
+        "Conturile locatarilor le faci tu, din fisa fiecarui apartament: scrii numele si numarul, iar aplicatia iti da parola pentru el.",
       ],
     },
     {

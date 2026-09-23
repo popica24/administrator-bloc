@@ -178,3 +178,63 @@ describe("cazuri de margine ale maparii", () => {
     expect(randPoza.cale.endsWith(".jpg")).toBe(true);
   });
 });
+
+describe("conducerea asociatiei", () => {
+  it("administratorul numeste un locatar presedinte, iar el vede blocul fara sa scrie", async () => {
+    const telefon = telefonDeTest();
+    const cont = await admin.adaugaLocatar(f.ap["1"], { nume: "Presedinte Ales", telefon });
+    const mandat = await admin.numesteInConducere(cont.profil_id, "presedinte");
+    expect(mandat).toEqual(expect.any(String));
+
+    const s = sursaNoua();
+    await s.intra(telefon, cont.parola);
+    const date = await s.incarca();
+    expect(date.eu.rol).toBe("presedinte");
+    /* vede blocul intreg, ca administratorul */
+    expect(date.apartamente.length).toBeGreaterThan(1);
+    expect(date.conducere.some((m) => m.profilId === cont.profil_id && m.rol === "presedinte")).toBe(true);
+    /* dar nu scrie: comenzile cer blocul administrat */
+    await expect(s.deschideLista(lunaCurenta())).rejects.toThrow();
+    await expect(s.numesteInConducere(cont.profil_id, "cenzor"))
+      .rejects.toThrow("Doar administratorul asociatiei numeste presedintele si cenzorul.");
+  });
+
+  it("un cenzor din afara blocului primeste cont si mandat dintr-o singura comanda", async () => {
+    const telefon = telefonDeTest();
+    const r = await admin.adaugaInConducere("Contabil Extern", telefon, "cenzor");
+    expect(r).toMatchObject({ telefon, parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
+
+    const s = sursaNoua();
+    await s.intra(telefon, r.parola);
+    const date = await s.incarca();
+    expect(date.eu.rol).toBe("cenzor");
+    expect(date.eu.apartamentId).toBeNull();
+    expect(date.apartamente.length).toBeGreaterThan(1);
+  });
+
+  it("mandatul se incheie, iar omul ramane in istoric fara sa mai vada blocul", async () => {
+    const telefon = telefonDeTest();
+    const r = await admin.adaugaInConducere("Cenzor Schimbat", telefon, "cenzor");
+    const date = await admin.incarca();
+    const mandat = date.conducere.find((m) => m.profilId === r.profil_id);
+    expect(mandat).toMatchObject({ rol: "cenzor", activPana: null });
+
+    await admin.incheieMandat(mandat.id);
+    const dupa = await admin.incarca();
+    expect(dupa.conducere.find((m) => m.id === mandat.id).activPana).not.toBeNull();
+    await expect(admin.incheieMandat(mandat.id))
+      .rejects.toThrow("Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.");
+  });
+
+  it("mandatul de presedinte nu se da pe alta asociatie", async () => {
+    const altul = await creeazaBloc();
+    const { s: altAdmin } = await intraCa(altul.adminTelefon);
+    const telefon = telefonDeTest();
+    const cont = await admin.adaugaLocatar(f.ap["2"], { nume: "Om Al Nostru", telefon });
+    /* administratorul celuilalt bloc il numeste: mandatul iese pe asociatia lui,
+       nu pe a noastra */
+    const mandat = await altAdmin.numesteInConducere(cont.profil_id, "cenzor");
+    const date = await admin.incarca();
+    expect(date.conducere.some((m) => m.id === mandat)).toBe(false);
+  });
+});

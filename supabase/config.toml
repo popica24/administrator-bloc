@@ -224,15 +224,18 @@ web3 = 30
 # secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
+# Contul se tine pe o adresa interna, facuta din numarul de telefon, deci acest
+# furnizor trebuie sa ramana pornit: cu el se intra in cont. (Pus pe false,
+# Supabase Auth refuza si intrarea, nu doar inscrierea: "Email logins are
+# disabled".) Nimeni nu isi face singur cont din aplicatie; un cont deschis
+# direct prin API ramane fara apartament si nu vede nimic.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
-# If enabled, users need to confirm their email address before signing in.
-# X03: fara confirmare, oricine isi face cont pe adresa altuia. Local, emailurile
-# ajung in serverul de test (http://127.0.0.1:54324), nu la destinatar.
-enable_confirmations = true
+# Adresele contului sunt interne (facute din numarul de telefon) si nu primesc
+# posta; contul se creeaza deja confirmat, cu cheia de serviciu.
+enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 # X04: parola nu se mai schimba doar cu tokenul din sesiune.
 secure_password_change = true
@@ -253,12 +256,8 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# F1: emailul de confirmare implicit e in engleza si nu spune nimic despre
-# asociatie sau despre AdminBloc — primul lucru pe care il vede un utilizator
-# de 50+ ani, necunoscator de tehnologie, care tocmai a cerut un cont.
-[auth.email.template.confirmation]
-subject = "Confirma adresa de email pentru contul tau AdminBloc"
-content_path = "./supabase/templates/confirmare-email.html"
+# Nu se trimite niciun email: contul il face administratorul, iar parola i-o
+# da omului el, pe hartie sau la telefon.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

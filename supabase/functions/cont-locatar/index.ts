@@ -11,8 +11,10 @@
 // administratorului pe apartament se verifica intai, cu tokenul lui
 // (identitate.apartament_de_administrat).
 //
-// Corp: { apartament_id, nume, telefon, calitate }            -> cont nou
-//        { apartament_id, locatar_id, actiune: "parola" }     -> parola noua
+// Corp: { apartament_id, nume, telefon, calitate }             -> cont nou
+//        { apartament_id, locatar_id, actiune: "parola" }      -> parola noua
+//        { nume, telefon, rol, actiune: "conducere" }          -> presedinte
+//                                                                 sau cenzor
 //
 // Daca numarul are deja cont (acelasi om, al doilea apartament), contul se
 // leaga de apartamentul nou si raspunsul vine fara parola.
@@ -25,19 +27,56 @@ porneste(async (req) => {
   if (req.method !== "POST") return eroare("Metoda nu este permisa.", 405);
 
   try {
-    const { apartament_id, locatar_id, nume, telefon, calitate = "proprietar", actiune = "creeaza" } = await req.json();
-    if (!apartament_id) return eroare("Lipseste apartamentul.");
+    const { apartament_id, locatar_id, nume, telefon, calitate = "proprietar", rol, actiune = "creeaza" } = await req.json();
+    const conducere = actiune === "conducere";
+    if (!conducere && !apartament_id) return eroare("Lipseste apartamentul.");
 
     const cititor = clientUtilizator(req);
     const { data: utilizator, error: eAuth } = await cititor.auth.getUser();
     if (eAuth || !utilizator.user) return eroare("Nu esti autentificat.", 401);
 
+    const admin = clientServiciu();
+    const parola = genereazaParola();
+
+    if (conducere) {
+      // Un presedinte sau un cenzor din afara blocului nu are cont. Dreptul
+      // il verifica numeste_in_conducere (asociatia administrata de cel care
+      // cere), deci aici nu se verifica apartamentul.
+      const numar = normalizeazaTelefon(telefon);
+      if (!numar) return eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+      if (!String(nume ?? "").trim()) return eroare("Scrie numele persoanei.");
+
+      const { data: existent, error: eCautare } = await admin.schema("identitate").from("profiluri")
+        .select("id").eq("telefon", numar).maybeSingle();
+      if (eCautare) return eroare(eCautare.message);
+
+      let profilId = existent?.id ?? null;
+      if (!profilId) {
+        const { data: cont, error: eCont } = await admin.auth.admin.createUser({
+          email: adresaContului(numar)!,
+          phone: `+4${numar}`,
+          password: parola,
+          email_confirm: true,
+          phone_confirm: true,
+          user_metadata: { nume: String(nume).trim(), telefon: numar },
+        });
+        if (eCont) return eroare(eCont.message);
+        profilId = cont.user.id;
+      }
+
+      // Mandatul se scrie cu tokenul administratorului: functia verifica
+      // singura ca asociatia este a lui.
+      const { error: eMandat } = await cititor.schema("identitate").rpc("numeste_in_conducere", { p_profil_id: profilId, p_rol: rol });
+      if (eMandat) {
+        if (!existent) await admin.auth.admin.deleteUser(profilId);
+        return eroare(eMandat.message, 403);
+      }
+      return raspuns({ profil_id: profilId, telefon: numar, parola: existent ? null : parola });
+    }
+
     // Verifica dreptul pe apartament cu tokenul administratorului
     const { error: eDrept } = await cititor.schema("identitate").rpc("apartament_de_administrat", { p_apartament_id: apartament_id });
     if (eDrept) return eroare(eDrept.message, 403);
-
-    const admin = clientServiciu();
-    const parola = genereazaParola();
 
     if (actiune === "parola") {
       if (!locatar_id) return eroare("Lipseste locatarul.");

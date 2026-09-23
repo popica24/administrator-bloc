@@ -11,12 +11,11 @@
        seed`), ca restul suitei si aplicatia sa ramana folosibile.
    Fisierul se numeste cu "z-" ca sa ruleze ultimul in proiectul lui. */
 
-import { execSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
-  asteaptaToast, textEcran, CUVINTE_TEHNICE, listaLunara, soldApartament, profilDupaEmail,
-  CONTURI, uitaCache, URL_SUPABASE, CHEIE_SERVICIU,
+  asteaptaToast, textEcran, CUVINTE_TEHNICE, listaLunara, soldApartament, profilDupaTelefon,
+  CONTURI, uitaCache, URL_SUPABASE, CHEIE_SERVICIU,  refaBaza,
 } from "./ajutor.js";
 
 const LUNA = "2026-09-01";
@@ -57,9 +56,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     void browserName;
     if (testInfo.project.name !== "telefon") return;
     /* Datele demo, exact ca la inceput */
-    execSync("supabase db reset && npm run seed", {
-      cwd: process.cwd(), stdio: "pipe", timeout: 600000,
-    });
+    refaBaza();
     uitaCache();
   });
 
@@ -261,7 +258,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     expect(Number(fondDupa.sold)).toBeCloseTo(Number(fondInainte.sold) + 1600, 2);
 
     /* Toata lumea cu cont a fost anuntata */
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     await expect.poll(async () => {
       const { data: n } = await sb.schema("comunicare").from("notificari")
         .select("titlu, corp").eq("profil_id", elena.id).eq("tip", "lista_publicata")
@@ -454,7 +451,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     expect(sold).toBeGreaterThan(0);
 
     /* Locatarul este anuntat ca lista s-a corectat */
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     await expect.poll(async () => {
       const { data } = await sb.schema("comunicare").from("notificari")
         .select("titlu, corp").eq("profil_id", elena.id)

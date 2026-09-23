@@ -2,7 +2,7 @@
 
 import { test, expect } from "@playwright/test";
 import {
-  buton, intraCa, mergiLaTab, tab, serviciu, blocD14, apartamentulNumarul, profilDupaEmail,
+  buton, intraCa, mergiLaTab, tab, serviciu, blocD14, apartamentulNumarul, profilDupaTelefon,
   CONTURI, asteaptaToast, textEcran, CUVINTE_TEHNICE, fisierPdf,
   asociatieD14,
 } from "./ajutor.js";
@@ -14,7 +14,7 @@ test.beforeAll(async () => { ASOC = await asociatieD14(); });
 async function sesizareDeTest(titlu, stare = "noua") {
   const b = await blocD14();
   const ap = await apartamentulNumarul(17);
-  const autor = await profilDupaEmail(CONTURI.elena);
+  const autor = await profilDupaTelefon(CONTURI.elena);
   const { data, error } = await serviciu().schema("sesizari").from("sesizari").insert({
     bloc_id: b.id, apartament_id: ap.id, autor_id: autor.id,
     categorie: "instalatii", titlu, descriere: "Curge apa la robinetul de pe palier.", stare,

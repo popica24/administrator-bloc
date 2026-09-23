@@ -355,7 +355,10 @@ function construiesteDemo() {
   D.FURNIZORI.forEach((f) => { furnizor[f.cheie] = db.adauga("furnizori", { asociatieId: asoc.id, ...f }); });
 
   const profil = {};
-  D.CONTURI.forEach((c) => {
+  /* Conducerea (presedinte, cenzor) se creeaza la sfarsit, dupa toate
+     celelalte date: identificatorii din sursa demo sunt o secventa unica, iar
+     testele se sprijina pe ei (lis-807, che-12 si asa mai departe). */
+  D.CONTURI.filter((c) => c.rol !== "presedinte" && c.rol !== "cenzor").forEach((c) => {
     profil[c.cheie] = db.adauga("profiluri", { nume: c.nume, telefon: normalizeazaTelefon(c.telefon) });
     db.autentificari.push({ telefon: normalizeazaTelefon(c.telefon), parola: D.PAROLA_DEMO, profilId: profil[c.cheie].id });
     if (c.rol === "administrator") {
@@ -519,6 +522,13 @@ function construiesteDemo() {
     profilId: l.profilId, asociatieId: asoc.id, tip: "restanta", la: "2026-09-01T09:00:00+03:00",
     titlu: "Instiintare de plata", corp: "Aveti sume neachitate trecute de scadenta. Va rugam sa le achitati ca sa opriti penalizarile.",
   }));
+  /* Conducerea asociatiei, la urma (vezi mai sus, despre identificatori) */
+  D.CONTURI.filter((c) => c.rol === "presedinte" || c.rol === "cenzor").forEach((c) => {
+    const p = db.adauga("profiluri", { nume: c.nume, telefon: normalizeazaTelefon(c.telefon) });
+    db.autentificari.push({ telefon: normalizeazaTelefon(c.telefon), parola: D.PAROLA_DEMO, profilId: p.id });
+    db.adauga("membri", { asociatieId: asoc.id, profilId: p.id, rol: c.rol, activDin: "2026-06-01", activPana: null });
+  });
+
   return db;
 }
 
@@ -531,19 +541,28 @@ function rolul(db, profilId) {
   const mandat = db.membri.find((m) => m.profilId === profilId && m.rol === "administrator" && !m.activPana);
   const legaturi = db.locatari.filter((l) => l.profilId === profilId && !l.activPana);
   if (adm && adm.stare === "aprobat" && mandat) return { rol: "administrator", mandat, legaturi };
+  /* [paritate identitate.eu()] conducerea care verifica: presedintele intai,
+     apoi cenzorul. Vad tot blocul, fara sa poata schimba ceva. */
+  const mandate = db.membri.filter((m) => m.profilId === profilId && (m.rol === "presedinte" || m.rol === "cenzor") && !m.activPana);
+  const supraveghere = mandate.find((m) => m.rol === "presedinte") || mandate[0];
+  if (supraveghere) return { rol: supraveghere.rol, mandat: supraveghere, legaturi };
   if (legaturi.length) return { rol: "locatar", mandat: null, legaturi };
   if (adm && adm.stare === "in_asteptare") return { rol: "in_asteptare", legaturi };
   return { rol: "fara_apartament", legaturi };
 }
+
+/* Rolurile care vad tot blocul (scriu doar administratorul) */
+const conduce = (rol) => rol === "administrator" || rol === "presedinte" || rol === "cenzor";
 
 function proiecteaza(db, profilId, apartamentAles) {
   const profil = db.profiluri.find((p) => p.id === profilId);
   const { rol, mandat, legaturi } = rolul(db, profilId);
   const azi = aziIso();
   const eu = { profilId, nume: profil.nume, telefon: profil.telefon, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
-  if (rol !== "administrator" && rol !== "locatar") return { azi, eu };
+  if (!conduce(rol) && rol !== "locatar") return { azi, eu };
 
-  const esteAdmin = rol === "administrator";
+  /* [paritate] presedintele si cenzorul vad tot blocul, ca administratorul */
+  const esteAdmin = conduce(rol);
   const bloc = esteAdmin
     ? db.blocuri.find((b) => b.asociatieId === mandat.asociatieId)
     : db.blocuri.find((b) => b.id === db.apartamente.find((a) => a.id === eu.apartamentId).blocId);
@@ -578,7 +597,7 @@ function proiecteaza(db, profilId, apartamentAles) {
       .map((p) => ({ valabilDin: p.valabilDin, numar: p.numar, motiv: p.motiv })),
     locatari: esteAdmin ? db.locatari.filter((l) => l.apartamentId === a.id).map((l) => {
       const p = db.profiluri.find((x) => x.id === l.profilId);
-      return { id: l.id, nume: p.nume, telefon: p.telefon, calitate: l.calitate, activDin: l.activDin, activPana: l.activPana };
+      return { id: l.id, profilId: l.profilId, nume: p.nume, telefon: p.telefon, calitate: l.calitate, activDin: l.activDin, activPana: l.activPana };
     }) : [],
   }));
 
@@ -742,6 +761,18 @@ function proiecteaza(db, profilId, apartamentAles) {
     datorii, penalizari, plati, situatieBloc, fonduri, sesizari, anunturi, documente, voturi, adunari,
     furnizori: esteAdmin ? db.furnizori.filter((f) => f.asociatieId === asociatie.id).map((f) => ({ id: f.id, denumire: f.denumire, cui: f.cui, categorie: f.categorie, metoda: f.metoda, tipApa: f.tipApa || null, cod: f.cod })) : [],
     remindere: esteAdmin ? db.remindere.filter((r) => r.asociatieId === asociatie.id).map((r) => ({ tip: r.tip, activ: r.activ, zile: r.zile })) : [],
+    /* Conducerea asociatiei: mandatele de presedinte si de cenzor, cu
+       istoricul lor (cele incheiate raman, cu data de incheiere). */
+    conducere: esteAdmin
+      ? db.membri.filter((m) => m.asociatieId === asociatie.id && m.rol !== "administrator")
+        .map((m) => ({
+          id: m.id, rol: m.rol, activDin: m.activDin, activPana: m.activPana,
+          profilId: m.profilId,
+          nume: db.profiluri.find((p) => p.id === m.profilId).nume,
+          telefon: db.profiluri.find((p) => p.id === m.profilId).telefon,
+        }))
+        .sort((a, b) => (a.activPana ? 1 : 0) - (b.activPana ? 1 : 0) || a.rol.localeCompare(b.rol) || a.nume.localeCompare(b.nume))
+      : [],
     notificari: db.notificari.filter((n) => n.profilId === profilId).sort((a, b) => (a.trimisaLa < b.trimisaLa ? 1 : -1))
       .map((n) => ({ id: n.id, tip: n.tip, titlu: n.titlu, corp: n.corp, trimisaLa: n.trimisaLa, cititaLa: n.cititaLa })),
   };
@@ -1167,6 +1198,52 @@ export function creeazaSursaMock() {
       const parola = genereazaParola();
       cont.parola = parola;
       return { parola };
+    },
+
+    /* [paritate] identitate.numeste_in_conducere / incheie_mandat */
+    async numesteInConducere(profilId, rol) {
+      const { bloc } = cerAdmin();
+      if (rol !== "presedinte" && rol !== "cenzor") eroare("Mandatul este de presedinte sau de cenzor.");
+      if (!db.profiluri.some((p) => p.id === profilId)) eroare("Persoana nu exista.");
+      const vechi = db.membri.find((m) => m.asociatieId === bloc.asociatieId && m.profilId === profilId && m.rol === rol);
+      if (vechi && !vechi.activPana) eroare("Persoana are deja acest mandat, in curs.");
+      if (vechi) {
+        vechi.activDin = aziIso();
+        vechi.activPana = null;
+        return vechi.id;
+      }
+      return db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null }).id;
+    },
+
+    async incheieMandat(membruId) {
+      const { bloc } = cerAdmin();
+      const m = db.membri.find((x) => x.id === membruId && x.asociatieId === bloc.asociatieId
+        && (x.rol === "presedinte" || x.rol === "cenzor") && !x.activPana);
+      if (!m) eroare("Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.");
+      /* ca in baza: cel putin o zi de mandat, ca istoricul sa ramana citibil */
+      const maine = adaugaZile(m.activDin, 1);
+      m.activPana = aziIso() > maine ? aziIso() : maine;
+    },
+
+    async adaugaInConducere(nume, telefon, rol) {
+      const { bloc } = cerAdmin();
+      if (rol !== "presedinte" && rol !== "cenzor") eroare("Mandatul este de presedinte sau de cenzor.");
+      const numar = normalizeazaTelefon(telefon);
+      if (!numar) eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+      if (!String(nume || "").trim()) eroare("Scrie numele persoanei.");
+      const contVechi = db.autentificari.find((x) => x.telefon === numar);
+      const profilId = contVechi ? contVechi.profilId : db.adauga("profiluri", { nume: nume.trim(), telefon: numar }).id;
+      let parola = null;
+      if (!contVechi) {
+        parola = genereazaParola();
+        db.autentificari.push({ telefon: numar, parola, profilId });
+      }
+      const vechi = db.membri.find((m) => m.asociatieId === bloc.asociatieId && m.profilId === profilId && m.rol === rol);
+      if (vechi && !vechi.activPana) eroare("Persoana are deja acest mandat, in curs.");
+      if (vechi) { vechi.activDin = aziIso(); vechi.activPana = null; } else {
+        db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null });
+      }
+      return { profil_id: profilId, telefon: numar, parola };
     },
 
     async inchideAcces(locatarId) {

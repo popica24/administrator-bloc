@@ -39,9 +39,13 @@ The app has two data sources with the same interface (`src/sursa.js` picks one):
 - **Demo mode** otherwise: `src/sursa-mock.js`, in memory, reset on reload. It replays
   `src/date-demo.js` with the same rules as the database, so both sources show the same numbers.
 
+Accounts are keyed by phone number: the administrator creates a tenant's account from the
+apartment sheet (Edge Function `cont-locatar`) and hands over the generated password; nobody
+signs up. Supabase Auth gets an internal address derived from the number
+(`supabase/functions/_shared/telefon.js`), because phone login would require an SMS provider.
 Login decides the role: **Locatar** (Acasa, Plata, Contoare, Sesizari, Bloc) or
-**Administrator** (Sumar, Apartamente, Facturi, Sesizari, Comunicare). An unverified
-administrator or an account without an apartment gets a waiting / invitation-code screen.
+**Administrator** (Sumar, Apartamente, Facturi, Sesizari, Comunicare). An account without an
+apartment gets a waiting screen.
 
 ## Architecture
 

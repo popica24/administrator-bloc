@@ -12,7 +12,7 @@
 import { test, expect } from "@playwright/test";
 import {
   serviciu, URL_SUPABASE, CHEIE_SERVICIU, PAROLA, intra, buton, mergiLaTab,
-  asteaptaToast, CUVINTE_TEHNICE, descarca, textPdf,
+  asteaptaToast, CUVINTE_TEHNICE, descarca, textPdf, telefonTemporar,
 } from "./ajutor.js";
 
 const STAMP = Date.now().toString(36);
@@ -39,7 +39,7 @@ async function functie(nume, corp) {
 /* O asociatie noua cu un bloc, apartamentele ei si administratorul ei */
 async function creeazaBloc({ eticheta, cui, apartamente, contoareGenerale }) {
   const db = serviciu();
-  const email = `e2e-neo-${eticheta}-admin-${STAMP}@adminbloc.test`;
+  const telefon = telefonTemporar();
   const creata = await functie("creeaza-asociatie", {
     asociatie: {
       denumire: `E2E ${eticheta} ${STAMP}`, cui, iban: "RO49RNCB0082004512340099",
@@ -48,7 +48,7 @@ async function creeazaBloc({ eticheta, cui, apartamente, contoareGenerale }) {
     },
     setari: { procentPenalizareZi: 0.02, zileGratie: 30, ziScadenta: 25, chitantaSerie: `E2E${STAMP.slice(-3).toUpperCase()}`, chitantaUltimulNumar: 0 },
     bloc: { denumire: `E2E bloc ${eticheta} ${STAMP}`, adresa: "Str. Testelor nr. 1", etaje: 1, ziLimitaCitire: 15, rulmentPerApartament: 0 },
-    administrator: { email, parola: PAROLA, nume: `Administrator ${eticheta}`, telefon: "0700000001", atestat: `E2E-${STAMP}` },
+    administrator: { telefon, parola: PAROLA, nume: `Administrator ${eticheta}`, atestat: `E2E-${STAMP}` },
   });
 
   for (const a of apartamente) {
@@ -103,23 +103,23 @@ async function creeazaBloc({ eticheta, cui, apartamente, contoareGenerale }) {
   }
 
   await ok(db.schema("organizare").rpc("activeaza_bloc", { p_bloc_id: creata.bloc_id }), "activare bloc");
-  return { ...creata, email, apartamente: apsBd };
+  return { ...creata, telefon, apartamente: apsBd };
 }
 
-async function locatarNou(email, nume, apartamentId, blocId) {
+async function locatarNou(telefon, nume, apartamentId, blocId) {
   const db = serviciu();
-  const { data: p } = await db.schema("identitate").from("profiluri").select("id").eq("email", email).maybeSingle();
+  const { data: p } = await db.schema("identitate").from("profiluri").select("id").eq("telefon", telefon).maybeSingle();
   let id = p?.id;
   if (!id) {
     const { data, error } = await db.auth.admin.createUser({
-      email, password: PAROLA, email_confirm: true, user_metadata: { nume, telefon: "0700000002" },
+      telefon, password: PAROLA, email_confirm: true, user_metadata: { nume, telefon: "0700000002" },
     });
-    if (error) throw new Error(`cont ${email}: ${error.message}`);
+    if (error) throw new Error(`cont ${telefon}: ${error.message}`);
     id = data.user.id;
   }
   await ok(db.schema("identitate").from("locatari").insert({
     apartament_id: apartamentId, bloc_id: blocId, profil_id: id, calitate: "proprietar", activ_din: LUNA,
-  }), `locatar ${email}`);
+  }), `locatar ${telefon}`);
   return id;
 }
 
@@ -188,7 +188,7 @@ test.describe("ecrane pe date neobisnuite", () => {
   });
 
   test("2. administratorul unui apartament fara contoare nu ramane cu ecranul de citiri gol", async ({ page }) => {
-    await intra(page, GOL.email);
+    await intra(page, GOL.telefon);
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
@@ -218,7 +218,7 @@ test.describe("ecrane pe date neobisnuite", () => {
     await ok(db.schema("intretinere").from("cheltuieli").insert(facturi), "cele 20 de facturi");
     const totalFacturi = facturi.reduce((s, f) => s + f.suma, 0);
 
-    await intra(page, UNUL.email);
+    await intra(page, UNUL.telefon);
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Facturi");
     await page.waitForTimeout(800);

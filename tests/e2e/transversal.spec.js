@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
 import {
   CONTURI, PAROLA, buton, intraCa, mergiLaTab, tab, serviciu, blocD14,
   apartamentulNumarul, asteaptaToast, textEcran, textTot, CUVINTE_TEHNICE,
-  asociatieD14,
+  asociatieD14, telefonTemporar, profilDupaTelefon, stergeCont,
 } from "./ajutor.js";
 
 /* Identificatorii se cauta in baza: un `db reset && npm run seed` le schimba */
@@ -19,11 +19,11 @@ test.describe("bara de taburi si badge-uri", () => {
   test("locatarul are cele cinci taburi, cu badge-urile din date", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
     const sb = serviciu();
-    const profil = await sb.schema("identitate").from("profiluri").select("id").eq("email", CONTURI.elena).single();
+    const profil = await profilDupaTelefon(CONTURI.elena);
     const { count: sesizari } = await sb.schema("sesizari").from("sesizari")
       .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).neq("stare", "rezolvata");
     const { count: notificari } = await sb.schema("comunicare").from("notificari")
-      .select("id", { count: "exact", head: true }).eq("profil_id", profil.data.id).is("citita_la", null);
+      .select("id", { count: "exact", head: true }).eq("profil_id", profil.id).is("citita_la", null);
 
     await intraCa(page, "elena");
     for (const t of TABURI_LOCATAR) await expect(tab(page, t)).toBeVisible();
@@ -134,22 +134,26 @@ test.describe("dublul apasat pe butoanele principale", () => {
     await serviciu().schema("comunicare").from("anunturi").delete().eq("id", data[0].id);
   });
 
-  test("codul de invitatie nu se genereaza de doua ori", async ({ page }) => {
+  test("contul unui locatar nu se face de doua ori", async ({ page }) => {
     const ap = await apartamentulNumarul(18);
-    await serviciu().schema("identitate").from("invitatii")
-      .delete().eq("apartament_id", ap.id).is("folosita_la", null);
+    const telefon = telefonTemporar();
+    try {
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: "Apartament 18" }).click();
+      await buton(page, "Adauga un locatar in aplicatie").click();
+      await page.getByLabel("Numele locatarului").fill("Dublu Apasat");
+      await page.getByLabel("Numarul lui de telefon").fill(telefon);
+      await buton(page, "Fa contul").dblclick();
+      await asteaptaToast(page, "Contul a fost creat");
 
-    await intraCa(page, "admin");
-    await mergiLaTab(page, "Apartamente");
-    await page.getByRole("button", { name: "Apartament 18" }).click();
-    await buton(page, "Invita un locatar in aplicatie").click();
-    await buton(page, "Genereaza codul").dblclick();
-    await asteaptaToast(page, "Codul de invitatie a fost generat");
-
-    const { data } = await serviciu().schema("identitate").from("invitatii")
-      .select("id").eq("apartament_id", ap.id).is("folosita_la", null);
-    expect(data).toHaveLength(1);
-    await serviciu().schema("identitate").from("invitatii").delete().eq("id", data[0].id);
+      const { data } = await serviciu().schema("identitate").from("locatari")
+        .select("id").eq("apartament_id", ap.id).is("activ_pana", null);
+      expect(data).toHaveLength(1);
+      expect(await profilDupaTelefon(telefon)).not.toBeNull();
+    } finally {
+      await stergeCont(telefon);
+    }
   });
 
   test("un vot deschis de doua ori ramane unul singur", async ({ page }) => {
@@ -180,8 +184,7 @@ test.describe("dublul apasat pe butoanele principale", () => {
   test("un mesaj trimis de doua ori nu ajunge de doua ori", async ({ page }) => {
     const b = await blocD14();
     const ap = await apartamentulNumarul(17);
-    const { data: profil } = await serviciu().schema("identitate").from("profiluri")
-      .select("id").eq("email", CONTURI.elena).single();
+    const profil = await profilDupaTelefon(CONTURI.elena);
     const titlu = `E2E dublu mesaj ${Date.now()}`;
     const { data: ses } = await serviciu().schema("sesizari").from("sesizari").insert({
       bloc_id: b.id, apartament_id: ap.id, autor_id: profil.id,
@@ -235,10 +238,10 @@ test.describe("operare de la tastatura", () => {
     await expect(page.getByText("Intra in cont")).toBeVisible();
     for (let i = 0; i < 12; i += 1) {
       const etichetaCurenta = await page.evaluate(() => document.activeElement && document.activeElement.getAttribute("aria-label"));
-      if (etichetaCurenta === "Email") break;
+      if (etichetaCurenta === "Numarul tau de telefon") break;
       await page.keyboard.press("Tab");
     }
-    expect(await page.evaluate(() => document.activeElement.getAttribute("aria-label"))).toBe("Email");
+    expect(await page.evaluate(() => document.activeElement.getAttribute("aria-label"))).toBe("Numarul tau de telefon");
     await page.keyboard.type(CONTURI.elena);
     await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement.getAttribute("aria-label"))).toBe("Parola");
@@ -319,8 +322,7 @@ test.describe("doua actiuni diferite, una dupa alta", () => {
      aruncata in tacere, fara toast si fara efect. */
   test("[E6] doua notificari marcate citite una dupa alta raman amandoua citite", async ({ page }) => {
     const sb = serviciu();
-    const { data: profil } = await sb.schema("identitate").from("profiluri")
-      .select("id").eq("email", CONTURI.elena).single();
+    const profil = await profilDupaTelefon(CONTURI.elena);
     /* Testul isi face singur cele doua notificari necitite. Cate are Elena
        depinde de ziua in care s-a facut seed-ul (mai vechi de 14 zile sunt
        citite) si de ce au facut testele rulate inainte in aceeasi baza: pe un

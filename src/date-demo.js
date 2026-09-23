@@ -50,6 +50,11 @@ export const CONTURI = [
   { cheie: "ilie", nume: "Dan Ilie", telefon: "0726 331 003", rol: "locatar", apartament: "3", calitate: "proprietar" },
   { cheie: "voicu", nume: "Gheorghe Voicu", telefon: "0741 002 101", rol: "locatar", apartament: "1", calitate: "proprietar" },
   { cheie: "neverificat", nume: "Cosmin Radu", telefon: "0755 900 800", rol: "administrator_in_asteptare", atestat: "AT-AG-2026-0077" },
+  /* Conducerea aleasa de adunarea generala. Amandoi vad tot blocul, fara sa
+     poata schimba ceva. (In demonstratie nu sunt si locatari, ca numerele
+     blocului sa ramana cele de pe hartie.) */
+  { cheie: "presedinte", nume: "Rodica Anton", telefon: "0722 118 005", rol: "presedinte" },
+  { cheie: "cenzor", nume: "Sorin Tudose", telefon: "0730 415 900", rol: "cenzor" },
 ];
 
 export const CONTACTE = [

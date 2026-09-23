@@ -6,7 +6,9 @@
    din §8 al hartii functiilor. */
 
 import { deflateSync } from "node:zlib";
+import { execSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
+import { adresaContului, normalizeazaTelefon } from "../../supabase/functions/_shared/telefon.js";
 import { expect } from "@playwright/test";
 
 export const URL_SUPABASE = "http://127.0.0.1:54321";
@@ -30,12 +32,13 @@ export function dataScurtaRo(iso = aziRo()) {
   const [y, m, d] = iso.split("-");
   return `${Number(d)} ${LUNI_SCURTE[Number(m) - 1]} ${y}`;
 }
+/* Conturile demo, pe numarul lor de telefon (src/date-demo.js) */
 export const CONTURI = {
-  admin: "administrator@adminbloc.test",
-  elena: "elena.marinescu@adminbloc.test",
-  ilie: "familia.ilie@adminbloc.test",
-  voicu: "gheorghe.voicu@adminbloc.test",
-  adminNou: "admin.nou@adminbloc.test",
+  admin: "0745 210 118",
+  elena: "0733 410 217",
+  ilie: "0726 331 003",
+  voicu: "0741 002 101",
+  adminNou: "0755 900 800",
 };
 
 let cacheServiciu = null;
@@ -119,52 +122,55 @@ export async function apartamentulNumarul(numar) {
   return ap;
 }
 
-export async function profilDupaEmail(email) {
+export async function profilDupaTelefon(telefon) {
   const { data, error } = await serviciu().schema("identitate").from("profiluri")
-    .select("*").eq("email", email).maybeSingle();
+    .select("*").eq("telefon", normalizeazaTelefon(telefon)).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
 
-/* Cont nou in Auth, confirmat direct (confirmarea pe email este activa, dar
-   pentru conturile de fixture nu are ce verifica). */
-export async function creeazaCont(email, nume, telefon = "0722000000") {
+/* Cont nou in Auth, pe numar de telefon, ca cele facute de administrator din
+   aplicatie (adresa interna vine din numar). */
+export async function creeazaCont(telefon, nume) {
   const sb = serviciu();
-  const existent = await profilDupaEmail(email);
+  const numar = normalizeazaTelefon(telefon);
+  const existent = await profilDupaTelefon(numar);
   if (existent) return existent.id;
   const { data, error } = await sb.auth.admin.createUser({
-    email, password: PAROLA, email_confirm: true, user_metadata: { nume, telefon },
+    email: adresaContului(numar), phone: `+4${numar}`, password: PAROLA,
+    email_confirm: true, phone_confirm: true, user_metadata: { nume, telefon: numar },
   });
-  if (error) throw new Error(`createUser ${email}: ${error.message}`);
+  if (error) throw new Error(`createUser ${numar}: ${error.message}`);
   return data.user.id;
 }
 
-export async function stergeCont(email) {
-  const p = await profilDupaEmail(email);
+export async function stergeCont(telefon) {
+  const p = await profilDupaTelefon(telefon);
   if (!p) return;
   const sb = serviciu();
   await sb.schema("comunicare").from("anunturi_citiri").delete().eq("profil_id", p.id);
   await sb.schema("comunicare").from("notificari").delete().eq("profil_id", p.id);
   await sb.schema("guvernanta").from("voturi_exprimate").delete().eq("profil_id", p.id);
   await sb.schema("guvernanta").from("adunari_prezente").delete().eq("profil_id", p.id);
-  /* Invitatia folosita de cont tine profilul legat (cheie straina restrictiva) */
-  await sb.schema("identitate").from("invitatii").delete().eq("folosita_de", p.id);
-  await sb.schema("identitate").from("invitatii").delete().eq("creat_de", p.id);
   await sb.schema("identitate").from("locatari").delete().eq("profil_id", p.id);
   await sb.schema("identitate").from("membri_asociatie").delete().eq("profil_id", p.id);
   await sb.schema("identitate").from("administratori").delete().eq("profil_id", p.id);
   await sb.auth.admin.deleteUser(p.id).catch(() => {});
 }
 
+/* Numerele conturilor temporare incep cu 0799: curatenia le sterge pe toate,
+   deci conturile fixe ale testelor stau in alt interval (0798). */
+export const TELEFON_TEMPORAR = "0799";
+let contorTemporar = 0;
+export const telefonTemporar = () => `${TELEFON_TEMPORAR}${String((Date.now() % 1000000) + (contorTemporar += 1)).padStart(6, "0")}`;
+
 /* Conturile temporare ale rularilor trecute, ca baza demo sa nu creasca */
-export async function curataConturiTemporare(prefixe = ["e2e-cod-", "e2e-conf-", "e2e-adm-", "e2e-inreg-", "e2e-mesaj-", "e2e-avizier", "e2e-acces-inchis", "e2e-presedinte", "e2e-cenzor", "e2e-fost-locatar"]) {
-  const { data } = await serviciu().schema("identitate").from("profiluri").select("email").like("email", "e2e-%");
-  for (const p of data || []) {
-    if (prefixe.some((x) => p.email.startsWith(x))) await stergeCont(p.email);
-  }
+export async function curataConturiTemporare() {
+  const { data } = await serviciu().schema("identitate").from("profiluri").select("telefon").like("telefon", `${TELEFON_TEMPORAR}%`);
+  for (const p of data || []) await stergeCont(p.telefon);
 }
 
-/* Leaga un cont de un apartament, fara sa treaca prin codul de invitatie */
+/* Leaga un cont de un apartament, direct, fara Edge Function */
 export async function legaDeApartament(profilId, apartamentId, calitate = "proprietar") {
   const b = await blocD14();
   const sb = serviciu();
@@ -206,7 +212,7 @@ export async function deschide(page) {
   await expect(page.getByText("AdminBloc").first()).toBeVisible();
 }
 
-export async function intra(page, email, parola = PAROLA) {
+export async function intra(page, telefon, parola = PAROLA) {
   await page.goto("/");
   await page.getByRole("heading", { name: "Intra in cont" }).or(page.getByText("Intra in cont").first()).first().waitFor();
   /* Testele de aici verifica aplicatia peste stack-ul local. Daca ea a pornit
@@ -216,7 +222,7 @@ export async function intra(page, email, parola = PAROLA) {
   if (await page.getByText("Mod demonstrativ, fara server").isVisible()) {
     throw new Error("Aplicatia a pornit in modul demonstrativ: lipsesc VITE_SUPABASE_URL si VITE_SUPABASE_ANON_KEY (vezi webServer.env in playwright.config.js).");
   }
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Numarul tau de telefon").fill(telefon);
   await page.getByLabel("Parola").fill(parola);
   await page.getByRole("button", { name: "Intra", exact: true }).click();
 }
@@ -338,41 +344,24 @@ export function textPdf(octeti) {
   return bucati.join("\n");
 }
 
-/* ---------- Mailpit: emailurile stack-ului local ---------- */
-
-export const URL_MAILPIT = "http://127.0.0.1:54324";
-
-/* Ultimul mesaj primit de adresa, cu textul si linkul de confirmare */
-export async function ultimulEmail(adresa, timeout = 20000) {
-  const pornire = Date.now();
-  for (;;) {
-    const r = await fetch(`${URL_MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${adresa}`)}&limit=5`);
-    const j = await r.json();
-    const mesaj = (j.messages || [])[0];
-    if (mesaj) {
-      const detaliu = await (await fetch(`${URL_MAILPIT}/api/v1/message/${mesaj.ID}`)).json();
-      const corp = `${detaliu.Text || ""}\n${detaliu.HTML || ""}`;
-      const link = (corp.match(/https?:\/\/[^\s"'<>)]+verify[^\s"'<>)]*/) || [])[0];
-      return { subiect: mesaj.Subject, corp, link: link && link.replace(/&amp;/g, "&") };
-    }
-    if (Date.now() - pornire > timeout) throw new Error(`Niciun email pentru ${adresa}`);
-    await new Promise((r2) => setTimeout(r2, 500));
-  }
-}
-
-/* ---------- limita de incercari la codul de invitatie ---------- */
-
-/* Incercarile se numara si pe adresa clientului, in tot stack-ul local: daca
-   raman in urma unui test, blocheaza si celelalte teste. Se sterg mereu. */
-export async function curataIncercariInvitatii() {
-  await serviciu().schema("identitate").from("incercari_invitatii")
-    .delete().gt("id", 0);
-}
-
 export function fisierPdf(nume = "factura.pdf") {
   const pdf = "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
     + "2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
     + "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n"
     + "trailer<</Root 1 0 R>>\n%%EOF\n";
   return { name: nume, mimeType: "application/pdf", buffer: Buffer.from(pdf, "utf8") };
+}
+
+/* Datele demo, de la zero: unele scenarii (ciclul lunii, doua luni, anul nou)
+   schimba starea blocului si o refac la loc.
+   `supabase db reset` poate lasa oprit containerul care serveste Edge
+   Functions, iar seed-ul are nevoie de el (publicarea listelor trece prin
+   publica-lista): fara repornire, seed-ul cade, baza ramane goala si tot ce
+   urmeaza in suita asteapta degeaba. */
+export function refaBaza() {
+  execSync("supabase db reset", { cwd: process.cwd(), stdio: "pipe", timeout: 600000 });
+  try {
+    execSync("supabase start", { cwd: process.cwd(), stdio: "pipe", timeout: 600000 });
+  } catch { /* stiva pornita deja */ }
+  execSync("npm run seed", { cwd: process.cwd(), stdio: "pipe", timeout: 600000 });
 }

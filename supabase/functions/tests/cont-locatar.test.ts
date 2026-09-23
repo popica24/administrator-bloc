@@ -14,6 +14,7 @@ const P = {
   locatari: "/rest/v1/locatari",
   profiluri: "/rest/v1/profiluri",
   leaga: "/rest/v1/rpc/leaga_locatar",
+  conducere: "/rest/v1/rpc/numeste_in_conducere",
   eu: "/auth/v1/user",
 };
 const AP = "apartament-1";
@@ -27,6 +28,7 @@ function backend(o: {
   profiluri?: unknown[];
   parolaNoua?: () => Response;
   stergere?: () => Response;
+  conducere?: () => Response;
 } = {}) {
   return (a: Apel) => {
     if (a.url.pathname === P.eu) return json({ id: "admin-1" });
@@ -37,6 +39,7 @@ function backend(o: {
       case P.locatari: return randuri(a, o.locatari ?? [{ profil_id: PROFIL }]);
       case P.profiluri: return randuri(a, o.profiluri ?? []);
       case P.leaga: return o.leaga ? o.leaga() : json("locatar-nou");
+      case P.conducere: return o.conducere ? o.conducere() : json("mandat-nou");
     }
   };
 }
@@ -234,5 +237,82 @@ Deno.test("cont-locatar: cautarea contului cazuta se spune ca atare", async () =
     const r = await citeste(await trimite(NOU));
     assertEquals(r.status, 400);
     assertEquals(r.corp, { eroare: "nu merge cautarea" });
+  });
+});
+
+// ---------------------------------------------------------------- conducere
+
+const CONDUCERE = { nume: " Sorin Tudose ", telefon: "0730 415 900", rol: "cenzor", actiune: "conducere" };
+
+Deno.test("cont-locatar: un cenzor din afara blocului primeste cont si mandat", async () => {
+  await cuFetch(backend(), async (f) => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.status, 200);
+    assertEquals(r.corp.profil_id, PROFIL);
+    assertEquals(r.corp.telefon, "0730415900");
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+
+    const creare = f.apeluri.find((a) => a.url.pathname === P.utilizatori)!;
+    assertEquals(creare.corp.email, "0730415900@telefon.adminbloc.ro");
+    assertEquals(creare.corp.user_metadata, { nume: "Sorin Tudose", telefon: "0730415900" });
+    const mandat = f.apeluri.find((a) => a.url.pathname === P.conducere)!;
+    assertEquals(mandat.corp, { p_profil_id: PROFIL, p_rol: "cenzor" });
+    // apartamentul nu se verifica: mandatul e pe asociatie
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.drept).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: un om care are deja cont primeste doar mandatul, fara parola noua", async () => {
+  await cuFetch(backend({ profiluri: [{ id: PROFIL }] }), async (f) => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.status, 200);
+    assertEquals(r.corp, { profil_id: PROFIL, telefon: "0730415900", parola: null });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: conducere fara numar sau fara nume -> 400", async () => {
+  await cuFetch(backend(), async () => {
+    const faraNumar = await citeste(await trimite({ ...CONDUCERE, telefon: "0722" }));
+    assertEquals(faraNumar.corp, { eroare: "Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx." });
+    const faraNume = await citeste(await trimite({ ...CONDUCERE, nume: "  " }));
+    assertEquals(faraNume.corp, { eroare: "Scrie numele persoanei." });
+    const fara = await citeste(await trimite({ telefon: CONDUCERE.telefon, rol: "cenzor", actiune: "conducere" }));
+    assertEquals(fara.corp, { eroare: "Scrie numele persoanei." });
+  });
+});
+
+Deno.test("cont-locatar: daca mandatul e refuzat, contul nou se sterge", async () => {
+  await cuFetch(backend({ conducere: () => eroarePg("Doar administratorul asociatiei numeste presedintele si cenzorul.", 403) }), async (f) => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.status, 403);
+    assertEquals(r.corp, { eroare: "Doar administratorul asociatiei numeste presedintele si cenzorul." });
+    assert(f.apeluri.find((a) => a.url.pathname === P.utilizator && a.metoda === "DELETE"), "contul nou a ramas in urma");
+  });
+});
+
+Deno.test("cont-locatar: mandatul refuzat pentru cineva care avea deja cont nu-i sterge contul", async () => {
+  await cuFetch(backend({ profiluri: [{ id: PROFIL }], conducere: () => eroarePg("Persoana are deja acest mandat, in curs.") }), async (f) => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.status, 403);
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizator && a.metoda === "DELETE").length, 0);
+  });
+});
+
+Deno.test("cont-locatar: conducere, cautarea contului cazuta se spune ca atare", async () => {
+  await cuFetch((a: Apel) => {
+    if (a.url.pathname === P.eu) return json({ id: "admin-1" });
+    if (a.url.pathname === P.profiluri) return eroarePg("nu merge cautarea", 500);
+    return undefined;
+  }, async () => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.corp, { eroare: "nu merge cautarea" });
+  });
+});
+
+Deno.test("cont-locatar: conducere, Auth refuza crearea contului", async () => {
+  await cuFetch(backend({ creare: () => json({ msg: "Database error creating new user" }, 500) }), async () => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.corp, { eroare: "Database error creating new user" });
   });
 });

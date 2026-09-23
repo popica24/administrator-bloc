@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
   creeazaCont, legaDeApartament, datorieDeTest, soldApartament,
-  asteaptaToast, CUVINTE_TEHNICE, listaLunara, profilDupaEmail, CONTURI,
+  asteaptaToast, CUVINTE_TEHNICE, listaLunara, profilDupaTelefon, CONTURI,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -86,7 +86,7 @@ test.describe("offline pe toata durata unei treburi, apoi inapoi online", () => 
    -------------------------------------------------------------------------- */
 
 test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
-  const EMAIL_2 = "e2e-seam-admin2@adminbloc.test";
+  const EMAIL_2 = "0798818571";
   let LISTA;
 
   test.beforeAll(async () => {
@@ -243,12 +243,12 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
    -------------------------------------------------------------------------- */
 
 test.describe("doua incasari cash in aceeasi clipa, pe aceeasi datorie", () => {
-  const EMAIL = "e2e-seam-platitor@adminbloc.test";
+  const TELEFON = "0798138711";
 
   test("amandoua se inregistreaza, chitantele raman numerotate, soldul nu trece pe minus", async ({ browser }) => {
     const sb = serviciu();
     const ap = await apartamentulNumarul(19);
-    const pid = await creeazaCont(EMAIL, "Platitor In Acelasi Timp");
+    const pid = await creeazaCont(TELEFON, "Platitor In Acelasi Timp");
     await legaDeApartament(pid, ap.id);
     await datorieDeTest(ap.id, 40, "E2E datorie pe doua cai");
     const sold = await soldApartament(ap.id);
@@ -323,7 +323,7 @@ test.describe("webhook-ul si cron-ul se bat pe acelasi eveniment", () => {
     test.setTimeout(150000);
     const sb = serviciu();
     const TITLU = `E2E eveniment reluat ${Date.now()}`;
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
 
     await intraCa(page, "elena");
     await mergiLaTab(page, "Sesizari");

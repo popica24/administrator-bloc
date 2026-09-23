@@ -11,12 +11,11 @@
    demonstrative: ruleaza o singura data, pe proiectul "telefon", si la final
    readuce baza la starea initiala. Numele "zzz-" il aseaza ultimul. */
 
-import { execSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, listaLunara, soldApartament, uitaCache,
-  descarca, textPdf, CONTURI, profilDupaEmail, URL_SUPABASE, CHEIE_SERVICIU, verificaCitirileLunii,
+  descarca, textPdf, CONTURI, profilDupaTelefon, URL_SUPABASE, CHEIE_SERVICIU, verificaCitirileLunii,  refaBaza,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -85,7 +84,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
   test.afterAll(async ({ browserName }, testInfo) => {
     void browserName;
     if (testInfo.project.name !== "telefon") return;
-    execSync("supabase db reset && npm run seed", { cwd: process.cwd(), stdio: "pipe", timeout: 600000 });
+    refaBaza();
     uitaCache();
   });
 
@@ -305,7 +304,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
       return count;
     }, { timeout: 30000 }).toBe(1);
 
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     await expect.poll(async () => {
       const { data } = await sb.schema("comunicare").from("notificari")
         .select("titlu, corp").eq("profil_id", elena.id)

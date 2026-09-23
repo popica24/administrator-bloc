@@ -266,6 +266,13 @@ const etichetaTipDocument = (v) => (TIPURI_DOCUMENTE.find((t) => t.value === v) 
 
 const ROLURI_CONTACT = { administrator: "Administrator", presedinte: "Presedinte", cenzor: "Cenzor", lift: "Urgente lift", altul: "Contact" };
 
+/* Cine vede blocul intreg. Scrie doar administratorul: presedintele si
+   cenzorul verifica, si e bine ca cel care tine banii sa nu fie acelasi cu
+   cel care il controleaza. */
+const ROLURI_CONDUCERE = ["administrator", "presedinte", "cenzor"];
+const ETICHETA_ROL = { administrator: "Administrator", presedinte: "Presedinte", cenzor: "Cenzor" };
+const doarVerifica = (date) => date.eu.rol === "presedinte" || date.eu.rol === "cenzor";
+
 const CALITATI = [
   { value: "proprietar", label: "Proprietar" },
   { value: "chirias", label: "Chirias" },
@@ -352,6 +359,13 @@ const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => 
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
 const explicatiePenalizare = (date, datorieId) => date.penalizari.find((p) => p.datorieId === datorieId) || null;
+/* Oamenii blocului care au cont, cu apartamentul lor: din ei alege
+   administratorul presedintele si cenzorul. */
+const oameniiBlocului = (date) => date.apartamente
+  .flatMap((a) => a.locatari.filter((l) => !l.activPana).map((l) => ({ profilId: l.profilId, nume: l.nume, apartament: a.numar })))
+  .filter((o, i, toti) => toti.findIndex((x) => x.profilId === o.profilId) === i)
+  .sort((a, b) => a.nume.localeCompare(b.nume, "ro"));
+
 /* [K7] Cat s-a anulat dintr-o penalizare dupa recalcularea listei (negativ) */
 const anulatDinPenalizare = (date, datorieId) =>
   suma(date.datorii.filter((d) => d.tip === "anulare_penalizare" && d.anuleazaDatorieId === datorieId), (d) => d.suma);
@@ -2751,6 +2765,8 @@ function Kpi({ eticheta, valoare, sub, tone, flex = 1, onPress }) {
 
 function AdminSumar({ go }) {
   const { date, trimiteReminder, trimiteInstiintare, toastMsg } = useApp();
+  /* Presedintele si cenzorul verifica: vad tot, nu schimba nimic. */
+  const verifica = doarVerifica(date);
   const st = statisticiAdmin(date);
   const lista = st.lista;
   const restanti = restantieri(date);
@@ -2780,10 +2796,12 @@ function AdminSumar({ go }) {
             <Txt size={11.5} color={C.muted}>Au platit integral {st.apAchitate} din {st.totalApartamente} apartamente.</Txt>
           </Box>
           <Box row gap={S.sm} style={{ flexWrap: "wrap" }}>
-            <Btn label="Trimite reminder de plata" size="sm" onPress={async () => {
-              const r = await trimiteReminder("plata");
-              if (r.ok) toastMsg(`Reminder trimis catre ${plural(r.rezultat.destinatari, "locatar", "locatari")}, din ${plural(r.rezultat.apartamente, "apartament", "apartamente")} cu sold`);
-            }} />
+            {!verifica && (
+              <Btn label="Trimite reminder de plata" size="sm" onPress={async () => {
+                const r = await trimiteReminder("plata");
+                if (r.ok) toastMsg(`Reminder trimis catre ${plural(r.rezultat.destinatari, "locatar", "locatari")}, din ${plural(r.rezultat.apartamente, "apartament", "apartamente")} cu sold`);
+              }} />
+            )}
             <Btn label="Exporta lista PDF" size="sm" variant="secondary" onPress={() => descarcaPdf(listaPdfIntern(date, lista.id), `lista-plata-${lista.luna}-uz-intern.pdf`)} />
           </Box>
           {/* [G2/F4] Varianta de aici e cea interna (nume, restante, penalizari):
@@ -2855,10 +2873,12 @@ function AdminSumar({ go }) {
                   </Box>
                   <Box gap={4} style={{ alignItems: "flex-end" }}>
                     <Lei value={r.restanta} size={13} color={C.danger} />
-                    <Btn label="Instiintare" size="sm" variant="secondary" onPress={async () => {
-                      const x = await trimiteInstiintare(r.ap.id);
-                      if (x.ok) toastMsg(x.rezultat.destinatari ? `Instiintare trimisa in aplicatie pentru ap. ${r.ap.numar}` : `Ap. ${r.ap.numar} nu are cont in aplicatie. Instiintarea se da pe hartie.`);
-                    }} />
+                    {!verifica && (
+                      <Btn label="Instiintare" size="sm" variant="secondary" onPress={async () => {
+                        const x = await trimiteInstiintare(r.ap.id);
+                        if (x.ok) toastMsg(x.rezultat.destinatari ? `Instiintare trimisa in aplicatie pentru ap. ${r.ap.numar}` : `Ap. ${r.ap.numar} nu are cont in aplicatie. Instiintarea se da pe hartie.`);
+                      }} />
+                    )}
                   </Box>
                 </Box>
               </Box>
@@ -2867,15 +2887,17 @@ function AdminSumar({ go }) {
         )}
       </Box>
 
-      <Box gap={S.sm}>
-        <Titlu>Actiuni rapide</Titlu>
-        <Box row gap={S.sm} style={{ flexWrap: "wrap" }}>
-          <Btn label="Adauga factura" variant="secondary" size="sm" onPress={() => go("facturi")} />
-          <Btn label="Inregistreaza incasare" variant="secondary" size="sm" onPress={() => go("apartamente")} />
-          <Btn label="Scrie un anunt" variant="secondary" size="sm" onPress={() => go("adminbloc")} />
-          <Btn label="Deschide un vot" variant="secondary" size="sm" onPress={() => go("adminbloc", { tab: "vot" })} />
+      {!verifica && (
+        <Box gap={S.sm}>
+          <Titlu>Actiuni rapide</Titlu>
+          <Box row gap={S.sm} style={{ flexWrap: "wrap" }}>
+            <Btn label="Adauga factura" variant="secondary" size="sm" onPress={() => go("facturi")} />
+            <Btn label="Inregistreaza incasare" variant="secondary" size="sm" onPress={() => go("apartamente")} />
+            <Btn label="Scrie un anunt" variant="secondary" size="sm" onPress={() => go("adminbloc")} />
+            <Btn label="Deschide un vot" variant="secondary" size="sm" onPress={() => go("adminbloc", { tab: "vot" })} />
+          </Box>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 }
@@ -2905,6 +2927,7 @@ function AdminApartamente({ parametri }) {
    documentul obligatoriu, ca §10.4 din harta functiilor. */
 function AdminFonduri() {
   const { date, inregistreazaIesireFond, deschideDocument } = useApp();
+  const verifica = doarVerifica(date);
   const [ies, setIes] = useState(null);
   const [suma, setSuma] = useState("");
   const [descriere, setDescriere] = useState("");
@@ -2927,7 +2950,7 @@ function AdminFonduri() {
               <Eyebrow>{f.denumire}</Eyebrow>
               <Lei value={f.sold} size={19} weight={700} />
             </Box>
-            <Btn label="Inregistreaza o iesire" size="sm" variant="secondary" onPress={() => deschide(f.id)} />
+            {!verifica && <Btn label="Inregistreaza o iesire" size="sm" variant="secondary" onPress={() => deschide(f.id)} />}
           </Box>
           {f.miscari.map((m, i) => (
             <Box key={m.id} gap={S.sm}>
@@ -3055,6 +3078,7 @@ function FisaApartament({ apId, onClose }) {
     date, inregistreazaIncasare, trimiteInstiintare, schimbaPersoane, adaugaLocatar, parolaNoua, inchideAcces,
     schimbaFisaApartament, schimbaCoteleBlocului, toastMsg,
   } = useApp();
+  const verifica = doarVerifica(date);
   const [actiune, setActiune] = useState(null);
   const [sumaIncasata, setSumaIncasata] = useState("");
   const [plataNoua, setPlataNoua] = useState(null);
@@ -3310,7 +3334,7 @@ function FisaApartament({ apId, onClose }) {
             <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
           </Box>
         </Card>
-      ) : (
+      ) : verifica ? null : (
         <Box gap={S.sm}>
           <Btn label="Inregistreaza incasare cash" full onPress={() => { setSumaIncasata(s > 0 ? lei(s, false) : ""); setActiune("incasare"); }} />
           <Btn label="Trimite instiintare de plata" variant="secondary" full disabled={restanta(date, ap.id) <= 0} onPress={async () => {
@@ -3381,6 +3405,7 @@ function FisaApartament({ apId, onClose }) {
               <Txt size={13} weight={600}>{l.nume}</Txt>
               <Txt size={11.5} color={C.muted}>{etichetaCalitate(l.calitate)} · din {dataRo(l.activDin)}{l.telefon ? ` · ${telefonAfisat(l.telefon)}` : ""}</Txt>
             </Box>
+            {verifica ? null : (
             <Box row gap={S.xs}>
               <Btn label="Parola noua" size="sm" variant="secondary" onPress={async () => {
                 const r = await parolaNoua(ap.id, l.id);
@@ -3392,6 +3417,7 @@ function FisaApartament({ apId, onClose }) {
                 if (await confirma(`Inchizi accesul lui ${l.nume} la apartamentul ${ap.numar}? Istoricul ramane.`)) await inchideAcces(l.id);
               }} />
             </Box>
+            )}
           </Box>
         ))}
         {ap.locatari.filter((l) => l.activPana).map((l) => (
@@ -3404,6 +3430,7 @@ function FisaApartament({ apId, onClose }) {
 
 function AdminCitiri() {
   const { date, valideazaCitire, valideazaCitiriApartament, citesteContorGeneral, estimeazaCitiri, toastMsg } = useApp();
+  const verifica = doarVerifica(date);
   const luniCuCitiri = [...new Set([lunaDe(date.azi), ...date.citiri.filter((c) => c.sursa !== "pornire").map((c) => c.luna)])].sort().reverse();
   const [luna, setLuna] = useState(luniCuCitiri[0]);
   const [respinge, setRespinge] = useState(null);
@@ -3433,6 +3460,7 @@ function AdminCitiri() {
         <Kpi eticheta="De verificat" valoare={String(deVerificat.length)} sub="cu poza atasata" tone={deVerificat.length ? C.warn : C.ink} />
       </Box>
 
+{!verifica && (
       <Card gap={S.md}>
         <Titlu sub="Contorul de la subsol, citit de administrator">Contorul general al blocului</Titlu>
         {contoareGen.map((c) => {
@@ -3460,16 +3488,19 @@ function AdminCitiri() {
           );
         })}
       </Card>
+      )}
 
       {transmise < apartamente.length && (
         <Card gap={S.sm} pad={S.md} style={{ backgroundColor: C.warnSoft, borderColor: C.warnLine }}>
           <Txt size={13} weight={700} color={C.warn}>{apartamente.length - transmise} apartamente nu au transmis indexul</Txt>
           <Txt size={12} color={C.inkSoft}>Dupa termen, le poti completa cu consumul estimat pe media ultimelor trei luni. Estimarea apare ca atare pe lista locatarului.</Txt>
-          <Btn label="Estimeaza citirile lipsa" size="sm" variant="secondary" onPress={async () => {
-            if (!await confirma("Completezi cu estimare toate citirile netransmise pe aceasta luna?")) return;
-            const r = await estimeazaCitiri(luna);
-            if (r.ok) toastMsg(`Au fost estimate ${r.rezultat.estimate} citiri`);
-          }} />
+          {!verifica && (
+            <Btn label="Estimeaza citirile lipsa" size="sm" variant="secondary" onPress={async () => {
+              if (!await confirma("Completezi cu estimare toate citirile netransmise pe aceasta luna?")) return;
+              const r = await estimeazaCitiri(luna);
+              if (r.ok) toastMsg(`Au fost estimate ${r.rezultat.estimate} citiri`);
+            }} />
+          )}
         </Card>
       )}
 
@@ -3495,13 +3526,13 @@ function AdminCitiri() {
                   {[...new Set(x.contoare.filter((c) => c.citire && c.citire.pozaCale).map((c) => c.citire.pozaCale))].map((cale) => <PozaStocata key={cale} cale={cale} latime={72} inaltime={72} />)}
                 </Box>
               )}
-              {x.contoare.some((c) => c.citire && c.citire.stare === "trimisa") && (
+              {!verifica && x.contoare.some((c) => c.citire && c.citire.stare === "trimisa") && (
                 <Box row gap={S.sm}>
                   <Btn label="Valideaza" size="sm" onPress={async () => { await valideazaCitiriApartament(x.ap.id, luna, true, null); }} />
                   <Btn label="Respinge" size="sm" variant="danger" onPress={() => { setRespinge(x); setMotiv(""); }} />
                 </Box>
               )}
-              {!x.contoare.some((c) => c.citire && c.citire.stare === "trimisa") && validateDeRespins(x).length > 0 && (
+              {!verifica && !x.contoare.some((c) => c.citire && c.citire.stare === "trimisa") && validateDeRespins(x).length > 0 && (
                 <Btn label="Respinge citirea validata" size="sm" variant="secondary" onPress={() => { setRespinge({ ...x, validate: validateDeRespins(x) }); setMotiv(""); }} />
               )}
             </Box>
@@ -3694,6 +3725,7 @@ function SheetFactura({ open, onClose, lista, cheltuiala }) {
 
 function AdminFacturi() {
   const { date, deschideLista, stergeCheltuiala, publicaLista, marcheazaFacturaPlatita, dateMotor, deschideDocument } = useApp();
+  const verifica = doarVerifica(date);
   const [listaId, setListaId] = useState(() => (listaCiorna(date) || listaCurenta(date) || {}).id || null);
   const [factura, setFactura] = useState(null);
   const [previz, setPreviz] = useState(null);
@@ -3742,7 +3774,7 @@ function AdminFacturi() {
       <AntetEcran
         eyebrow={lista ? `${monthLabel(lista.luna)} · ${lista.stare === "ciorna" ? "in lucru" : "publicata"}` : "Facturi"}
         titlu="Facturi si liste"
-        dreapta={esteCiorna ? <Btn label="Adauga factura" size="sm" onPress={() => setFactura({})} /> : null}
+        dreapta={esteCiorna && !verifica ? <Btn label="Adauga factura" size="sm" onPress={() => setFactura({})} /> : null}
       />
 
       {date.liste.length > 0 && <AlegeLuna liste={date.liste} value={listaId} onChange={(id) => { setListaId(id); setPreviz(null); }} />}
@@ -3751,7 +3783,7 @@ function AdminFacturi() {
         <Card gap={S.sm} pad={S.md}>
           <Txt size={13} weight={700}>Lista pe {monthLabel(lunaNoua)} nu este inceputa</Txt>
           <Txt size={12} color={C.muted}>Lista noua porneste cu fondul de reparatii deja completat. Adaugi facturile pe masura ce vin.</Txt>
-          <Btn label={`Incepe lista pe ${monthLabel(lunaNoua)}`} size="sm" onPress={async () => { const r = await deschideLista(lunaNoua); if (r.ok) setListaId(r.rezultat); }} />
+          {!verifica && <Btn label={`Incepe lista pe ${monthLabel(lunaNoua)}`} size="sm" onPress={async () => { const r = await deschideLista(lunaNoua); if (r.ok) setListaId(r.rezultat); }} />}
         </Card>
       )}
 
@@ -3787,7 +3819,7 @@ function AdminFacturi() {
           )}
 
           {cheltuieli.length === 0 ? (
-            <Gol titlu="Nicio cheltuiala" text="Adauga prima factura a lunii." actiune={esteCiorna ? <Btn label="Adauga factura" size="sm" onPress={() => setFactura({})} /> : null} />
+            <Gol titlu="Nicio cheltuiala" text="Adauga prima factura a lunii." actiune={esteCiorna && !verifica ? <Btn label="Adauga factura" size="sm" onPress={() => setFactura({})} /> : null} />
           ) : (
             <Card pad={0}>
               {cheltuieli.map((c, i) => (
@@ -3816,15 +3848,15 @@ function AdminFacturi() {
                     </Box>
                     <Box row gap={S.sm} style={{ flexWrap: "wrap" }}>
                       {c.documentId && <Btn label="Vezi factura" size="sm" variant="secondary" onPress={() => deschideDocument(c.documentId)} />}
-                      {c.tip === "factura" && (
+                      {c.tip === "factura" && !verifica && (
                         <Btn label={c.achitataLa ? "Anuleaza plata furnizor" : "Marcheaza platita"} size="sm" variant={c.achitataLa ? "quiet" : "secondary"} onPress={async () => {
                           /* [F25] Anularea sterge o informatie: se intreaba intai */
                           if (c.achitataLa && !await confirma(`Anulezi plata catre ${c.furnizor} pentru ${c.categorie}?`)) return;
                           marcheazaFacturaPlatita(c.id, !c.achitataLa);
                         }} />
                       )}
-                      {esteCiorna && c.tip === "factura" && <Btn label="Modifica" size="sm" variant="secondary" onPress={() => setFactura({ cheltuiala: c })} />}
-                      {esteCiorna && c.tip === "factura" && <Btn label="Sterge" size="sm" variant="danger" onPress={async () => { if (await confirma(`Stergi ${c.categorie}?`)) stergeCheltuiala(c.id); }} />}
+                      {esteCiorna && !verifica && c.tip === "factura" && <Btn label="Modifica" size="sm" variant="secondary" onPress={() => setFactura({ cheltuiala: c })} />}
+                      {esteCiorna && !verifica && c.tip === "factura" && <Btn label="Sterge" size="sm" variant="danger" onPress={async () => { if (await confirma(`Stergi ${c.categorie}?`)) stergeCheltuiala(c.id); }} />}
                     </Box>
                   </Box>
                 </Box>
@@ -3857,7 +3889,7 @@ function AdminFacturi() {
                   <RandCalcul st="Total facturi" dr={lei(totalFacturi)} />
                 </Box>
               )}
-              <Btn label="Publica lista" full size="lg" disabled={cheltuieli.length === 0 || lucreaza} onPress={() => setConfirmPublica(true)} />
+              {!verifica && <Btn label="Publica lista" full size="lg" disabled={cheltuieli.length === 0 || lucreaza} onPress={() => setConfirmPublica(true)} />}
             </Card>
           ) : (
             <Card gap={S.sm}>
@@ -3902,6 +3934,7 @@ function AdminFacturi() {
 
 function AdminSesizari() {
   const { date, preiaSesizare, rezolvaSesizare, scrieMesaj } = useApp();
+  const verifica = doarVerifica(date);
   const [filtru, setFiltru] = useState("deschise");
   const [selectata, setSelectata] = useState(null);
   const [text, setText] = useState("");
@@ -3986,7 +4019,7 @@ function AdminSesizari() {
               </Card>
             )}
 
-            {s.stare !== "rezolvata" && (
+            {s.stare !== "rezolvata" && !verifica && (
               <>
                 <Field label="Raspuns pentru proprietar" value={text} onChange={setText} multiline placeholder="Ce se intampla si pana cand" />
                 <Btn label="Trimite raspunsul" full onPress={async () => { const r = await scrieMesaj(s.id, text); if (r.ok) setText(""); }} disabled={!text.trim()} />
@@ -4007,7 +4040,11 @@ function AdminSesizari() {
 }
 
 function AdminBlocEcran({ parametri }) {
-  const { date, publicaAnunt, seteazaReminder, trimiteReminder, deschideVot, reamintesteVot, convoacaAdunare, incarcaDocument, deschideDocument, toastMsg } = useApp();
+  const {
+    date, publicaAnunt, seteazaReminder, trimiteReminder, deschideVot, reamintesteVot, convoacaAdunare,
+    incarcaDocument, deschideDocument, numesteInConducere, adaugaInConducere, incheieMandat, toastMsg,
+  } = useApp();
+  const verifica = doarVerifica(date);
   const [tab, setTab] = useState(parametri && parametri.tab ? parametri.tab : "anunturi");
   const [sheet, setSheet] = useState(null);
   const [titlu, setTitlu] = useState("");
@@ -4016,6 +4053,13 @@ function AdminBlocEcran({ parametri }) {
   const [optiuni, setOptiuni] = useState(["", ""]);
   const [inchideLa, setInchideLa] = useState("");
   const [numarare, setNumarare] = useState("apartament");
+  /* Conducerea asociatiei: pe cine numim, in ce rol, si contul lui cand e din
+     afara blocului (parola se arata o singura data). */
+  const [rolNou, setRolNou] = useState("presedinte");
+  const [peCine, setPeCine] = useState("");
+  const [numeNou, setNumeNou] = useState("");
+  const [telefonNou, setTelefonNou] = useState("");
+  const [contNou, setContNou] = useState(null);
   const [dataAg, setDataAg] = useState("");
   const [oraAg, setOraAg] = useState("18:30");
   const [loc, setLoc] = useState("");
@@ -4043,13 +4087,14 @@ function AdminBlocEcran({ parametri }) {
           { value: "anunturi", label: "Anunturi" },
           { value: "remindere", label: "Remindere" },
           { value: "vot", label: "Vot si AG" },
+          { value: "conducere", label: "Conducere" },
           { value: "acte", label: "Acte" },
         ]}
       />
 
       {tab === "anunturi" && (
         <Box gap={S.sm}>
-          <Btn label="Scrie un anunt" full onPress={() => deschide("anunt")} />
+          {!verifica && <Btn label="Scrie un anunt" full onPress={() => deschide("anunt")} />}
           {date.anunturi.map((a) => (
             <Card key={a.id} gap={S.sm} pad={S.md}>
               <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.sm }}>
@@ -4084,9 +4129,9 @@ function AdminBlocEcran({ parametri }) {
                         <Txt size={13.5} weight={600}>{info.nume}</Txt>
                         <Txt size={11.5} color={C.muted}>{info.cand(r.zile)}</Txt>
                       </Box>
-                      <Switch value={r.activ} label={info.nume} onChange={(v) => seteazaReminder(r.tip, v, r.zile)} />
+                      {!verifica && <Switch value={r.activ} label={info.nume} onChange={(v) => seteazaReminder(r.tip, v, r.zile)} />}
                     </Box>
-                    {r.tip !== "lista_publicata" && r.activ && (
+                    {!verifica && r.tip !== "lista_publicata" && r.activ && (
                       <Box row gap={S.xs} style={{ flexWrap: "wrap" }}>
                         {[1, 3, 5, 7, 10, 15, 30].map((z) => (
                           <Press key={z} onPress={() => seteazaReminder(r.tip, true, z)} apasat={r.zile === z} style={{ padding: "4px 9px", borderRadius: R.pill, border: `1px solid ${r.zile === z ? C.accent : C.line}`, backgroundColor: r.zile === z ? C.accentSoft : C.surface }}>
@@ -4116,10 +4161,12 @@ function AdminBlocEcran({ parametri }) {
 
       {tab === "vot" && (
         <Box gap={S.md}>
-          <Box row gap={S.sm}>
-            <Btn label="Deschide un vot nou" size="sm" onPress={() => deschide("vot")} />
-            <Btn label="Convoaca adunarea" size="sm" variant="secondary" onPress={() => deschide("adunare")} />
-          </Box>
+          {!verifica && (
+            <Box row gap={S.sm}>
+              <Btn label="Deschide un vot nou" size="sm" onPress={() => deschide("vot")} />
+              <Btn label="Convoaca adunarea" size="sm" variant="secondary" onPress={() => deschide("adunare")} />
+            </Box>
+          )}
           {date.voturi.map((v) => {
             const deschis = new Date(v.inchideLa) > new Date();
             return (
@@ -4139,7 +4186,7 @@ function AdminBlocEcran({ parametri }) {
                   <Bar value={(v.votanti / Math.max(1, v.totalApartamente)) * 100} height={8} />
                   {v.nevotate && v.nevotate.length > 0 && <Txt size={11.5} color={C.muted}>Nu au votat: ap. {v.nevotate.join(", ")}</Txt>}
                 </Box>
-                {deschis && v.nevotate && v.nevotate.length > 0 && (
+                {!verifica && deschis && v.nevotate && v.nevotate.length > 0 && (
                   <Btn label="Reaminteste celor care nu au votat" size="sm" variant="secondary" onPress={async () => {
                     const r = await reamintesteVot(v.id);
                     if (r.ok) toastMsg(`Reminder trimis catre ${plural(r.rezultat.destinatari, "locatar", "locatari")} cu cont, din ${plural(r.rezultat.apartamente, "apartament", "apartamente")}`);
@@ -4158,9 +4205,62 @@ function AdminBlocEcran({ parametri }) {
         </Box>
       )}
 
+      {tab === "conducere" && (
+        <Box gap={S.sm}>
+          <Txt size={12.5} color={C.muted}>
+            Adunarea generala alege presedintele si cenzorul; tu treci aici ce s-a hotarat. Ei vad tot blocul,
+            dar nu pot schimba nimic: nu incaseaza, nu publica liste si nu corecteaza fise.
+          </Txt>
+
+          {contNou && (
+            <Card gap={S.sm} style={{ backgroundColor: C.accentSoft, borderColor: C.accentSoft }}>
+              <Txt size={13} color={C.accentInk}>
+                {contNou.parola
+                  ? `Contul este gata. Intra cu numarul ${telefonAfisat(contNou.telefon)} si parola de mai jos; da-i-le pe hartie sau la telefon.`
+                  : `Persoana avea deja cont pe numarul ${telefonAfisat(contNou.telefon)}. Intra cu parola pe care o stie.`}
+              </Txt>
+              {contNou.parola && <Txt size={22} weight={700} mono color={C.accentInk}>{contNou.parola}</Txt>}
+              <Btn label="Gata" variant="secondary" size="sm" onPress={() => setContNou(null)} />
+            </Card>
+          )}
+
+          <Card pad={0}>
+            {date.conducere.length === 0 && (
+              <Box style={{ padding: S.md }}>
+                <Txt size={12.5} color={C.muted}>Nimeni nu are inca mandat de presedinte sau de cenzor.</Txt>
+              </Box>
+            )}
+            {date.conducere.map((m, i) => (
+              <Box key={m.id}>
+                {i > 0 && <Line />}
+                <Box row style={{ padding: S.md, alignItems: "center", gap: S.sm }}>
+                  <Box flex={1} gap={2}>
+                    <Txt size={13} weight={600}>{m.nume}</Txt>
+                    <Txt size={11.5} color={C.muted}>
+                      {m.rol === "presedinte" ? "Presedinte" : "Cenzor"} · din {dataRo(m.activDin)}
+                      {m.activPana ? `, pana pe ${dataRo(m.activPana)}` : ""}
+                      {m.telefon ? ` · ${telefonAfisat(m.telefon)}` : ""}
+                    </Txt>
+                  </Box>
+                  {m.activPana
+                    ? <Badge label="Incheiat" tone="neutral" />
+                    : verifica ? null : (
+                      <Btn label="Incheie mandatul" size="sm" variant="danger" onPress={async () => {
+                        if (await confirma(`Incheii mandatul lui ${m.nume}? Istoricul ramane.`)) await incheieMandat(m.id);
+                      }} />
+                    )}
+                </Box>
+              </Box>
+            ))}
+          </Card>
+
+          {!verifica && <Btn label="Numeste un presedinte sau un cenzor" full variant="secondary" onPress={() => deschide("conducere")} />}
+        </Box>
+      )}
+
       {tab === "acte" && (
         <Box gap={S.sm}>
-          <Btn label="Incarca un document" full onPress={() => deschide("document")} />
+          {!verifica && <Btn label="Incarca un document" full onPress={() => deschide("document")} />}
           <Card pad={0}>
             {date.documente.map((d, i) => (
               <Box key={d.id}>
@@ -4225,6 +4325,42 @@ function AdminBlocEcran({ parametri }) {
           await convoacaAdunare({ dataOra: instantRomania(dataAg, oraAg), loc, ordineDeZi: corp }),
           () => "Convocarea a fost trimisa locatarilor cu cont",
         )} />
+      </Sheet>
+
+      <Sheet open={sheet === "conducere"} onClose={() => setSheet(null)} titlu="Numeste un presedinte sau un cenzor" pazit={areText(numeNou, telefonNou)}>
+        <Picker label="Mandatul" value={rolNou} onChange={setRolNou} options={[{ value: "presedinte", label: "Presedinte" }, { value: "cenzor", label: "Cenzor" }]} />
+        <Picker
+          label="Cine"
+          value={peCine}
+          onChange={setPeCine}
+          options={[
+            { value: "", label: "Cineva din afara blocului" },
+            ...oameniiBlocului(date).map((o) => ({ value: o.profilId, label: `${o.nume} (ap. ${o.apartament})` })),
+          ]}
+        />
+        {peCine === "" && (
+          <>
+            <Txt size={12.5} color={C.muted}>
+              Un cenzor poate fi si din afara blocului (un contabil, de exemplu). Ii facem cont pe numarul lui.
+            </Txt>
+            <Field label="Numele lui" value={numeNou} onChange={setNumeNou} placeholder="Prenume si nume" />
+            <Field label="Numarul lui de telefon" value={telefonNou} onChange={setTelefonNou} placeholder="07xx xxx xxx" inputMode="tel" />
+          </>
+        )}
+        <Btn
+          label="Numeste"
+          full size="lg"
+          disabled={peCine === "" && (!numeNou.trim() || !normalizeazaTelefon(telefonNou))}
+          onPress={async () => {
+            const r = peCine
+              ? await numesteInConducere(peCine, rolNou)
+              : await adaugaInConducere(numeNou.trim(), telefonNou.trim(), rolNou);
+            if (!r.ok) return;
+            setSheet(null);
+            setNumeNou(""); setTelefonNou(""); setPeCine("");
+            if (r.rezultat && r.rezultat.telefon) setContNou({ telefon: r.rezultat.telefon, parola: r.rezultat.parola });
+          }}
+        />
       </Sheet>
 
       <Sheet open={sheet === "document"} onClose={() => setSheet(null)} titlu="Document nou" pazit={areText(titlu)}>
@@ -4336,7 +4472,10 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
 }
 
 function BaraSus({ date, onIesi, onAlegeApartament }) {
-  const esteAdmin = date.eu.rol === "administrator";
+  /* Administratorul si conducerea care verifica (presedinte, cenzor) vad
+     blocul intreg; locatarul, apartamentul lui. */
+  const conduceBlocul = ROLURI_CONDUCERE.includes(date.eu.rol);
+  const esteAdmin = conduceBlocul;
   const ap = !esteAdmin ? apartamentulMeu(date) : null;
   const initiale = date.bloc.denumire.replace(/^Bloc\s+/i, "").split(/[\s,]/)[0].slice(0, 3).toUpperCase();
   /* [P5] Un locatar legat de mai multe apartamente ale aceluiasi bloc
@@ -4346,7 +4485,7 @@ function BaraSus({ date, onIesi, onAlegeApartament }) {
     ? date.eu.apartamenteMele.map((id) => date.apartamente.find((a) => a.id === id)).filter(Boolean)
     : null;
   const [alegeOpen, setAlegeOpen] = useState(false);
-  const eticheta = esteAdmin ? `Administrator, ${date.bloc.denumire}` : `Apartament ${ap.numar}, ${date.bloc.denumire}`;
+  const eticheta = conduceBlocul ? `${ETICHETA_ROL[date.eu.rol]}, ${date.bloc.denumire}` : `Apartament ${ap.numar}, ${date.bloc.denumire}`;
   return (
     <Box
       row
@@ -4675,6 +4814,9 @@ export default function AdminBloc() {
       schimbaPersoane: cmd((ap, n, l, m) => sursa.schimbaPersoane(ap, n, l, m), (r, ap, n, l) => `Din ${monthLabel(l)} se calculeaza ${n} persoane`),
       adaugaLocatar: cmd((ap, x) => sursa.adaugaLocatar(ap, x), "Contul a fost creat"),
       parolaNoua: cmd((ap, l) => sursa.parolaNoua(ap, l), "Parola noua a fost generata"),
+      numesteInConducere: cmd((p, r) => sursa.numesteInConducere(p, r), "Mandatul a fost inregistrat"),
+      adaugaInConducere: cmd((n, t, r) => sursa.adaugaInConducere(n, t, r), "Mandatul a fost inregistrat"),
+      incheieMandat: cmd((m) => sursa.incheieMandat(m), "Mandatul a fost incheiat"),
       inchideAcces: cmd((id) => sursa.inchideAcces(id), "Accesul a fost inchis"),
       schimbaFisaApartament: cmd((ap, x) => sursa.schimbaFisaApartament(ap, x), "Fisa apartamentului a fost actualizata"),
       schimbaCoteleBlocului: cmd((cote) => sursa.schimbaCoteleBlocului(cote), "Cotele blocului au fost actualizate"),
@@ -4774,11 +4916,11 @@ export default function AdminBloc() {
   } else if (!sesiune && !date) {
     continut = <EcranAutentificare />;
     cheie = "autentificare";
-  } else if (date.eu.rol !== "administrator" && date.eu.rol !== "locatar") {
+  } else if (!ROLURI_CONDUCERE.includes(date.eu.rol) && date.eu.rol !== "locatar") {
     continut = <EcranFaraAcces />;
     cheie = "fara-acces";
   } else {
-    const esteAdmin = date.eu.rol === "administrator";
+    const esteAdmin = ROLURI_CONDUCERE.includes(date.eu.rol);
     const taburi = esteAdmin ? TABURI_ADMIN : TABURI_LOCATAR;
     const tabActiv = taburi.find((t) => t.key === tab) ? tab : taburi[0].key;
     const Ecran = taburi.find((t) => t.key === tabActiv).ecran;

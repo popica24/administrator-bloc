@@ -12,12 +12,11 @@
    readuce baza la starea initiala. Fisierul se numeste cu "zz-" ca sa ruleze
    dupa toate celelalte. */
 
-import { execSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, listaLunara, soldApartament, uitaCache,
-  descarca, textPdf, CONTURI, profilDupaEmail, verificaCitirileLunii,
+  descarca, textPdf, CONTURI, profilDupaTelefon, verificaCitirileLunii,  refaBaza,
 } from "./ajutor.js";
 
 const LUNA_1 = "2026-09-01";
@@ -82,7 +81,7 @@ test.describe("doua luni la rand, fara derive", () => {
   test.afterAll(async ({ browserName }, testInfo) => {
     void browserName;
     if (testInfo.project.name !== "telefon") return;
-    execSync("supabase db reset && npm run seed", { cwd: process.cwd(), stdio: "pipe", timeout: 600000 });
+    refaBaza();
     uitaCache();
   });
 
@@ -282,7 +281,7 @@ test.describe("doua luni la rand, fara derive", () => {
     for (const cuvant of CUVINTE_TEHNICE) expect(acasa).not.toContain(cuvant);
 
     /* Notificarile: cate una pe luna publicata, nu doua pe aceeasi luna */
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     const anunturi = await ok(sb.schema("comunicare").from("notificari")
       .select("titlu").eq("profil_id", elena.id).eq("tip", "lista_publicata"), "notificari");
     const titluri = anunturi.map((n) => n.titlu);

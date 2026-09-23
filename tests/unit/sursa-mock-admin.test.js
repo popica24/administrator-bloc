@@ -157,4 +157,70 @@ describe("incarcaDocument", () => {
     const { s } = await ca(ADMIN);
     await expect(s.incarcaDocument({ titlu: "x", tip: "altul" })).rejects.toThrow("Alege fisierul.");
   });
+
+});
+
+describe("conducerea asociatiei", () => {
+  it("numeste, refuza rolul gresit, persoana inexistenta si mandatul dublu", async () => {
+    const { s, d } = await ca(ADMIN);
+    const elena = d.apartamente.flatMap((a) => a.locatari).find((l) => l.nume === "Elena Marinescu");
+    await expect(s.numesteInConducere(elena.profilId, "administrator")).rejects.toThrow("Mandatul este de presedinte sau de cenzor.");
+    await expect(s.numesteInConducere("pro-0", "cenzor")).rejects.toThrow("Persoana nu exista.");
+    await s.numesteInConducere(elena.profilId, "cenzor");
+    await expect(s.numesteInConducere(elena.profilId, "cenzor")).rejects.toThrow("Persoana are deja acest mandat, in curs.");
+    const dupa = await s.incarca();
+    expect(dupa.conducere.some((m) => m.profilId === elena.profilId && m.rol === "cenzor" && !m.activPana)).toBe(true);
+  });
+
+  it("un mandat inceput azi se incheie de maine, ca istoricul sa aiba o zi", async () => {
+    const { s, d } = await ca(ADMIN);
+    const voicu = d.apartamente.flatMap((a) => a.locatari).find((l) => l.nume === "Gheorghe Voicu");
+    const id = await s.numesteInConducere(voicu.profilId, "presedinte");
+    await s.incheieMandat(id);
+    const m = (await s.incarca()).conducere.find((x) => x.id === id);
+    expect(m.activPana).toBe("2026-09-20");
+  });
+
+  it("contul din afara blocului: pe cineva cunoscut il leaga, fara parola noua", async () => {
+    const { s } = await ca(ADMIN);
+    /* numarul lui Gheorghe Voicu, care are deja cont */
+    const r = await s.adaugaInConducere("Gheorghe Voicu", "0741 002 101", "cenzor");
+    expect(r.parola).toBeNull();
+    await expect(s.adaugaInConducere("Gheorghe Voicu", "0741 002 101", "cenzor")).rejects.toThrow("Persoana are deja acest mandat, in curs.");
+    const cenzor = (await s.incarca()).conducere.find((m) => m.profilId === r.profil_id && m.rol === "cenzor");
+    await s.incheieMandat(cenzor.id);
+    /* dupa incheiere, acelasi om poate fi numit din nou */
+    const dinNou = await s.adaugaInConducere("Gheorghe Voicu", "0741 002 101", "cenzor");
+    expect(dinNou.parola).toBeNull();
+    expect((await s.incarca()).conducere.find((m) => m.id === cenzor.id).activPana).toBeNull();
+  });
+
+  it("incheierea unui mandat inexistent este refuzata, ca in baza", async () => {
+    const { s } = await ca(ADMIN);
+    await expect(s.incheieMandat("mem-0")).rejects.toThrow("Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.");
+  });
+
+  it("contul din afara blocului: rol gresit, numar gresit si nume lipsa sunt refuzate", async () => {
+    const { s } = await ca(ADMIN);
+    await expect(s.adaugaInConducere("X", "0799400400", "administrator")).rejects.toThrow("Mandatul este de presedinte sau de cenzor.");
+    await expect(s.adaugaInConducere("X", "0722", "cenzor")).rejects.toThrow("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+    await expect(s.adaugaInConducere("  ", "0799400400", "cenzor")).rejects.toThrow("Scrie numele persoanei.");
+    await expect(s.adaugaInConducere(undefined, "0799400400", "cenzor")).rejects.toThrow("Scrie numele persoanei.");
+  });
+
+  it("acelasi om poate fi si presedinte, si cenzor: primeaza presedintele", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ilie = d.apartamente.flatMap((a) => a.locatari).find((l) => l.nume === "Dan Ilie");
+    await s.numesteInConducere(ilie.profilId, "cenzor");
+    await s.numesteInConducere(ilie.profilId, "presedinte");
+    await s.intra("0726 331 003", PAROLA);
+    expect((await s.incarca()).eu.rol).toBe("presedinte");
+  });
+
+  it("locatarul si conducerea nu numesc pe nimeni", async () => {
+    const { s } = await ca(LOCATAR);
+    await expect(s.numesteInConducere("pro-1", "cenzor")).rejects.toThrow("Doar administratorul poate face asta.");
+    await expect(s.incheieMandat("mem-1")).rejects.toThrow("Doar administratorul poate face asta.");
+    await expect(s.adaugaInConducere("X", "0799400401", "cenzor")).rejects.toThrow("Doar administratorul poate face asta.");
+  });
 });

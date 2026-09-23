@@ -455,9 +455,12 @@ describe("bloc de test: ramurile maparii", () => {
     expect(loc1.plati.find((p) => p.id === ids.cash).inregistrataDe).toBe(`Administrator ${f.id}`);
   });
 
-  it("[S2] presedintele care locuieste in bloc vede ca ale lui doar platile apartamentului lui", () => {
-    expect(pres.eu.rol).toBe("locatar");
-    expect(pres.plati.map((p) => p.apartamentId)).toEqual([]);
+  /* Presedintele are acum rolul lui: vede blocul intreg, ca sa-l poata
+     verifica, iar apartamentul lui il gaseste in lista, ca pe oricare altul. */
+  it("[S2] presedintele care locuieste in bloc vede blocul, cu rolul lui", () => {
+    expect(pres.eu.rol).toBe("presedinte");
+    expect(pres.apartamente.length).toBeGreaterThan(1);
+    expect(pres.conducere.some((m) => m.profilId === pres.eu.profilId && m.rol === "presedinte")).toBe(true);
   });
 
   it("[S2] presedintele care locuieste in bloc nu vede sesizarile de doua ori", () => {
@@ -486,9 +489,11 @@ describe("bloc de test: ramurile maparii", () => {
 
   it("raspuns sintetic: un locatar fara profil vizibil apare ca \"Locatar\"", async () => {
     const { s } = await intraCa(f.adminTelefon, { incarca: false });
-    const date = await cuFetch(modifica("/rest/v1/profiluri?", (rows) => rows.filter((p) => p.id !== f.conturi.loc1.id)), () => s.incarca());
+    const date = await cuFetch(modifica("/rest/v1/profiluri?", (rows) => rows.filter((p) => p.id !== f.conturi.loc1.id && p.id !== f.conturi.pres.id)), () => s.incarca());
     const l = date.apartamente.find((a) => a.numar === "1").locatari.find((x) => x.id === f.locatari.loc1);
     expect(l).toMatchObject({ nume: "Locatar", telefon: undefined });
+    /* acelasi lucru pentru mandatul al carui profil nu se vede */
+    expect(date.conducere.find((m) => m.profilId === f.conturi.pres.id)).toMatchObject({ nume: "Persoana", telefon: null });
   });
 });
 

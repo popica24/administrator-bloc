@@ -130,9 +130,13 @@ export function creeazaSursaSupabase(url, cheie) {
     /* [K21] doar pentru rolul "respins" trimite identitate.eu() motivul */
     if (eu.rol === "respins") euUi.motivRespingere = eu.motiv_respingere;
     ctx = { profilId: eu.profil_id, rol: eu.rol, blocId: eu.bloc_id, asociatieId: eu.asociatie_id, apartamentId: eu.apartament_id };
-    if (eu.rol !== "administrator" && eu.rol !== "locatar") return { azi, eu: euUi };
+    /* Presedintele si cenzorul vad tot blocul, ca administratorul, dar nu
+       scriu nimic: comenzile cer private.blocuri_administrate(), care nu ii
+       cuprinde. Ce le refuza RLS vine gol, nu cu eroare. */
+    const conduce = eu.rol === "administrator" || eu.rol === "presedinte" || eu.rol === "cenzor";
+    if (!conduce && eu.rol !== "locatar") return { azi, eu: euUi };
 
-    const esteAdmin = eu.rol === "administrator";
+    const esteAdmin = conduce;
     const bloc = eu.bloc_id;
     const asoc = eu.asociatie_id;
     /* [P5] identitate.eu() alege un singur apartament, determinist, dar
@@ -171,7 +175,7 @@ export function creeazaSursaSupabase(url, cheie) {
       asociatie, setariFin, setariCont, blocRand, contacte, apartamente, persoane, liste, cheltuieli, furnizori,
       repartizari, contoare, citiri, consumMediu, datorii, penalizari, plati, alocari, chitante, situatieBloc,
       fonduri, miscari, sesizari, mesaje, poze, sesizariBloc, anunturi, anunturiCitiri, documente, voturi, adunari,
-      remindere, notificari, locatari, profiluri,
+      remindere, notificari, locatari, profiluri, mandate,
     ] = await Promise.all([
       ok(org.from("asociatii").select("*").eq("id", asoc).single()),
       ok(fin.from("setari_financiare").select("*").eq("asociatie_id", asoc).maybeSingle()),
@@ -214,6 +218,10 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? toate(() => id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
       toate(() => id.from("profiluri").select("id, nume, telefon")),
+      /* Conducerea asociatiei: mandatele de presedinte si de cenzor, cu
+         istoricul lor. Politica "Mandatele se vad in asociatie" le arata
+         tuturor celor din asociatie; le folosim pe ecranul administratorului. */
+      toate(() => id.from("membri_asociatie").select("*").eq("asociatie_id", asoc).neq("rol", "administrator")),
     ]);
     /* [K17] toate() ordoneaza dupa id, pentru paginare; id-ul e un UUID
        aleator, deci ordinea aceea nu inseamna nimic pentru om si difera de la
@@ -300,7 +308,7 @@ export function creeazaSursaSupabase(url, cheie) {
           istoricPersoane: persoane.filter((p) => p.apartament_id === a.id).map((p) => ({ valabilDin: luna(p.valabil_din), numar: p.numar_persoane, motiv: p.motiv })),
           locatari: locatari.filter((l) => l.apartament_id === a.id).map((l) => {
             const p = profiluri.find((x) => x.id === l.profil_id) || {};
-            return { id: l.id, nume: p.nume || "Locatar", telefon: p.telefon, calitate: l.calitate, activDin: l.activ_din, activPana: l.activ_pana };
+            return { id: l.id, profilId: l.profil_id, nume: p.nume || "Locatar", telefon: p.telefon, calitate: l.calitate, activDin: l.activ_din, activPana: l.activ_pana };
           }),
         })),
       liste: liste.map((l) => ({
@@ -378,6 +386,15 @@ export function creeazaSursaSupabase(url, cheie) {
         id: f.id, denumire: f.denumire, cui: f.cui, categorie: f.categorie_implicita, metoda: f.metoda_implicita, tipApa: f.tip_apa_implicit, cod: f.cod_implicit,
       })) : [],
       remindere: remindere.map((r) => ({ tip: r.tip, activ: r.activ, zile: r.zile })),
+      conducere: mandate
+        .map((m) => {
+          const p = profiluri.find((x) => x.id === m.profil_id) || {};
+          return {
+            id: m.id, rol: m.rol, activDin: m.activ_din, activPana: m.activ_pana,
+            profilId: m.profil_id, nume: p.nume || "Persoana", telefon: p.telefon || null,
+          };
+        })
+        .sort((a, b) => (a.activPana ? 1 : 0) - (b.activPana ? 1 : 0) || a.rol.localeCompare(b.rol) || a.nume.localeCompare(b.nume)),
       notificari: notificari.map((n) => ({ id: n.id, tip: n.tip, titlu: n.titlu, corp: n.corp, trimisaLa: n.trimisa_la, cititaLa: n.citita_la })),
     };
   }
@@ -652,6 +669,14 @@ export function creeazaSursaSupabase(url, cheie) {
     parolaNoua: (apartamentId, locatarId) =>
       invoca("cont-locatar", { apartament_id: apartamentId, locatar_id: locatarId, actiune: "parola" }),
     inchideAcces: (locatarId) => ok(id.rpc("inchide_acces_locatar", { p_locatar_id: locatarId })),
+    /* Conducerea asociatiei: adunarea generala ii alege, administratorul
+       trece in aplicatie ce s-a hotarat. */
+    numesteInConducere: (profilId, rol) => ok(id.rpc("numeste_in_conducere", { p_profil_id: profilId, p_rol: rol })),
+    incheieMandat: (membruId) => ok(id.rpc("incheie_mandat", { p_membru_id: membruId })),
+    /* Un cenzor din afara blocului nu are cont: i-l face administratorul, pe
+       numarul lui, prin acelasi Edge Function care face conturile locatarilor. */
+    adaugaInConducere: (nume, telefon, rol) =>
+      invoca("cont-locatar", { asociatie_id: cerCtx().asociatieId, nume, telefon, rol, actiune: "conducere" }),
     valideazaCitire: (citireId, accepta, motiv) => ok(cont.rpc("valideaza_citire", { p_citire_id: citireId, p_accepta: accepta, p_motiv: motiv })),
     /* [A5] Un singur apel valideaza sau respinge, dintr-o data, toate citirile
        "trimise" ale apartamentului pe acea luna: nu ramane nimic pe jumatate

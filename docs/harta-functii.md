@@ -33,10 +33,9 @@ Cum se citeste:
 ```
 AdminBloc
 ├── Autentificare (EcranAutentificare, EcranFaraAcces)
-│   ├── Intrare cu email + parola
-│   ├── Locatar nou cu cod de invitatie
-│   ├── Administrator nou cu atestat (asteapta aprobare)
-│   └── Cont fara acces: in verificare / respins / fara apartament
+│   ├── Intrare cu numar de telefon + parola
+│   ├── Conducere (presedinte, cenzor): ecranele administratorului, doar citire
+│   └── Cont fara apartament: asteapta sa fie legat de administrator
 │
 ├── LOCATAR (5 taburi)
 │   ├── Acasa ─────── sold de plata, mesaje noi, "De facut", avizier, consum vs. bloc, sesizarile mele, contacte
@@ -78,51 +77,65 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 ## 2. Autentificare si acces
 
 ### 2.1 Intrare in cont
-- **UI:** `EcranAutentificare`, modul "Intra in cont". Email valid si parola.
-- **Comanda:** `intra(email, parola)` → Supabase Auth `signInWithPassword`, apoi `incarca()`.
+- **UI:** `EcranAutentificare`: numarul de telefon si parola. Butonul se deblocheaza doar la un
+  numar romanesc intreg (10 cifre, `07`/`02`/`03`), scris oricum: cu spatii, cu puncte sau cu
+  `+40` (`supabase/functions/_shared/telefon.js`).
+- **Comanda:** `intra(telefon, parola)` → Supabase Auth `signInWithPassword`, apoi `incarca()`.
+- **De ce o adresa interna:** intrarea cu telefon in Supabase Auth cere un furnizor de SMS, iar
+  aplicatia nu trimite niciun SMS. Fiecare cont are o adresa facuta din numarul lui
+  (`0722123456@telefon.adminbloc.ro`), pe care omul nu o vede si nu o scrie niciodata.
 - **Rolul** il decide `identitate.eu()`, in aceasta ordine de prioritate:
   1. `administrator`: administrator aprobat, cu mandat activ pe o asociatie. Blocul lui este cel
      mai vechi bloc nearhivat al asociatiei.
   2. `locatar`: are o legatura activa cu un apartament.
-  3. `in_asteptare` sau `respins`: are o cerere de administrator.
+  3. `in_asteptare` sau `respins`: are un rand in `identitate.administratori`.
   4. `fara_apartament`: altfel.
 
-### 2.2 Locatar nou, cu cod de invitatie
-- **UI:** "Am un cod de la administrator": codul, numele, telefonul, emailul si parola (minim 10
-  caractere, cu litere mari, litere mici si cifre).
-- **Flux:** `inregistreaza()` creeaza contul Auth. Adresa de email trebuie confirmata, deci
-  inregistrarea nu deschide sesiune: ecranul arata "Confirma adresa de email" si pastreaza codul.
-  Triggerul `identitate.la_cont_nou` creeaza profilul. Dupa confirmare si intrare,
-  `folosesteInvitatie(cod)` → `identitate.foloseste_invitatie`.
-- **Reguli:** codul are 8 caractere din alfabetul fara caractere usor de confundat
-  (`A–Z` fara I/O, `2–9`), se foloseste o singura data, expira in 30 de zile si poate fi revocat.
-  Mesajul de eroare: "Codul nu este valabil. Cere administratorului un cod nou."
-- **Impotriva ghicirii codurilor:** 5 incercari gresite pe cont la 15 minute, plus 20 de
-  incercari gresite de la aceeasi adresa in acelasi interval, ca deschiderea de conturi noi sa
-  nu cumpere incercari (`identitate.incercari_invitatii`, `identitate.adresa_cererii`).
-  Modul demonstrativ nu are adrese, deci acolo ramane doar limita pe cont (§8).
-- **Efect:** un rand in `identitate.locatari` cu calitatea din invitatie (proprietar, chirias sau
-  membru al familiei).
+### 2.2 Contul locatarului, facut de administrator
+- **UI:** fisa apartamentului → "Adauga un locatar in aplicatie": numele, numarul de telefon si
+  calitatea (proprietar, chirias, membru al familiei).
+- **Flux:** `adaugaLocatar()` → Edge Function `cont-locatar`, care:
+  1. verifica dreptul pe apartament cu tokenul administratorului
+     (`identitate.apartament_de_administrat`);
+  2. daca numarul are deja cont (acelasi om, al doilea apartament), il leaga si de apartamentul
+     acesta si raspunde fara parola;
+  3. altfel creeaza contul in Auth (adresa interna din numar, parola generata de
+     `_shared/parola.js`: doua cuvinte romanesti si patru cifre, citibile la telefon) si il leaga
+     cu `identitate.leaga_locatar` (doar cheia de serviciu). Daca legarea cade, contul nou se
+     sterge, ca numarul sa ramana liber.
+- **Parola** se vede o singura data, pe ecranul administratorului; el o da omului cum stie (pe
+  hartie, la telefon). Nu se trimite niciun SMS si niciun email.
+- **Parola uitata:** butonul "Parola noua" de pe fiecare locatar → aceeasi functie, cu
+  `actiune: "parola"`.
 
-### 2.3 Administrator nou
-- **UI:** "Sunt administrator si vreau cont": nume, telefon, email, parola, numarul atestatului si
-  optional o poza a atestatului.
-- **Flux:** `inregistreaza()`, apoi `cereVerificareAdministrator()`. Poza urca in bucket-ul
-  `atestate/<profil_id>/`, apoi ruleaza `identitate.cere_verificare_administrator`, care lasa
-  cererea `in_asteptare`.
-- **Pana la aprobare** contul nu vede nicio asociatie, pentru ca helperii RLS ignora
-  administratorii neaprobati. Aprobarea o face dezvoltatorul (§8.2).
+### 2.3 Contul administratorului
+- Il facem noi: Edge Function `creeaza-asociatie` (asociatie noua cu primul ei administrator, pe
+  numar de telefon) sau, pentru un administrator in plus, cheia de serviciu plus
+  `identitate.numeste_administrator` (§8.2). Nimeni nu isi face singur cont.
 
-### 2.4 Cont fara acces
-- **UI:** `EcranFaraAcces`, cu trei stari:
-  - `in_asteptare`: "Contul de administrator asteapta verificarea".
-  - `respins`: "Cererea de administrator a fost respinsa".
-  - `fara_apartament`: un camp pentru codul de invitatie, care leaga contul de apartament.
+### 2.4 Conducerea asociatiei: presedinte si cenzor
+- **Cine ii numeste:** adunarea generala ii alege; administratorul trece hotararea in aplicatie
+  (Comunicare → Conducere). `numesteInConducere(profilId, rol)` →
+  `identitate.numeste_in_conducere`; pentru cineva din afara blocului (un cenzor contabil),
+  `adaugaInConducere(nume, telefon, rol)` → Edge Function `cont-locatar` cu
+  `actiune: "conducere"`, care face contul si apoi mandatul.
+- **Mandatul** se incheie cu `incheieMandat(id)` → `identitate.incheie_mandat`, care scrie
+  `activ_pana` (cel putin o zi de mandat, ca istoricul sa ramana citibil). Randul nu se sterge.
+- **Ce vad:** tot blocul, cu ecranele administratorului (`identitate.eu()` le da rolul, iar
+  `private.blocuri_supravegheate()` dreptul de citire). Nu scriu nimic: comenzile cer
+  `private.blocuri_administrate()`, iar ecranele nu le arata butoanele (steagul `doarVerifica`).
+  Asa ramane separat cel care tine banii de cel care il verifica.
+- **Un presedinte care sta in bloc** vede blocul cu rolul lui; apartamentul lui il gaseste in
+  Apartamente, ca pe oricare altul (nu mai are ecranele de locatar).
 
-### 2.5 Iesire
-- `BaraSus` → "Iesi" → `iesi()` (signOut, starea se goleste).
+### 2.5 Cont fara apartament
+- **UI:** `EcranFaraAcces`: "Contul nu este legat de un apartament", cu indrumarea catre
+  administratorul blocului si, cand exista, motivul respingerii unei cereri de administrator.
 
-### 2.6 Pagina publica "Cum functioneaza AdminBloc" (`cum-functioneaza/`)
+### 2.6 Iesire
+- `BaraSus` → "Iesi" → `iesi()` (signOut doar pe dispozitivul curent, starea se goleste).
+
+### 2.7 Pagina publica "Cum functioneaza AdminBloc" (`cum-functioneaza/`)
 - **Unde:** `/cum-functioneaza/`, a doua pagina a site-ului, fara cont. Build-ul are doua intrari
   (`vite.config.js`): aplicatia si pagina aceasta.
 - **Ce arata:** lista de intretinere pe ultima luna publicata a blocului demonstrativ, calculata in
@@ -505,7 +518,7 @@ Doar cu service role, fara interfata in aplicatie.
 
 | Operatiune | Cum |
 |---|---|
-| **8.1 Asociatie noua** | Edge Function `creeaza-asociatie` → `organizare.creeaza_asociatie`: asociatia, setarile financiare, cele 5 remindere, optional blocul cu setarile de contorizare si fondurile. Apoi contul administratorului (createUser sau invitatie pe email) si `identitate.numeste_administrator`. Se poate rula din nou fara efecte duble (dupa CUI). |
+| **8.1 Asociatie noua** | Edge Function `creeaza-asociatie` → `organizare.creeaza_asociatie`: asociatia, setarile financiare, cele 5 remindere, optional blocul cu setarile de contorizare si fondurile. Apoi contul administratorului, pe numarul lui de telefon (cu parola ceruta sau una generata, intoarsa o singura data) si `identitate.numeste_administrator`. Se poate rula din nou fara efecte duble (dupa CUI sau dupa numarul administratorului). |
 | **8.2 Aprobarea unui administrator** | `identitate.verifica_administrator(profil, aprobat, motiv)`; aprobarea emite `AdministratorAprobat` |
 | **8.3 Inrolarea unui bloc de pe hartie** | Randuri in `organizare.inrolare_apartamente` (`propus`), apoi `confirma_inrolare` pe fiecare (apartament, persoane, contoare, indexuri de pornire, restanta preluata), apoi `activeaza_bloc`, care verifica: cotele insumeaza 100, fiecare apartament are persoane, fiecare contor are citire, nu mai exista randuri propuse. Starea se vede in `organizare.verificari_bloc`. |
 | **8.4 Recalcularea unei liste publicate** | `publica-lista` cu `recalculare: true`: versiunea creste cu 1, randurile vechi raman, iar diferentele devin datorii `corectie`, vizibile locatarilor |
@@ -526,7 +539,6 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 - Contoarele nu pot fi adaugate, inlocuite sau scoase de utilizatori.
 
 **Identitate**
-- `identitate.revoca_invitatie` exista, dar niciun ecran nu o cheama inca; inchiderea accesului
   revoca automat codurile nefolosite ale apartamentului.
 - Nu se pot numi presedintele si cenzorul si nu se poate incheia un mandat. `eu()` nu are rol de
   presedinte sau cenzor: un presedinte fara apartament primeste `fara_apartament`, desi RLS i-ar
@@ -573,13 +585,13 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | **Contexte (DDD)** | O schema Postgres pe context: `organizare`, `identitate`, `intretinere`, `contorizare`, `financiar`, `sesizari`, `guvernanta`, `comunicare`, `nomenclator`. Neexpuse: `private`, `evenimente`, `audit`. Modelul este in `docs/schema-propunere.md`. |
 | **RLS** | Citirile trec prin helperii din `private` (`blocuri_administrate`, `apartamentele_mele`, `blocuri_conduse`, …). Conducerea (administrator, presedinte, cenzor) vede tot blocul; locatarul vede apartamentul lui plus ce e comun blocului. Scrierile trec prin functii `security definer`, una pe agregat. |
 | **Storage** | `documente` (10 MB, pdf/jpeg/png/webp), `poze` (1 MB, jpeg/webp), `atestate` (5 MB). Toate private, cu URL semnat la deschidere. |
-| **Audit** | `audit.jurnal`: fiecare modificare pe apartamente, persoane, locatari, administratori, citiri, liste, cheltuieli, datorii, plati, miscari de fond, sesizari, voturi (cu optiunile si voturile exprimate), documente, invitatii si chitante, cu starea veche si noua si autorul. |
+| **Audit** | `audit.jurnal`: fiecare modificare pe apartamente, persoane, locatari, administratori, citiri, liste, cheltuieli, datorii, plati, miscari de fond, sesizari, voturi (cu optiunile si voturile exprimate), documente si chitante, cu starea veche si noua si autorul. |
 | **Nomenclator** | `nomenclator.administratii_locale`: judete, municipii, orase, comune si sectoare, cu codul SIRUTA. Contine doar randurile demo. |
 | **PDF** | `src/pdf.js`: generator PDF 1.4 fara librarii, cu Helvetica si WinAnsi (de aici textele fara diacritice). Produce chitanta si lista pentru avizier. |
 | **Fotografii** | Micsorare locala la 1600 px JPEG inainte de upload (`micsoreazaPoza`) |
-| **Autentificare** | Parola de minim 10 caractere, cu litere mari, mici si cifre; adresa de email se confirma; schimbarea parolei cere autentificare recenta; sesiunea expira la 24 de ore, sau dupa 8 ore de inactivitate (`supabase/config.toml`). |
+| **Autentificare** | Contul se tine pe numarul de telefon, iar parola o genereaza sistemul (minim 10 caractere, cu litere mari, mici si cifre); nimeni nu isi face singur cont. Schimbarea parolei cere autentificare recenta; sesiunea expira la 24 de ore, sau dupa 8 ore de inactivitate (`supabase/config.toml`). |
 | **Secretele din productie** | `SITE_URL` (singura adresa careia Edge Functions ii raspund cu antete CORS). Vezi README, "Punerea in productie". |
-| **Date personale** | `identitate.anonimizeaza_profil` (doar dezvoltatorul) inlocuieste numele, emailul si telefonul, inchide legaturile si mandatele, revoca invitatiile nefolosite si sterge sesiunile, pastrand randurile contabile. |
+| **Date personale** | `identitate.anonimizeaza_profil` (doar dezvoltatorul) inlocuieste numele si numarul de telefon, inchide legaturile si mandatele si sterge sesiunile, pastrand randurile contabile. |
 | **UI** | O coloana de telefon (maxim 520 px), flexbox, primitivele din sectiunea 5 (portabile pe React Native), 5 taburi cu badge-uri, toast dupa fiecare comanda, tinte mari la atingere pentru utilizatori de peste 50 de ani |
 | **Ciclul unei comenzi** | `cmd()` in `AdminBloc`: apelul catre sursa, reincarcarea datelor, toastul; ecranul primeste `{ ok, rezultat }` |
 
@@ -589,9 +601,9 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 
 | Comanda (`sursa.*`) | Rol | Backend |
 |---|---|---|
-| `intra`, `inregistreaza`, `iesi` | toti | Supabase Auth |
-| `folosesteInvitatie` | cont nou | `identitate.foloseste_invitatie` |
-| `cereVerificareAdministrator` | cont nou | Storage `atestate` + `identitate.cere_verificare_administrator` |
+| `intra`, `iesi` | toti | Supabase Auth (adresa interna din numarul de telefon) |
+| `adaugaLocatar`, `parolaNoua`, `adaugaInConducere` | admin | Edge `cont-locatar` |
+| `numesteInConducere`, `incheieMandat` | admin | `identitate.numeste_in_conducere`, `identitate.incheie_mandat` |
 | `incarca` | toti | select-uri prin RLS + `identitate.eu`, `contacte_asociatie`, `consum_mediu_bloc`, `situatie_bloc`, `sesizari_bloc`, `situatie_voturi`, `situatie_adunari` |
 | `transmiteCitire` | locatar | Storage `poze` + `contorizare.transmite_citire` |
 | `adaugaSesizare` | locatar | Storage `poze` + `sesizari.adauga_sesizare` |
@@ -612,7 +624,6 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `schimbaFisaApartament` | admin | `organizare.schimba_fisa_apartament` (proprietar, suprafata, etaj, scutire de lift, corectii mici de cota) |
 | `schimbaCoteleBlocului` | admin | `organizare.schimba_cotele_blocului` (toate cotele deodata, cu verificarea sumei la 100) |
 | `inregistreazaIesireFond` | admin | Storage `documente` + `financiar.inregistreaza_iesire_fond` (suma negativa, document obligatoriu, soldul nu poate trece sub zero) |
-| `invitaLocatar` | admin | `identitate.invita_locatar` |
 | `inchideAcces` | admin | `identitate.inchide_acces_locatar` |
 | `valideazaCitiriApartament` | admin | `contorizare.valideaza_citiri_apartament` (toate contoarele apartamentului pe o luna, totul sau nimic) |
 | `valideazaCitire` | admin | `contorizare.valideaza_citire` (o singura citire; nefolosit de ecrane) |

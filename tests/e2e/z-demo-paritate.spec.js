@@ -56,9 +56,9 @@ test.afterAll(() => {
   server = null;
 });
 
-async function intraPe(page, baza, email) {
+async function intraPe(page, baza, telefon) {
   await page.goto(`${baza}/`);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Numarul tau de telefon").fill(telefon);
   await page.getByLabel("Parola").fill(PAROLA);
   await page.getByRole("button", { name: "Intra", exact: true }).click();
   await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });

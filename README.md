@@ -18,8 +18,10 @@ cp .env.example .env.local   # si completeaza ANON_KEY din `supabase status`
 npm run dev               # http://localhost:5173
 ```
 
-Conturile de test sunt in `conturi-test.txt`. Fara `.env.local`, aplicatia porneste in modul
-demonstrativ, cu aceleasi date tinute in memorie.
+Contul se tine pe numarul de telefon: omul intra cu numarul lui si cu parola primita de la
+administrator, care ii face contul din fisa apartamentului. Conturile de test (numere si parola)
+sunt in `conturi-test.txt`. Fara `.env.local`, aplicatia porneste in modul demonstrativ, cu
+aceleasi date tinute in memorie.
 
 ## Scripturi
 
