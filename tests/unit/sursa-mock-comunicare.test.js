@@ -172,6 +172,15 @@ describe("adunarea generala", () => {
     const { s } = await ca(ADMIN);
     await s.convoacaAdunare({ dataOra: "2026-09-19T19:00", loc: "Sala", ordineDeZi: "x" });
   });
+
+  /* Ecranul trimite ora ca sir UTC ("...Z"). Comparat ca text cu ora
+     locala, 11:00 in Romania (08:00 UTC) parea trecuta la 09:00 in Romania. */
+  it("[K24] ora trimisa in UTC se compara ca moment, nu ca text", async () => {
+    const { s } = await ca(ADMIN);
+    await s.convoacaAdunare({ dataOra: "2026-09-19T08:00:00.000Z", loc: "Sala", ordineDeZi: "x" });
+    await expect(s.convoacaAdunare({ dataOra: "2026-09-19T05:00:00.000Z", loc: "Sala", ordineDeZi: "x" }))
+      .rejects.toThrow("Data adunarii trebuie sa fie in viitor.");
+  });
 });
 
 describe("anunturile", () => {

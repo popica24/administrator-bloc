@@ -16,13 +16,13 @@ import { calculeazaLista, round2 } from "../supabase/functions/_shared/motor.js"
 import * as D from "./date-demo.js";
 import { documentPdf } from "./pdf.js";
 /* [K22] seara unei zile, ora Romaniei: acelasi calcul ca sursa Supabase si ecranul */
-import { oraSeriiRomania } from "./ora-romania.js";
+import { oraSeriiRomania, dataOraRomania, aziRomania } from "./ora-romania.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
+/* [K24] ziua Romaniei, nu a telefonului */
 export function aziIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return aziRomania();
 }
 
 const zi = (iso) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
@@ -58,20 +58,6 @@ function numarRo(n) {
   return `${intreg.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${zecimal}`;
 }
 
-/* [J8] Data si ora Romaniei ale unei clipe date, indiferent in ce fus a
-   ajuns scris sirul (ecranul trimite new Date(...).toISOString(), deci un
-   sir UTC ("...Z"), nu text local). Feliind direct caracterele unui sir
-   UTC s-ar citi ora UTC, nu ora Romaniei aleasa de om in formular. */
-function dataOraRomania(iso) {
-  const parti = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(new Date(iso));
-  const p = Object.fromEntries(parti.map((x) => [x.type, x.value]));
-  return { data: `${p.year}-${p.month}-${p.day}`, ora: `${p.hour}:${p.minute}` };
-}
-/* Ora curenta, ca text local "AAAA-LL-ZZThh:mm" (acelasi fus ca aziIso()),
-   pentru compararea cu un dataOra scris la fel (convoacaAdunare). */
-const oraCurentaText = () => { const d = new Date(); return `${aziIso()}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
 /* Un camp gol din formular ("" sau necompletat) inseamna "fara valoare" */
 const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
@@ -1519,8 +1505,9 @@ export function creeazaSursaMock() {
     async convoacaAdunare({ dataOra, loc, ordineDeZi }) {
       const { bloc } = cerAdmin();
       /* [§8] o adunare mai tarziu in aceeasi zi e acceptata: se compara ora
-         intreaga, nu doar data (altfel orice adunare de azi era refuzata). */
-      if (!dataOra || dataOra < oraCurentaText()) eroare("Data adunarii trebuie sa fie in viitor.");
+         intreaga, nu doar data (altfel orice adunare de azi era refuzata).
+         Se compara momente, nu texte: ecranul trimite ora in UTC ("...Z"). */
+      if (!dataOra || new Date(dataOra) < new Date()) eroare("Data adunarii trebuie sa fie in viitor.");
       const a = db.adauga("adunari", { asociatieId: bloc.asociatieId, dataOra, loc: loc.trim(), ordineDeZi: ordineDeZi.trim() });
       /* [K6, paritate] convocarea trebuie sa spuna si ora adunarii, nu doar
          data. [J8] data si ora Romaniei, nu feliate direct din sirul primit. */

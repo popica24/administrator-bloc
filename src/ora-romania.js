@@ -30,3 +30,19 @@ export const instantRomania = (dataText, oraText) =>
 /* Seara (20:00) unei zile, ora Romaniei, ca text cu decalaj: forma pe care o
    pastreaza sursele pentru inchiderea unui vot */
 export const oraSeriiRomania = (dataText) => `${dataText}T20:00:00${offsetRomania(dataText)}`;
+
+/* [J8, K24] Data si ora Romaniei ale unei clipe date, indiferent in ce fus a
+   ajuns scris sirul (un sir UTC "...Z" din baza) si in ce fus e telefonul.
+   Tot ce afiseaza aplicatia (chitante, adunari, mesaje) e pe ora Romaniei,
+   ca un proprietar plecat din tara sa vada aceeasi ora ca vecinii lui. */
+export function dataOraRomania(iso) {
+  const parti = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const p = Object.fromEntries(parti.map((x) => [x.type, x.value]));
+  return { data: `${p.year}-${p.month}-${p.day}`, ora: `${p.hour}:${p.minute}` };
+}
+
+/* [K24] Ziua de azi in Romania ("AAAA-LL-ZZ"): scadentele, termenele si
+   penalizarile se socotesc pe zilele Romaniei, ca in baza de date. */
+export const aziRomania = () => dataOraRomania(new Date().toISOString()).data;

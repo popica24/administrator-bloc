@@ -47,6 +47,19 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     expect(screen.getByRole("button", { name: "Plateste acum" })).toBeTruthy();
   });
 
+  /* [K24] Ziua de azi e a Romaniei: la 22:00 in New York, pe 25 septembrie,
+     in Romania e deja 26, deci termenul a trecut, ca pentru vecini. */
+  it("[K24] pe un telefon din alt fus, termenul se socoteste dupa ziua Romaniei", async () => {
+    const fus = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      await pornesteApp({ email: ELENA, zi: new Date("2026-09-26T02:00:00Z") });
+      expect(screen.getByText("Termen depasit")).toBeTruthy();
+    } finally {
+      process.env.TZ = fus;
+    }
+  });
+
   it("fara lista publicata, dar cu datorii, nu arata termenul listei", async () => {
     await pornesteApp({ email: ILIE, modifica: (d) => { d.liste = []; } });
     expect(screen.getByText("Termen depasit")).toBeTruthy();
@@ -170,6 +183,19 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
     expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
     await apasa(sarcina("Voteaza: Inlocuirea usii de la intrare"));
     expect(screen.getByText("Alege o varianta")).toBeTruthy();
+  });
+
+  /* [K24] Ora afisata e a Romaniei, nu a telefonului: un proprietar plecat
+     la New York vede adunarea la aceeasi ora ca vecinii lui. */
+  it("[K24] pe un telefon din alt fus, adunarea apare tot la ora Romaniei", async () => {
+    const fus = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      await pornesteApp({ email: ELENA });
+      expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
+    } finally {
+      process.env.TZ = fus;
+    }
   });
 
   it("sarcina de adunare deschide tot tabul de vot", async () => {

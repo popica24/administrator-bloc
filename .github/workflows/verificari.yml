@@ -33,11 +33,11 @@ jobs:
     name: Lint, teste unitare, teste Edge Functions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Instaleaza dependintele exact ca in package-lock.json
@@ -60,18 +60,20 @@ jobs:
     name: Migratii, date demo, pgTAP, integrare
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          # O versiune fixa, aceeasi ca local. Din v3 CLI-ul vine din npm, nu
+          # din API-ul GitHub (care refuza la limita de cereri).
+          version: 2.116.0
 
       - uses: denoland/setup-deno@v2
         with:
@@ -120,18 +122,20 @@ jobs:
       matrix:
         parte: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          # O versiune fixa, aceeasi ca local. Din v3 CLI-ul vine din npm, nu
+          # din API-ul GitHub (care refuza la limita de cereri).
+          version: 2.116.0
 
       - name: Porneste stiva locala (aplica si migratiile)
         run: supabase start
@@ -149,7 +153,7 @@ jobs:
 
       - name: Raportul Playwright, cand ceva a picat
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: raport-playwright-${{ matrix.parte }}
           path: |
