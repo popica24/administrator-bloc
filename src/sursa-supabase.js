@@ -137,6 +137,10 @@ export function creeazaSursaSupabase(url, cheie) {
     if (!conduce && eu.rol !== "locatar") return { azi, eu: euUi };
 
     const esteAdmin = conduce;
+    /* [C1, C13] Ce e numai al administratorului, nu al intregii conduceri:
+       sesizarile cu nume, descriere si poze (H11). Presedintele si cenzorul
+       primesc vederea anonima a blocului, ca locatarii. */
+    const esteAdministrator = eu.rol === "administrator";
     const bloc = eu.bloc_id;
     const asoc = eu.asociatie_id;
     /* [P5] identitate.eu() alege un singur apartament, determinist, dar
@@ -204,7 +208,7 @@ export function creeazaSursaSupabase(url, cheie) {
       toate(() => alMeu(ses.from("sesizari").select("*").eq("bloc_id", bloc))),
       toate(() => prin(ses.from("sesizari_mesaje").select("*, s:sesizari!inner(bloc_id, apartament_id)"), "s")),
       toate(() => prin(ses.from("sesizari_poze").select("*, s:sesizari!inner(bloc_id, apartament_id)"), "s")),
-      esteAdmin ? Promise.resolve([]) : ok(ses.rpc("sesizari_bloc", { p_bloc_id: bloc })),
+      esteAdministrator ? Promise.resolve([]) : ok(ses.rpc("sesizari_bloc", { p_bloc_id: bloc })),
       toate(() => com.from("anunturi").select("*").eq("asociatie_id", asoc)),
       toate(() => com.from("anunturi_citiri").select("*, a:anunturi!inner(asociatie_id)").eq("a.asociatie_id", asoc)),
       toate(() => com.from("documente").select("*").eq("asociatie_id", asoc)),
@@ -217,11 +221,13 @@ export function creeazaSursaSupabase(url, cheie) {
       esteAdmin ? ok(com.from("remindere_setari").select("*").eq("asociatie_id", asoc)) : Promise.resolve([]),
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? toate(() => id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
-      toate(() => id.from("profiluri").select("id, nume, telefon")),
+      /* [C13] Numarul de telefon al cuiva din conducere (un cenzor poate fi un
+         contabil din afara blocului) nu are ce cauta in datele unui locatar. */
+      toate(() => id.from("profiluri").select(conduce ? "id, nume, telefon" : "id, nume")),
       /* Conducerea asociatiei: mandatele de presedinte si de cenzor, cu
-         istoricul lor. Politica "Mandatele se vad in asociatie" le arata
-         tuturor celor din asociatie; le folosim pe ecranul administratorului. */
-      toate(() => id.from("membri_asociatie").select("*").eq("asociatie_id", asoc).neq("rol", "administrator")),
+         istoricul lor. Le foloseste doar ecranul conducerii, deci nu le
+         incarcam pentru locatari. */
+      conduce ? toate(() => id.from("membri_asociatie").select("*").eq("asociatie_id", asoc).neq("rol", "administrator")) : Promise.resolve([]),
     ]);
     /* [K17] toate() ordoneaza dupa id, pentru paginare; id-ul e un UUID
        aleator, deci ordinea aceea nu inseamna nimic pentru om si difera de la

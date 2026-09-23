@@ -3949,6 +3949,18 @@ function AdminSesizari() {
     <Box gap={S.lg}>
       <AntetEcran eyebrow={`${date.sesizari.filter((x) => x.stare !== "rezolvata").length} deschise`} titlu="Sesizari" />
 
+      {/* [C1] Ce a scris un om despre casa lui ramane intre el si
+          administrator. Conducerea vede ca s-a reclamat si in ce stadiu este,
+          fara apartament, fara text si fara poze. */}
+      {verifica && (
+        <Card gap={S.xs}>
+          <Txt size={13} weight={700}>Le vezi fara nume</Txt>
+          <Txt size={12.5} color={C.inkSoft}>
+            Sesizarea este intre locatar si administrator. Tu vezi ce s-a reclamat si daca a fost rezolvata, nu si apartamentul, textul sau pozele.
+          </Txt>
+        </Card>
+      )}
+
       <Segment
         small
         value={filtru}
@@ -3971,12 +3983,12 @@ function AdminSesizari() {
                   <Box gap={2} flex={1}>
                     <Txt size={13.5} weight={600}>{x.titlu}</Txt>
                     <Txt size={11.5} color={C.muted}>
-                      Ap. {x.apartamentNumar} · {etichetaCategorie(x.categorie)} · {dataRo(x.creataLa)}
+                      {x.apartamentNumar ? `Ap. ${x.apartamentNumar} · ` : ""}{etichetaCategorie(x.categorie)} · {dataRo(x.creataLa)}
                     </Txt>
                   </Box>
                   <StareBadge stare={x.stare} />
                 </Box>
-                <Txt size={12.5} color={C.inkSoft} randuri={2}>{x.descriere}</Txt>
+                {x.descriere && <Txt size={12.5} color={C.inkSoft} randuri={2}>{x.descriere}</Txt>}
                 {x.stare !== "rezolvata" && (
                   <Txt size={11.5} weight={700} color={asteapta(x) > 3 ? C.danger : C.warn}>
                     {asteapta(x) === 0 ? "Trimisa azi" : `Asteapta de ${pluralZile(asteapta(x))}`}
@@ -3988,13 +4000,15 @@ function AdminSesizari() {
         </Box>
       )}
 
-      <Sheet open={!!s} onClose={() => setSelectata(null)} titlu={s ? `Ap. ${s.apartamentNumar}` : ""}>
+      <Sheet open={!!s} onClose={() => setSelectata(null)} titlu={s ? (s.apartamentNumar ? `Ap. ${s.apartamentNumar}` : etichetaCategorie(s.categorie)) : ""}>
         {s && (
           <>
             <Card gap={S.sm}>
               <Box row gap={S.sm}><StareBadge stare={s.stare} /><Badge label={etichetaCategorie(s.categorie)} /></Box>
               <Txt size={16} weight={700}>{s.titlu}</Txt>
-              <Txt size={13} color={C.inkSoft}>{s.descriere}</Txt>
+              {s.descriere
+                ? <Txt size={13} color={C.inkSoft}>{s.descriere}</Txt>
+                : <Txt size={13} color={C.muted}>Textul sesizarii il vede doar administratorul.</Txt>}
               <Txt size={11.5} color={C.muted}>
                 Trimisa pe {dataLunga(s.creataLa)}, ora {oraRo(s.creataLa)}
                 {s.preluataLa ? `. Preluata pe ${dataRo(s.preluataLa)}` : ""}

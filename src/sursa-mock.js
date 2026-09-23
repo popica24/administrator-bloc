@@ -575,6 +575,9 @@ function proiecteaza(db, profilId, apartamentAles) {
 
   /* [paritate] presedintele si cenzorul vad tot blocul, ca administratorul */
   const esteAdmin = conduce(rol);
+  /* [C1] Sesizarile raman intre locatar si administrator (H11): presedintele
+     si cenzorul vad blocul, dar sesizarile numai anonim, ca orice locatar. */
+  const esteAdministrator = rol === "administrator";
   const bloc = esteAdmin
     ? db.blocuri.find((b) => b.asociatieId === mandat.asociatieId)
     : db.blocuri.find((b) => b.id === db.apartamente.find((a) => a.id === eu.apartamentId).blocId);
@@ -706,7 +709,7 @@ function proiecteaza(db, profilId, apartamentAles) {
   const sesizari = db.sesizari.filter((s) => s.blocId === bloc.id).sort((a, b) => (a.creatLa < b.creatLa ? 1 : -1)).map((s) => {
     const legatura = legaturaCurenta(s.apartamentId);
     const aMea = !!legatura && s.creatLa >= legatura.activDin;
-    const complet = esteAdmin || aMea;
+    const complet = esteAdministrator || aMea;
     return {
       id: s.id, aMea, titlu: s.titlu, categorie: s.categorie, stare: s.stare, creataLa: s.creatLa,
       preluataLa: s.preluataLa, rezolvataLa: s.rezolvataLa,

@@ -207,12 +207,28 @@ describe("conducerea asociatiei", () => {
     const mandat = await admin.numesteInConducere(cont.profil_id, "presedinte");
     expect(mandat).toEqual(expect.any(String));
 
+    /* alt locatar, alt apartament, scrie o sesizare: pe aceea presedintele nu
+       are voie sa o vada cu nume si cu text */
+    const telefonVecin = telefonDeTest();
+    const vecin = await admin.adaugaLocatar(f.ap["10"], { nume: "Vecinul De Sus", telefon: telefonVecin });
+    const sursaVecin = sursaNoua();
+    await sursaVecin.intra(telefonVecin, vecin.parola);
+    await sursaVecin.incarca();
+    const sesizareId = await sursaVecin.adaugaSesizare({
+      apartamentId: f.ap["10"], titlu: "Usa de la intrare", categorie: "acces", descriere: "Nu se inchide singura",
+    });
+
     const s = sursaNoua();
     await s.intra(telefon, cont.parola);
     const date = await s.incarca();
     expect(date.eu.rol).toBe("presedinte");
     /* vede blocul intreg, ca administratorul */
     expect(date.apartamente.length).toBeGreaterThan(1);
+    /* [C1] dar sesizarile raman intre locatar si administrator (H11): le vede
+       anonim, ca orice locatar, nu goale si nu cu text si poze cu tot */
+    const anonima = date.sesizari.find((x) => x.id === sesizareId);
+    expect(anonima, "ecranul Sesizari nu are voie sa fie gol pentru presedinte").toBeTruthy();
+    expect(anonima).toMatchObject({ titlu: "Usa de la intrare", apartamentNumar: null, descriere: null, mesaje: [], poze: [] });
     expect(date.conducere.some((m) => m.profilId === cont.profil_id && m.rol === "presedinte")).toBe(true);
     /* dar nu scrie: comenzile cer blocul administrat */
     await expect(s.deschideLista(lunaCurenta())).rejects.toThrow();

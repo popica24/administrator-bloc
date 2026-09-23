@@ -96,10 +96,18 @@ describe("conducerea nu poate schimba nimic", () => {
     expect(butoane("Calculeaza lista pe apartamente").length).toBe(1);
   });
 
-  it("Sesizari: le citeste, dar nu raspunde si nu le inchide", async () => {
+  /* [C1] Sesizarile raman intre locatar si administrator (H11). Ecranul nu
+     mai poate arata ce a scris omul, dar nici nu are voie sa fie gol fara sa
+     spuna de ce: conducerea vede ce s-a reclamat si in ce stadiu este. */
+  it("Sesizari: le vede anonim, fara apartament, text sau poze", async () => {
     await intraCa(PRESEDINTE);
     await mergiLa("Sesizari");
-    await apasa(butoane(/Lift/)[0] || screen.getAllByRole("button")[3]);
+    const t = ecran();
+    expect(t).toContain("Le vezi fara nume");
+    expect(t).toMatch(/Usa de la intrare nu se inchide singura/);
+    expect(t).not.toMatch(/Ap\. \d/);
+    await apasa(butoane(/Usa de la intrare/)[0]);
+    expect(ecran()).toContain("Textul sesizarii il vede doar administratorul.");
     expect(screen.queryByLabelText("Raspuns pentru proprietar")).toBeNull();
     expect(butoane("Marcheaza rezolvata").length).toBe(0);
     expect(butoane("Preiau sesizarea").length).toBe(0);
