@@ -40,7 +40,7 @@ AdminBloc
 │
 ├── LOCATAR (5 taburi)
 │   ├── Acasa ─────── sold de plata, mesaje noi, "De facut", avizier, consum vs. bloc, sesizarile mele, contacte
-│   ├── Plata ─────── lista de plata in 3 trepte + RandLista, plata cu cardul, verificarea repartitiei,
+│   ├── Plata ─────── lista de plata in 3 trepte + RandLista, cum platesti, verificarea repartitiei,
 │   │                 istoric lunar, platile mele cu chitante PDF
 │   ├── Contoare ──── transmitere index cu poza, corectare, istoric consum, explicatia diferentei pe coloana
 │   ├── Sesizari ──── sesizare noua (rapida / libera, pana la 3 poze), conversatie, sesizarile blocului (anonim)
@@ -140,7 +140,7 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 | Bloc de continut | Ce arata | Date / reguli |
 |---|---|---|
 | **De plata acum** | Soldul apartamentului, cu badge "Achitat", "Mai ai N zile", "Scadent azi" sau "Termen depasit" | Soldul este suma resturilor din datoriile deschise (`financiar.datorii_rest`), calculat, niciodata stocat. Textul explica procentul de penalizare si zilele de gratie. |
-| Butoane | "Plateste acum" (deschide Plata si formularul cardului), "De unde vine suma"; daca totul e achitat, "Descarca ultima chitanta" | |
+| Butoane | "Cum platesc" (duce la Plata, la instructiunile de plata), "De unde vine suma"; daca totul e achitat, "Descarca ultima chitanta" | |
 | **Fraza de comparatie** | "Intretinerea pe X este A. Pe Y a fost B, deci luna aceasta platesti cu Z mai mult/putin." | `frazaComparatie()` pe ultimele doua liste publicate; duce la "Platile mele" |
 | **Mesaje noi** | Pana la 3 notificari necitite, cu "Am citit" | `comunicare.notificari`; `marcheaza_notificare_citita`. Instiintarile de restanta apar cu rosu. |
 | **De facut** | Sarcini: transmite indexul (sau retrimite-l, daca a fost respins), plateste, voteaza, confirma prezenta la AG; "Nimic de facut acum" cand nu e nimic | Termenul de citire este ziua `zi_limita_citire` din luna curenta |
@@ -177,8 +177,10 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
   - documentul justificativ: furnizorul, seria facturii si butonul "Vezi documentul" (URL semnat,
     valabil 10 minute);
   - procentul din cheltuiala care revine apartamentului.
-- **Plata cu cardul** (`SheetPlataCard`): vezi §6.3. Dupa confirmare, chitanta se poate descarca
-  imediat ca PDF.
+- **Cum platesti** (`CardCumPlatesti`), cat timp apartamentul are ceva de plata: incasarea in
+  numerar la administrator (contactul si programul lui din `organizare.contacte`) si datele pentru
+  transfer bancar (IBAN-ul, banca si denumirea asociatiei, plus apartamentul de scris la detalii).
+  Chitanta vine dupa ce administratorul inregistreaza banii.
 - **Verificarea repartitiei**: totalul facturilor fata de totalul repartizat pe apartamente, cu
   diferenta 0. Este dovada ca "nimic nu ramane nealocat si nimic nu se plateste de doua ori".
 
@@ -264,7 +266,7 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
 |---|---|
 | Date | Proprietar, etaj, persoane, cota indiviza, suprafata, lift (scutit sau plateste) |
 | **Sold la zi** | Fiecare datorie deschisa: tipul (intretinere, penalizare, restanta preluata, fond de rulment, corectie), scadenta, restul. Cele scadente apar colorate. |
-| **Incasare cash** | Suma primita (implicit, soldul) → `financiar.inregistreaza_plata_numerar`. Banii se aloca automat pe cea mai veche datorie si chitanta se emite imediat, cu PDF descarcabil. |
+| **Confirma banii primiti** | Cum au venit banii (in numerar sau prin transfer bancar) si suma (implicit, soldul) → `financiar.inregistreaza_incasare`. Banii se aloca automat pe cea mai veche datorie si chitanta se emite imediat, cu PDF descarcabil. |
 | **Instiintare de plata** | Activa doar cand apartamentul are restanta |
 | **Numarul de persoane** | Numarul nou, luna de la care se aplica (luna curenta sau urmatoarele doua, fara lunile deja folosite) si motivul. Se insereaza direct in `organizare.apartamente_persoane`; RLS cere `valabil_din` ≥ luna curenta. Listele publicate nu se schimba. |
 | **Invita un locatar** | Calitatea (proprietar, chirias, membru al familiei) → `identitate.invita_locatar` → codul de 8 caractere afisat mare, valabil 30 de zile |
@@ -411,22 +413,16 @@ calculeaza din datorii minus plati (`financiar.datorii_rest`, `financiar.solduri
 - Ce ramane este **avans**. `aloca_avansuri` il muta automat pe fiecare datorie noua.
 - Chitanta si ecranul "Platile mele" arata alocarea in cuvinte.
 
-### 6.3 Plata cu cardul
-```
-Locatar ─► plata-card (JWT) ─► creeaza_plata_card (in_asteptare)
-                    └──► procesator-simulat ─► semnatura HMAC-SHA256 ─► plata-card-webhook
-                                                                        └─► confirma_plata_card
-                                                                            ├─ alocare
-                                                                            ├─ chitanta
-                                                                            └─ PlataConfirmata
-```
-- Datele cardului trec doar prin procesator; asociatia nu le primeste.
-- Cardul de test `4242 4242 4242 4242` trece; `4000 0000 0000 0002` este refuzat.
-- Raspunsurile: 200 confirmata, 402 refuzata, 202 in asteptare. Webhook-ul poate fi primit de mai
-  multe ori fara efecte duble.
+### 6.3 Plata cu cardul: nu exista
+Banii ajung la asociatie in numerar, in mana administratorului, sau prin transfer in contul ei;
+administratorul confirma incasarea in aplicatie (§6.4). Nu exista procesator de plati, Edge
+Function de plata sau webhook: lantul lor a fost scos cu totul (migratia
+`scoate_plata_cu_cardul`), iar `financiar.plati` nu mai are nici coloanele procesatorului, nici
+starile `in_asteptare` / `esuata`.
 
-### 6.4 Incasare in numerar
-- `inregistreaza_plata_numerar`: doar administratorul blocului. Plata se inregistreaza direct
+### 6.4 Confirmarea banilor primiti (numerar sau transfer)
+- `inregistreaza_incasare`: doar administratorul blocului, si doar cu metoda `numerar` sau
+  `transfer`. Plata se inregistreaza direct
   `confirmata`, cu `inregistrata_de`, si trece prin aceeasi alocare, chitanta si notificare.
 
 ### 6.5 Chitante
@@ -567,8 +563,6 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 
 **Plati**
 - Procesatorul de plati este simulat.
-- `PROCESATOR_SECRET` are o valoare implicita de dezvoltare in `procesator-simulat` si
-  `plata-card-webhook`. **Trebuie setat inainte de productie.**
 
 ---
 
@@ -584,7 +578,7 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | **PDF** | `src/pdf.js`: generator PDF 1.4 fara librarii, cu Helvetica si WinAnsi (de aici textele fara diacritice). Produce chitanta si lista pentru avizier. |
 | **Fotografii** | Micsorare locala la 1600 px JPEG inainte de upload (`micsoreazaPoza`) |
 | **Autentificare** | Parola de minim 10 caractere, cu litere mari, mici si cifre; adresa de email se confirma; schimbarea parolei cere autentificare recenta; sesiunea expira la 24 de ore, sau dupa 8 ore de inactivitate (`supabase/config.toml`). |
-| **Secretele din productie** | `SITE_URL` (singura adresa careia Edge Functions ii raspund cu antete CORS) si `PROCESATOR_SECRET` (semneaza confirmarile de plata). Vezi README, "Punerea in productie". |
+| **Secretele din productie** | `SITE_URL` (singura adresa careia Edge Functions ii raspund cu antete CORS). Vezi README, "Punerea in productie". |
 | **Date personale** | `identitate.anonimizeaza_profil` (doar dezvoltatorul) inlocuieste numele, emailul si telefonul, inchide legaturile si mandatele, revoca invitatiile nefolosite si sterge sesiunile, pastrand randurile contabile. |
 | **UI** | O coloana de telefon (maxim 520 px), flexbox, primitivele din sectiunea 5 (portabile pe React Native), 5 taburi cu badge-uri, toast dupa fiecare comanda, tinte mari la atingere pentru utilizatori de peste 50 de ani |
 | **Ciclul unei comenzi** | `cmd()` in `AdminBloc`: apelul catre sursa, reincarcarea datelor, toastul; ecranul primeste `{ ok, rezultat }` |
@@ -599,7 +593,6 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `folosesteInvitatie` | cont nou | `identitate.foloseste_invitatie` |
 | `cereVerificareAdministrator` | cont nou | Storage `atestate` + `identitate.cere_verificare_administrator` |
 | `incarca` | toti | select-uri prin RLS + `identitate.eu`, `contacte_asociatie`, `consum_mediu_bloc`, `situatie_bloc`, `sesizari_bloc`, `situatie_voturi`, `situatie_adunari` |
-| `platesteCard` | locatar | Edge `plata-card` |
 | `transmiteCitire` | locatar | Storage `poze` + `contorizare.transmite_citire` |
 | `adaugaSesizare` | locatar | Storage `poze` + `sesizari.adauga_sesizare` |
 | `scrieMesaj` | ambele | `sesizari.scrie_mesaj` |
@@ -613,7 +606,7 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `dateMotor` | admin | `intretinere.date_pentru_motor` (+ `motor.js` in browser) |
 | `publicaLista` | admin | Edge `publica-lista` |
 | `marcheazaFacturaPlatita` | admin | `intretinere.marcheaza_factura_platita` |
-| `inregistreazaNumerar` | admin | `financiar.inregistreaza_plata_numerar` |
+| `inregistreazaIncasare` | admin | `financiar.inregistreaza_incasare` |
 | `trimiteInstiintare` | admin | `comunicare.trimite_instiintare` |
 | `schimbaPersoane` | admin | insert pe `organizare.apartamente_persoane` |
 | `schimbaFisaApartament` | admin | `organizare.schimba_fisa_apartament` (proprietar, suprafata, etaj, scutire de lift, corectii mici de cota) |

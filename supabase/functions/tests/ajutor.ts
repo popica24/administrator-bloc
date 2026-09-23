@@ -11,8 +11,6 @@ export const URL_TEST = "http://supabase.test";
 export const URL_SITE = "http://aplicatie.test";
 export const CHEIE_ANON = "cheie-anon-test";
 export const CHEIE_SERVICIU = "cheie-serviciu-test";
-export const SECRET_TEST = "secret-procesator-test";
-export const SECRET_IMPLICIT = "procesator-local-doar-pentru-dezvoltare";
 
 Deno.env.set("SUPABASE_URL", URL_TEST);
 Deno.env.set("SUPABASE_ANON_KEY", CHEIE_ANON);
@@ -149,10 +147,4 @@ export function randuri(a: Apel, lista: unknown[]): Response {
     return json(lista[0]);
   }
   return json(lista);
-}
-
-export async function hmacHex(secret: string, text: string): Promise<string> {
-  const cheie = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const semn = await crypto.subtle.sign("HMAC", cheie, new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(semn)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }

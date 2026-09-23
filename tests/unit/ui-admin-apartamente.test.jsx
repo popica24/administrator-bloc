@@ -150,14 +150,14 @@ describe("FisaApartament, date si sold", () => {
 describe("FisaApartament, incasare cash", () => {
   it("precompleteaza soldul, emite chitanta si o descarca", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "inregistreazaNumerar");
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     const ap = await apDupaNumar(sursa, "3");
     await deschideFisa("3");
     await apasa("Inregistreaza incasare cash");
     const camp = screen.getByLabelText("Suma primita");
     expect(camp.value).toBe("2.319,36");
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36);
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar");
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
     const f = inDialog("Apartament 3");
     expect(f.getByText("Incasare inregistrata: 2.319,36 lei")).toBeTruthy();
@@ -174,7 +174,7 @@ describe("FisaApartament, incasare cash", () => {
 
   it("fara sold, campul porneste gol si butonul e dezactivat pana se scrie o suma", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "inregistreazaNumerar");
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("1");
     await apasa("Inregistreaza incasare cash");
     const camp = screen.getByLabelText("Suma primita");
@@ -188,13 +188,25 @@ describe("FisaApartament, incasare cash", () => {
     await act(async () => { scrie("Suma primita", "150,5"); });
     expect(dezactivat(buton("Emite chitanta"))).toBe(false);
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5);
+    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar");
     expect(inDialog("Apartament 1").getByText("Incasare inregistrata: 150,50 lei")).toBeTruthy();
+  });
+
+  it("banii veniti prin banca se confirma ca transfer", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
+    const ap = await apDupaNumar(sursa, "3");
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    await apasa(buton("Prin transfer bancar"));
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer");
+    expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
   });
 
   it("renunta inchide formularul fara incasare", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "inregistreazaNumerar");
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("3");
     await apasa("Inregistreaza incasare cash");
     await apasa("Renunta");
@@ -204,7 +216,7 @@ describe("FisaApartament, incasare cash", () => {
 
   it("o incasare refuzata lasa formularul deschis, cu suma", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    vi.spyOn(sursa, "inregistreazaNumerar").mockRejectedValue(new Error("Suma trebuie sa fie mai mare decat zero."));
+    vi.spyOn(sursa, "inregistreazaIncasare").mockRejectedValue(new Error("Suma trebuie sa fie mai mare decat zero."));
     await deschideFisa("3");
     await apasa("Inregistreaza incasare cash");
     await apasa("Emite chitanta");
@@ -229,7 +241,7 @@ describe("FisaApartament, incasare cash", () => {
 
   it("[F3] dublu apasat pe 'Emite chitanta' inregistreaza o singura plata", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "inregistreazaNumerar");
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("3");
     await apasa("Inregistreaza incasare cash");
     const b = buton("Emite chitanta");
@@ -239,7 +251,7 @@ describe("FisaApartament, incasare cash", () => {
 
   it("[F5] '1.500' scris de administrator inseamna 1500 lei, nu 1,50", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "inregistreazaNumerar");
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("3");
     await apasa("Inregistreaza incasare cash");
     await act(async () => { scrie("Suma primita", "1.500"); });

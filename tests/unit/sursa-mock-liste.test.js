@@ -204,8 +204,8 @@ describe("publicaLista", () => {
     await s.intra(LOCATAR, PAROLA);
     const e = await s.incarca();
     const rest = e.datorii.reduce((t, x) => t + x.rest, 0);
-    await s.platesteCard({ apartamentId: e.eu.apartamentId, suma: rest + 50, card: { numar: "4242424242424242", expira: "12/29" } });
     await s.intra(ADMIN, PAROLA);
+    await s.inregistreazaIncasare(e.eu.apartamentId, rest + 50, "transfer");
     await verificaCitirile(s);
     await s.publicaLista(ciorna.id);
     await s.intra(LOCATAR, PAROLA);
@@ -308,9 +308,7 @@ describe("liste in afara ordinii lunilor", () => {
     ceasDemo(new Date("2026-05-01T09:00:00"));
     const { s, d } = await admin();
     /* o plata cu data mai veche decat platile rejucate, ca avansurile sa se ordoneze dupa data */
-    await s.intra(LOCATAR, PAROLA);
-    await s.platesteCard({ apartamentId: apNr(d, "17").id, suma: 5, card: { numar: "4242424242424242", expira: "12/29" } });
-    await s.intra(ADMIN, PAROLA);
+    await s.inregistreazaIncasare(apNr(d, "17").id, 5, "transfer");
     const id = await s.deschideLista("2026-04");
     await s.publicaLista(id);
     const dupa = await s.incarca();
@@ -319,7 +317,7 @@ describe("liste in afara ordinii lunilor", () => {
     const aprilie = dupa.datorii.find((x) => x.listaId === id && x.apartamentId === ap11);
     const soldInitial = dupa.datorii.find((x) => x.apartamentId === ap11 && x.tip === "sold_initial");
     expect(aprilie.scadenta).toBe(soldInitial.scadenta);
-    const { plataId } = await s.inregistreazaNumerar(ap11, 10);
+    const { plataId } = await s.inregistreazaIncasare(ap11, 10, "numerar");
     const p = (await s.incarca()).plati.find((x) => x.id === plataId);
     expect(p.alocari).toEqual([{ datorieId: aprilie.id, suma: 10 }]);
   });

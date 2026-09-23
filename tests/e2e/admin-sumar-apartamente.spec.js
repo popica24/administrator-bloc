@@ -388,7 +388,7 @@ test.describe("locatar fara datorii", () => {
     await intraCa(page, "voicu");
     await expect(page.getByText("Totul este platit")).toBeVisible();
     await expect(page.getByText("Achitat").first()).toBeVisible();
-    await expect(buton(page, "Plateste acum")).toHaveCount(0);
+    await expect(buton(page, "Cum platesc")).toHaveCount(0);
     const descarcare = page.waitForEvent("download");
     await buton(page, "Descarca ultima chitanta").click();
     expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);

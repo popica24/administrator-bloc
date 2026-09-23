@@ -29,7 +29,7 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
 
   it("citeste formatul romanesc si cel cu punct zecimal; refuza ce nu e numar", async () => {
     const { sursa } = await fisa("11");
-    const numerar = vi.spyOn(sursa, "inregistreazaNumerar").mockResolvedValue({ plataId: null });
+    const numerar = vi.spyOn(sursa, "inregistreazaIncasare").mockResolvedValue({ plataId: null });
     await apasa("Inregistreaza incasare cash");
     /* campul pleaca de la sold, scris romaneste, si se citeste inapoi exact */
     expect(screen.getByLabelText("Suma primita").value).toBe("3.939,38");
@@ -37,7 +37,7 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     expect(screen.getByText("Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua.")).toBeTruthy();
     expect(within(screen.getByRole("dialog")).getByText("lei")).toBeTruthy();
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.38);
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.38, "numerar");
 
     for (const gol of ["   ", "abc", "0", "-5"]) {
       await incaseaza(gol);
@@ -47,21 +47,21 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
 
     await incaseaza("1.234,5");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5);
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar");
 
     await incaseaza(" 1234.5 ");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5);
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar");
 
     await incaseaza("12 50");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1250);
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1250, "numerar");
     expect(numerar).toHaveBeenCalledTimes(4);
   });
 
   it("un buton dezactivat nu raspunde nici la tastatura", async () => {
     const { sursa } = await fisa("11");
-    const numerar = vi.spyOn(sursa, "inregistreazaNumerar");
+    const numerar = vi.spyOn(sursa, "inregistreazaIncasare");
     await incaseaza("");
     const b = buton("Emite chitanta");
     expect(b.getAttribute("tabindex")).toBe("-1");
@@ -73,10 +73,10 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
   /* Audit F5: "1.500" (o mie cinci sute, scris romaneste) se citeste 1,50 lei */
   it("[F5] 1.500 inseamna o mie cinci sute de lei", async () => {
     const { sursa } = await fisa("11");
-    const numerar = vi.spyOn(sursa, "inregistreazaNumerar").mockResolvedValue({ plataId: null });
+    const numerar = vi.spyOn(sursa, "inregistreazaIncasare").mockResolvedValue({ plataId: null });
     await incaseaza("1.500");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1500);
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1500, "numerar");
   });
 });
 

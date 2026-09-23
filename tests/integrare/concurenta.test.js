@@ -73,7 +73,7 @@ beforeAll(async () => {
 describe("banii: doua incasari in acelasi moment", () => {
   it("chitantele primesc numere consecutive, fara goluri si fara duplicate", async () => {
     const apartamente = ["1", "2", "2A", "10"].map((n) => f.ap[n]);
-    const plati = await Promise.all([...apartamente, ...apartamente].map((ap) => adm.inregistreazaNumerar(ap, 10)));
+    const plati = await Promise.all([...apartamente, ...apartamente].map((ap) => adm.inregistreazaIncasare(ap, 10, "numerar")));
     expect(plati.length).toBe(8);
 
     const chitante = await ok(db("financiar").from("chitante").select("numar, serie, plata_id").in("plata_id", plati.map((p) => p.plataId)));
@@ -91,7 +91,7 @@ describe("banii: doua incasari in acelasi moment", () => {
       suma: 300, scadenta: `${lunaDelta(-1)}-25`, descriere: "Intretinere pentru testul de concurenta",
     }).select().single());
 
-    await Promise.all([...Array(6).keys()].map(() => adm.inregistreazaNumerar(ap, 50)));
+    await Promise.all([...Array(6).keys()].map(() => adm.inregistreazaIncasare(ap, 50, "numerar")));
 
     const alocari = await ok(db("financiar").from("alocari_plati").select("plata_id, suma").eq("datorie_id", datorie.id));
     const total = alocari.reduce((s, a) => s + Number(a.suma), 0);

@@ -163,7 +163,7 @@ select is(pg_temp.jurnal('identitate.invitatii', pg_temp.fx('invitatie'), 'UPDAT
 insert into financiar.datorii (apartament_id, bloc_id, tip, luna, suma, scadenta, descriere)
 values (pg_temp.fx('ap1'), pg_temp.fx('bloc'), 'intretinere',
         (date_trunc('month', current_date) - interval '1 month')::date, 50, current_date - 1, 'Intretinere de test');
-select set_config('fx.plata', financiar.inregistreaza_plata_numerar(pg_temp.fx('ap1'), 50)::text, true);
+select set_config('fx.plata', financiar.inregistreaza_incasare(pg_temp.fx('ap1'), 50, 'numerar')::text, true);
 select set_config('fx.chitanta',
   (select id::text from financiar.chitante where plata_id = pg_temp.fx('plata')), true);
 select is(pg_temp.jurnal('financiar.chitante', pg_temp.fx('chitanta'), 'INSERT'), 1,

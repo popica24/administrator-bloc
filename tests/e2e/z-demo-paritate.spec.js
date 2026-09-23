@@ -185,20 +185,6 @@ test.describe("aceleasi refuzuri in ambele surse", () => {
     return a;
   }
 
-  test("cardul cu numar prea scurt nu se poate trimite, pe nicio sursa", async ({ browser }) => {
-    const stare = await amandoua(browser, CONTURI.elena, async (page) => {
-      await buton(page, "Plateste acum").click();
-      const panou = page.getByRole("dialog", { name: "Plata cu cardul" });
-      await panou.getByLabel("Numarul cardului").fill("4242 4242 42");
-      await panou.getByLabel("Expira").fill("12/30");
-      await panou.getByLabel("Cod CVC").fill("123");
-      await panou.getByLabel("Numele de pe card").fill("ELENA MARINESCU");
-      const plateste = panou.getByRole("button", { name: /^Plateste / });
-      return await plateste.getAttribute("aria-disabled");
-    });
-    expect(stare, "butonul de plata ramane blocat").toBe("true");
-  });
-
   test("indexul mai mic decat cel anterior primeste acelasi mesaj", async ({ browser }) => {
     const mesaj = await amandoua(browser, CONTURI.elena, async (page) => {
       await mergiLaTab(page, "Contoare");

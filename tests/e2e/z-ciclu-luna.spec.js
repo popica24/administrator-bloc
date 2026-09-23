@@ -1,7 +1,7 @@
 /* O luna intreaga, de la inceput la sfarsit, asa cum o face un administrator
    adevarat: facturile lunii pe fiecare metoda de repartizare, citirile
    contoarelor (validare, estimare, contorul general), previzualizarea,
-   publicarea, apoi ce vede fiecare locatar, plata cu cardul si cu numerar,
+   publicarea, apoi ce vede fiecare locatar, incasarea in numerar,
    penalizarile si o corectie dupa publicare.
 
    Testul PUBLICA lista pe septembrie a blocului demo, deci strica datele
@@ -313,7 +313,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     await expect(verificare).toContainText("0,00");
   });
 
-  test("8. plata cu cardul stinge soldul si lasa chitanta", async ({ page }) => {
+  test("8. locatarul vede cum plateste, iar incasarea cash stinge soldul si lasa chitanta", async ({ page }) => {
     const sb = serviciu();
     const ap = await apartamentulNumarul(17);
     const sold = await soldApartament(ap.id);
@@ -321,17 +321,21 @@ test.describe("ciclul unei luni, cap-coada", () => {
     const { count: inainte } = await sb.schema("financiar").from("chitante")
       .select("id", { count: "exact", head: true });
 
+    /* Locatarul: ecranul ii spune unde duce banii */
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await buton(page, `Plateste ${lei(sold)} lei cu cardul`).click();
-    await page.getByLabel("Numarul cardului").fill("4242424242424242");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("ELENA MARINESCU");
-    await buton(page, `Plateste ${lei(sold)} lei`).click();
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6} a fost emisa/)).toBeVisible();
-    await buton(page, "Gata").click();
+    await expect(page.getByText("Cum platesti")).toBeVisible();
+    await expect(page.getByText("In numerar, la administrator")).toBeVisible();
+    await buton(page, "Iesi").click();
+
+    /* Administratorul incaseaza si emite chitanta */
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 17" }).click();
+    await buton(page, "Inregistreaza incasare cash").click();
+    await expect(page.getByLabel("Suma primita")).toHaveValue(lei(sold));
+    await buton(page, "Emite chitanta").click();
+    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible({ timeout: 30000 });
 
     await expect.poll(async () => soldApartament(ap.id), { timeout: 30000 }).toBe(0);
     const { count: dupa } = await sb.schema("financiar").from("chitante")
@@ -340,7 +344,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     const { data: plata } = await sb.schema("financiar").from("plati")
       .select("metoda, suma, stare").eq("apartament_id", ap.id).eq("stare", "confirmata")
       .order("creat_la", { ascending: false }).limit(1).single();
-    expect(plata.metoda).toBe("card");
+    expect(plata.metoda).toBe("numerar");
     expect(Number(plata.suma)).toBeCloseTo(sold, 2);
   });
 

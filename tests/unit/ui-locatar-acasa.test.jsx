@@ -20,7 +20,7 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     expect(screen.getAllByText("718,09").length).toBeGreaterThan(0);
     expect(screen.getByText("Mai ai 6 zile")).toBeTruthy();
     expect(ecran()).toContain("Lista pe august 2026, termen de plata 25 septembrie 2026. Dupa 30 de zile de la scadenta se calculeaza penalizari de 0,02% pe zi.");
-    expect(screen.getByRole("button", { name: "Plateste acum" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cum platesc" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "De unde vine suma" })).toBeTruthy();
   });
 
@@ -44,7 +44,7 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     await pornesteApp({ email: ELENA, zi: zi("2026-09-26") });
     expect(screen.getByText("Termen depasit")).toBeTruthy();
     expect(within(sarcina("Transmite indexul la apa")).getByText("Termen 25 septembrie 2026")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Plateste acum" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cum platesc" })).toBeTruthy();
   });
 
   /* [K24] Ziua de azi e a Romaniei: la 22:00 in New York, pe 25 septembrie,
@@ -115,7 +115,7 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     await pornesteApp({ email: VOICU });
     expect(screen.getByText("Totul este platit")).toBeTruthy();
     expect(screen.getByText("Achitat")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Plateste acum" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cum platesc" })).toBeNull();
     await apasaButon("Descarca ultima chitanta");
     expect(descarcari).toHaveLength(1);
     expect(descarcari[0]).toMatch(/^chitanta-\d+\.pdf$/);
@@ -143,11 +143,11 @@ describe("Acasa: soldul si badge-ul de termen", () => {
 });
 
 describe("Acasa: navigarea spre celelalte ecrane", () => {
-  it("Plateste acum deschide Plata cu formularul cardului", async () => {
+  it("Cum platesc deschide Plata, cu instructiunile de plata", async () => {
     await pornesteApp({ email: ELENA });
-    await apasaButon("Plateste acum");
-    expect(screen.getByRole("dialog", { name: "Plata cu cardul" })).toBeTruthy();
+    await apasaButon("Cum platesc");
     expect(screen.getByText("Lista de plata")).toBeTruthy();
+    expect(screen.getByText("Cum platesti")).toBeTruthy();
   });
 
   it("De unde vine suma deschide lista de plata fara formular", async () => {
@@ -164,10 +164,10 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
     expect(screen.getByText("Cat ai avut de plata")).toBeTruthy();
   });
 
-  it("sarcina de plata duce la formularul cardului", async () => {
+  it("sarcina de plata duce la instructiunile de plata", async () => {
     await pornesteApp({ email: ELENA });
-    await apasa(screen.getByRole("button", { name: "Plateste acum" }));
-    expect(screen.getByRole("dialog", { name: "Plata cu cardul" })).toBeTruthy();
+    await apasa(screen.getByRole("button", { name: "Cum platesc" }));
+    expect(screen.getByText("In numerar, la administrator")).toBeTruthy();
   });
 
   it("sarcina de citire duce la Contoare", async () => {

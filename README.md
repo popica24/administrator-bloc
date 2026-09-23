@@ -1,7 +1,7 @@
 # AdminBloc
 
 Aplicatia prin care o administratie de bloc devine transparenta: omul vede cat are de plata,
-de ce atat si cum s-a ajuns la suma aceea. Lista de intretinere, plata cu cardul, citirile de
+de ce atat si cum s-a ajuns la suma aceea. Lista de intretinere, incasarile confirmate de administrator, citirile de
 contoare cu poza, sesizari, avizier, voturi, fonduri si penalizari.
 
 Elementul central este randul din lista de intretinere care se desface si arata calculul
@@ -71,19 +71,16 @@ flexbox, fara librarii de UI. `Box` → `View`, `Txt` → `Text`, `Btn` → `Pre
 ## Punerea in productie
 
 Inainte de primul `supabase db push` si de primul deploy de Edge Functions,
-proiectul din productie are nevoie de doua secrete:
+proiectul din productie are nevoie de un secret:
 
 ```bash
 supabase secrets set SITE_URL=https://adresa-aplicatiei
-supabase secrets set PROCESATOR_SECRET=<cheia procesatorului de plati>
 ```
 
 `SITE_URL` este adresa de la care raspund functiile: fara ea, antetele CORS
 cad pe `http://localhost:5173`, iar aplicatia reala primeste "Serverul nu
-raspunde" la plata cu cardul si la publicarea listei. Trebuie sa fie aceeasi
-adresa cu `auth.site_url` din `supabase/config.toml`. `PROCESATOR_SECRET`
-semneaza confirmarile de plata; fara el, functiile cad pe o valoare de
-dezvoltare, scrisa in cod, cu care oricine si-ar putea confirma singur plata.
+raspunde" la publicarea listei. Trebuie sa fie aceeasi adresa cu
+`auth.site_url` din `supabase/config.toml`.
 
 ## Stack
 

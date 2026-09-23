@@ -61,7 +61,7 @@ async function cere(cale: string, init: RequestInit & { token?: string } = {}) {
 }
 
 test("toate functiile sunt servite si raspund la OPTIONS", async () => {
-  for (const f of ["creeaza-asociatie", "exporta-bloc", "plata-card", "plata-card-webhook", "procesator-simulat", "proceseaza-eveniment", "publica-lista"]) {
+  for (const f of ["creeaza-asociatie", "exporta-bloc", "proceseaza-eveniment", "publica-lista"]) {
     const r = await cere(f, { method: "OPTIONS" });
     assertEquals(r.status, 200, f);
   }
@@ -78,23 +78,6 @@ test("[X09] raspunsul real trece prin porneste(), deci prin decizia de CORS", as
   assertEquals((r.antete.get("Vary") ?? "").includes("Origin"), true, r.antete.get("Vary") ?? "");
 });
 
-test("webhook-ul (fara JWT) refuza o semnatura gresita", async () => {
-  const r = await cere("plata-card-webhook", { method: "POST", body: JSON.stringify({ referinta: "SIM-NU", stare: "autorizata" }), headers: { "x-semnatura": "00".repeat(32) } });
-  assertEquals(r.status, 401);
-  assertEquals(r.corp, { eroare: "Semnatura nu este valida." });
-});
-
-test("[N3] webhook-ul raspunde 400 la un corp care nu e JSON, nu cade", async () => {
-  const r = await cere("plata-card-webhook", { method: "POST", body: "nu e json", headers: { "x-semnatura": "00".repeat(32) } });
-  // semnatura gresita se vede prima; important e ca functia raspunde, nu cade
-  assertEquals([400, 401].includes(r.status), true, `status ${r.status}`);
-});
-
-test("procesatorul refuza cheia anon", async ({ anon }) => {
-  const r = await cere("procesator-simulat", { method: "POST", token: anon, body: "{}" });
-  assertEquals(r.status, 403);
-});
-
 test("proceseaza-eveniment refuza cheia anon", async ({ anon }) => {
   assertEquals((await cere("proceseaza-eveniment", { method: "POST", token: anon, body: "{}" })).status, 403);
 });
@@ -103,9 +86,7 @@ test("creeaza-asociatie refuza cheia anon", async ({ anon }) => {
   assertEquals((await cere("creeaza-asociatie", { method: "POST", token: anon, body: "{}" })).status, 403);
 });
 
-test("plata-card si publica-lista cer un utilizator autentificat", async ({ anon }) => {
-  const p = await cere("plata-card", { method: "POST", token: anon, body: JSON.stringify({ apartament_id: crypto.randomUUID(), suma: 1, card: { numar: "4242424242424242" } }) });
-  assertEquals(p.status, 401);
+test("publica-lista cere un utilizator autentificat", async ({ anon }) => {
   const l = await cere("publica-lista", { method: "POST", token: anon, body: JSON.stringify({ lista_id: crypto.randomUUID() }) });
   assertEquals(l.status, 401);
 });

@@ -62,33 +62,6 @@ test.describe("ecran de 320 px cu tastatura deschisa", () => {
     await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
   });
 
-  test("panoul de plata cu cardul se completeaza si se trimite pe 300 px inaltime", async ({ page }) => {
-    await intra(page, CONTURI.elena);
-    await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
-    await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: /^Plateste [\d.,]+ lei cu cardul$/ }).click();
-
-    const panou = page.getByRole("dialog", { name: /Plata cu cardul|Plateste/ }).first();
-    await expect(panou).toBeVisible();
-    await faraDerulareOrizontala(page);
-
-    /* Fiecare camp trebuie sa se poata atinge, unul dupa altul, derulanand
-       in interiorul panoului — nu al paginii de sub el. */
-    for (const [eticheta, valoare] of [
-      ["Numarul cardului", "4242424242424242"],
-      ["Expira", "12/30"],
-      ["Cod CVC", "123"],
-      ["Numele de pe card", "ELENA MARINESCU"],
-    ]) {
-      const camp = page.getByLabel(eticheta);
-      await camp.scrollIntoViewIfNeeded();
-      await camp.fill(valoare);
-    }
-    const trimite = page.getByRole("button", { name: /^Plateste [\d.,]+ lei$/ });
-    await ajungeLa(trimite);
-    await faraDerulareOrizontala(page);
-  });
-
   test("formularul de index se completeaza si se trimite pe ecran scurt", async ({ page }) => {
     await intra(page, CONTURI.voicu);
     await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });

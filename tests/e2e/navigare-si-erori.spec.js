@@ -8,7 +8,7 @@
 
 import { test, expect } from "@playwright/test";
 import {
-  buton, intraCa, mergiLaTab, tab, serviciu, apartamentulNumarul,
+  buton, intraCa, mergiLaTab, tab, serviciu,
   textEcran, CUVINTE_TEHNICE,
 } from "./ajutor.js";
 
@@ -153,36 +153,10 @@ test.describe("erori care raman pe ecran", () => {
     for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul contine "${cuvant}"`).not.toContain(cuvant);
   });
 
-  test("cardul refuzat lasa motivul in panou si dupa ce toastul dispare", async ({ page }) => {
-    const ap = await apartamentulNumarul(3);
-    await intraCa(page, "ilie");
-    await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: /^Plateste .* cu cardul$/ }).first().click();
-    const panou = page.getByRole("dialog", { name: "Plata cu cardul" });
-    await panou.getByLabel("Numarul cardului").fill("4000000000000002");
-    await panou.getByLabel("Expira").fill("12/30");
-    await panou.getByLabel("CVC").fill("123");
-    await panou.getByLabel("Numele de pe card").fill("DAN ILIE");
-    const inainte = await serviciu().schema("financiar").from("plati")
-      .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).eq("stare", "confirmata");
-
-    await panou.getByRole("button", { name: /^Plateste \d/ }).click();
-    await expect(panou.locator("text=/refuz|respins|banca/i").first()).toBeVisible({ timeout: 30000 });
-    /* [F17] Toastul pleaca dupa ~3,4 s; motivul ramane in panou */
-    await page.waitForTimeout(5000);
-    await expect(panou.locator("text=/refuz|respins|banca/i").first()).toBeVisible();
-    const inPanou = await panou.innerText();
-    for (const cuvant of CUVINTE_TEHNICE) expect(inPanou, `panoul contine "${cuvant}"`).not.toContain(cuvant);
-
-    const dupa = await serviciu().schema("financiar").from("plati")
-      .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).eq("stare", "confirmata");
-    expect(dupa.count).toBe(inainte.count);
-  });
-
   test("[F6] refuzul unei iesiri din fond lasa si el motivul pe ecran", async ({ page }) => {
     /* [F6] Toate celelalte comenzi de bani au primit, la reparatia F17, un
        mesaj care ramane pe ecran: incasarea cash, corectia fisei, cotele,
-       plata cu cardul si publicarea folosesc componenta <Eroare>. Iesirea din
+       incasarea cash si publicarea folosesc componenta <Eroare>. Iesirea din
        fond nu: AdminFonduri (AdminBloc.jsx:2767-2830) are doar toastul de 3,4
        secunde, iar la refuz panoul ramane deschis, cu suma scrisa si fara
        niciun motiv vizibil. Omul apasa din nou si primeste acelasi refuz. */

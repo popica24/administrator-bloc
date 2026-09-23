@@ -239,10 +239,10 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
 });
 
 /* --------------------------------------------------------------------------
-   Cardul si incasarea cash in aceeasi clipa, pe aceeasi datorie
+   Doua incasari cash in aceeasi clipa, pe aceeasi datorie
    -------------------------------------------------------------------------- */
 
-test.describe("plata cu cardul in aceeasi clipa cu incasarea cash", () => {
+test.describe("doua incasari cash in aceeasi clipa, pe aceeasi datorie", () => {
   const EMAIL = "e2e-seam-platitor@adminbloc.test";
 
   test("amandoua se inregistreaza, chitantele raman numerotate, soldul nu trece pe minus", async ({ browser }) => {
@@ -259,14 +259,12 @@ test.describe("plata cu cardul in aceeasi clipa cu incasarea cash", () => {
     const t = await ctxT.newPage();
     const a = await ctxA.newPage();
     try {
-      await intra(t, EMAIL);
-      await expect(t.getByRole("tab", { name: "Plata" })).toBeVisible({ timeout: 25000 });
-      await mergiLaTab(t, "Plata");
-      await buton(t, `Plateste ${lei(sold)} lei cu cardul`).click();
-      await t.getByLabel("Numarul cardului").fill("4242424242424242");
-      await t.getByLabel("Expira").fill("12/30");
-      await t.getByLabel("Cod CVC").fill("123");
-      await t.getByLabel("Numele de pe card").fill("PLATITOR");
+      /* Doi administratori, pe aceeasi fisa, fiecare cu jumatate din bani */
+      await intraCa(t, "admin");
+      await mergiLaTab(t, "Apartamente");
+      await t.getByRole("button", { name: "Apartament 19" }).click();
+      await buton(t, "Inregistreaza incasare cash").click();
+      await t.getByLabel("Suma primita").fill(lei(sold / 2));
 
       await intraCa(a, "admin");
       await mergiLaTab(a, "Apartamente");
@@ -277,11 +275,11 @@ test.describe("plata cu cardul in aceeasi clipa cu incasarea cash", () => {
       const numereInainte = (inainte || []).map((c) => `${c.serie}-${c.numar}`);
 
       await Promise.all([
-        buton(t, `Plateste ${lei(sold)} lei`).click(),
+        buton(t, "Emite chitanta").click(),
         buton(a, "Emite chitanta").click(),
       ]);
 
-      await expect(t.getByText("Plata a reusit")).toBeVisible({ timeout: 40000 });
+      await expect(t.locator(".ab-toast")).toBeVisible({ timeout: 40000 });
       await expect(a.locator(".ab-toast")).toBeVisible({ timeout: 40000 });
       const mesajAdmin = await a.locator(".ab-toast").innerText();
       for (const cuvant of CUVINTE_TEHNICE) expect(mesajAdmin, `mesajul "${mesajAdmin}"`).not.toContain(cuvant);
@@ -300,9 +298,9 @@ test.describe("plata cu cardul in aceeasi clipa cu incasarea cash", () => {
 
       /* Si ce vede omul: nicio suma pe minus pe ecran */
       await t.reload();
-      await expect(t.getByRole("tab", { name: "Plata" })).toBeVisible({ timeout: 25000 });
+      await expect(t.getByRole("tab", { name: "Apartamente" })).toBeVisible({ timeout: 25000 });
       const ecran = await t.locator(".ab-shell > .ab-scroll").innerText();
-      expect(ecran, "suma negativa pe ecranul locatarului").not.toMatch(/-\s?\d+,\d{2}\s*LEI/i);
+      expect(ecran, "suma negativa pe ecranul administratorului").not.toMatch(/-\s?\d+,\d{2}\s*LEI/i);
       for (const cuvant of CUVINTE_TEHNICE) expect(ecran).not.toContain(cuvant);
     } finally {
       await ctxT.close();

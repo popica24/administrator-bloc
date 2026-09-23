@@ -151,26 +151,10 @@ describe("[F17] erorile se anunta si nu dispar singure", () => {
     expect(screen.getByLabelText("Apa rece, index anterior 244,5").getAttribute("aria-invalid")).toBeNull();
   });
 
-  it("plata refuzata ramane scrisa pe ecran, nu doar in mesajul care trece", async () => {
-    const { sursa } = await pornesteApp({ email: LOCATAR });
-    ceasCuTemporizatoare();
-    vi.spyOn(sursa, "platesteCard").mockRejectedValue(new Error("Banca a refuzat plata."));
-    await tab("Plata");
-    await apasa(screen.getAllByRole("button").find((b) => /^Plateste .* cu cardul$/.test(b.textContent)).textContent);
-    const dialog = screen.getByRole("dialog");
-    await scrie("Numarul cardului", "4000000000000002");
-    await scrie("Expira", "10/28");
-    await scrie("Cod CVC", "123");
-    await scrie("Numele de pe card", "ELENA MARINESCU");
-    await apasa(within(dialog).getByRole("button", { name: /^Plateste / }).textContent);
-    await dupaMesajulZburator();
-    expect(within(dialog).getByText("Banca a refuzat plata.")).toBeTruthy();
-  });
-
   it("incasarea refuzata ramane scrisa in fisa apartamentului", async () => {
     const { sursa } = await pornesteApp({ email: ADMIN });
     ceasCuTemporizatoare();
-    vi.spyOn(sursa, "inregistreazaNumerar").mockRejectedValue(new Error("Chitantierul nu are setari."));
+    vi.spyOn(sursa, "inregistreazaIncasare").mockRejectedValue(new Error("Chitantierul nu are setari."));
     await tab("Apartamente");
     await apasa("Apartament 17");
     await apasa("Inregistreaza incasare cash");

@@ -190,16 +190,16 @@ export const RESTANTE_INITIALE = [
    lista, calculata de motor; o plata partiala are suma scrisa explicit. */
 export const PLATI = [
   ...["1", "2", "4", "5", "6", "7", "8", "9", "10", "12", "13", "14", "16", "18", "19", "20"].map((numar, i) => ({
-    numar, luna: "2026-06", data: `2026-07-${String(10 + (i % 12)).padStart(2, "0")}T18:00:00+03:00`, metoda: i % 3 === 0 ? "numerar" : "card",
+    numar, luna: "2026-06", data: `2026-07-${String(10 + (i % 12)).padStart(2, "0")}T18:00:00+03:00`, metoda: i % 3 === 0 ? "numerar" : "transfer",
   })),
-  { numar: "17", luna: "2026-06", data: "2026-07-14T20:12:00+03:00", metoda: "card" },
+  { numar: "17", luna: "2026-06", data: "2026-07-14T20:12:00+03:00", metoda: "transfer" },
   { numar: "15", luna: "2026-06", data: "2026-07-30T17:30:00+03:00", metoda: "numerar", suma: 200 },
   ...["1", "2", "4", "5", "7", "8", "9", "10", "12", "13", "14", "16", "18", "20"].map((numar, i) => ({
-    numar, luna: "2026-07", data: `2026-08-${String(10 + (i % 12)).padStart(2, "0")}T18:00:00+03:00`, metoda: i % 3 === 0 ? "numerar" : "card",
+    numar, luna: "2026-07", data: `2026-08-${String(10 + (i % 12)).padStart(2, "0")}T18:00:00+03:00`, metoda: i % 3 === 0 ? "numerar" : "transfer",
   })),
-  { numar: "17", luna: "2026-07", data: "2026-08-12T21:03:00+03:00", metoda: "card" },
+  { numar: "17", luna: "2026-07", data: "2026-08-12T21:03:00+03:00", metoda: "transfer" },
   ...["1", "2", "4", "5", "7", "8", "9", "10", "12", "13", "14", "16", "18", "20"].map((numar, i) => ({
-    numar, luna: "2026-08", data: `2026-09-${String(9 + (i % 9)).padStart(2, "0")}T18:00:00+03:00`, metoda: i % 3 === 0 ? "numerar" : "card",
+    numar, luna: "2026-08", data: `2026-09-${String(9 + (i % 9)).padStart(2, "0")}T18:00:00+03:00`, metoda: i % 3 === 0 ? "numerar" : "transfer",
   })),
 ];
 

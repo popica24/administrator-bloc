@@ -119,29 +119,23 @@ test.describe("doua luni la rand, fara derive", () => {
     expect(miscari.length, "o singura contributie pentru luna publicata").toBe(1);
   });
 
-  test("2. banii primiti in prima luna: card si numerar", async ({ page }) => {
+  test("2. banii primiti in prima luna: intreg si partial, in numerar", async ({ page }) => {
     const sb = serviciu();
     const apElena = await apartamentulNumarul(17);
 
-    /* Locatarul plateste tot, cu cardul */
+    /* Un locatar plateste tot, in numerar, la administrator */
     const sold = await soldApartament(apElena.id);
     expect(sold).toBeGreaterThan(0);
-    await intraCa(page, "elena");
-    await mergiLaTab(page, "Plata");
-    await buton(page, `Plateste ${lei(sold)} lei cu cardul`).click();
-    await page.getByLabel("Numarul cardului").fill("4242424242424242");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("ELENA MARINESCU");
-    await buton(page, `Plateste ${lei(sold)} lei`).click();
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 40000 });
-    expect(await soldApartament(apElena.id), "soldul dupa plata integrala").toBe(0);
-
-    /* Administratorul incaseaza o parte, in numerar, de la restantier */
-    await buton(page, "Gata").click();
-    await buton(page, "Iesi").click();
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 17" }).click();
+    await buton(page, "Inregistreaza incasare cash").click();
+    await buton(page, "Emite chitanta").click();
+    await asteaptaToast(page, "chitanta");
+    await expect.poll(async () => soldApartament(apElena.id), { timeout: 30000 }).toBe(0);
+    await page.getByRole("dialog", { name: "Apartament 17" }).getByRole("button", { name: "Inchide" }).first().click();
+
+    /* Iar de la restantier incaseaza doar o parte */
     await page.getByRole("button", { name: "Apartament 3" }).click();
     await buton(page, "Inregistreaza incasare cash").click();
     await page.getByLabel(/Suma primita/).fill("100");

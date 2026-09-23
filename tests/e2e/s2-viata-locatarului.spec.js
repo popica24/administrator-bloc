@@ -238,7 +238,7 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
     for (const id of [DATORIE_A, DATORIE_B]) if (id) await sb.schema("financiar").from("datorii").delete().eq("id", id);
   });
 
-  test("plata se duce pe apartamentul ales, nu pe celalalt", async ({ page }) => {
+  test("plata se duce pe apartamentul ales, nu pe celalalt", async ({ page, browser }) => {
     const primul = await apartamentulNumarul(15);
     const alDoilea = await apartamentulNumarul(16);
     const soldA = await soldApartament(primul.id);
@@ -247,20 +247,29 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
     await intra(page, EMAIL);
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
 
-    /* Alege explicit al doilea apartament si plateste soldul lui */
+    /* Alege explicit al doilea apartament: instructiunile de plata sunt ale lui */
     await page.getByRole("button", { name: "Schimba apartamentul" }).click();
     await page.getByRole("button", { name: `Apartament ${alDoilea.numar}` }).click();
     await expect(page.getByText(`Apartament ${alDoilea.numar}, Bloc D14, scara A`)).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Plata");
     const suma = Number(soldB).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
-    await buton(page, `Plateste ${suma} lei cu cardul`).click();
-    await page.getByLabel("Numarul cardului").fill("4242424242424242");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("DOI PROPRIETARI");
-    await buton(page, `Plateste ${suma} lei`).click();
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 30000 });
-    await buton(page, "Gata").click();
+    await expect(page.getByText(`Ai de plata ${suma} lei`)).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(`Scrie la detalii: apartament ${alDoilea.numar}, Bloc D14, scara A`)).toBeVisible();
+
+    /* Iar banii dusi administratorului se inregistreaza pe apartamentul acela.
+       Administratorul lucreaza in fereastra lui, ca locatarul sa ramana unde e. */
+    const ctxAdmin = await browser.newContext();
+    const adminPage = await ctxAdmin.newPage();
+    try {
+      await intraCa(adminPage, "admin");
+      await mergiLaTab(adminPage, "Apartamente");
+      await adminPage.getByRole("button", { name: `Apartament ${alDoilea.numar}`, exact: true }).click();
+      await buton(adminPage, "Inregistreaza incasare cash").click();
+      await buton(adminPage, "Emite chitanta").click();
+      await expect(adminPage.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible({ timeout: 30000 });
+    } finally {
+      await ctxAdmin.close();
+    }
 
     /* Al doilea apartament este achitat, primul a ramas neatins */
     await expect.poll(async () => soldApartament(alDoilea.id), { timeout: 30000 }).toBe(0);
@@ -270,7 +279,7 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
        cu soldul lui neschimbat */
     await page.getByRole("button", { name: "Schimba apartamentul" }).click();
     await page.getByRole("button", { name: `Apartament ${primul.numar}` }).click();
-    await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`)).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`).first()).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Plata");
     await expect(page.getByText("31,11").first()).toBeVisible({ timeout: 20000 });
     const t = await textEcran(page);

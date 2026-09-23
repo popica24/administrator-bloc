@@ -2,9 +2,8 @@
 
 import { test, expect } from "@playwright/test";
 import {
-  CONTURI, buton, intra, intraCa, mergiLaTab, serviciu, apartamentulNumarul,
-  creeazaCont, legaDeApartament, datorieDeTest, soldApartament,
-  textEcran, CUVINTE_TEHNICE, aziRo,
+  CONTURI, buton, intraCa, mergiLaTab, serviciu, apartamentulNumarul,
+  asociatieD14, soldApartament, textEcran, CUVINTE_TEHNICE, aziRo,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -16,7 +15,7 @@ test.describe("Acasa", () => {
     await intraCa(page, "elena");
     await expect(page.getByText("De plata acum")).toBeVisible();
     await expect(page.locator(".ab-shell")).toContainText(lei(sold));
-    await expect(buton(page, "Plateste acum")).toBeVisible();
+    await expect(buton(page, "Cum platesc")).toBeVisible();
     await expect(buton(page, "De unde vine suma")).toBeVisible();
   });
 
@@ -77,11 +76,16 @@ test.describe("Acasa", () => {
       .update({ citita_la: null }).eq("id", necitite[0].id);
   });
 
-  test("Plateste acum duce in Plata cu formularul de card deschis", async ({ page }) => {
+  test("Cum platesc duce in Plata, la instructiunile de plata", async ({ page }) => {
     await intraCa(page, "elena");
-    await buton(page, "Plateste acum").click();
-    await expect(page.getByRole("dialog", { name: "Plata cu cardul" })).toBeVisible();
-    await expect(page.getByLabel("Numarul cardului")).toBeVisible();
+    await buton(page, "Cum platesc").click();
+    await expect(page.getByText("Cum platesti")).toBeVisible();
+    await expect(page.getByText("In numerar, la administrator")).toBeVisible();
+    /* Datele pentru transfer sunt cele ale asociatiei din baza */
+    const { data: a } = await serviciu().schema("organizare").from("asociatii")
+      .select("iban, denumire").eq("id", await asociatieD14()).single();
+    await expect(page.getByText(a.iban)).toBeVisible();
+    await expect(page.getByText(a.denumire).first()).toBeVisible();
   });
 });
 
@@ -210,100 +214,5 @@ test.describe("Plata: platile mele", () => {
     await mergiLaTab(page, "Plata");
     await page.getByRole("button", { name: "Platile mele" }).click();
     await expect(buton(page, "Descarca chitanta")).toHaveCount(count);
-  });
-});
-
-test.describe("Plata cu cardul", () => {
-  const EMAIL = "e2e-platitor@adminbloc.test";
-
-  test.beforeEach(async () => {
-    const ap = await apartamentulNumarul(20);
-    const pid = await creeazaCont(EMAIL, "Lavinia Costea");
-    await legaDeApartament(pid, ap.id);
-  });
-
-  test("cardul refuzat de banca nu inregistreaza nicio plata", async ({ page }) => {
-    const ap = await apartamentulNumarul(20);
-    await datorieDeTest(ap.id, 11.11, "Test card refuzat");
-    const { count: inainte } = await serviciu().schema("financiar").from("plati")
-      .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).eq("stare", "confirmata");
-
-    await intra(page, EMAIL);
-    await expect(page.getByRole("tab", { name: "Plata" })).toBeVisible({ timeout: 20000 });
-    await mergiLaTab(page, "Plata");
-    const soldRefuzat = await soldApartament(ap.id);
-    await buton(page, `Plateste ${lei(soldRefuzat)} lei cu cardul`).click();
-    await page.getByLabel("Numarul cardului").fill("4000000000000002");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("LAVINIA COSTEA");
-    await buton(page, `Plateste ${lei(soldRefuzat)} lei`).click();
-
-    await expect(page.getByRole("dialog", { name: "Plata cu cardul" }).locator("text=/refuz|respins|banca/i").first())
-      .toBeVisible({ timeout: 25000 });
-    const { count: dupa } = await serviciu().schema("financiar").from("plati")
-      .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).eq("stare", "confirmata");
-    expect(dupa).toBe(inainte);
-    const t = await textEcran(page);
-    for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
-  });
-
-  test("cardul acceptat plateste, emite chitanta si o lasa de descarcat", async ({ page }) => {
-    const ap = await apartamentulNumarul(20);
-    await datorieDeTest(ap.id, 12.34, "Test card acceptat");
-    const sold = await soldApartament(ap.id);
-
-    await intra(page, EMAIL);
-    await expect(page.getByRole("tab", { name: "Plata" })).toBeVisible({ timeout: 20000 });
-    await mergiLaTab(page, "Plata");
-    await buton(page, `Plateste ${lei(sold)} lei cu cardul`).click();
-    await page.getByLabel("Numarul cardului").fill("4242424242424242");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("LAVINIA COSTEA");
-    await buton(page, `Plateste ${lei(sold)} lei`).click();
-
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6} a fost emisa/)).toBeVisible();
-
-    const descarcare = page.waitForEvent("download");
-    await buton(page, "Descarca chitanta").click();
-    expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
-    await buton(page, "Gata").click();
-
-    /* Registrul: plata confirmata, chitanta emisa, soldul la zero */
-    const { data: plati } = await serviciu().schema("financiar").from("plati")
-      .select("id, suma, stare, metoda").eq("apartament_id", ap.id).eq("stare", "confirmata")
-      .order("creat_la", { ascending: false }).limit(1);
-    expect(plati[0].metoda).toBe("card");
-    expect(Number(plati[0].suma)).toBeCloseTo(sold, 2);
-    const { data: ch } = await serviciu().schema("financiar").from("chitante")
-      .select("numar").eq("plata_id", plati[0].id).single();
-    expect(ch.numar).toBeGreaterThan(0);
-    expect(await soldApartament(ap.id)).toBe(0);
-  });
-
-  test("dublul apasat pe Plateste nu trimite doua plati", async ({ page }) => {
-    const ap = await apartamentulNumarul(20);
-    await datorieDeTest(ap.id, 9.99, "Test dublu apasat card");
-    const sold = await soldApartament(ap.id);
-
-    await intra(page, EMAIL);
-    await expect(page.getByRole("tab", { name: "Plata" })).toBeVisible({ timeout: 20000 });
-    await mergiLaTab(page, "Plata");
-    await buton(page, `Plateste ${lei(sold)} lei cu cardul`).click();
-    await page.getByLabel("Numarul cardului").fill("4242424242424242");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("LAVINIA COSTEA");
-    const { count: inainte } = await serviciu().schema("financiar").from("plati")
-      .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id);
-    const plateste = buton(page, `Plateste ${lei(sold)} lei`);
-    await plateste.dblclick();
-
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 30000 });
-    const { count: dupa } = await serviciu().schema("financiar").from("plati")
-      .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id);
-    expect(dupa - inainte).toBe(1);
   });
 });
