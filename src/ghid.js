@@ -85,7 +85,7 @@ export const GHID = {
       titlu: "Apartamente", rezumat: "Fisa fiecarui apartament, citirile si fondurile.",
       puncte: [
         "Cauti un apartament dupa nume sau numar. Fisa lui arata datele, soldul la zi si fiecare datorie.",
-        "Din fisa incasezi numerar: banii acopera intai datoria cea mai veche, iar chitanta se emite pe loc. Tot de acolo schimbi numarul de persoane, corectezi datele si cotele, inviti un locatar cu un cod sau ii inchizi accesul.",
+        "Din fisa confirmi banii primiti, in numerar sau prin transfer: ei acopera intai datoria cea mai veche, iar chitanta se emite pe loc. Tot de acolo schimbi numarul de persoane, corectezi datele si cotele, faci contul unui locatar pe numarul lui de telefon sau ii inchizi accesul.",
         "Citiri contoare: citesti contorul general, validezi sau respingi indexurile, cu motiv, si estimezi ce lipseste dupa termen. O citire validata din greseala o poti respinge cat timp lista lunii nu e publicata.",
         "Fonduri: vezi fiecare miscare si inregistrezi o cheltuiala din fond, cu documentul ei. Fondul nu poate ajunge sub zero.",
       ],
