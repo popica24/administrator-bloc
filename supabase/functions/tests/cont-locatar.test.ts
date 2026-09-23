@@ -15,6 +15,7 @@ const P = {
   profiluri: "/rest/v1/profiluri",
   leaga: "/rest/v1/rpc/leaga_locatar",
   conducere: "/rest/v1/rpc/numeste_in_conducere",
+  sesiuni: "/rest/v1/rpc/inchide_sesiunile",
   asociatie: "/rest/v1/rpc/asociatia_de_administrat",
   eu: "/auth/v1/user",
 };
@@ -31,6 +32,7 @@ function backend(o: {
   stergere?: () => Response;
   conducere?: () => Response;
   asociatie?: () => Response;
+  sesiuni?: () => Response;
 } = {}) {
   return (a: Apel) => {
     if (a.url.pathname === P.eu) return json({ id: "admin-1" });
@@ -38,11 +40,12 @@ function backend(o: {
       case P.drept: return o.drept ? o.drept() : json({ apartament_id: AP, bloc_id: "bloc-1", numar: "17" });
       case P.utilizatori: return o.creare ? o.creare() : json({ id: PROFIL });
       case P.utilizator: return a.metoda === "DELETE" ? (o.stergere ? o.stergere() : json({})) : (o.parolaNoua ? o.parolaNoua() : json({ id: PROFIL }));
-      case P.locatari: return randuri(a, o.locatari ?? [{ profil_id: PROFIL }]);
+      case P.locatari: return randuri(a, o.locatari ?? [{ profil_id: PROFIL, activ_pana: null }]);
       case P.profiluri: return randuri(a, o.profiluri ?? []);
       case P.leaga: return o.leaga ? o.leaga() : json("locatar-nou");
       case P.conducere: return o.conducere ? o.conducere() : json("mandat-nou");
       case P.asociatie: return o.asociatie ? o.asociatie() : json("asoc-1");
+      case P.sesiuni: return o.sesiuni ? o.sesiuni() : json(null);
     }
   };
 }
@@ -172,6 +175,26 @@ Deno.test("cont-locatar: parola noua se da doar pentru un locatar al apartamentu
     const schimbare = f.apeluri.find((a) => a.url.pathname === P.utilizator && a.metoda === "PUT")!;
     assertEquals(schimbare.corp.password, r.corp.parola);
     assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+    // [A4] cine era inauntru cu parola veche iese
+    const iesire = f.apeluri.find((a) => a.url.pathname === P.sesiuni)!;
+    assertEquals(iesire.corp, { p_profil_id: PROFIL });
+  });
+});
+
+// [A4] Cine s-a mutat nu mai primeste parola noua pe apartamentul acela.
+Deno.test("cont-locatar: parola noua pentru un acces inchis -> 400", async () => {
+  await cuFetch(backend({ locatari: [{ profil_id: PROFIL, activ_pana: "2020-01-01" }] }), async (f) => {
+    const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Locatarul nu mai are acces la acest apartament." });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizator).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: inchiderea sesiunilor cazuta se spune ca atare", async () => {
+  await cuFetch(backend({ sesiuni: () => eroarePg("nu merg sesiunile", 500) }), async () => {
+    const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
+    assertEquals(r.corp, { eroare: "nu merg sesiunile" });
   });
 });
 

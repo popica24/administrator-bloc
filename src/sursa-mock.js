@@ -1258,6 +1258,8 @@ export function creeazaSursaMock() {
       }
       const l = db.locatari.find((x) => x.id === locatarId && x.apartamentId === apartamentId);
       if (!l) eroare("Locatarul nu este al acestui apartament.");
+      /* [A4] cine s-a mutat nu mai primeste parola noua pe apartamentul acela */
+      if (l.activPana && l.activPana <= aziIso()) eroare("Locatarul nu mai are acces la acest apartament.");
       const cont = db.autentificari.find((x) => x.profilId === l.profilId);
       const parola = genereazaParola();
       cont.parola = parola;

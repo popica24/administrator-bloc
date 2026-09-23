@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(128);
+select plan(133);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -829,6 +829,36 @@ select throws_ok($$update identitate.profiluri set telefon = '0722 118 005' wher
 select throws_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA2')$$,
   '23505', null, '[A5] profiluri.telefon: doi oameni nu pot avea acelasi numar');
 reset role;
+
+-- -----------------------------------------------------------------------------
+-- [A4] identitate.inchide_sesiunile: dupa o parola noua, cine era inauntru iese
+-- -----------------------------------------------------------------------------
+
+select pg_temp.ca('locA1');
+set local role authenticated;
+set local teste.sesiune = 'authenticator';
+select throws_ok($$select identitate.inchide_sesiunile(pg_temp.id('locA1'))$$,
+  '42501', null, '[A4] inchide_sesiunile: locatarul nu are drept de executie');
+reset role;
+select pg_temp.fara_claims();
+set local role service_role;
+set local teste.sesiune = 'authenticator';
+select throws_ok($$select identitate.inchide_sesiunile(pg_temp.id('locA1'))$$,
+  'Doar serviciul poate inchide sesiunile unui cont.',
+  '[A4] inchide_sesiunile: refuzata in afara serviciului');
+set local teste.sesiune = '';
+reset role;
+
+insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
+values (gen_random_uuid(), pg_temp.id('locA1'), now(), now(), now() + interval '1 day');
+insert into auth.refresh_tokens (token, user_id, revoked, created_at, updated_at)
+values ('rt-a4-' || pg_temp.id('locA1'), pg_temp.id('locA1')::text, false, now(), now());
+select lives_ok($$select identitate.inchide_sesiunile(pg_temp.id('locA1'))$$,
+  '[A4] inchide_sesiunile: serviciul inchide sesiunile contului');
+select is((select count(*)::int from auth.sessions where user_id = pg_temp.id('locA1')), 0,
+  '[A4] inchide_sesiunile: sesiunile deschise dispar');
+select is((select count(*)::int from auth.refresh_tokens where user_id = pg_temp.id('locA1')::text), 0,
+  '[A4] inchide_sesiunile: si token-urile de reimprospatare');
 
 select * from finish();
 rollback;

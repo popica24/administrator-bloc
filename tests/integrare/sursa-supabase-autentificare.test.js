@@ -142,6 +142,27 @@ describe("adaugaLocatar(): contul il face administratorul", () => {
       .rejects.toThrow("Scrie numele locatarului.");
   });
 
+  /* [A4] Parola noua se da cuiva care si-a uitat-o, sau cand banuiesti ca a
+     ajuns pe mana cui nu trebuie. Pana la auditul 4, sesiunile deschise
+     ramaneau deschise, iar un acces inchis putea primi oricand alta parola. */
+  it("[A4] parola noua inchide sesiunile deschise si refuza un acces inchis", async () => {
+    const telefon = telefonDeTest();
+    const cont = await admin.adaugaLocatar(f.ap["2"], { nume: "Uituc Nou", telefon });
+    const alLui = createClient(URL_LOCAL, ANON_LOCAL, { auth: { persistSession: false, autoRefreshToken: false } });
+    const intrare = await alLui.auth.signInWithPassword({ email: `${telefon}@telefon.adminbloc.ro`, password: cont.parola });
+    expect(intrare.error).toBeNull();
+
+    await admin.parolaNoua(f.ap["2"], cont.locatar_id);
+    /* tokenul din mana ii mai tine o ora, dar sesiunea nu se mai poate
+       reimprospata: la prima reintrare in aplicatie, omul este afara */
+    const reimprospatare = await alLui.auth.refreshSession();
+    expect(reimprospatare.error, "sesiunea veche nu are voie sa se reimprospateze").toBeTruthy();
+
+    await admin.inchideAcces(cont.locatar_id);
+    await expect(admin.parolaNoua(f.ap["2"], cont.locatar_id))
+      .rejects.toThrow("Locatarul nu mai are acces la acest apartament.");
+  });
+
   it("apartamentul altui bloc este refuzat, oricine ar cere", async () => {
     const altul = await creeazaBloc();
     await expect(admin.adaugaLocatar(altul.ap["1"], { nume: "X", telefon: telefonDeTest() }))

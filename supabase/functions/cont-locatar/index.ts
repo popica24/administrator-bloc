@@ -89,11 +89,19 @@ porneste(async (req) => {
     if (actiune === "parola") {
       if (!locatar_id) return eroare("Lipseste locatarul.");
       const { data: locatar, error: e1 } = await admin.schema("identitate").from("locatari")
-        .select("profil_id").eq("id", locatar_id).eq("apartament_id", apartament_id).maybeSingle();
+        .select("profil_id, activ_pana").eq("id", locatar_id).eq("apartament_id", apartament_id).maybeSingle();
       if (e1) return eroare(e1.message);
       if (!locatar) return eroare("Locatarul nu este al acestui apartament.", 404);
+      // [A4] Un acces inchis nu primeste parola noua: omul s-a mutat.
+      const azi = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
+      if (locatar.activ_pana && locatar.activ_pana <= azi) {
+        return eroare("Locatarul nu mai are acces la acest apartament.");
+      }
       const { error: e2 } = await admin.auth.admin.updateUserById(locatar.profil_id, { password: parola });
       if (e2) return eroare(e2.message);
+      // [A4] ... si cine era inauntru cu parola veche iese
+      const { error: e5 } = await admin.schema("identitate").rpc("inchide_sesiunile", { p_profil_id: locatar.profil_id });
+      if (e5) return eroare(e5.message);
       return raspuns({ parola });
     }
 

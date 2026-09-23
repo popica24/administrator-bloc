@@ -116,6 +116,16 @@ describe("adaugaLocatar, parolaNoua si inchideAcces", () => {
     expect((await s.incarca()).eu.nume).toBe("Ana");
   });
 
+  /* [A4] Cine s-a mutat nu mai primeste parola noua pe apartamentul acela:
+     altfel administratorul putea deschide la loc un cont inchis. */
+  it("[A4] accesul inchis nu mai primeste parola noua", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap = apNr(d, "2").id;
+    const cont = await s.adaugaLocatar(ap, { nume: "Plecat", telefon: "0722 000 024" });
+    await s.inchideAcces(cont.locatarId);
+    await expect(s.parolaNoua(ap, cont.locatarId)).rejects.toThrow("Locatarul nu mai are acces la acest apartament.");
+  });
+
   it("parola noua doar pe apartamentul administrat si doar pentru locatarul lui", async () => {
     const { s, d } = await ca(ADMIN);
     const ap = apNr(d, "2").id;
