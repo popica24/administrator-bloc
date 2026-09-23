@@ -9,6 +9,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { ceasDemo, PAROLA, ADMIN } from "./ajutor.jsx";
 
+const round2 = (n) => Math.round(n * 100) / 100;
+
 const apNr = (d, n) => d.apartamente.find((a) => a.numar === n);
 
 async function admin() {
@@ -42,7 +44,7 @@ describe("restDatorie", () => {
      fie compensate cu cele pozitive. Intretinerea ramanea cu rest negativ (pe
      care nicio plata nu-l mai putea consuma), iar corectia pozitiva cerea in
      continuare toata suma ei. */
-  it("[B1] corectiile pozitive ale listei absorb intai reducerea", async () => {
+  it("[B1] corectia negativa o anuleaza intai pe cea pozitiva, nu datoria de baza", async () => {
     const { s, d } = await admin();
     const ap = apNr(d, "9").id;
     const listaId = "lst-test-b1";
@@ -52,7 +54,11 @@ describe("restDatorie", () => {
     });
     const inSus = s.db.adauga("datorii", {
       apartamentId: ap, blocId: d.bloc.id, tip: "corectie", luna: "2026-08", listaId,
-      suma: 400, scadenta: "2026-10-05", descriere: "Corectie in sus",
+      suma: 250, scadenta: "2026-10-05", descriere: "Corectie in sus",
+    });
+    const inSusApoi = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "corectie", luna: "2026-08", listaId,
+      suma: 150, scadenta: "2026-10-05", descriere: "Inca o corectie in sus",
     });
     const inJos = s.db.adauga("datorii", {
       apartamentId: ap, blocId: d.bloc.id, tip: "corectie", luna: "2026-08", listaId,
@@ -60,8 +66,11 @@ describe("restDatorie", () => {
     });
     const dupa = await s.incarca();
     const rest = (id) => dupa.datorii.find((x) => x.id === id).rest;
-    expect(rest(intretinere.id)).toBe(0);
-    expect(rest(inSus.id)).toBe(100);
+    /* [B3] corectiile pozitive se anuleaza de la cea mai noua, iar datoria
+       reala ramane pe randul de intretinere, cu scadenta lui */
+    expect(rest(inSusApoi.id)).toBe(0);
+    expect(rest(inSus.id)).toBe(0);
+    expect(rest(intretinere.id)).toBe(100);
     expect(rest(inJos.id)).toBe(0);
   });
 
@@ -117,6 +126,35 @@ describe("plafonul penalizarilor", () => {
     const dupa = await s.incarca();
     const total = dupa.penalizari.filter((p) => p.datorieSursaId === intretinere.id).reduce((sum, p) => sum + p.suma, 0);
     expect(total).toBe(50);
+  });
+
+  /* [K7/B9] Plafonul se calculeaza net de anularile de penalizare: ce s-a
+     anulat dupa o recalculare se poate cere din nou, daca datoria creste la
+     loc. Sursa demonstrativa nu avea termenul acesta, desi baza il are. */
+  it("[B9] plafonul tine cont de penalizarile anulate", async () => {
+    const { s, d } = await admin();
+    s.db.setari.procentPenalizareZi = 50;
+    const ap = apNr(d, "9").id;
+    const listaId = "lst-test-b9";
+    const scadenta = "2025-01-25";
+    const intretinere = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2025-01", listaId,
+      suma: 300, scadenta, descriere: "Test intretinere",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-09-18");
+    const penalizare = (await s.incarca()).datorii.find((x) => x.tip === "penalizare" && x.apartamentId === ap);
+    /* K7: jumatate din penalizare se anuleaza dupa o recalculare */
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "anulare_penalizare", luna: "2025-01", listaId: null,
+      suma: -round2(penalizare.suma / 2), scadenta: "2026-09-18", descriere: "Penalizare anulata dupa recalcularea listei",
+      anuleazaDatorieId: penalizare.id,
+    });
+    s._calculeazaPenalizariPentruTeste("2026-09-19");
+    const dupa = await s.incarca();
+    const cerute = dupa.penalizari.filter((p) => p.datorieSursaId === intretinere.id).reduce((sum, p) => sum + p.suma, 0);
+    const anulate = dupa.datorii.filter((x) => x.tip === "anulare_penalizare" && x.apartamentId === ap)
+      .reduce((sum, x) => sum + x.suma, 0);
+    expect(round2(cerute + anulate)).toBe(300);
   });
 });
 

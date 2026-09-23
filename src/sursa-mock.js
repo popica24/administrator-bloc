@@ -121,13 +121,17 @@ const restDatorie = (db, d) => {
       && areDatorieSora(db, c))
     .reduce((s, c) => s + round2(c.suma - alocatDatorie(db, c.id)), 0);
   if (deScazut <= 0) return propriu;
-  /* aceeasi ordine ca in financiar.datorii_rest: intretinerea, apoi corectiile
-     pozitive dupa data si id */
-  const cheie = (x) => `${x.tip === "intretinere" ? 0 : 1}|${x.creatLa}|${x.id}`;
-  const pachet = db.datorii
-    .filter((x) => x.listaId === d.listaId && x.apartamentId === d.apartamentId
-      && (x.tip === "intretinere" || (x.tip === "corectie" && x.suma > 0)))
-    .sort((a, b) => cheie(a).localeCompare(cheie(b)));
+  /* [B3] aceeasi ordine ca in financiar.datorii_rest: intai corectiile
+     pozitive, de la cea mai noua (o corectie negativa o anuleaza de obicei pe
+     cea dinaintea ei), si abia la urma randul de intretinere, care isi
+     pastreaza scadenta initiala */
+  const alePachetului = (tip) => db.datorii.filter((x) => x.listaId === d.listaId
+    && x.apartamentId === d.apartamentId && x.tip === tip);
+  const pachet = [
+    ...alePachetului("corectie").filter((x) => x.suma > 0)
+      .sort((a, b) => `${b.creatLa}|${b.id}`.localeCompare(`${a.creatLa}|${a.id}`)),
+    ...alePachetului("intretinere"),
+  ];
   const cap = (x) => Math.max(round2(x.suma - alocatDatorie(db, x.id)), 0);
   const inainte = pachet.slice(0, pachet.findIndex((x) => x.id === d.id)).reduce((s, x) => s + cap(x), 0);
   const scade = Math.max(Math.min(cap(d), deScazut - inainte), 0);
@@ -176,14 +180,11 @@ function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = nu
 
 /* Penalizarile lunii: pentru fiecare datorie ramasa neachitata dupa zilele de
    gratie, rest x procent pe zi x zilele de intarziere de la ultimul calcul. */
-/* [K16/H3] Baza de calcul a unei datorii de intretinere: suma ei redusa de
-   corectiile negative surori (aceeasi lista, acelasi apartament) -- exact
-   formula din financiar.calculeaza_penalizari (migratia H3). Pentru orice
-   alt tip de datorie, baza e chiar suma ei. */
-function bazaIntretinere(db, d) {
-  if (d.tip !== "intretinere") return d.suma;
-  const corectii = db.datorii.filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId);
-  return round2(d.suma + corectii.reduce((s, c) => s + c.suma, 0));
+/* [B3] Baza pe care se calculeaza penalizarea: cat a ramas din datorie dupa
+   corectiile listei, fara sa tina cont de ce s-a platit pe ea -- exact
+   financiar.baza_dupa_corectii. */
+function bazaDupaCorectii(db, d) {
+  return Math.max(round2(restDatorie(db, d) + alocatDatorie(db, d.id)), 0);
 }
 
 function calculeazaPenalizari(db, la) {
@@ -196,14 +197,18 @@ function calculeazaPenalizari(db, la) {
       const dela = anterioare.length && anterioare[anterioare.length - 1] > inceput ? anterioare[anterioare.length - 1] : inceput;
       const zileTaxate = zileIntre(dela, la);
       if (zileTaxate <= 0) return;
-      /* [K16/H3] baza corectata: o corectie negativa sora (aceeasi lista,
-         acelasi apartament) reduce direct baza pe care se calculeaza restul
-         si plafonul unei datorii de intretinere. */
-      const baza = bazaIntretinere(db, d);
+      /* [B3] baza corectata: cat a ramas din datorie dupa corectiile listei */
+      const baza = bazaDupaCorectii(db, d);
       const rest = round2(baza - alocatDatorie(db, d.id));
       if (rest <= 0) return;
-      /* Legea 196/2018: toate penalizarile unei datorii nu depasesc datoria (corectata) */
-      const plafon = round2(baza - db.penalizari.filter((p) => p.datorieSursaId === d.id).reduce((s, p) => s + p.suma, 0));
+      /* Legea 196/2018: toate penalizarile unei datorii nu depasesc datoria
+         (corectata), nete de anularile K7 */
+      const penalizate = db.penalizari.filter((p) => p.datorieSursaId === d.id);
+      const anulate = db.datorii.filter((x) => x.tip === "anulare_penalizare"
+        && penalizate.some((p) => p.datorieId === x.anuleazaDatorieId));
+      const plafon = round2(baza
+        - penalizate.reduce((s, p) => s + p.suma, 0)
+        - anulate.reduce((s, x) => s + x.suma, 0));
       const suma = Math.min(rest, plafon, round2((rest * procentPenalizareZi * zileTaxate) / 100));
       if (suma <= 0) return;
       const pen = db.adauga("datorii", {
