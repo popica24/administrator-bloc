@@ -30,6 +30,34 @@ describe("[K9] fisa apartamentului, avansul", () => {
   });
 });
 
+/* [B4] Fisa apartamentului si Sumarul administratorului trebuie sa numere la
+   fel. restanta() aduna doar randurile cu rest pozitiv, iar financiar.situatie_bloc
+   aduna restul tuturor datoriilor scadente: un apartament cu un credit pe un
+   rand (o corectie in jos dupa o recalculare) aparea in Sumar la "fara
+   restanta" si pe fisa lui cu "Restanta 400". */
+describe("[B4] restanta apartamentului, aceeasi cifra peste tot", () => {
+  it("creditul de pe un rand scade restanta aratata pe fisa", async () => {
+    await pornesteAdmin({
+      tab: "Apartamente",
+      modifica: (d) => {
+        const ap = d.apartamente.find((a) => a.numar === "1");
+        d.datorii.push({
+          id: "dat-b4-plus", apartamentId: ap.id, tip: "corectie", luna: "2026-08", listaId: null,
+          suma: 400, rest: 400, scadenta: "2026-09-01", descriere: "Corectie in plus", documentId: null,
+          creatLa: "2026-09-01T10:00:00Z",
+        });
+        d.datorii.push({
+          id: "dat-b4-minus", apartamentId: ap.id, tip: "corectie", luna: "2026-08", listaId: null,
+          suma: -400, rest: -400, scadenta: "2026-09-01", descriere: "Corectie in minus", documentId: null,
+          creatLa: "2026-09-02T10:00:00Z",
+        });
+      },
+    });
+    const ap1 = within(buton("Apartament 1"));
+    expect(ap1.queryByText(/^Restanta /)).toBeNull();
+  });
+});
+
 describe("ListaApartamente", () => {
   it("arata toate apartamentele in ordine, cu etaj, persoane, cota si badge", async () => {
     await pornesteAdmin({ tab: "Apartamente" });

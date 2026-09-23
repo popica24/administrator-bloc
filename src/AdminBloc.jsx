@@ -367,7 +367,13 @@ const sold = (date, apId) => suma(datoriiApartament(date, apId), (d) => d.rest);
    doar ca "Achitat", fara nicio urma a banilor platiti in plus. */
 const avans = (date, apId) => suma(date.plati.filter((p) => p.apartamentId === apId && p.stare === "confirmata"),
   (p) => p.suma - suma(p.alocari, (a) => a.suma));
-const restanta = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.scadenta < date.azi), (d) => d.rest);
+/* [B4] Restanta apartamentului: tot ce e scadent si neplatit, adunat cu credit
+   cu tot si taiat la zero -- exact ca financiar.situatie_bloc. Cat timp aduna
+   doar randurile cu rest pozitiv, fisa apartamentului putea arata "Restanta
+   400" pentru un om pe care Sumarul administratorului il numara la
+   "fara restanta", pentru ca avea si un credit de 300 pe alt rand. */
+const restanta = (date, apId) => Math.max(0,
+  suma(datoriiApartament(date, apId).filter((d) => d.scadenta < date.azi), (d) => d.rest));
 const penalizariDeschise = (date, apId) => suma(datoriiDeschise(date, apId).filter((d) => d.tip === "penalizare"), (d) => d.rest);
 const datoriePeLista = (date, listaId, apId) => date.datorii.find((d) => d.listaId === listaId && d.apartamentId === apId && d.tip === "intretinere");
 const explicatiePenalizare = (date, datorieId) => date.penalizari.find((p) => p.datorieId === datorieId) || null;
