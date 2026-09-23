@@ -271,6 +271,15 @@ const ROLURI_CONTACT = { administrator: "Administrator", presedinte: "Presedinte
    cel care il controleaza. */
 const ROLURI_CONDUCERE = ["administrator", "presedinte", "cenzor"];
 const ETICHETA_ROL = { administrator: "Administrator", presedinte: "Presedinte", cenzor: "Cenzor" };
+
+/* [B2] Cheia unei cereri de incasare: acelasi identificator la fiecare
+   reincercare, ca serverul sa recunoasca a doua apasare pe aceiasi bani si sa
+   intoarca plata deja inregistrata, in loc sa faca alta. crypto.randomUUID nu
+   exista pe toate platformele (React Native), deci il compunem singuri. */
+const cheieCerere = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+  const r = Math.floor(Math.random() * 16);
+  return (c === "x" ? r : (r % 4) + 8).toString(16);
+});
 const doarVerifica = (date) => date.eu.rol === "presedinte" || date.eu.rol === "cenzor";
 /* [C2] Presedintele sau cenzorul care locuieste in bloc: are si apartament,
    deci poate trece intre ecranele lui de locatar si panoul de verificare. */
@@ -3126,6 +3135,10 @@ function FisaApartament({ apId, onClose }) {
   const [eroare, setEroare] = useState(null);
   /* Un dublu apasat pe "Emite chitanta" nu trebuie sa emita doua chitante */
   const incasareInCurs = React.useRef(false);
+  /* [B2] ... si nici o a doua incercare dupa un raspuns pierdut pe drum:
+     cheia cererii este facuta cand se deschide formularul si ramane aceeasi
+     pana cand incasarea reuseste. */
+  const cheieIncasare = React.useRef(null);
   const [incaseaza, setIncaseaza] = useState(false);
 
   const ap = apId ? apartamentDupaId(date, apId) : null;
@@ -3219,13 +3232,17 @@ function FisaApartament({ apId, onClose }) {
               incasareInCurs.current = true;
               setIncaseaza(true);
               setEroare(null);
-              const r = await inregistreazaIncasare(ap.id, sumaCash, metodaIncasare);
+              if (!cheieIncasare.current) cheieIncasare.current = cheieCerere();
+              const r = await inregistreazaIncasare(ap.id, sumaCash, metodaIncasare, cheieIncasare.current);
               incasareInCurs.current = false;
               setIncaseaza(false);
               /* [B7] metoda se intoarce la "numerar": altfel a doua incasare
                  din aceeasi fisa pornea cu "transfer bancar" preselectat, iar
                  chitanta spunea transfer pentru bani primiti in mana. */
-              if (r.ok) { setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); setMetodaIncasare("numerar"); } else setEroare(r.mesaj);
+              if (r.ok) {
+                cheieIncasare.current = null;
+                setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); setMetodaIncasare("numerar");
+              } else setEroare(r.mesaj);
             }} />
             <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
           </Box>
@@ -4862,7 +4879,7 @@ export default function AdminBloc() {
       dateMotor: cmd((id) => sursa.dateMotor(id), null, false, false),
       publicaLista: cmd((id) => sursa.publicaLista(id), "Lista a fost publicata. Locatarii o vad acum."),
       marcheazaFacturaPlatita: cmd((id, p) => sursa.marcheazaFacturaPlatita(id, p), (r, id, p) => (p ? "Factura marcata ca platita furnizorului" : "Plata catre furnizor a fost anulata")),
-      inregistreazaIncasare: cmd((ap, s, m) => sursa.inregistreazaIncasare(ap, s, m), "Incasare inregistrata, chitanta emisa"),
+      inregistreazaIncasare: cmd((ap, s, m, cheie) => sursa.inregistreazaIncasare(ap, s, m, cheie), "Incasare inregistrata, chitanta emisa"),
       trimiteInstiintare: cmd((ap) => sursa.trimiteInstiintare(ap)),
       schimbaPersoane: cmd((ap, n, l, m) => sursa.schimbaPersoane(ap, n, l, m), (r, ap, n, l) => `Din ${monthLabel(l)} se calculeaza ${n} persoane`),
       adaugaLocatar: cmd((ap, x) => sursa.adaugaLocatar(ap, x), "Contul a fost creat"),

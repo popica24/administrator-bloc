@@ -24,7 +24,7 @@ const COMENZI = [
   ["publicaLista", ["lis-1"], "publicaLista", undefined, "Lista a fost publicata. Locatarii o vad acum."],
   ["marcheazaFacturaPlatita", ["che-1", true], "marcheazaFacturaPlatita", undefined, "Factura marcata ca platita furnizorului"],
   ["marcheazaFacturaPlatita", ["che-1", false], "marcheazaFacturaPlatita", undefined, "Plata catre furnizor a fost anulata"],
-  ["inregistreazaIncasare", ["apa-3", 100, "numerar"], "inregistreazaIncasare", { plataId: "p" }, "Incasare inregistrata, chitanta emisa"],
+  ["inregistreazaIncasare", ["apa-3", 100, "numerar", "cerere-1"], "inregistreazaIncasare", { plataId: "p" }, "Incasare inregistrata, chitanta emisa"],
   ["trimiteInstiintare", ["apa-3"], "trimiteInstiintare", { destinatari: 1 }, null],
   ["schimbaPersoane", ["apa-3", 3, "2026-10", "nastere"], "schimbaPersoane", undefined, "Din octombrie 2026 se calculeaza 3 persoane"],
   ["adaugaLocatar", ["apa-3", { nume: "Ana", telefon: "0722000051" }], "adaugaLocatar", { parola: "Bloc-Casa-1234" }, "Contul a fost creat"],

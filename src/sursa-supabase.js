@@ -610,8 +610,12 @@ export function creeazaSursaSupabase(url, cheie) {
     publicaLista: (listaId) => invoca("publica-lista", { lista_id: listaId }),
     marcheazaFacturaPlatita: (cid, platita) => ok(intr.rpc("marcheaza_factura_platita", { p_cheltuiala_id: cid, p_platita: platita })),
 
-    async inregistreazaIncasare(apartamentId, suma, metoda) {
-      const plataId = await ok(fin.rpc("inregistreaza_incasare", { p_apartament_id: apartamentId, p_suma: suma, p_metoda: metoda }));
+    /* [B2] cheieCerere: aceeasi cheie la o a doua incercare (raspuns pierdut pe
+       drum) intoarce plata deja inregistrata, nu face alta */
+    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null) {
+      const plataId = await ok(fin.rpc("inregistreaza_incasare", {
+        p_apartament_id: apartamentId, p_suma: suma, p_metoda: metoda, p_cheie_client: cheieCerere,
+      }));
       return { plataId };
     },
 

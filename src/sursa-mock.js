@@ -162,11 +162,11 @@ function alocaAvansuri(db, apartamentId) {
 
 /* Orice plata trece prin administrator, care o confirma: inregistrataDe este
    mereu cineva. platitaDe ramane pentru platile facute de locatar insusi. */
-function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe }) {
+function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe, cheieClient = null }) {
   const ap = db.apartamente.find((a) => a.id === apartamentId);
   const plata = db.adauga("plati", {
     apartamentId, blocId: ap.blocId, suma: round2(suma), metoda, stare: "confirmata",
-    platitaDe, inregistrataDe, confirmataLa: la, creatLa: la,
+    platitaDe, inregistrataDe, confirmataLa: la, creatLa: la, cheieClient,
   });
   alocaPlata(db, plata);
   db.setari.chitantaUltimulNumar += 1;
@@ -1092,14 +1092,20 @@ export function creeazaSursaMock() {
 
     /* Administratorul confirma banii primiti: in mana lui sau in contul
        asociatiei. Aceleasi reguli ca financiar.inregistreaza_incasare. */
-    async inregistreazaIncasare(apartamentId, suma, metoda) {
+    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null) {
       const { bloc } = cerAdmin();
       const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
       if (metoda !== "numerar" && metoda !== "transfer") eroare("Banii primiti sunt fie in numerar, fie prin transfer bancar.");
       /* [paritate] aceeasi rotunjire la ban ca la financiar.inregistreaza_plata:
          o suma care se rotunjeste la 0 lei e refuzata, nu doar cea scrisa 0. */
       if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
-      const p = inregistreazaPlata(db, { apartamentId: ap.id, suma: Number(suma), metoda, la: acum(), inregistrataDe: eu().id });
+      /* [B2] aceeasi cheie a cererii, aceeasi plata: a doua incercare dupa un
+         raspuns pierdut pe drum nu mai emite inca o chitanta */
+      const veche = cheieCerere && db.plati.find((x) => x.apartamentId === ap.id && x.cheieClient === cheieCerere);
+      if (veche) return { plataId: veche.id };
+      const p = inregistreazaPlata(db, {
+        apartamentId: ap.id, suma: Number(suma), metoda, la: acum(), inregistrataDe: eu().id, cheieClient: cheieCerere,
+      });
       return { plataId: p.id };
     },
 

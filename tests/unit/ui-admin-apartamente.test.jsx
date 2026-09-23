@@ -157,7 +157,7 @@ describe("FisaApartament, incasare cash", () => {
     const camp = screen.getByLabelText("Suma primita");
     expect(camp.value).toBe("2.319,36");
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
     const f = inDialog("Apartament 3");
     expect(f.getByText("Incasare inregistrata: 2.319,36 lei")).toBeTruthy();
@@ -188,7 +188,7 @@ describe("FisaApartament, incasare cash", () => {
     await act(async () => { scrie("Suma primita", "150,5"); });
     expect(dezactivat(buton("Emite chitanta"))).toBe(false);
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar");
+    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
     expect(inDialog("Apartament 1").getByText("Incasare inregistrata: 150,50 lei")).toBeTruthy();
   });
 
@@ -200,7 +200,7 @@ describe("FisaApartament, incasare cash", () => {
     await apasa("Inregistreaza incasare cash");
     await apasa(buton("Prin transfer bancar"));
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
   });
 
@@ -217,12 +217,12 @@ describe("FisaApartament, incasare cash", () => {
     await apasa(buton("Prin transfer bancar"));
     await act(async () => { scrie("Suma primita", "100"); });
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer");
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
 
     await apasa("Inregistreaza incasare cash");
     await act(async () => { scrie("Suma primita", "50"); });
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar");
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
   });
 
   it("renunta inchide formularul fara incasare", async () => {
@@ -233,6 +233,22 @@ describe("FisaApartament, incasare cash", () => {
     await apasa("Renunta");
     expect(screen.queryByLabelText("Suma primita")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
+  });
+
+  /* [B2] Reincercarea dupa o cadere trimite aceeasi cheie a cererii: daca
+     prima cerere ajunsese totusi la server, a doua intoarce aceeasi plata, in
+     loc sa emita inca o chitanta pe aceiasi bani. */
+  it("[B2] reincercarea dupa o eroare trimite aceeasi cheie a cererii", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare")
+      .mockRejectedValueOnce(new Error("Serverul nu raspunde. Incearca din nou."));
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    await apasa("Emite chitanta");
+    expect(toast().textContent).toBe("Serverul nu raspunde. Incearca din nou.");
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenCalledTimes(2);
+    expect(spion.mock.calls[1][3]).toBe(spion.mock.calls[0][3]);
   });
 
   it("o incasare refuzata lasa formularul deschis, cu suma", async () => {

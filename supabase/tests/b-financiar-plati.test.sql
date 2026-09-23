@@ -6,7 +6,7 @@
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(68);
+select plan(72);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -453,14 +453,33 @@ select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10
   'Banii primiti sunt fie in numerar, fie prin transfer bancar.', 'inregistreaza_incasare: metoda lipsa este refuzata');
 select throws_ok($$select financiar.aloca_plata(pg_temp.fx('p_cash'))$$,
   '42501', null, 'financiar: functiile interne nu se pot apela din API');
+
+-- [B2] Aceiasi bani, o singura data. Administratorul apasa "Emite chitanta",
+-- cererea trece prin server, dar raspunsul se pierde (retea mobila) si el
+-- apasa din nou: fara o cheie a cererii, in registru intrau doua plati si
+-- doua chitante pe aceiasi bani, iar stornare nu exista.
+select set_config('fx.cheie', gen_random_uuid()::text, true);
+select set_config('fx.p_odata', financiar.inregistreaza_incasare(
+  pg_temp.fx('ap2'), 25, 'numerar', current_setting('fx.cheie')::uuid)::text, true);
+select is(financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 25, 'numerar', current_setting('fx.cheie')::uuid),
+  pg_temp.fx('p_odata'),
+  '[B2] inregistreaza_incasare: a doua cerere cu aceeasi cheie intoarce aceeasi plata');
+select is((select count(*)::int from financiar.plati
+           where apartament_id = pg_temp.fx('ap2') and cheie_client = current_setting('fx.cheie')::uuid), 1,
+  '[B2] inregistreaza_incasare: o singura plata in registru');
+select is((select count(*)::int from financiar.chitante where plata_id = pg_temp.fx('p_odata')), 1,
+  '[B2] inregistreaza_incasare: o singura chitanta pe aceiasi bani');
+select isnt(financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 25, 'numerar', gen_random_uuid()),
+  pg_temp.fx('p_odata'),
+  '[B2] inregistreaza_incasare: alta cerere, alta plata');
 reset role;
 select pg_temp.serviciu();
-select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap2')), 0.00::numeric,
-  'solduri: ap2 a platit tot (150 = 100,46 + 49,54)');
+select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap2')), -50.00::numeric,
+  'solduri: ap2 a platit tot (150 = 100,46 + 49,54), plus doua incasari de cate 25 de lei in plus [B2]');
 
 -- Chitantele raman numerotate fara goluri pe toata asociatia
 select results_eq($$select numar from financiar.chitante where asociatie_id = pg_temp.fx('asociatie') order by numar$$,
-  $$values (42), (43), (44), (45)$$,
+  $$values (42), (43), (44), (45), (46), (47)$$,
   'chitante: numerotare continua, fara goluri, pe toata asociatia');
 
 select * from finish();

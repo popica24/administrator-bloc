@@ -25,6 +25,22 @@ describe("inregistreazaIncasare", () => {
     expect(p.chitanta.numar).toBeGreaterThan(0);
   });
 
+  /* [B2] paritate cu financiar.inregistreaza_incasare: aceeasi cheie a cererii
+     (raspuns pierdut pe drum, administratorul apasa din nou) nu face a doua
+     plata si a doua chitanta pe aceiasi bani. */
+  it("[B2] aceeasi cheie a cererii intoarce aceeasi plata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const cheie = "cerere-de-test-1";
+    const intai = await s.inregistreazaIncasare(ap3, "100", "numerar", cheie);
+    const apoi = await s.inregistreazaIncasare(ap3, "100", "numerar", cheie);
+    expect(apoi.plataId).toBe(intai.plataId);
+    const dupa = await s.incarca();
+    expect(dupa.plati.filter((x) => x.id === intai.plataId)).toHaveLength(1);
+    const alta = await s.inregistreazaIncasare(ap3, "100", "numerar", "cerere-de-test-2");
+    expect(alta.plataId).not.toBe(intai.plataId);
+  });
+
   it("alta metoda decat numerar sau transfer este refuzata", async () => {
     const { s, d } = await ca(ADMIN);
     const ap3 = apNr(d, "3").id;

@@ -360,6 +360,23 @@ describe("bani si oameni", () => {
     expect(d2.plati.find((p) => p.id === transfer.plataId)).toMatchObject({ metoda: "transfer", suma: 10 });
   });
 
+  /* [B2] Administratorul apasa "Emite chitanta", cererea trece, dar raspunsul
+     se pierde pe drum (retea mobila) si el apasa din nou. Pana la auditul 4,
+     in registru intrau doua plati si doua chitante pe aceiasi bani. */
+  it("[B2] aceeasi cerere de incasare, trimisa de doua ori, face o singura plata", async () => {
+    const cheie = crypto.randomUUID();
+    const intai = await adm.inregistreazaIncasare(f.ap["2"], 75, "numerar", cheie);
+    const apoi = await adm.inregistreazaIncasare(f.ap["2"], 75, "numerar", cheie);
+    expect(apoi.plataId).toBe(intai.plataId);
+    const plati = await ok(db("financiar").from("plati").select("id").eq("apartament_id", f.ap["2"]).eq("cheie_client", cheie));
+    expect(plati).toHaveLength(1);
+    const chitante = await ok(db("financiar").from("chitante").select("id").eq("plata_id", intai.plataId));
+    expect(chitante).toHaveLength(1);
+    /* alta cerere, alti bani */
+    const alta = await adm.inregistreazaIncasare(f.ap["2"], 75, "numerar", crypto.randomUUID());
+    expect(alta.plataId).not.toBe(intai.plataId);
+  });
+
   it("trimiteInstiintare(): notificarea de restanta ajunge la locatarul apartamentului", async () => {
     expect(await adm.trimiteInstiintare(f.ap["1"])).toEqual({ destinatari: 1 });
     const n = await ok(db("comunicare").from("notificari").select("*").eq("profil_id", f.conturi.loc.id).eq("tip", "restanta"));
