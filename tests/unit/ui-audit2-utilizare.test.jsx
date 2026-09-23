@@ -62,7 +62,7 @@ describe("[F22] cuvintele de pe hartie, explicate acolo unde apar", () => {
 describe("[F23] Acasa are o singura intrare spre plata", () => {
   it("cardul de sus duce la plata, lista De facut nu repeta actiunea", async () => {
     await pornesteApp({ email: LOCATAR });
-    expect(screen.getByRole("button", { name: "Plateste acum" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cum platesc" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Plateste intretinerea" })).toBeNull();
   });
 });

@@ -1662,108 +1662,44 @@ function CardContacte({ contacte }) {
   );
 }
 
+/* Cum platesti: in numerar la administrator sau prin transfer bancar. Plata
+   cu cardul nu are inca procesator, asa ca ecranul spune limpede ce are omul
+   de facut, cu datele pe care asociatia le are deja. */
+function CardCumPlatesti({ suma }) {
+  const { date } = useApp();
+  const ap = apartamentulMeu(date);
+  const admin = date.contacte.find((c) => c.rol === "administrator");
+  const a = date.asociatie;
+  return (
+    <Card gap={S.md}>
+      <Titlu sub={`Ai de plata ${lei(suma)}`}>Cum platesti</Titlu>
+      <Box gap={S.sm}>
+        <Eyebrow>In numerar, la administrator</Eyebrow>
+        {admin ? <ContactRand contact={admin} /> : <Txt size={13} color={C.muted}>Administratorul nu are un contact trecut in aplicatie.</Txt>}
+      </Box>
+      {a.iban && (
+        <>
+          <Line />
+          <Box gap={4}>
+            <Eyebrow>Prin transfer bancar</Eyebrow>
+            <Txt size={15} weight={700}>{a.iban}</Txt>
+            <Txt size={12.5} color={C.inkSoft}>{a.banca}</Txt>
+            <Txt size={12.5} color={C.inkSoft}>{a.denumire}</Txt>
+            <Txt size={12.5} color={C.muted}>Scrie la detalii: apartament {ap.numar}, {date.bloc.denumire}</Txt>
+          </Box>
+        </>
+      )}
+      <Txt size={12} color={C.muted}>Chitanta o primesti in Platile mele, dupa ce administratorul inregistreaza banii.</Txt>
+    </Card>
+  );
+}
+
 /* Alegerea lunii: butoane cand sunt putine luni, lista derulanta cand sunt multe */
 function AlegeLuna({ liste, value, onChange }) {
   if (liste.length <= 4) {
     return <Segment small value={value} onChange={onChange} options={liste.map((l) => ({ value: l.id, label: monthShort(l.luna) }))} />;
   }
   return <Picker label="Luna" value={value} onChange={onChange} options={liste.map((l) => ({ value: l.id, label: monthLabel(l.luna) }))} />;
-}
-
-/* Plata cu cardul. Formularul imita pagina procesatorului de plati: datele
-   cardului merg la procesator, niciodata la asociatie. */
-function SheetPlataCard({ open, onClose, apartamentId, sumaDePlata }) {
-  const { date, platesteCard } = useApp();
-  const [numar, setNumar] = useState("");
-  const [expira, setExpira] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [nume, setNume] = useState("");
-  const [lucreaza, setLucreaza] = useState(false);
-  const [eroare, setEroare] = useState(null);
-  const [plataId, setPlataId] = useState(null);
-  /* [H7/F8] O plata "in asteptare" (202) nu este confirmata inca de banca,
-     dar nici un esec: nu apare in date.plati (doar platile confirmate se
-     incarca), deci fara aceasta stare separata formularul ar reveni singur
-     la "Plata cu cardul" si l-ar lasa pe om sa plateasca a doua oara. */
-  const [asteptare, setAsteptare] = useState(null);
-
-  const cifre = numar.replace(/\D/g, "");
-  const valid = cifre.length >= 13 && /^\d{2}\/\d{2}$/.test(expira.trim()) && /^\d{3,4}$/.test(cvc.trim()) && nume.trim().length > 2;
-  const plata = plataId ? date.plati.find((p) => p.id === plataId) : null;
-
-  const inchide = () => { setNumar(""); setExpira(""); setCvc(""); setNume(""); setEroare(null); setPlataId(null); setAsteptare(null); onClose(); };
-  const plateste = async () => {
-    setLucreaza(true);
-    setEroare(null);
-    const r = await platesteCard({ apartamentId, suma: sumaDePlata, card: { numar: cifre, expira: expira.trim(), cvc: cvc.trim(), nume: nume.trim() } });
-    setLucreaza(false);
-    if (!r.ok) { setEroare(r.mesaj); return; }
-    if (r.rezultat.inAsteptare) { setAsteptare(r.rezultat.mesaj); return; }
-    setPlataId(r.rezultat.plataId);
-  };
-
-  return (
-    <Sheet
-      open={open}
-      onClose={inchide}
-      titlu={plata ? "Plata a reusit" : asteptare ? "Plata asteapta confirmarea" : "Plata cu cardul"}
-      pazit={areText(numar, expira, cvc, nume)}
-    >
-      {asteptare ? (
-        <>
-          <Card gap={S.sm} style={{ backgroundColor: C.infoSoft, borderColor: C.infoSoft }}>
-            <Badge label="In asteptare" tone="info" />
-            <Txt size={14} weight={600} color={C.info}>{asteptare}</Txt>
-            <Txt size={13} color={C.inkSoft}>
-              Nu plati din nou: cand banca confirma plata, ea apare automat la Platile mele, cu chitanta.
-            </Txt>
-          </Card>
-          <Btn label="Am inteles" variant="secondary" full onPress={inchide} />
-        </>
-      ) : plata ? (
-        <>
-          <Card gap={S.sm} style={{ backgroundColor: C.okSoft, borderColor: C.okLine }}>
-            <Badge label="Platit" tone="ok" />
-            <Lei value={plata.suma} size={28} weight={700} color={C.ok} />
-            <Txt size={13} color={C.inkSoft}>
-              Chitanta {plata.chitanta ? numarChitanta(plata.chitanta) : ""} a fost emisa pe {dataLunga(plata.confirmataLa)}. O gasesti oricand in Plata, la Platile mele.
-            </Txt>
-          </Card>
-          {/* [J14] plata.chitanta poate lipsi (nu inca emisa): textul de mai
-              sus deja o trateaza, dar butonul citea plata.chitanta.numar
-              neconditionat. Ascuns, ca la Platile mele si la fisa
-              apartamentului (p.chitanta &&). */}
-          {plata.chitanta && (
-            <Btn label="Descarca chitanta" full size="lg" onPress={() => descarcaPdf(chitantaPdf(date, plata), `chitanta-${plata.chitanta.numar}.pdf`)} />
-          )}
-          <Btn label="Gata" variant="secondary" full onPress={inchide} />
-        </>
-      ) : (
-        <>
-          <Card gap={S.xs} pad={S.md}>
-            <Eyebrow>De plata</Eyebrow>
-            <Lei value={sumaDePlata} size={26} weight={700} />
-            <Txt size={12} color={C.muted}>Catre {date.asociatie.denumire}</Txt>
-          </Card>
-          <Field label="Numarul cardului" value={numar} onChange={setNumar} placeholder="0000 0000 0000 0000" inputMode="numeric" autoComplete="cc-number" />
-          <Box row gap={S.sm}>
-            <Box flex={1}><Field label="Expira" value={expira} onChange={setExpira} placeholder="LL/AA" autoComplete="cc-exp" /></Box>
-            <Box flex={1}><Field label="Cod CVC" value={cvc} onChange={setCvc} placeholder="123" inputMode="numeric" autoComplete="cc-csc" /></Box>
-          </Box>
-          <Field label="Numele de pe card" value={nume} onChange={setNume} placeholder="ELENA MARINESCU" autoComplete="cc-name" />
-          <Eroare mesaj={eroare} />
-          <Btn label={lucreaza ? "Se proceseaza..." : `Plateste ${lei(sumaDePlata)}`} full size="lg" disabled={!valid || lucreaza} onPress={plateste} />
-          <Txt size={11.5} color={C.muted}>
-            Plata este procesata de procesatorul de plati. Datele cardului nu ajung la asociatie. Chitanta se emite imediat ce banca confirma plata.
-          </Txt>
-          <Card pad={S.md} style={{ backgroundColor: C.infoSoft, borderColor: C.infoSoft }} gap={2}>
-            <Txt size={11.5} weight={700} color={C.info}>Procesator de test</Txt>
-            <Txt size={11.5} color={C.info}>Merge orice numar de card de test, de exemplu 4242 4242 4242 4242. Cardul 4000 0000 0000 0002 este refuzat de banca.</Txt>
-          </Card>
-        </>
-      )}
-    </Sheet>
-  );
 }
 
 function LocatarAcasa({ go }) {
@@ -1833,7 +1769,7 @@ function LocatarAcasa({ go }) {
           )}
           {!achitat ? (
             <Box row gap={S.sm} style={{ flexWrap: "wrap" }}>
-              <Btn label="Plateste acum" onPress={() => go("plata", { plateste: true })} />
+              <Btn label="Cum platesc" onPress={() => go("plata")} />
               <Btn label="De unde vine suma" variant="secondary" onPress={() => go("plata")} />
             </Box>
           ) : ultimaPlata && ultimaPlata.chitanta ? (
@@ -1956,7 +1892,6 @@ function LocatarPlata({ parametri }) {
   const [listaId, setListaId] = useState(publicate[0] ? publicate[0].id : null);
   const [tab, setTab] = useState(parametri && parametri.tab === "istoric" ? "istoric" : "lista");
   const deDat = sold(date, ap.id);
-  const [plata, setPlata] = useState(!!(parametri && parametri.plateste) && deDat > 0);
 
   if (!listaId) {
     return (
@@ -2005,13 +1940,12 @@ function LocatarPlata({ parametri }) {
               <Line style={{ marginTop: 2, marginBottom: 2 }} />
               <RandCalcul st={def.esteCurenta ? "Total de plata" : "Total lista"} dr={lei(def.total)} bold />
             </Box>
-            {def.esteCurenta && deDat > 0 && (
-              <Btn label={`Plateste ${lei(deDat)} cu cardul`} full size="lg" onPress={() => setPlata(true)} />
-            )}
             <Txt size={12} color={C.muted}>
               {def.lista.scadenta ? `Termen de plata ${dataLunga(def.lista.scadenta)}. ` : ""}Mai jos este fiecare suma pe rand. Apasa pe un rand ca sa vezi factura si calculul complet.
             </Txt>
           </Card>
+
+          {def.esteCurenta && deDat > 0 && <CardCumPlatesti suma={deDat} />}
 
           <Card pad={0}>
             <TreaptaAntet nr={1} titlu="Cheltuielile lunii" total={cheltuieli.total} />
@@ -2155,7 +2089,6 @@ function LocatarPlata({ parametri }) {
         </Box>
       )}
 
-      <SheetPlataCard open={plata} onClose={() => setPlata(false)} apartamentId={ap.id} sumaDePlata={deDat} />
     </Box>
   );
 }
@@ -4842,7 +4775,6 @@ export default function AdminBloc() {
          lui la fiecare incarca(). */
       aleseApartament: cmd(async (apartamentId) => { setApartamentAles(apartamentId); return reincarca(apartamentId); }, null, false),
 
-      platesteCard: cmd((x) => sursa.platesteCard(x), (r) => (r.inAsteptare ? r.mesaj : "Plata a fost confirmata de banca")),
       transmiteCitire: cmd((x) => sursa.transmiteCitire(x), "Indexul a fost trimis administratorului"),
       adaugaSesizare: cmd((x) => sursa.adaugaSesizare(x), "Sesizarea a ajuns la administrator"),
       scrieMesaj: cmd((id, t) => sursa.scrieMesaj(id, t), "Mesajul a fost trimis"),

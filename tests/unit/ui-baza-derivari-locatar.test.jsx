@@ -46,7 +46,7 @@ describe("defalcare pe lista curenta", () => {
     expect(screen.getByText("Curent, lift si curatenie")).toBeTruthy();
     expect(screen.getByText("Administrarea blocului")).toBeTruthy();
     expect(screen.queryByText("Alte cheltuieli")).toBeNull();
-    expect(screen.getByRole("button", { name: "Plateste 718,09 lei cu cardul" })).toBeTruthy();
+    expect(screen.getByText("Ai de plata 718,09 lei")).toBeTruthy();
   });
 
   it("scade ce s-a platit deja din lista, dupa alocarile reale, si pune codurile necunoscute la Alte cheltuieli", async () => {
@@ -95,7 +95,7 @@ describe("defalcare pe lista curenta", () => {
       expect(calcul(/Corectie dupa recalculare/)).toContain("-118,09 lei");
       expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
       expect(calcul("Total de plata")).toBe("Total de plata600,00 lei");
-      expect(screen.getByRole("button", { name: "Plateste 600,00 lei cu cardul" })).toBeTruthy();
+      expect(screen.getByText("Ai de plata 600,00 lei")).toBeTruthy();
     });
 
     it("recalculare in plus: corectia nu se mai numara de doua ori", async () => {
@@ -112,7 +112,7 @@ describe("defalcare pe lista curenta", () => {
       expect(calcul(/Corectie dupa recalculare/)).toContain("181,91 lei");
       expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
       expect(calcul("Total de plata")).toBe("Total de plata900,00 lei");
-      expect(screen.getByRole("button", { name: "Plateste 900,00 lei cu cardul" })).toBeTruthy();
+      expect(screen.getByText("Ai de plata 900,00 lei")).toBeTruthy();
     });
   });
 
@@ -162,7 +162,7 @@ describe("defalcare pe lista curenta", () => {
       d.datorii.push(datorie({ id: "dat-credit", tip: "corectie", suma: -40, rest: -40, scadenta: "2026-08-25", descriere: "Corectie credit" }));
     });
     expect(calcul("Total de plata")).toBe("Total de plata678,09 lei");
-    expect(screen.getByRole("button", { name: "Plateste 678,09 lei cu cardul" })).toBeTruthy();
+    expect(screen.getByText("Ai de plata 678,09 lei")).toBeTruthy();
   });
 
   it("datoriile cu aceeasi scadenta apar in ordinea in care s-au creat", async () => {
@@ -184,7 +184,7 @@ describe("defalcare pe o lista trecuta", () => {
     expect(screen.getByText("Achitata")).toBeTruthy();
     expect(calcul("Total lista")).toContain("631,39 lei");
     expect(screen.queryByText("3. Datorii din lunile trecute")).toBeNull();
-    expect(screen.queryByRole("button", { name: /cu cardul/ })).toBeNull();
+    expect(screen.queryByText("Cum platesti")).toBeNull();
     expect(calcul(`Total repartizat pe cele 20 apartamente`)).toContain("11.219,10 lei");
     expect(calcul("Diferenta")).toContain("0,00 lei");
   });

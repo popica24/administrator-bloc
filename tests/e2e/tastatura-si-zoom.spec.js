@@ -9,12 +9,9 @@
 
 import { test, expect } from "@playwright/test";
 import {
-  buton, intra, intraCa, mergiLaTab, serviciu, apartamentulNumarul, creeazaCont,
-  legaDeApartament, datorieDeTest, soldApartament, asteaptaToast, CUVINTE_TEHNICE,
+  buton, intraCa, mergiLaTab, serviciu, apartamentulNumarul, asteaptaToast, CUVINTE_TEHNICE,
   CONTURI, PAROLA,
 } from "./ajutor.js";
-
-const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
 
 /* Tab pana cand focusul ajunge pe elementul cerut, apoi Enter. Intoarce cate
    apasari de Tab au fost nevoie, sau -1 daca elementul nu e de atins. */
@@ -44,7 +41,6 @@ async function scrieCuTastatura(page, locator, text) {
 }
 
 test.describe("treburile principale, numai din tastatura", () => {
-  const EMAIL = "e2e-tastatura@adminbloc.test";
 
   test("intrarea in cont se face fara maus", async ({ page }) => {
     await page.goto("/");
@@ -53,37 +49,6 @@ test.describe("treburile principale, numai din tastatura", () => {
     await scrieCuTastatura(page, page.getByLabel("Parola"), PAROLA);
     await apasaCuTastatura(page, buton(page, "Intra"));
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 25000 });
-  });
-
-  test("plata cu cardul se duce pana la chitanta fara maus", async ({ page }) => {
-    const ap = await apartamentulNumarul(16);
-    const pid = await creeazaCont(EMAIL, "Tastatura Curata");
-    await legaDeApartament(pid, ap.id);
-    await datorieDeTest(ap.id, 7.77, "E2E plata din tastatura");
-    const sold = await soldApartament(ap.id);
-
-    await intra(page, EMAIL);
-    await expect(page.getByRole("tab", { name: "Plata" })).toBeVisible({ timeout: 25000 });
-    await apasaCuTastatura(page, page.getByRole("tab", { name: /^Plata( \d+)?$/ }));
-    await expect(buton(page, `Plateste ${lei(sold)} lei cu cardul`)).toBeVisible({ timeout: 20000 });
-    await apasaCuTastatura(page, buton(page, `Plateste ${lei(sold)} lei cu cardul`));
-
-    const panou = page.getByRole("dialog", { name: "Plata cu cardul" });
-    await expect(panou).toBeVisible();
-    /* Focusul trebuie sa fie deja in panou: altfel omul scrie in ecranul de
-       dedesubt, ascuns sub scrim */
-    const inPanou = await page.evaluate(() => {
-      const d = document.querySelector('[role="dialog"]');
-      return !!d && d.contains(document.activeElement);
-    });
-    expect(inPanou, "focusul ramane in afara panoului deschis").toBe(true);
-
-    await scrieCuTastatura(page, panou.getByLabel("Numarul cardului"), "4242424242424242");
-    await scrieCuTastatura(page, panou.getByLabel("Expira"), "12/30");
-    await scrieCuTastatura(page, panou.getByLabel("Cod CVC"), "123");
-    await scrieCuTastatura(page, panou.getByLabel("Numele de pe card"), "TASTATURA CURATA");
-    await apasaCuTastatura(page, panou.getByRole("button", { name: `Plateste ${lei(sold)} lei` }));
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 40000 });
   });
 
   test("sesizarea se scrie si se trimite fara maus", async ({ page }) => {
@@ -198,7 +163,7 @@ test.describe("browserul marit la 200%", () => {
     await intraCa(page, "elena");
     const text = await page.locator(".ab-shell > .ab-scroll").innerText();
     expect(text).toMatch(/DE PLATA ACUM|ACHITAT/);
-    const principal = page.getByRole("button", { name: /Plateste acum|Descarca ultima chitanta/ }).first();
+    const principal = page.getByRole("button", { name: /Cum platesc|Descarca ultima chitanta/ }).first();
     await expect(principal).toBeVisible();
     const cutie = await principal.boundingBox();
     expect(cutie.width, "butonul principal iese din ecran").toBeLessThanOrEqual(206);

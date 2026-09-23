@@ -32,7 +32,7 @@ export const GHID = {
         "Alegi luna. Totalul e impartit in trei: cheltuielile lunii, fondurile si datoriile din lunile trecute.",
         "Atinge orice rand ca sa vezi calculul complet: cat a costat factura, cum s-a impartit, cat ti-a revenit si documentul facturii.",
         "Jos vezi verificarea: totalul facturilor este egal cu totalul impartit pe apartamente. Nimic nu ramane nealocat si nimic nu se plateste de doua ori.",
-        "Platesti cu cardul din aplicatie. Datele cardului nu ajung la asociatie, iar chitanta se descarca imediat.",
+        "Ecranul iti spune cum platesti: in numerar la administrator, cu programul si telefonul lui, sau prin transfer bancar, cu contul asociatiei.",
         "La Platile mele vezi fiecare plata, ce a acoperit si chitanta ei. Banii acopera intai datoria cea mai veche.",
       ],
     },

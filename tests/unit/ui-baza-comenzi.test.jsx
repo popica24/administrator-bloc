@@ -12,7 +12,6 @@ import { contextApp, toast } from "./ui-baza-ajutor.jsx";
 const COMENZI = [
   ["folosesteInvitatie", ["ABCD2345"], "folosesteInvitatie", { apartamentNumar: "5" }, "Contul a fost legat de apartamentul 5"],
   ["cereVerificareAdministrator", [{ numarAtestat: "AT-1", fisier: null }], "cereVerificareAdministrator", undefined, "Cererea a fost trimisa spre verificare"],
-  ["platesteCard", [{ apartamentId: "apa-3", suma: 10, card: {} }], "platesteCard", { plataId: "p" }, "Plata a fost confirmata de banca"],
   ["transmiteCitire", [{ apartamentId: "apa-3", luna: "2026-09" }], "transmiteCitire", undefined, "Indexul a fost trimis administratorului"],
   ["adaugaSesizare", [{ titlu: "Bec" }], "adaugaSesizare", undefined, "Sesizarea a ajuns la administrator"],
   ["scrieMesaj", ["ses-1", "Multumesc"], "scrieMesaj", undefined, "Mesajul a fost trimis"],

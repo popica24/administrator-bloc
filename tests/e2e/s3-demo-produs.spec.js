@@ -111,46 +111,15 @@ test.describe("locatarul duce la capat tot ce are de facut, fara server", () => 
     expect(t).toContain("Consumul apartamentului");
   });
 
-  test("plata cu cardul merge pana la chitanta descarcata", async ({ page }) => {
+  test("ecranul de plata spune cum se plateste, fara jargon", async ({ page }) => {
     await intraDemo(page, CONTURI.elena);
     await mergiLaTab(page, "Plata");
-    const buton1 = page.getByRole("button", { name: /^Plateste [\d.,]+ lei cu cardul$/ });
-    await expect(buton1).toBeVisible();
-    const eticheta = await buton1.innerText();
-    const suma = eticheta.replace("Plateste ", "").replace(" cu cardul", "");
-    await buton1.click();
-    await page.getByLabel("Numarul cardului").fill("4242424242424242");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("ELENA MARINESCU");
-    await buton(page, `Plateste ${suma}`).click();
-    await expect(page.getByText("Plata a reusit")).toBeVisible({ timeout: 25000 });
-    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6} a fost emisa/)).toBeVisible();
-
-    const chitanta = await descarcaDemo(page, () => buton(page, "Descarca chitanta").first().click());
-    const textul = textPdf(chitanta.octeti);
-    expect(textul).toContain("CHITANTA");
-    expect(textul).toContain("Am primit de la");
-    expect(textul).not.toMatch(/NaN|undefined|Invalid/);
-
-    await buton(page, "Gata").click();
-    /* Soldul s-a stins pe loc, in memorie */
-    await ecranSanatos(page, 200);
-    await mergiLaTab(page, "Acasa");
-    await expect(page.getByText("Achitat").first()).toBeVisible();
-  });
-
-  test("cardul refuzat de banca spune ce s-a intamplat, fara jargon", async ({ page }) => {
-    await intraDemo(page, CONTURI.elena);
-    await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: /^Plateste [\d.,]+ lei cu cardul$/ }).click();
-    await page.getByLabel("Numarul cardului").fill("4000000000000002");
-    await page.getByLabel("Expira").fill("12/30");
-    await page.getByLabel("Cod CVC").fill("123");
-    await page.getByLabel("Numele de pe card").fill("ELENA MARINESCU");
-    await page.getByRole("button", { name: /^Plateste [\d.,]+ lei$/ }).click();
-    await expect(page.getByRole("dialog", { name: "Plata cu cardul" }).getByText(/Banca a refuzat plata/)).toBeVisible({ timeout: 25000 });
-    await ecranSanatos(page, 200);
+    await expect(page.getByText("Cum platesti")).toBeVisible();
+    const t = await ecranSanatos(page, 200);
+    /* Titlurile mici se scriu cu majuscule pe ecran (text-transform) */
+    expect(t).toContain("IN NUMERAR, LA ADMINISTRATOR");
+    expect(t).toContain("PRIN TRANSFER BANCAR");
+    expect(t).toContain("Chitanta o primesti in Platile mele");
   });
 
   test("indexul contorului se transmite cu poza si ecranul confirma", async ({ page }) => {

@@ -139,7 +139,7 @@ const PASI = [
   "Locatarii trimit indexul la apa, cu o poza a contorului, pana la termenul din luna.",
   "Administratorul verifica fiecare index. Unul respins se retrimite; unul lipsa se estimeaza din media ultimelor trei luni.",
   "Administratorul publica lista. Abia acum se calculeaza sumele, o singura data, iar locatarii sunt anuntati.",
-  "Locatarii platesc cu cardul sau la administrator. Banii acopera intai datoria cea mai veche, iar chitanta, numerotata fara goluri, se descarca pe loc.",
+  "Locatarii platesc in numerar la administrator sau prin transfer bancar; ecranul le spune unde si cum. Banii acopera intai datoria cea mai veche, iar chitanta, numerotata fara goluri, se descarca pe loc.",
   "Dupa scadenta si zilele de gratie se calculeaza penalizari, cu formula la vedere. Nu cresc peste datorie si nu se calculeaza penalizari la penalizari.",
 ];
 
@@ -228,7 +228,6 @@ export default function PaginaPublica() {
             <li>Fiecare locatar vede doar apartamentul lui. Regula nu e in ecran, ci in baza de date: o cerere pentru datele vecinului nu intoarce nimic.</li>
             <li>Lista pentru avizier se tipareste fara nume si fara restante. Situatia incasarilor arata cate apartamente au datorii, nu care.</li>
             <li>Sesizarile vecinilor apar fara autor si fara apartament.</li>
-            <li>Datele cardului merg direct la procesatorul de plati; asociatia nu le primeste si nu le pastreaza.</li>
           </ul>
         </section>
 
@@ -239,8 +238,8 @@ export default function PaginaPublica() {
             demonstrativ are 20 de apartamente si patru luni de liste, citiri si plati.
           </p>
           <p>
-            Plata cu cardul trece deocamdata printr-un procesator simulat. Integrarea cu un procesator de plati real este
-            urmatorul pas.
+            Banii se incaseaza deocamdata in numerar sau prin transfer bancar, iar administratorul ii inregistreaza in
+            aplicatie, care emite chitanta. Plata cu cardul direct din aplicatie asteapta alegerea unui procesator de plati.
           </p>
           <p>
             Fiecare regula are teste care o verifica: peste 1.000 de teste ale aplicatiei, cu tot codul acoperit, peste

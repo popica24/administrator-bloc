@@ -1,11 +1,11 @@
 /* Ecranul Plata al locatarului (LocatarPlata): lista in trei trepte, alegerea
    lunii (AlegeLuna), datoriile si penalizarile (RandSuma, TreaptaAntet),
-   verificarea repartitiei, Platile mele si plata cu cardul (SheetPlataCard). */
+   verificarea repartitiei, Platile mele si cum se plateste (CardCumPlatesti). */
 import { describe, it, expect, vi } from "vitest";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { pornesteApp, zonaCu, textEcran } from "./ajutor.jsx";
 import {
-  ELENA, ILIE, VOICU, apasa, apasaButon, alegeSegment, deschideTab, scrie, prindeDescarcari, prindeFerestre, amanat, text,
+  ELENA, ILIE, VOICU, apasa, apasaButon, alegeSegment, deschideTab, prindeDescarcari, prindeFerestre, text,
 } from "./ui-locatar-ajutor.jsx";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
@@ -20,6 +20,43 @@ async function laPlata(optiuni) {
   return r;
 }
 
+/* Plata in numerar sau prin transfer: cat timp nu avem procesator de card,
+   ecranul spune omului exact ce are de facut, cu datele deja din baza. */
+describe("Plata: cum platesti", () => {
+  it("arata incasarea la administrator si datele pentru transfer bancar", async () => {
+    await laPlata({ email: ELENA });
+    const card = zonaCu([/Cum platesti/, /Prin transfer bancar/]);
+    expect(text(card)).toContain("In numerar, la administrator");
+    expect(text(card)).toContain("Mihai Dobre");
+    expect(text(card)).toContain("Marti si joi, 17:00 - 19:00");
+    expect(text(card)).toContain("Prin transfer bancar");
+    expect(text(card)).toContain("RO49RNCB0082004512340001");
+    expect(text(card)).toContain("BCR, sucursala Pitesti");
+    expect(text(card)).toContain("Asociatia de proprietari nr. 118");
+    expect(text(card)).toContain("Scrie la detalii: apartament 17, Bloc D14, scara A");
+    expect(text(card)).toContain("Chitanta o primesti in Platile mele, dupa ce administratorul inregistreaza banii.");
+    expect(screen.getByRole("button", { name: "Suna 0745 210 118" })).toBeTruthy();
+  });
+
+  it("fara contact de administrator si fara IBAN, spune ce lipseste si nu arata transferul", async () => {
+    await laPlata({
+      email: ELENA,
+      modifica: (d) => {
+        d.contacte = d.contacte.filter((c) => c.rol !== "administrator");
+        d.asociatie.iban = "";
+      },
+    });
+    const card = zonaCu([/Cum platesti/, /In numerar, la administrator/]);
+    expect(text(card)).toContain("Administratorul nu are un contact trecut in aplicatie.");
+    expect(text(card)).not.toContain("Prin transfer bancar");
+  });
+
+  it("cand nu are nimic de plata, nu mai arata cum se plateste", async () => {
+    await laPlata({ email: VOICU });
+    expect(screen.queryByText("Cum platesti")).toBeNull();
+  });
+});
+
 describe("Plata: lista curenta", () => {
   it("fara lista publicata arata un ecran gol", async () => {
     await laPlata({ email: ELENA, modifica: (d) => { d.liste = []; } });
@@ -27,7 +64,7 @@ describe("Plata: lista curenta", () => {
     expect(screen.queryByText("Lista de plata")).toBeNull();
   });
 
-  it("arata totalul, cele trei trepte si butonul de plata", async () => {
+  it("arata totalul si cele trei trepte", async () => {
     await laPlata({ email: ELENA });
     expect(screen.getByText("Apartament 17, 3 persoane, cota 4,63%")).toBeTruthy();
     expect(screen.getByText("Total de plata acum")).toBeTruthy();
@@ -38,7 +75,7 @@ describe("Plata: lista curenta", () => {
     expect(text(card)).toContain("Total de plata718,09 lei");
     expect(text(card)).not.toContain("Platit deja");
     expect(text(card)).toContain("Termen de plata 25 septembrie 2026. Mai jos este fiecare suma pe rand.");
-    expect(screen.getByRole("button", { name: "Plateste 718,09 lei cu cardul" })).toBeTruthy();
+    expect(screen.getByText("Ai de plata 718,09 lei")).toBeTruthy();
     /* lunile, ca butoane: sunt doar trei liste */
     expect(screen.getByRole("button", { name: "aug 26" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.queryByRole("combobox", { name: "Luna" })).toBeNull();
@@ -77,13 +114,13 @@ describe("Plata: lista curenta", () => {
     const card = cardTotal();
     expect(text(card)).toContain("Platit deja din lista lunii-200,00 lei");
     expect(text(card)).toContain("Total de plata518,09 lei");
-    expect(screen.getByRole("button", { name: "Plateste 518,09 lei cu cardul" })).toBeTruthy();
+    expect(screen.getByText("Ai de plata 518,09 lei")).toBeTruthy();
   });
 
   it("lista curenta platita integral: badge Achitat si fara buton de plata", async () => {
     await laPlata({ email: VOICU });
     expect(within(cardTotal()).getByText("Achitat")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /cu cardul/ })).toBeNull();
+    expect(screen.queryByText("Cum platesti")).toBeNull();
   });
 
   it("doua contributii la fonduri apar amandoua in treapta 2", async () => {
@@ -214,7 +251,7 @@ describe("Plata: alegerea lunii", () => {
     expect(text(cardTotal())).toContain("Total lista631,39 lei");
     expect(text(cardTotal())).not.toContain("3. Datorii");
     expect(screen.queryByText("Datorii din lunile trecute")).toBeNull();
-    expect(screen.queryByRole("button", { name: /cu cardul/ })).toBeNull();
+    expect(screen.queryByText("Cum platesti")).toBeNull();
   });
 
   it("o luna trecuta neplatita: Neachitata", async () => {
@@ -305,120 +342,3 @@ describe("Plata: Platile mele", () => {
   });
 });
 
-describe("Plata cu cardul", () => {
-  const completeaza = (numar = "4242 4242 4242 4242") => {
-    scrie("Numarul cardului", numar);
-    scrie("Expira", "12/28");
-    scrie("Cod CVC", "123");
-    scrie("Numele de pe card", "ELENA MARINESCU");
-  };
-
-  it("butonul ramane inactiv pana cand datele cardului sunt complete", async () => {
-    const { sursa } = await laPlata({ email: ELENA });
-    const spion = vi.spyOn(sursa, "platesteCard");
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    const dialog = screen.getByRole("dialog", { name: "Plata cu cardul" });
-    expect(text(dialog)).toContain("De plata718,09LEICatre Asociatia de proprietari nr. 118");
-    const plateste = within(dialog).getByRole("button", { name: "Plateste 718,09 lei" });
-    expect(plateste.getAttribute("aria-disabled")).toBe("true");
-    scrie("Numarul cardului", "4242 4242 4242");
-    scrie("Expira", "1228");
-    scrie("Cod CVC", "12");
-    scrie("Numele de pe card", "EM");
-    expect(plateste.getAttribute("aria-disabled")).toBe("true");
-    await apasa(plateste);
-    expect(spion).not.toHaveBeenCalled();
-    completeaza();
-    expect(plateste.getAttribute("aria-disabled")).toBeNull();
-  });
-
-  it("plata reusita: chitanta emisa, descarcare si Gata", async () => {
-    const descarcari = prindeDescarcari();
-    const { sursa } = await laPlata({ email: ELENA });
-    const spion = vi.spyOn(sursa, "platesteCard");
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    completeaza();
-    await apasaButon("Plateste 718,09 lei");
-    expect(spion).toHaveBeenCalledWith({
-      apartamentId: (await sursa.incarca()).eu.apartamentId,
-      suma: 718.09,
-      card: { numar: "4242424242424242", expira: "12/28", cvc: "123", nume: "ELENA MARINESCU" },
-    });
-    const dialog = screen.getByRole("dialog", { name: "Plata a reusit" });
-    expect(within(dialog).getByText("Platit")).toBeTruthy();
-    expect(text(dialog)).toMatch(/Chitanta AP118 nr\. \d{6} a fost emisa pe 19 septembrie 2026\. O gasesti oricand in Plata, la Platile mele\./);
-    expect(screen.getByRole("status").textContent).toBe("Plata a fost confirmata de banca");
-    await apasaButon("Descarca chitanta");
-    expect(descarcari[0]).toMatch(/^chitanta-\d+\.pdf$/);
-    await apasaButon("Gata");
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(within(cardTotal()).getByText("Achitat")).toBeTruthy();
-  });
-
-  it("cardul refuzat de banca: mesaj, formularul ramane deschis", async () => {
-    await laPlata({ email: ELENA });
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    completeaza("4000 0000 0000 0002");
-    await apasaButon("Plateste 718,09 lei");
-    expect(screen.getByRole("status").textContent).toBe("Banca a refuzat plata. Nu s-a retras niciun ban.");
-    expect(screen.getByRole("dialog", { name: "Plata cu cardul" })).toBeTruthy();
-    expect(screen.getByLabelText("Numarul cardului").value).toBe("4000 0000 0000 0002");
-  });
-
-  it("in timpul procesarii butonul spune Se proceseaza si nu se poate apasa", async () => {
-    const { sursa } = await laPlata({ email: ELENA });
-    const a = amanat();
-    vi.spyOn(sursa, "platesteCard").mockImplementation(() => a.promisiune.then(() => { throw new Error("Timeout"); }));
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    completeaza();
-    await apasaButon("Plateste 718,09 lei");
-    const b = screen.getByRole("button", { name: "Se proceseaza..." });
-    expect(b.getAttribute("aria-disabled")).toBe("true");
-    await act(async () => { a.rezolva(); });
-    expect(screen.getByRole("button", { name: "Plateste 718,09 lei" })).toBeTruthy();
-  });
-
-  /* [J14] "Descarca chitanta" se randa neconditionat, dar apasarea lui
-     citea plata.chitanta.numar: fara chitanta (acelasi caz ca la Platile
-     mele si la fisa apartamentului, unde butonul e ascuns cu p.chitanta &&),
-     apasarea arunca o eroare in loc sa nu arate deloc butonul. */
-  it("[J14] o plata confirmata fara chitanta inca emisa nu arata numarul si nici butonul de descarcare", async () => {
-    let faraChitanta = false;
-    await laPlata({ email: ELENA, modifica: (d) => { if (faraChitanta) d.plati.forEach((p) => { p.chitanta = null; }); } });
-    faraChitanta = true;
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    completeaza();
-    await apasaButon("Plateste 718,09 lei");
-    const dialog = screen.getByRole("dialog", { name: "Plata a reusit" });
-    expect(text(dialog)).toContain("Chitanta a fost emisa pe 19 septembrie 2026.");
-    expect(within(dialog).queryByRole("button", { name: "Descarca chitanta" })).toBeNull();
-  });
-
-  it("[H7/F8] plata in asteptare: mesajul bancii, fara Plata a reusit, si nu se poate plati din nou fara sa inchida", async () => {
-    const { sursa } = await laPlata({ email: ELENA });
-    vi.spyOn(sursa, "platesteCard").mockResolvedValue({
-      plataId: "p1", inAsteptare: true, mesaj: "Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma.",
-    });
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    completeaza();
-    await apasaButon("Plateste 718,09 lei");
-    expect(screen.queryByRole("dialog", { name: "Plata a reusit" })).toBeNull();
-    const dialog = screen.getByRole("dialog", { name: "Plata asteapta confirmarea" });
-    expect(text(dialog)).toContain("Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma.");
-    expect(text(dialog)).toContain("Nu plati din nou");
-    expect(screen.queryByRole("button", { name: "Plateste 718,09 lei" })).toBeNull();
-    expect(screen.getByRole("status").textContent).toBe("Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma.");
-    await apasaButon("Am inteles");
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("inchiderea cu X goleste formularul", async () => {
-    await laPlata({ email: ELENA });
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    completeaza();
-    await apasa(screen.getByRole("button", { name: "Inchide" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    await apasaButon("Plateste 718,09 lei cu cardul");
-    expect(screen.getByLabelText("Numarul cardului").value).toBe("");
-  });
-});

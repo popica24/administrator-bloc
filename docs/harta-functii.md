@@ -40,7 +40,7 @@ AdminBloc
 │
 ├── LOCATAR (5 taburi)
 │   ├── Acasa ─────── sold de plata, mesaje noi, "De facut", avizier, consum vs. bloc, sesizarile mele, contacte
-│   ├── Plata ─────── lista de plata in 3 trepte + RandLista, plata cu cardul, verificarea repartitiei,
+│   ├── Plata ─────── lista de plata in 3 trepte + RandLista, cum platesti, verificarea repartitiei,
 │   │                 istoric lunar, platile mele cu chitante PDF
 │   ├── Contoare ──── transmitere index cu poza, corectare, istoric consum, explicatia diferentei pe coloana
 │   ├── Sesizari ──── sesizare noua (rapida / libera, pana la 3 poze), conversatie, sesizarile blocului (anonim)
@@ -140,7 +140,7 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 | Bloc de continut | Ce arata | Date / reguli |
 |---|---|---|
 | **De plata acum** | Soldul apartamentului, cu badge "Achitat", "Mai ai N zile", "Scadent azi" sau "Termen depasit" | Soldul este suma resturilor din datoriile deschise (`financiar.datorii_rest`), calculat, niciodata stocat. Textul explica procentul de penalizare si zilele de gratie. |
-| Butoane | "Plateste acum" (deschide Plata si formularul cardului), "De unde vine suma"; daca totul e achitat, "Descarca ultima chitanta" | |
+| Butoane | "Cum platesc" (duce la Plata, la instructiunile de plata), "De unde vine suma"; daca totul e achitat, "Descarca ultima chitanta" | |
 | **Fraza de comparatie** | "Intretinerea pe X este A. Pe Y a fost B, deci luna aceasta platesti cu Z mai mult/putin." | `frazaComparatie()` pe ultimele doua liste publicate; duce la "Platile mele" |
 | **Mesaje noi** | Pana la 3 notificari necitite, cu "Am citit" | `comunicare.notificari`; `marcheaza_notificare_citita`. Instiintarile de restanta apar cu rosu. |
 | **De facut** | Sarcini: transmite indexul (sau retrimite-l, daca a fost respins), plateste, voteaza, confirma prezenta la AG; "Nimic de facut acum" cand nu e nimic | Termenul de citire este ziua `zi_limita_citire` din luna curenta |
@@ -177,8 +177,10 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
   - documentul justificativ: furnizorul, seria facturii si butonul "Vezi documentul" (URL semnat,
     valabil 10 minute);
   - procentul din cheltuiala care revine apartamentului.
-- **Plata cu cardul** (`SheetPlataCard`): vezi §6.3. Dupa confirmare, chitanta se poate descarca
-  imediat ca PDF.
+- **Cum platesti** (`CardCumPlatesti`), cat timp apartamentul are ceva de plata: incasarea in
+  numerar la administrator (contactul si programul lui din `organizare.contacte`) si datele pentru
+  transfer bancar (IBAN-ul, banca si denumirea asociatiei, plus apartamentul de scris la detalii).
+  Chitanta vine dupa ce administratorul inregistreaza banii.
 - **Verificarea repartitiei**: totalul facturilor fata de totalul repartizat pe apartamente, cu
   diferenta 0. Este dovada ca "nimic nu ramane nealocat si nimic nu se plateste de doua ori".
 
@@ -411,7 +413,10 @@ calculeaza din datorii minus plati (`financiar.datorii_rest`, `financiar.solduri
 - Ce ramane este **avans**. `aloca_avansuri` il muta automat pe fiecare datorie noua.
 - Chitanta si ecranul "Platile mele" arata alocarea in cuvinte.
 
-### 6.3 Plata cu cardul
+### 6.3 Plata cu cardul (lantul exista, ecranul nu)
+Comanda `platesteCard` si Edge Functions raman in cod si sunt testate, dar niciun ecran nu le mai
+cheama: pana la alegerea unui procesator de plati real, locatarul plateste in numerar sau prin
+transfer, iar administratorul inregistreaza incasarea (§6.4).
 ```
 Locatar ─► plata-card (JWT) ─► creeaza_plata_card (in_asteptare)
                     └──► procesator-simulat ─► semnatura HMAC-SHA256 ─► plata-card-webhook
@@ -599,7 +604,7 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `folosesteInvitatie` | cont nou | `identitate.foloseste_invitatie` |
 | `cereVerificareAdministrator` | cont nou | Storage `atestate` + `identitate.cere_verificare_administrator` |
 | `incarca` | toti | select-uri prin RLS + `identitate.eu`, `contacte_asociatie`, `consum_mediu_bloc`, `situatie_bloc`, `sesizari_bloc`, `situatie_voturi`, `situatie_adunari` |
-| `platesteCard` | locatar | Edge `plata-card` |
+| `platesteCard` | locatar | Edge `plata-card` (fara ecran, vezi §6.3) |
 | `transmiteCitire` | locatar | Storage `poze` + `contorizare.transmite_citire` |
 | `adaugaSesizare` | locatar | Storage `poze` + `sesizari.adauga_sesizare` |
 | `scrieMesaj` | ambele | `sesizari.scrie_mesaj` |
