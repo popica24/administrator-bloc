@@ -181,9 +181,9 @@ select is(
   jsonb_build_object('legaturi_inchise', 1, 'mandate_inchise', 0, 'administrator_revocat', false),
   'anonimizeaza_profil: raporteaza ce a inchis si ce a revocat');
 select results_eq(
-  $$select nume, email, telefon from identitate.profiluri where id = pg_temp.fx('loc')$$,
-  $$values ('Persoana stearsa', null::text, null::text)$$,
-  'anonimizeaza_profil: numele, emailul si telefonul devin neutre');
+  $$select nume, telefon from identitate.profiluri where id = pg_temp.fx('loc')$$,
+  $$values ('Persoana stearsa', null::text)$$,
+  'anonimizeaza_profil: numele si telefonul devin neutre');
 select results_eq(
   $$select email like 'anonim-%@adminbloc.invalid', phone, raw_user_meta_data
       from auth.users where id = pg_temp.fx('loc')$$,

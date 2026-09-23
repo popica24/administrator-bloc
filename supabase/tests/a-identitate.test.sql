@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(133);
+select plan(132);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -206,9 +206,9 @@ $$;
 -- -----------------------------------------------------------------------------
 
 select results_eq(
-  $$select nume, telefon, email from identitate.profiluri where id = pg_temp.id('locA1')$$,
-  $$values ('Test locA1'::text, null::text, null::text)$$,
-  'identitate.la_cont_nou: profilul ia numele din metadate, fara email');
+  $$select nume, telefon from identitate.profiluri where id = pg_temp.id('locA1')$$,
+  $$values ('Test locA1'::text, null::text)$$,
+  '[A11] identitate.la_cont_nou: profilul ia numele din metadate; emailul nu mai exista');
 select results_eq(
   $$select nume, telefon from identitate.profiluri where id = pg_temp.id('faraMeta')$$,
   $$values ('Utilizator'::text, '0722111222'::text)$$,
@@ -572,8 +572,6 @@ select is(pg_temp.randuri($$update identitate.profiluri set nume = 'Ion Locatar'
   'politica "Fiecare isi modifica profilul": propriul profil');
 select is(pg_temp.randuri($$update identitate.profiluri set nume = 'Hack' where id = pg_temp.id('adminA')$$), 0,
   'politica "Fiecare isi modifica profilul": nu si profilul altuia');
-select throws_ok($$update identitate.profiluri set email = 'x@y.z' where id = pg_temp.id('locA1')$$, '42501', null,
-  'identitate.profiluri: emailul nu se modifica din aplicatie');
 -- [A2] Numarul este identitatea contului: cine si l-ar putea scrie ar primi
 -- apartamentul pe care administratorul il adauga mai tarziu pe acel numar.
 select throws_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA1')$$, '42501', null,
