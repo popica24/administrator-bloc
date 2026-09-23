@@ -273,13 +273,13 @@ test.describe("Fisa apartamentului", () => {
       await asteaptaToast(page, "Contul a fost creat");
 
       const fisa = page.getByRole("dialog", { name: "Apartament 11" });
-      await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
+      await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
       const profil = await profilDupaTelefon(telefon);
       expect(profil.nume).toBe("Chirias Nou");
 
       await buton(page, "Gata").click();
       await expect(fisa.getByText("Chirias · din")).toBeVisible();
-      await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toHaveCount(0);
+      await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toHaveCount(0);
     } finally {
       await stergeCont(telefon);
     }

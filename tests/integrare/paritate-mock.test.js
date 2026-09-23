@@ -25,7 +25,7 @@ describe("adaugaLocatar() in sursa demonstrativa", () => {
   it("contul nou intra imediat cu numarul si parola primite", async () => {
     await intra(ADMIN);
     const r = await s.adaugaLocatar(date.apartamente[0].id, { nume: "Cont Nou", telefon: "0722 000 301", calitate: "chirias" });
-    expect(r).toMatchObject({ telefon: "0722000301", parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
+    expect(r).toMatchObject({ telefon: "0722000301", parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
     await s.intra(r.telefon, r.parola);
     const dupa = await s.incarca();
     expect(dupa.eu).toMatchObject({ nume: "Cont Nou", rol: "locatar", telefon: "0722000301" });

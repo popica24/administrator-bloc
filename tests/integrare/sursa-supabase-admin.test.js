@@ -399,7 +399,7 @@ describe("bani si oameni", () => {
   it("adaugaLocatar(): contul nou apare pe fisa apartamentului", async () => {
     const telefon = `07${String(Date.now() % 100000000).padStart(8, "0")}`;
     const r = await adm.adaugaLocatar(f.ap["2A"], { nume: "Membru Familie", telefon, calitate: "membru_familie" });
-    expect(r.parola).toMatch(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/);
+    expect(r.parola).toMatch(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/);
     const legatura = await ok(db("identitate").from("locatari").select("*").eq("id", r.locatar_id).single());
     expect(legatura).toMatchObject({ apartament_id: f.ap["2A"], calitate: "membru_familie", activ_pana: null });
     const d = await adm.incarca();

@@ -120,7 +120,7 @@ Deno.test("cont-locatar: contul nou primeste numarul, parola si legatura cu apar
     assertEquals(r.corp.locatar_id, "locatar-nou");
     assertEquals(r.corp.profil_id, PROFIL);
     assertEquals(r.corp.telefon, "0722123456");
-    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
 
     const creare = f.apeluri.find((a) => a.url.pathname === P.utilizatori)!;
     assertEquals(creare.corp.email, "0722123456@telefon.adminbloc.ro");
@@ -171,7 +171,7 @@ Deno.test("cont-locatar: parola noua se da doar pentru un locatar al apartamentu
   await cuFetch(backend(), async (f) => {
     const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
     assertEquals(r.status, 200);
-    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
     const schimbare = f.apeluri.find((a) => a.url.pathname === P.utilizator && a.metoda === "PUT")!;
     assertEquals(schimbare.corp.password, r.corp.parola);
     assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
@@ -276,7 +276,7 @@ Deno.test("cont-locatar: un cenzor din afara blocului primeste cont si mandat", 
     assertEquals(r.status, 200);
     assertEquals(r.corp.profil_id, PROFIL);
     assertEquals(r.corp.telefon, "0730415900");
-    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
 
     const creare = f.apeluri.find((a) => a.url.pathname === P.utilizatori)!;
     assertEquals(creare.corp.email, "0730415900@telefon.adminbloc.ro");

@@ -116,7 +116,7 @@ Deno.test("creeaza-asociatie: fara parola ceruta, sistemul alege una si o intoar
     const r = await citeste(await trimite({ ...CORP, administrator: fara }));
     assertEquals(r.status, 200);
     assertEquals(r.corp.administrator, "profil-nou");
-    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
     assertEquals(f.catre(P.utilizatori)[0].corp.password, r.corp.parola);
     const [n] = f.catre(P.numeste);
     assertEquals(n.corp.p_numar_atestat, null);

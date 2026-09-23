@@ -5,12 +5,12 @@ import { genereazaParola } from "../../supabase/functions/_shared/parola.js";
 const numere = (...valori) => (cate) => Uint32Array.from(valori.slice(0, cate));
 
 describe("genereazaParola", () => {
-  it("doua cuvinte si patru cifre, ca sa poata fi citita la telefon", () => {
-    expect(genereazaParola(numere(3, 8, 4821))).toBe("Vecin-Lac-4821");
+  it("[A3] trei cuvinte si patru cifre, ca sa poata fi citita la telefon", () => {
+    expect(genereazaParola(numere(3, 8, 5, 4821))).toBe("Vecin-Lac-Poarta-4821");
   });
 
   it("cifrele se completeaza pana la patru, ca lungimea sa fie mereu aceeasi", () => {
-    expect(genereazaParola(numere(0, 1, 7))).toBe("Bloc-Casa-0007");
+    expect(genereazaParola(numere(0, 1, 2, 7))).toBe("Bloc-Casa-Scara-0007");
   });
 
   it("trece regulile cerute de Supabase Auth, oricare ar fi numerele", () => {
@@ -26,5 +26,13 @@ describe("genereazaParola", () => {
   it("nu da aceeasi parola de doua ori la rand", () => {
     const multe = new Set(Array.from({ length: 50 }, () => genereazaParola()));
     expect(multe.size).toBeGreaterThan(40);
+  });
+
+  /* [A3] Parola se da o data si omul nu si-o poate schimba singur, deci
+     trebuie sa reziste incercarilor repetate: 64 x 64 x 64 x 10000 de
+     variante, adica peste 31 de biti. */
+  it("[A3] alege din cel putin saizeci de cuvinte", () => {
+    const primele = new Set(Array.from({ length: 2000 }, () => genereazaParola().split("-")[0]));
+    expect(primele.size).toBeGreaterThanOrEqual(60);
   });
 });

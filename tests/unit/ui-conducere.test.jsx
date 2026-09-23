@@ -183,7 +183,7 @@ describe("administratorul trece mandatele in aplicatie", () => {
     expect(spion).toHaveBeenCalledWith("Vasile Contabil", "0799 400 300", "presedinte");
     const t = ecran();
     expect(t).toContain("Intra cu numarul 0799 400 300");
-    expect(t).toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
+    expect(t).toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
     expect(t).toContain("Vasile Contabil");
   });
 
@@ -210,7 +210,7 @@ describe("administratorul trece mandatele in aplicatie", () => {
     await apasa(buton("Numeste"));
     const t = ecran();
     expect(t).toContain("Persoana avea deja cont pe numarul 0741 002 101");
-    expect(t).not.toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
+    expect(t).not.toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
     const d = await sursa.incarca();
     expect(d.conducere.some((m) => m.nume === "Gheorghe Voicu" && !m.activPana)).toBe(true);
   });
@@ -230,9 +230,9 @@ describe("administratorul trece mandatele in aplicatie", () => {
     scrie("Numele lui", "Vasile Contabil");
     scrie("Numarul lui de telefon", "0799 400 301");
     await apasa(buton("Numeste"));
-    expect(ecran()).toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
+    expect(ecran()).toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
     await apasa(buton("Gata"));
-    expect(ecran()).not.toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
+    expect(ecran()).not.toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
   });
 
   it("panoul se inchide si formularul se goleste dupa o numire din lista", async () => {

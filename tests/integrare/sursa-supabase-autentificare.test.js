@@ -99,7 +99,7 @@ describe("adaugaLocatar(): contul il face administratorul", () => {
   it("contul nou intra imediat cu numarul si parola primite", async () => {
     const telefon = telefonDeTest();
     const r = await admin.adaugaLocatar(f.ap["2"], { nume: "  Chirias Nou ", telefon, calitate: "chirias" });
-    expect(r).toMatchObject({ telefon, parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
+    expect(r).toMatchObject({ telefon, parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
 
     const legatura = await ok(db("identitate").from("locatari").select("*").eq("id", r.locatar_id).single());
     expect(legatura).toMatchObject({ apartament_id: f.ap["2"], bloc_id: f.blocId, calitate: "chirias", activ_pana: null });
@@ -260,7 +260,7 @@ describe("conducerea asociatiei", () => {
   it("un cenzor din afara blocului primeste cont si mandat dintr-o singura comanda", async () => {
     const telefon = telefonDeTest();
     const r = await admin.adaugaInConducere("Contabil Extern", telefon, "cenzor");
-    expect(r).toMatchObject({ telefon, parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
+    expect(r).toMatchObject({ telefon, parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
 
     const s = sursaNoua();
     await s.intra(telefon, r.parola);

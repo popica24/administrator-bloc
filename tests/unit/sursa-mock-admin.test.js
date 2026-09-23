@@ -86,7 +86,7 @@ describe("adaugaLocatar, parolaNoua si inchideAcces", () => {
     const { s, d } = await ca(ADMIN);
     const ap = apNr(d, "2");
     const r = await s.adaugaLocatar(ap.id, { nume: " Ana Pop ", telefon: "0722 000 021", calitate: "chirias" });
-    expect(r).toMatchObject({ telefon: "0722000021", parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
+    expect(r).toMatchObject({ telefon: "0722000021", parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
     const locatari = apNr(await s.incarca(), "2").locatari;
     expect(locatari.map((l) => [l.nume, l.calitate, l.telefon])).toContainEqual(["Ana Pop", "chirias", "0722000021"]);
     /* omul intra imediat cu numarul si parola primite */
