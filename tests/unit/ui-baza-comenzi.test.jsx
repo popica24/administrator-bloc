@@ -26,7 +26,7 @@ const COMENZI = [
   ["publicaLista", ["lis-1"], "publicaLista", undefined, "Lista a fost publicata. Locatarii o vad acum."],
   ["marcheazaFacturaPlatita", ["che-1", true], "marcheazaFacturaPlatita", undefined, "Factura marcata ca platita furnizorului"],
   ["marcheazaFacturaPlatita", ["che-1", false], "marcheazaFacturaPlatita", undefined, "Plata catre furnizor a fost anulata"],
-  ["inregistreazaNumerar", ["apa-3", 100], "inregistreazaNumerar", { plataId: "p" }, "Incasare inregistrata, chitanta emisa"],
+  ["inregistreazaIncasare", ["apa-3", 100, "numerar"], "inregistreazaIncasare", { plataId: "p" }, "Incasare inregistrata, chitanta emisa"],
   ["trimiteInstiintare", ["apa-3"], "trimiteInstiintare", { destinatari: 1 }, null],
   ["schimbaPersoane", ["apa-3", 3, "2026-10", "nastere"], "schimbaPersoane", undefined, "Din octombrie 2026 se calculeaza 3 persoane"],
   ["invitaLocatar", ["apa-3", "chirias"], "invitaLocatar", "ABCD2345", "Codul de invitatie a fost generat"],

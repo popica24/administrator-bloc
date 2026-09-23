@@ -319,7 +319,7 @@ describe("liste in afara ordinii lunilor", () => {
     const aprilie = dupa.datorii.find((x) => x.listaId === id && x.apartamentId === ap11);
     const soldInitial = dupa.datorii.find((x) => x.apartamentId === ap11 && x.tip === "sold_initial");
     expect(aprilie.scadenta).toBe(soldInitial.scadenta);
-    const { plataId } = await s.inregistreazaNumerar(ap11, 10);
+    const { plataId } = await s.inregistreazaIncasare(ap11, 10, "numerar");
     const p = (await s.incarca()).plati.find((x) => x.id === plataId);
     expect(p.alocari).toEqual([{ datorieId: aprilie.id, suma: 10 }]);
   });

@@ -154,7 +154,7 @@ describe("[F17] erorile se anunta si nu dispar singure", () => {
   it("incasarea refuzata ramane scrisa in fisa apartamentului", async () => {
     const { sursa } = await pornesteApp({ email: ADMIN });
     ceasCuTemporizatoare();
-    vi.spyOn(sursa, "inregistreazaNumerar").mockRejectedValue(new Error("Chitantierul nu are setari."));
+    vi.spyOn(sursa, "inregistreazaIncasare").mockRejectedValue(new Error("Chitantierul nu are setari."));
     await tab("Apartamente");
     await apasa("Apartament 17");
     await apasa("Inregistreaza incasare cash");

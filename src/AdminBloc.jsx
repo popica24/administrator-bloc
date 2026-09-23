@@ -3055,12 +3055,14 @@ function ListaApartamente({ filtruInitial }) {
 /* Fisa apartamentului: tot ce stie asociatia despre el, cu actiunile lui */
 function FisaApartament({ apId, onClose }) {
   const {
-    date, inregistreazaNumerar, trimiteInstiintare, schimbaPersoane, invitaLocatar, inchideAcces,
+    date, inregistreazaIncasare, trimiteInstiintare, schimbaPersoane, invitaLocatar, inchideAcces,
     schimbaFisaApartament, schimbaCoteleBlocului, toastMsg,
   } = useApp();
   const [actiune, setActiune] = useState(null);
   const [sumaIncasata, setSumaIncasata] = useState("");
   const [plataNoua, setPlataNoua] = useState(null);
+  /* Cum au venit banii: in mana administratorului sau in contul asociatiei */
+  const [metodaIncasare, setMetodaIncasare] = useState("numerar");
   const [persoane, setPersoane] = useState("");
   const [dinLuna, setDinLuna] = useState("");
   const [motiv, setMotiv] = useState("");
@@ -3083,7 +3085,7 @@ function FisaApartament({ apId, onClose }) {
 
   const ap = apId ? apartamentDupaId(date, apId) : null;
   const inchide = () => {
-    setActiune(null); setPlataNoua(null); setCod(null); setSumaIncasata(""); setPersoane(""); setMotiv(""); setEroare(null);
+    setActiune(null); setPlataNoua(null); setCod(null); setSumaIncasata(""); setMetodaIncasare("numerar"); setPersoane(""); setMotiv(""); setEroare(null);
     setProprietarEd(""); setEtajEd(""); setMpEd(""); setCotaEd(""); setScutitLiftEd(false); setCoteBloc({});
     onClose();
   };
@@ -3153,7 +3155,13 @@ function FisaApartament({ apId, onClose }) {
 
       {actiune === "incasare" ? (
         <Card gap={S.md}>
-          <Txt size={14} weight={700}>Incasare in numerar</Txt>
+          <Txt size={14} weight={700}>Confirma banii primiti</Txt>
+          <Segment
+            small
+            value={metodaIncasare}
+            onChange={setMetodaIncasare}
+            options={[{ value: "numerar", label: "In numerar" }, { value: "transfer", label: "Prin transfer bancar" }]}
+          />
           {/* [F8] Nu exista nicio cale de a anula o chitanta emisa (nici in
              aplicatie, nici in registrul financiar): cel mai onest lucru pe
              care il poate face ecranul e sa spuna asta inainte de emitere,
@@ -3166,7 +3174,7 @@ function FisaApartament({ apId, onClose }) {
               incasareInCurs.current = true;
               setIncaseaza(true);
               setEroare(null);
-              const r = await inregistreazaNumerar(ap.id, sumaCash);
+              const r = await inregistreazaIncasare(ap.id, sumaCash, metodaIncasare);
               incasareInCurs.current = false;
               setIncaseaza(false);
               if (r.ok) { setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); } else setEroare(r.mesaj);
@@ -4796,7 +4804,7 @@ export default function AdminBloc() {
       dateMotor: cmd((id) => sursa.dateMotor(id), null, false, false),
       publicaLista: cmd((id) => sursa.publicaLista(id), "Lista a fost publicata. Locatarii o vad acum."),
       marcheazaFacturaPlatita: cmd((id, p) => sursa.marcheazaFacturaPlatita(id, p), (r, id, p) => (p ? "Factura marcata ca platita furnizorului" : "Plata catre furnizor a fost anulata")),
-      inregistreazaNumerar: cmd((ap, s) => sursa.inregistreazaNumerar(ap, s), "Incasare inregistrata, chitanta emisa"),
+      inregistreazaIncasare: cmd((ap, s, m) => sursa.inregistreazaIncasare(ap, s, m), "Incasare inregistrata, chitanta emisa"),
       trimiteInstiintare: cmd((ap) => sursa.trimiteInstiintare(ap)),
       schimbaPersoane: cmd((ap, n, l, m) => sursa.schimbaPersoane(ap, n, l, m), (r, ap, n, l) => `Din ${monthLabel(l)} se calculeaza ${n} persoane`),
       invitaLocatar: cmd((ap, c) => sursa.invitaLocatar(ap, c), "Codul de invitatie a fost generat"),

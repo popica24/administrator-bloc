@@ -25,8 +25,16 @@ const testeMici = teste.toLowerCase();
 
 const unice = (arr) => [...new Set(arr)];
 
-const functii = unice([...migratii.matchAll(/create\s+(?:or\s+replace\s+)?function\s+([a-z_]+\.[a-z_0-9]+)\s*\(/gi)]
-  .map((m) => m[1].toLowerCase()));
+/* Ce exista in baza la final este ce spune ULTIMA migratie care atinge
+   functia: o stergere fara recreare o scoate din baza, deci niciun test nu
+   mai are ce cita. Multe migratii sterg si recreeaza in acelasi fisier, ca
+   sa schimbe semnatura; acolo functia ramane. */
+const ultimaAtingere = new Map();
+for (const m of migratii.matchAll(/(create\s+(?:or\s+replace\s+)?|drop\s+)function\s+(?:if\s+exists\s+)?([a-z_]+\.[a-z_0-9]+)\s*\(/gi)) {
+  ultimaAtingere.set(m[2].toLowerCase(), m[1].trim().toLowerCase().startsWith("drop") ? "drop" : "create");
+}
+
+const functii = [...ultimaAtingere].filter(([, ce]) => ce === "create").map(([f]) => f);
 
 const erori = unice([...migratii.matchAll(/raise\s+exception\s+'((?:[^']|'')*)'/gi)]
   .map((m) => m[1].replace(/''/g, "'").split("%")[0].trim())

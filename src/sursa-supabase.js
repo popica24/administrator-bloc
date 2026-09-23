@@ -649,8 +649,8 @@ export function creeazaSursaSupabase(url, cheie) {
     publicaLista: (listaId) => invoca("publica-lista", { lista_id: listaId }),
     marcheazaFacturaPlatita: (cid, platita) => ok(intr.rpc("marcheaza_factura_platita", { p_cheltuiala_id: cid, p_platita: platita })),
 
-    async inregistreazaNumerar(apartamentId, suma) {
-      const plataId = await ok(fin.rpc("inregistreaza_plata_numerar", { p_apartament_id: apartamentId, p_suma: suma }));
+    async inregistreazaIncasare(apartamentId, suma, metoda) {
+      const plataId = await ok(fin.rpc("inregistreaza_incasare", { p_apartament_id: apartamentId, p_suma: suma, p_metoda: metoda }));
       return { plataId };
     },
 

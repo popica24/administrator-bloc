@@ -1,12 +1,12 @@
 -- Financiar, platile (migratia 20260919120017_financiar.sql): constrangerile
 -- registrului, financiar.deschide_cont, aloca_plata, aloca_avansuri,
 -- emite_chitanta (numerotare fara goluri), inregistreaza_plata,
--- inregistreaza_plata_numerar, creeaza_plata_card, confirma_plata_card
+-- inregistreaza_incasare, creeaza_plata_card, confirma_plata_card
 -- (idempotenta) si view-urile datorii_rest si solduri.
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(85);
+select plan(87);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -424,29 +424,33 @@ select throws_ok($$select financiar.inregistreaza_plata(pg_temp.fx('ap2'), 0.004
   'Suma trebuie sa fie mai mare decat zero.', '[NOU-2] 0,004 lei este refuzat ca suma zero');
 
 -- =============================================================================
--- financiar.inregistreaza_plata_numerar
+-- financiar.inregistreaza_incasare
 -- =============================================================================
 
 set local role authenticated;
 select pg_temp.ca('loc2');
-select throws_ok($$select financiar.inregistreaza_plata_numerar(pg_temp.fx('ap2'), 10)$$,
-  'Doar administratorul blocului inregistreaza incasari.', 'inregistreaza_plata_numerar: locatarul nu inregistreaza');
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, 'numerar')$$,
+  'Doar administratorul blocului inregistreaza incasari.', 'inregistreaza_incasare: locatarul nu inregistreaza');
 select pg_temp.ca('pres');
-select throws_ok($$select financiar.inregistreaza_plata_numerar(pg_temp.fx('ap2'), 10)$$,
-  'Doar administratorul blocului inregistreaza incasari.', 'inregistreaza_plata_numerar: presedintele nu inregistreaza');
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, 'numerar')$$,
+  'Doar administratorul blocului inregistreaza incasari.', 'inregistreaza_incasare: presedintele nu inregistreaza');
 select pg_temp.ca('admin2');
-select throws_ok($$select financiar.inregistreaza_plata_numerar(pg_temp.fx('ap2'), 10)$$,
-  'Doar administratorul blocului inregistreaza incasari.', 'inregistreaza_plata_numerar: administratorul altui bloc nu inregistreaza');
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, 'numerar')$$,
+  'Doar administratorul blocului inregistreaza incasari.', 'inregistreaza_incasare: administratorul altui bloc nu inregistreaza');
 select pg_temp.ca('admin');
-select throws_ok($$select financiar.inregistreaza_plata_numerar(pg_temp.fx('ap2'), 0)$$,
-  'Suma trebuie sa fie mai mare decat zero.', 'inregistreaza_plata_numerar: suma zero');
-select set_config('fx.p_cash', financiar.inregistreaza_plata_numerar(pg_temp.fx('ap2'), 49.54)::text, true);
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 0, 'numerar')$$,
+  'Suma trebuie sa fie mai mare decat zero.', 'inregistreaza_incasare: suma zero');
+select set_config('fx.p_cash', financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 49.54, 'numerar')::text, true);
 select results_eq(
   $$select suma, metoda, stare, platita_de, inregistrata_de from financiar.plati where id = pg_temp.fx('p_cash')$$,
   $$values (49.54::numeric(12,2), 'numerar'::text, 'confirmata'::text, null::uuid, pg_temp.fx('admin'))$$,
-  'inregistreaza_plata_numerar: plata cash, inregistrata de administrator');
+  'inregistreaza_incasare: plata cash, inregistrata de administrator');
 select results_eq($$select serie, numar from financiar.chitante where plata_id = pg_temp.fx('p_cash')$$,
-  $$values ('TB'::text, 45)$$, 'inregistreaza_plata_numerar: chitanta emisa imediat');
+  $$values ('TB'::text, 45)$$, 'inregistreaza_incasare: chitanta emisa imediat');
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, 'card')$$,
+  'Banii primiti sunt fie in numerar, fie prin transfer bancar.', 'inregistreaza_incasare: alta metoda este refuzata');
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, null)$$,
+  'Banii primiti sunt fie in numerar, fie prin transfer bancar.', 'inregistreaza_incasare: metoda lipsa este refuzata');
 select throws_ok($$select financiar.aloca_plata(pg_temp.fx('p_cash'))$$,
   '42501', null, 'financiar: functiile interne nu se pot apela din API');
 select throws_ok($$select financiar.creeaza_plata_card(pg_temp.fx('ap2'), 10, pg_temp.fx('loc2'), 'simulat', 'X')$$,

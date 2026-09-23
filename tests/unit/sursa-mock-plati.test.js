@@ -89,12 +89,28 @@ describe("platesteCard", () => {
   });
 });
 
-describe("inregistreazaNumerar", () => {
+describe("inregistreazaIncasare", () => {
+  it("banii veniti prin banca se inregistreaza ca transfer, tot cu chitanta", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const { plataId } = await s.inregistreazaIncasare(ap3, "100", "transfer");
+    const p = (await s.incarca()).plati.find((x) => x.id === plataId);
+    expect(p).toMatchObject({ suma: 100, metoda: "transfer", inregistrataDe: "Mihai Dobre" });
+    expect(p.chitanta.numar).toBeGreaterThan(0);
+  });
+
+  it("alta metoda decat numerar sau transfer este refuzata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    await expect(s.inregistreazaIncasare(ap3, "100", "card"))
+      .rejects.toThrow("Banii primiti sunt fie in numerar, fie prin transfer bancar.");
+  });
+
   it("incaseaza cash, cu chitanta si numele administratorului", async () => {
     const { s, d } = await ca(ADMIN);
     const ap3 = apNr(d, "3").id;
     const inainte = restTotal(d, ap3);
-    const { plataId } = await s.inregistreazaNumerar(ap3, "250.5");
+    const { plataId } = await s.inregistreazaIncasare(ap3, "250.5", "numerar");
     const dupa = await s.incarca();
     const p = dupa.plati.find((x) => x.id === plataId);
     expect(p).toMatchObject({ suma: 250.5, metoda: "numerar", referinta: null, inregistrataDe: "Mihai Dobre", chitanta: { numar: 464 } });
@@ -105,7 +121,7 @@ describe("inregistreazaNumerar", () => {
     const { s, d } = await ca(ADMIN);
     const ap11 = apNr(d, "11").id;
     const toate = d.datorii.filter((x) => x.apartamentId === ap11 && x.rest > 0);
-    await s.inregistreazaNumerar(ap11, restTotal(d, ap11));
+    await s.inregistreazaIncasare(ap11, restTotal(d, ap11), "numerar");
     const dupa = await s.incarca();
     expect(restTotal(dupa, ap11)).toBe(0);
     const p = dupa.plati[dupa.plati.length - 1];
@@ -117,19 +133,19 @@ describe("inregistreazaNumerar", () => {
 
   it("refuza apartamentul inexistent si suma zero sau gresita", async () => {
     const { s, d } = await ca(ADMIN);
-    await expect(s.inregistreazaNumerar("apa-0", 10)).rejects.toThrow("Apartamentul nu exista.");
-    await expect(s.inregistreazaNumerar(apNr(d, "3").id, "0")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
-    await expect(s.inregistreazaNumerar(apNr(d, "3").id, "abc")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+    await expect(s.inregistreazaIncasare("apa-0", 10, "numerar")).rejects.toThrow("Apartamentul nu exista.");
+    await expect(s.inregistreazaIncasare(apNr(d, "3").id, "0", "numerar")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+    await expect(s.inregistreazaIncasare(apNr(d, "3").id, "abc", "numerar")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
   });
 
   it("[paritate NOU-2] o suma care se rotunjeste la 0 lei este refuzata", async () => {
     const { s, d } = await ca(ADMIN);
-    await expect(s.inregistreazaNumerar(apNr(d, "3").id, "0.004")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+    await expect(s.inregistreazaIncasare(apNr(d, "3").id, "0.004", "numerar")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
   });
 
   it("locatarul nu poate inregistra cash", async () => {
     const { s, d } = await ca(LOCATAR);
-    await expect(s.inregistreazaNumerar(d.eu.apartamentId, 10)).rejects.toThrow("Doar administratorul poate face asta.");
+    await expect(s.inregistreazaIncasare(d.eu.apartamentId, 10, "numerar")).rejects.toThrow("Doar administratorul poate face asta.");
   });
 });
 

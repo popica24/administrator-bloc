@@ -347,13 +347,17 @@ describe("motorul si publicarea", () => {
 });
 
 describe("bani si oameni", () => {
-  it("inregistreazaNumerar(): plata cash, alocata si cu chitanta; suma zero refuzata", async () => {
-    const { plataId } = await adm.inregistreazaNumerar(f.ap["1"], 50);
+  it("inregistreazaIncasare(): plata cash, alocata si cu chitanta; suma zero refuzata", async () => {
+    const { plataId } = await adm.inregistreazaIncasare(f.ap["1"], 50, "numerar");
     const p = await ok(db("financiar").from("plati").select("*").eq("id", plataId).single());
     expect(p).toMatchObject({ metoda: "numerar", stare: "confirmata", suma: 50, inregistrata_de: f.adminId, apartament_id: f.ap["1"] });
     const ch = await ok(db("financiar").from("chitante").select("*").eq("plata_id", plataId).single());
     expect(ch.numar).toBeGreaterThan(0);
-    await expect(adm.inregistreazaNumerar(f.ap["1"], 0)).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+    await expect(adm.inregistreazaIncasare(f.ap["1"], 0, "numerar")).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
+    await expect(adm.inregistreazaIncasare(f.ap["1"], 10, "card")).rejects.toThrow("Banii primiti sunt fie in numerar, fie prin transfer bancar.");
+    const transfer = await adm.inregistreazaIncasare(f.ap["1"], 10, "transfer");
+    const d2 = await adm.incarca();
+    expect(d2.plati.find((p) => p.id === transfer.plataId)).toMatchObject({ metoda: "transfer", suma: 10 });
   });
 
   it("trimiteInstiintare(): notificarea de restanta ajunge la locatarul apartamentului", async () => {

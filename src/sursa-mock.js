@@ -1130,13 +1130,16 @@ export function creeazaSursaMock() {
       c.achitataLa = platita ? aziIso() : null;
     },
 
-    async inregistreazaNumerar(apartamentId, suma) {
+    /* Administratorul confirma banii primiti: in mana lui sau in contul
+       asociatiei. Aceleasi reguli ca financiar.inregistreaza_incasare. */
+    async inregistreazaIncasare(apartamentId, suma, metoda) {
       const { bloc } = cerAdmin();
       const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
+      if (metoda !== "numerar" && metoda !== "transfer") eroare("Banii primiti sunt fie in numerar, fie prin transfer bancar.");
       /* [paritate] aceeasi rotunjire la ban ca la financiar.inregistreaza_plata:
          o suma care se rotunjeste la 0 lei e refuzata, nu doar cea scrisa 0. */
       if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
-      const p = inregistreazaPlata(db, { apartamentId: ap.id, suma: Number(suma), metoda: "numerar", la: acum(), inregistrataDe: eu().id });
+      const p = inregistreazaPlata(db, { apartamentId: ap.id, suma: Number(suma), metoda, la: acum(), inregistrataDe: eu().id });
       return { plataId: p.id };
     },
 

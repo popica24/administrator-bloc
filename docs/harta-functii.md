@@ -266,7 +266,7 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
 |---|---|
 | Date | Proprietar, etaj, persoane, cota indiviza, suprafata, lift (scutit sau plateste) |
 | **Sold la zi** | Fiecare datorie deschisa: tipul (intretinere, penalizare, restanta preluata, fond de rulment, corectie), scadenta, restul. Cele scadente apar colorate. |
-| **Incasare cash** | Suma primita (implicit, soldul) → `financiar.inregistreaza_plata_numerar`. Banii se aloca automat pe cea mai veche datorie si chitanta se emite imediat, cu PDF descarcabil. |
+| **Confirma banii primiti** | Cum au venit banii (in numerar sau prin transfer bancar) si suma (implicit, soldul) → `financiar.inregistreaza_incasare`. Banii se aloca automat pe cea mai veche datorie si chitanta se emite imediat, cu PDF descarcabil. |
 | **Instiintare de plata** | Activa doar cand apartamentul are restanta |
 | **Numarul de persoane** | Numarul nou, luna de la care se aplica (luna curenta sau urmatoarele doua, fara lunile deja folosite) si motivul. Se insereaza direct in `organizare.apartamente_persoane`; RLS cere `valabil_din` ≥ luna curenta. Listele publicate nu se schimba. |
 | **Invita un locatar** | Calitatea (proprietar, chirias, membru al familiei) → `identitate.invita_locatar` → codul de 8 caractere afisat mare, valabil 30 de zile |
@@ -430,8 +430,9 @@ Locatar ─► plata-card (JWT) ─► creeaza_plata_card (in_asteptare)
 - Raspunsurile: 200 confirmata, 402 refuzata, 202 in asteptare. Webhook-ul poate fi primit de mai
   multe ori fara efecte duble.
 
-### 6.4 Incasare in numerar
-- `inregistreaza_plata_numerar`: doar administratorul blocului. Plata se inregistreaza direct
+### 6.4 Confirmarea banilor primiti (numerar sau transfer)
+- `inregistreaza_incasare`: doar administratorul blocului, si doar cu metoda `numerar` sau
+  `transfer`. Plata se inregistreaza direct
   `confirmata`, cu `inregistrata_de`, si trece prin aceeasi alocare, chitanta si notificare.
 
 ### 6.5 Chitante
@@ -618,7 +619,7 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `dateMotor` | admin | `intretinere.date_pentru_motor` (+ `motor.js` in browser) |
 | `publicaLista` | admin | Edge `publica-lista` |
 | `marcheazaFacturaPlatita` | admin | `intretinere.marcheaza_factura_platita` |
-| `inregistreazaNumerar` | admin | `financiar.inregistreaza_plata_numerar` |
+| `inregistreazaIncasare` | admin | `financiar.inregistreaza_incasare` |
 | `trimiteInstiintare` | admin | `comunicare.trimite_instiintare` |
 | `schimbaPersoane` | admin | insert pe `organizare.apartamente_persoane` |
 | `schimbaFisaApartament` | admin | `organizare.schimba_fisa_apartament` (proprietar, suprafata, etaj, scutire de lift, corectii mici de cota) |
