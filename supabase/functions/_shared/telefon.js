@@ -36,9 +36,11 @@ export function normalizeazaTelefon(scris) {
   return FORMA.test(numar) ? numar : null;
 }
 
-/* Domeniul nu exista si nu primeste posta: adresele acestea nu ies niciodata
-   din baza de autentificare. */
-export const DOMENIU_CONTURI = "telefon.adminbloc.ro";
+/* [A10] Domeniul este ".invalid", rezervat prin RFC 2606 tocmai pentru asa
+   ceva: nimeni nu il poate inregistra si nu primeste posta. Adresele acestea
+   nu ies niciodata din baza de autentificare, dar un domeniu real, chiar si
+   neinregistrat inca, ar fi putut fi cumparat de altcineva. */
+export const DOMENIU_CONTURI = "telefon.adminbloc.invalid";
 
 export function adresaContului(scris) {
   const numar = normalizeazaTelefon(scris);

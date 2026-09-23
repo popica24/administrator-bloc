@@ -19,7 +19,7 @@ Deno.test("telefon: ce nu e numar romanesc este refuzat", () => {
 });
 
 Deno.test("telefon: adresa interna a contului se face din numar", () => {
-  assertEquals(adresaContului("0722 123 456"), "0722123456@telefon.adminbloc.ro");
+  assertEquals(adresaContului("0722 123 456"), "0722123456@telefon.adminbloc.invalid");
   assertEquals(adresaContului("nu e numar"), null);
 });
 

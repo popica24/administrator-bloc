@@ -175,7 +175,7 @@ refresh_token_reuse_interval = 10
 # [A1] Inchisa. Contul nu si-l face omul: administratorul ii trece numarul in
 # aplicatie, iar cont-locatar il creeaza cu cheia de serviciu (care nu trece pe
 # aici). Cu inscrierea deschisa, oricine putea sa-si faca cont pe adresa
-# interna a unui numar strain (<numar>@telefon.adminbloc.ro) si sa primeasca
+# interna a unui numar strain (<numar>@telefon.adminbloc.invalid) si sa primeasca
 # apartamentul cand administratorul adauga acel numar. Nu confunda cu
 # [auth.email] enable_signup, care taie si intrarea in cont.
 enable_signup = false

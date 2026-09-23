@@ -45,14 +45,14 @@ describe("sesiunea", () => {
 
   /* [A1] Contul il face administratorul, niciodata omul. Cat timp inscrierea
      prin API era deschisa, oricine putea sa-si faca singur cont pe adresa
-     interna a unui numar care nu este al lui ("0722..."@telefon.adminbloc.ro)
+     interna a unui numar care nu este al lui ("0722..."@telefon.adminbloc.invalid)
      si sa astepte: cand administratorul adauga acel numar in bloc,
      cont-locatar gaseste profilul gata facut si ii leaga apartamentul. */
   it("[A1] nimeni nu-si face singur cont: inscrierea prin API este inchisa", async () => {
     const numar = telefonDeTest();
     const anonim = createClient(URL_LOCAL, ANON_LOCAL, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data, error } = await anonim.auth.signUp({
-      email: `${numar}@telefon.adminbloc.ro`,
+      email: `${numar}@telefon.adminbloc.invalid`,
       password: PAROLA_TEST,
       options: { data: { nume: "Cineva din afara", telefon: numar } },
     });
@@ -149,7 +149,7 @@ describe("adaugaLocatar(): contul il face administratorul", () => {
     const telefon = telefonDeTest();
     const cont = await admin.adaugaLocatar(f.ap["2"], { nume: "Uituc Nou", telefon });
     const alLui = createClient(URL_LOCAL, ANON_LOCAL, { auth: { persistSession: false, autoRefreshToken: false } });
-    const intrare = await alLui.auth.signInWithPassword({ email: `${telefon}@telefon.adminbloc.ro`, password: cont.parola });
+    const intrare = await alLui.auth.signInWithPassword({ email: `${telefon}@telefon.adminbloc.invalid`, password: cont.parola });
     expect(intrare.error).toBeNull();
 
     await admin.parolaNoua(f.ap["2"], cont.locatar_id);

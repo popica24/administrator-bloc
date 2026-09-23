@@ -83,7 +83,7 @@ autentificare, modul demonstrativ afiseaza conturile de test.
 - **Comanda:** `intra(telefon, parola)` → Supabase Auth `signInWithPassword`, apoi `incarca()`.
 - **De ce o adresa interna:** intrarea cu telefon in Supabase Auth cere un furnizor de SMS, iar
   aplicatia nu trimite niciun SMS. Fiecare cont are o adresa facuta din numarul lui
-  (`0722123456@telefon.adminbloc.ro`), pe care omul nu o vede si nu o scrie niciodata.
+  (`0722123456@telefon.adminbloc.invalid`), pe care omul nu o vede si nu o scrie niciodata.
 - **Rolul** il decide `identitate.eu()`, in aceasta ordine de prioritate:
   1. `administrator`: administrator aprobat, cu mandat activ pe o asociatie. Blocul lui este cel
      mai vechi bloc nearhivat al asociatiei.

@@ -29,8 +29,8 @@ describe("adresaContului", () => {
      folosit direct fara un furnizor de SMS. Adresa se face din numar, este
      interna si omul nu o vede niciodata. */
   it("face o adresa interna din numar, oricum ar fi scris numarul", () => {
-    expect(adresaContului("0722 123 456")).toBe("0722123456@telefon.adminbloc.ro");
-    expect(adresaContului("+40722123456")).toBe("0722123456@telefon.adminbloc.ro");
+    expect(adresaContului("0722 123 456")).toBe("0722123456@telefon.adminbloc.invalid");
+    expect(adresaContului("+40722123456")).toBe("0722123456@telefon.adminbloc.invalid");
   });
 
   it("un numar gresit nu are adresa", () => {

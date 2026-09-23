@@ -123,7 +123,7 @@ Deno.test("cont-locatar: contul nou primeste numarul, parola si legatura cu apar
     assert(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
 
     const creare = f.apeluri.find((a) => a.url.pathname === P.utilizatori)!;
-    assertEquals(creare.corp.email, "0722123456@telefon.adminbloc.ro");
+    assertEquals(creare.corp.email, "0722123456@telefon.adminbloc.invalid");
     assertEquals(creare.corp.phone, "+40722123456");
     assertEquals(creare.corp.password, r.corp.parola);
     assertEquals(creare.corp.email_confirm, true);
@@ -279,7 +279,7 @@ Deno.test("cont-locatar: un cenzor din afara blocului primeste cont si mandat", 
     assert(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
 
     const creare = f.apeluri.find((a) => a.url.pathname === P.utilizatori)!;
-    assertEquals(creare.corp.email, "0730415900@telefon.adminbloc.ro");
+    assertEquals(creare.corp.email, "0730415900@telefon.adminbloc.invalid");
     assertEquals(creare.corp.user_metadata, { nume: "Sorin Tudose", telefon: "0730415900" });
     const mandat = f.apeluri.find((a) => a.url.pathname === P.conducere)!;
     assertEquals(mandat.corp, { p_profil_id: PROFIL, p_rol: "cenzor", p_asociatie_id: "asoc-1" });

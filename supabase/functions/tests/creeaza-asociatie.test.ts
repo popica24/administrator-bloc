@@ -98,7 +98,7 @@ Deno.test("creeaza-asociatie: cu parola creeaza contul confirmat si il numeste a
 
     const [u] = f.catre(P.utilizatori);
     assertEquals(u.antete.get("Authorization"), `Bearer ${CHEIE_SERVICIU}`);
-    assertEquals(u.corp.email, "0745210118@telefon.adminbloc.ro");
+    assertEquals(u.corp.email, "0745210118@telefon.adminbloc.invalid");
     assertEquals(u.corp.phone, "+40745210118");
     assertEquals(u.corp.password, "Parola-1");
     assertEquals(u.corp.email_confirm, true);
