@@ -61,7 +61,7 @@ describe("consistenta datelor", () => {
     D.PLATI.forEach((p) => {
       expect(numere).toContain(p.numar);
       expect(D.LUNI_PUBLICATE).toContain(p.luna);
-      expect(["card", "numerar"]).toContain(p.metoda);
+      expect(["transfer", "numerar"]).toContain(p.metoda);
     });
     D.SESIZARI.forEach((s) => expect(numere).toContain(s.numar));
     Object.keys(D.VOT.voturi).forEach((n) => expect(numere).toContain(n));

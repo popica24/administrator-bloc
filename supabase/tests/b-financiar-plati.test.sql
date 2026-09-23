@@ -1,12 +1,12 @@
 -- Financiar, platile (migratia 20260919120017_financiar.sql): constrangerile
 -- registrului, financiar.deschide_cont, aloca_plata, aloca_avansuri,
 -- emite_chitanta (numerotare fara goluri), inregistreaza_plata,
--- inregistreaza_incasare, creeaza_plata_card, confirma_plata_card
+-- inregistreaza_incasare
 -- (idempotenta) si view-urile datorii_rest si solduri.
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(87);
+select plan(68);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -270,15 +270,15 @@ select throws_like($$insert into financiar.datorii (apartament_id, bloc_id, tip,
     from intretinere.liste_lunare where bloc_id = pg_temp.fx('bloc2') and luna = pg_temp.luna(-4)$$,
   '%datorii_lista_versiune_apartament_tip_key%', 'datorii: o singura datorie pe lista, versiune, apartament si tip');
 
-select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 0, 'numerar', 'in_asteptare')$$,
+select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 0, 'numerar', 'rambursata')$$,
   '%plati_suma_check%', 'plati: suma pozitiva');
-select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 1, 'cec', 'in_asteptare')$$,
-  '%plati_metoda_check%', 'plati: metoda card, numerar sau transfer');
-select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 1, 'card', 'pierduta')$$,
+select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 1, 'card', 'rambursata')$$,
+  '%plati_metoda_check%', 'plati: metoda este numerar sau transfer');
+select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 1, 'numerar', 'pierduta')$$,
   '%plati_stare_check%', 'plati: starea din lista');
-select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 1, 'card', 'confirmata')$$,
+select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), 1, 'numerar', 'confirmata')$$,
   '%plati_confirmata_check%', 'plati: o plata confirmata are data confirmarii');
-select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap21'), pg_temp.fx('bloc'), 1, 'card', 'in_asteptare')$$,
+select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, metoda, stare) values (pg_temp.fx('ap21'), pg_temp.fx('bloc'), 1, 'numerar', 'rambursata')$$,
   '%plati_cont_fk%', 'plati: contul si blocul trebuie sa se potriveasca');
 
 -- =============================================================================
@@ -286,10 +286,10 @@ select throws_like($$insert into financiar.plati (apartament_id, bloc_id, suma, 
 -- =============================================================================
 
 insert into financiar.plati (id, apartament_id, bloc_id, suma, metoda, stare)
-values ('00000000-0000-0000-0000-0000000000b1', pg_temp.fx('ap1'), pg_temp.fx('bloc'), 250, 'transfer', 'in_asteptare');
-select lives_ok($$select financiar.aloca_plata('00000000-0000-0000-0000-0000000000b1')$$, 'aloca_plata: o plata in asteptare nu se aloca');
+values ('00000000-0000-0000-0000-0000000000b1', pg_temp.fx('ap1'), pg_temp.fx('bloc'), 250, 'transfer', 'rambursata');
+select lives_ok($$select financiar.aloca_plata('00000000-0000-0000-0000-0000000000b1')$$, 'aloca_plata: o plata neconfirmata nu se aloca');
 select is((select count(*)::int from financiar.alocari_plati where plata_id = '00000000-0000-0000-0000-0000000000b1'), 0,
-  'aloca_plata: nicio alocare pentru plata in asteptare');
+  'aloca_plata: nicio alocare pentru plata neconfirmata');
 select lives_ok($$select financiar.aloca_plata(gen_random_uuid())$$, 'aloca_plata: plata inexistenta nu face nimic');
 
 update financiar.plati set stare = 'confirmata', confirmata_la = now() - interval '3 days' where id = '00000000-0000-0000-0000-0000000000b1';
@@ -403,13 +403,13 @@ select throws_ok($$select financiar.inregistreaza_plata(pg_temp.fx('ap2'), null,
   'Suma trebuie sa fie mai mare decat zero.', 'inregistreaza_plata: suma lipsa');
 
 select set_config('fx.p_transfer', financiar.inregistreaza_plata(pg_temp.fx('ap2'), 100.456, 'transfer', '2026-02-03 08:00:00+00',
-  pg_temp.fx('loc2'), null, 'banca', 'OP-77')::text, true);
+  pg_temp.fx('loc2'), null)::text, true);
 select results_eq(
-  $$select suma, metoda, stare, creat_la, confirmata_la, platita_de, inregistrata_de, procesator, referinta_procesator
+  $$select suma, metoda, stare, creat_la, confirmata_la, platita_de, inregistrata_de
     from financiar.plati where id = pg_temp.fx('p_transfer')$$,
   $$values (100.46::numeric(12,2), 'transfer'::text, 'confirmata'::text, '2026-02-03 08:00:00+00'::timestamptz, '2026-02-03 08:00:00+00'::timestamptz,
-            pg_temp.fx('loc2'), null::uuid, 'banca'::text, 'OP-77'::text)$$,
-  'inregistreaza_plata: plata confirmata, rotunjita la ban, cu data si referinta');
+            pg_temp.fx('loc2'), null::uuid)$$,
+  'inregistreaza_plata: plata confirmata, rotunjita la ban, cu data ei');
 select is((select sum(suma) from financiar.alocari_plati where plata_id = pg_temp.fx('p_transfer')), 100.46::numeric,
   'inregistreaza_plata: plata se aloca pe datorie');
 select results_eq($$select serie, numar, emisa_la from financiar.chitante where plata_id = pg_temp.fx('p_transfer')$$,
@@ -453,78 +453,15 @@ select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10
   'Banii primiti sunt fie in numerar, fie prin transfer bancar.', 'inregistreaza_incasare: metoda lipsa este refuzata');
 select throws_ok($$select financiar.aloca_plata(pg_temp.fx('p_cash'))$$,
   '42501', null, 'financiar: functiile interne nu se pot apela din API');
-select throws_ok($$select financiar.creeaza_plata_card(pg_temp.fx('ap2'), 10, pg_temp.fx('loc2'), 'simulat', 'X')$$,
-  '42501', null, 'creeaza_plata_card: doar service_role');
 reset role;
 select pg_temp.serviciu();
 select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap2')), 0.00::numeric,
   'solduri: ap2 a platit tot (150 = 100,46 + 49,54)');
 
--- =============================================================================
--- financiar.creeaza_plata_card si confirma_plata_card
--- =============================================================================
-
-select throws_ok($$select financiar.creeaza_plata_card(pg_temp.fx('ap1'), 10, pg_temp.fx('strain'), 'simulat', 'REF-X')$$,
-  'Platitorul nu este locatar al apartamentului.', 'creeaza_plata_card: strainul nu plateste');
-select throws_ok($$select financiar.creeaza_plata_card(pg_temp.fx('ap2'), 10, pg_temp.fx('loc1'), 'simulat', 'REF-X')$$,
-  'Platitorul nu este locatar al apartamentului.', 'creeaza_plata_card: locatarul altui apartament nu plateste');
-select throws_ok($$select financiar.creeaza_plata_card(pg_temp.fx('ap3'), 10, pg_temp.fx('fost'), 'simulat', 'REF-X')$$,
-  'Platitorul nu este locatar al apartamentului.', 'creeaza_plata_card: fostul locatar nu mai plateste');
-
-insert into financiar.datorii (apartament_id, bloc_id, tip, luna, suma, scadenta, descriere)
-values (pg_temp.fx('ap1'), pg_temp.fx('bloc'), 'intretinere', pg_temp.luna(), 60, pg_temp.luna(1) + 24, 'Intretinere luna curenta');
-select set_config('fx.p_card', financiar.creeaza_plata_card(pg_temp.fx('ap1'), 50.004, pg_temp.fx('loc1'), 'simulat', 'REF-1')::text, true);
-select set_config('fx.p_card2', financiar.creeaza_plata_card(pg_temp.fx('ap1'), 20, pg_temp.fx('loc1'), 'simulat', 'REF-2')::text, true);
-select results_eq(
-  $$select suma, metoda, stare, procesator, referinta_procesator, platita_de, confirmata_la from financiar.plati where id = pg_temp.fx('p_card')$$,
-  $$values (50.00::numeric(12,2), 'card'::text, 'in_asteptare'::text, 'simulat'::text, 'REF-1'::text, pg_temp.fx('loc1'), null::timestamptz)$$,
-  'creeaza_plata_card: plata in asteptare, fara confirmare');
-select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), 50.00::numeric,
-  'solduri: plata in asteptare nu intra in sold (390 datorii - 340 platite)');
-select throws_like($$select financiar.creeaza_plata_card(pg_temp.fx('ap1'), 5, pg_temp.fx('loc1'), 'simulat', 'REF-1')$$,
-  '%plati_procesator_referinta_key%', 'plati: referinta procesatorului este unica');
-
-select throws_ok($$select financiar.confirma_plata_card('simulat', 'NU-EXISTA', true)$$,
-  'Plata cu referinta NU-EXISTA nu exista.', 'confirma_plata_card: referinta necunoscuta');
-
-select is(financiar.confirma_plata_card('simulat', 'REF-2', false), pg_temp.fx('p_card2'),
-  'confirma_plata_card: refuzul intoarce plata');
-select is(financiar.confirma_plata_card('simulat', 'REF-2', true), pg_temp.fx('p_card2'),
-  'confirma_plata_card: un webhook intarziat dupa refuz...');
-select results_eq(
-  $$select p.stare, (select count(*)::int from financiar.chitante c where c.plata_id = p.id), (select count(*)::int from financiar.alocari_plati a where a.plata_id = p.id)
-    from financiar.plati p where p.id = pg_temp.fx('p_card2')$$,
-  $$values ('esuata'::text, 0, 0)$$,
-  'confirma_plata_card: ...nu schimba plata esuata; fara chitanta, fara alocare');
-
-select is(financiar.confirma_plata_card('simulat', 'REF-1', true), pg_temp.fx('p_card'),
-  'confirma_plata_card: confirmarea intoarce plata');
-select results_eq(
-  $$select p.stare, p.confirmata_la is not null, (select sum(a.suma) from financiar.alocari_plati a where a.plata_id = p.id)
-    from financiar.plati p where p.id = pg_temp.fx('p_card')$$,
-  $$values ('confirmata'::text, true, 50.00::numeric)$$,
-  'confirma_plata_card: plata confirmata si alocata pe datoria deschisa');
-select is(financiar.confirma_plata_card('simulat', 'REF-1', true), pg_temp.fx('p_card'),
-  'confirma_plata_card: al doilea webhook intoarce aceeasi plata...');
-select results_eq(
-  $$select (select count(*)::int from financiar.chitante where plata_id = pg_temp.fx('p_card')),
-           (select count(*)::int from financiar.alocari_plati where plata_id = pg_temp.fx('p_card')),
-           (select count(*)::int from evenimente.coada where tip = 'PlataConfirmata' and date ->> 'plata_id' = pg_temp.fx('p_card')::text)$$,
-  $$values (1, 1, 1)$$,
-  'confirma_plata_card: ...fara a doua chitanta, alocare sau eveniment');
-select is(
-  (select date from evenimente.coada where tip = 'PlataConfirmata' and date ->> 'plata_id' = pg_temp.fx('p_card')::text),
-  jsonb_build_object('plata_id', pg_temp.fx('p_card'), 'apartament_id', pg_temp.fx('ap1'), 'bloc_id', pg_temp.fx('bloc'), 'suma', 50, 'metoda', 'card'),
-  'confirma_plata_card: evenimentul PlataConfirmata');
-select is(financiar.confirma_plata_card('simulat', 'REF-1', false), pg_temp.fx('p_card'),
-  'confirma_plata_card: un refuz dupa confirmare...');
-select is((select stare from financiar.plati where id = pg_temp.fx('p_card')), 'confirmata',
-  '...nu anuleaza plata confirmata');
+-- Chitantele raman numerotate fara goluri pe toata asociatia
 select results_eq($$select numar from financiar.chitante where asociatie_id = pg_temp.fx('asociatie') order by numar$$,
-  $$values (42), (43), (44), (45), (46)$$,
+  $$values (42), (43), (44), (45)$$,
   'chitante: numerotare continua, fara goluri, pe toata asociatia');
-select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), 0.00::numeric,
-  'solduri: dupa plata cu cardul, ap1 nu mai datoreaza nimic');
 
 select * from finish();
 rollback;

@@ -595,7 +595,7 @@ function chitantaPdf(date, plata) {
       { tip: "spatiu", h: 6 },
       ...descriereAlocari(date, plata).map((t) => ({ tip: "text", text: `  -  ${t}`, marime: 10 })),
       { tip: "spatiu", h: 10 },
-      { tip: "text", text: `Modalitate: ${plata.metoda === "card" ? `plata cu cardul, referinta ${plata.referinta || "-"}` : plata.metoda === "numerar" ? `numerar${plata.inregistrataDe ? `, incasat de ${plata.inregistrataDe}` : ""}` : "transfer bancar"}`, marime: 10 },
+      { tip: "text", text: `Modalitate: ${plata.metoda === "numerar" ? `numerar${plata.inregistrataDe ? `, incasat de ${plata.inregistrataDe}` : ""}` : `transfer bancar${plata.inregistrataDe ? `, confirmat de ${plata.inregistrataDe}` : ""}`}`, marime: 10 },
       { tip: "spatiu", h: 30 },
       { tip: "linie" },
       { tip: "text", text: "Document emis electronic prin AdminBloc. Nu necesita semnatura si stampila.", gri: true, marime: 8 },
@@ -1662,9 +1662,9 @@ function CardContacte({ contacte }) {
   );
 }
 
-/* Cum platesti: in numerar la administrator sau prin transfer bancar. Plata
-   cu cardul nu are inca procesator, asa ca ecranul spune limpede ce are omul
-   de facut, cu datele pe care asociatia le are deja. */
+/* Cum platesti: in numerar la administrator sau prin transfer bancar, cele
+   doua cai prin care ajung banii la asociatie. Ecranul spune limpede ce are
+   omul de facut, cu datele pe care asociatia le are deja. */
 function CardCumPlatesti({ suma }) {
   const { date } = useApp();
   const ap = apartamentulMeu(date);
@@ -2078,7 +2078,7 @@ function LocatarPlata({ parametri }) {
               <Box row style={{ alignItems: "flex-start", gap: S.md }}>
                 <Box flex={1} gap={2}>
                   <Txt size={13.5} weight={600}>{descriereAlocari(date, p).join(", ")}</Txt>
-                  <Txt size={11.5} color={C.muted}>{dataLunga(p.confirmataLa)}, {p.metoda === "card" ? "card" : p.metoda === "numerar" ? "numerar" : "transfer"}</Txt>
+                  <Txt size={11.5} color={C.muted}>{dataLunga(p.confirmataLa)}, {p.metoda === "numerar" ? "numerar" : "transfer"}</Txt>
                   {p.chitanta && <Txt size={11.5} color={C.muted}>Chitanta {numarChitanta(p.chitanta)}</Txt>}
                 </Box>
                 <Lei value={p.suma} size={14} />

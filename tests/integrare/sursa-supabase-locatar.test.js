@@ -1,11 +1,8 @@
-/* Comenzile locatarului (harta-functii §3, §11): plata cu cardul prin Edge
-   Function, citirea contoarelor cu poza, sesizari, vot, prezenta, anunturi,
-   notificari si fisierele semnate. Fiecare rulare are blocul ei. */
+/* Comenzile locatarului (harta-functii §3, §11): citirea contoarelor cu poza,
+   sesizari, vot, prezenta, anunturi, notificari si fisierele semnate. Fiecare
+   rulare are blocul ei. */
 import { beforeAll, describe, expect, it } from "vitest";
-import { creeazaBloc, cuFetch, db, intraCa, json, lunaCurenta, ok, pozaJpeg, serviciu, unic, zi1 } from "./fixture.js";
-
-const CARD_BUN = { numar: "4242 4242 4242 4242", expira: "12/30", cvc: "123", nume: "Test" };
-const CARD_REFUZAT = { numar: "4000 0000 0000 0002", expira: "12/30", cvc: "123", nume: "Test" };
+import { creeazaBloc, db, intraCa, lunaCurenta, ok, pozaJpeg, serviciu, unic, zi1 } from "./fixture.js";
 
 let f;
 let s;
@@ -19,59 +16,6 @@ beforeAll(async () => {
     locatari: [{ cheie: "loc", apartament: "1" }, { cheie: "vecin", apartament: "2" }],
   });
   ({ s } = await intraCa(f.conturi.loc.email));
-});
-
-describe("platesteCard()", () => {
-  it("cardul acceptat: plata confirmata, alocata pe cea mai veche datorie, cu chitanta", async () => {
-    const r = await s.platesteCard({ apartamentId: f.ap["1"], suma: 120, card: CARD_BUN });
-    const plata = await ok(db("financiar").from("plati").select("*").eq("id", r.plataId).single());
-    expect(r).toEqual({ plataId: plata.id });
-    expect(plata).toMatchObject({ apartament_id: f.ap["1"], suma: 120, metoda: "card", stare: "confirmata", platita_de: f.conturi.loc.id, procesator: "simulat" });
-    const alocari = await ok(db("financiar").from("alocari_plati").select("suma, datorie_id").eq("plata_id", plata.id));
-    const sold = await ok(db("financiar").from("datorii").select("id").eq("apartament_id", f.ap["1"]).eq("tip", "sold_initial").single());
-    expect(alocari).toEqual([{ suma: 120, datorie_id: sold.id }]);
-    const date2 = await s.incarca();
-    const ui = date2.plati.find((p) => p.id === plata.id);
-    expect(ui).toMatchObject({ metoda: "card", suma: 120, referinta: plata.referinta_procesator, inregistrataDe: null, alocari: [{ datorieId: sold.id, suma: 120 }] });
-    expect(ui.chitanta).toMatchObject({ numar: expect.any(Number), serie: expect.any(String) });
-    expect(date2.datorii.find((d) => d.id === sold.id).rest).toBe(180);
-  });
-
-  it("cardul refuzat: mesajul bancii, fara plata confirmata", async () => {
-    const inainte = await ok(db("financiar").from("plati").select("id").eq("apartament_id", f.ap["1"]).eq("stare", "confirmata"));
-    await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 50, card: CARD_REFUZAT })).rejects.toThrow("Banca a refuzat plata. Nu s-a retras niciun ban.");
-    const dupa = await ok(db("financiar").from("plati").select("id").eq("apartament_id", f.ap["1"]).eq("stare", "confirmata"));
-    expect(dupa).toHaveLength(inainte.length);
-  });
-
-  it("suma zero este refuzata de functie, cu mesajul ei", async () => {
-    await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 0, card: CARD_BUN })).rejects.toThrow("Suma trebuie sa fie mai mare decat zero.");
-  });
-
-  it("apartamentul altcuiva este refuzat", async () => {
-    await expect(s.platesteCard({ apartamentId: f.ap["2"], suma: 10, card: CARD_BUN })).rejects.toThrow("Platitorul nu este locatar al apartamentului.");
-  });
-
-  it("un raspuns fara stare confirmata si fara mesaj foloseste textul implicit", async () => {
-    await cuFetch((url) => (url.includes("/functions/v1/plata-card") ? json({ plataId: "x", stare: "necunoscuta" }) : undefined), async () => {
-      await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 10, card: CARD_BUN })).rejects.toThrow("Plata nu a fost confirmata.");
-    });
-  });
-
-  it("[F8] plata in asteptare fara mesaj foloseste textul implicit", async () => {
-    await cuFetch((url) => (url.includes("/functions/v1/plata-card") ? json({ plataId: "p2", stare: "in_asteptare" }, 202) : undefined), async () => {
-      await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 10, card: CARD_BUN }))
-        .resolves.toEqual({ plataId: "p2", inAsteptare: true, mesaj: "Plata asteapta confirmarea bancii." });
-    });
-  });
-
-  it("[F8] plata in asteptare (202) nu este aratata ca esec", async () => {
-    const asteptare = { plataId: "p1", stare: "in_asteptare", mesaj: "Plata asteapta confirmarea bancii. Chitanta apare cand banca o confirma." };
-    await cuFetch((url) => (url.includes("/functions/v1/plata-card") ? json(asteptare, 202) : undefined), async () => {
-      await expect(s.platesteCard({ apartamentId: f.ap["1"], suma: 10, card: CARD_BUN }))
-        .resolves.toEqual({ plataId: "p1", inAsteptare: true, mesaj: asteptare.mesaj });
-    });
-  });
 });
 
 describe("transmiteCitire()", () => {
@@ -266,8 +210,9 @@ describe("[K13] alocarile unei plati", () => {
       apartament_id: f.ap["2"], bloc_id: f.blocId, tip: "sold_initial", suma: 10,
       scadenta: new Date(Date.now() - z * 86400000).toISOString().slice(0, 10), descriere: `Restanta K13, acum ${z} zile`,
     }))).select("id, scadenta"));
+    const { s: admin } = await intraCa(f.adminEmail);
+    const r = await admin.inregistreazaIncasare(f.ap["2"], 50, "numerar");
     const vecin = (await intraCa(f.conturi.vecin.email)).s;
-    const r = await vecin.platesteCard({ apartamentId: f.ap["2"], suma: 50, card: CARD_BUN });
     const plata = (await vecin.incarca()).plati.find((p) => p.id === r.plataId);
     const asteptat = [...inserate].sort((a, b) => a.scadenta.localeCompare(b.scadenta)).map((d) => d.id);
     expect(plata.alocari.map((a) => a.datorieId)).toEqual(asteptat);

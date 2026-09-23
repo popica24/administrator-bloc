@@ -236,11 +236,11 @@ async function main() {
       fa: async (la) => {
         const lista = await ok(db.schema("intretinere").from("liste_lunare").select("id").eq("bloc_id", bloc).eq("luna", luna1(p.luna)).single(), "lista");
         const datorie = await ok(db.schema("financiar").from("datorii").select("suma").eq("lista_id", lista.id).eq("apartament_id", ap[p.numar]).eq("tip", "intretinere").single(), "datorie");
-        const platitor = locatarAp(p.numar);
+        /* Banii vin in numerar sau prin transfer, iar administratorul ii
+           confirma in aplicatie: el este cel care inregistreaza plata. */
         await ok(db.schema("financiar").rpc("inregistreaza_plata", {
           p_apartament_id: ap[p.numar], p_suma: p.suma || Number(datorie.suma), p_metoda: p.metoda, p_la: la,
-          p_platita_de: p.metoda === "card" ? platitor : null, p_inregistrata_de: p.metoda === "numerar" ? admin : null,
-          p_procesator: p.metoda === "card" ? "simulat" : null, p_referinta: p.metoda === "card" ? `SIM-DEMO-${p.luna}-${p.numar}` : null,
+          p_inregistrata_de: admin,
         }), `plata ${p.numar} ${p.luna}`);
       },
     });

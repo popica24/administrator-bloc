@@ -25,22 +25,33 @@ const testeMici = teste.toLowerCase();
 
 const unice = (arr) => [...new Set(arr)];
 
-/* Ce exista in baza la final este ce spune ULTIMA migratie care atinge
-   functia: o stergere fara recreare o scoate din baza, deci niciun test nu
-   mai are ce cita. Multe migratii sterg si recreeaza in acelasi fisier, ca
-   sa schimbe semnatura; acolo functia ramane. */
-const ultimaAtingere = new Map();
-for (const m of migratii.matchAll(/(create\s+(?:or\s+replace\s+)?|drop\s+)function\s+(?:if\s+exists\s+)?([a-z_]+\.[a-z_0-9]+)\s*\(/gi)) {
-  ultimaAtingere.set(m[2].toLowerCase(), m[1].trim().toLowerCase().startsWith("drop") ? "drop" : "create");
+/* Migratiile sunt istoria, nu starea. Ce exista in baza la final este ce a
+   lasat ULTIMA migratie care atinge functia: o stergere fara recreare o scoate
+   din baza, deci nici ea, nici mesajele ei de eroare nu mai au ce test sa le
+   citeze. Multe migratii sterg si recreeaza functia in acelasi fisier, ca
+   sa-i schimbe semnatura; acolo functia ramane, cu corpul cel nou.
+   Asa ca aici reconstruim starea finala: corpul de acum al fiecarei functii,
+   plus tot restul SQL-ului (tabele, politici, triggere). */
+const DEFINITIE = /create\s+(?:or\s+replace\s+)?function\s+([a-z_]+\.[a-z_0-9]+)[\s\S]*?\$\$;/gi;
+const STERGERE = /drop\s+function\s+(?:if\s+exists\s+)?([a-z_]+\.[a-z_0-9]+)\s*\(/gi;
+
+const corpuri = new Map();
+for (const m of migratii.matchAll(new RegExp(`${DEFINITIE.source}|${STERGERE.source}`, "gi"))) {
+  const [text, definita, stearsa] = m;
+  if (definita) corpuri.set(definita.toLowerCase(), text);
+  else corpuri.delete(stearsa.toLowerCase());
 }
 
-const functii = [...ultimaAtingere].filter(([, ce]) => ce === "create").map(([f]) => f);
+const restul = migratii.replace(DEFINITIE, "");
+const final = [restul, ...corpuri.values()].join("\n");
 
-const erori = unice([...migratii.matchAll(/raise\s+exception\s+'((?:[^']|'')*)'/gi)]
+const functii = [...corpuri.keys()];
+
+const erori = unice([...final.matchAll(/raise\s+exception\s+'((?:[^']|'')*)'/gi)]
   .map((m) => m[1].replace(/''/g, "'").split("%")[0].trim())
   .filter((t) => t.length >= 8));
 
-const politici = unice([...migratii.matchAll(/create\s+policy\s+"([^"]+)"/gi)].map((m) => m[1]));
+const politici = unice([...final.matchAll(/create\s+policy\s+"([^"]+)"/gi)].map((m) => m[1]));
 
 const verifica = (nume, lista, gasit) => {
   const lipsa = lista.filter((x) => !gasit(x));

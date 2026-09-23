@@ -413,22 +413,12 @@ calculeaza din datorii minus plati (`financiar.datorii_rest`, `financiar.solduri
 - Ce ramane este **avans**. `aloca_avansuri` il muta automat pe fiecare datorie noua.
 - Chitanta si ecranul "Platile mele" arata alocarea in cuvinte.
 
-### 6.3 Plata cu cardul (lantul exista, ecranul nu)
-Comanda `platesteCard` si Edge Functions raman in cod si sunt testate, dar niciun ecran nu le mai
-cheama: pana la alegerea unui procesator de plati real, locatarul plateste in numerar sau prin
-transfer, iar administratorul inregistreaza incasarea (§6.4).
-```
-Locatar ─► plata-card (JWT) ─► creeaza_plata_card (in_asteptare)
-                    └──► procesator-simulat ─► semnatura HMAC-SHA256 ─► plata-card-webhook
-                                                                        └─► confirma_plata_card
-                                                                            ├─ alocare
-                                                                            ├─ chitanta
-                                                                            └─ PlataConfirmata
-```
-- Datele cardului trec doar prin procesator; asociatia nu le primeste.
-- Cardul de test `4242 4242 4242 4242` trece; `4000 0000 0000 0002` este refuzat.
-- Raspunsurile: 200 confirmata, 402 refuzata, 202 in asteptare. Webhook-ul poate fi primit de mai
-  multe ori fara efecte duble.
+### 6.3 Plata cu cardul: nu exista
+Banii ajung la asociatie in numerar, in mana administratorului, sau prin transfer in contul ei;
+administratorul confirma incasarea in aplicatie (§6.4). Nu exista procesator de plati, Edge
+Function de plata sau webhook: lantul lor a fost scos cu totul (migratia
+`scoate_plata_cu_cardul`), iar `financiar.plati` nu mai are nici coloanele procesatorului, nici
+starile `in_asteptare` / `esuata`.
 
 ### 6.4 Confirmarea banilor primiti (numerar sau transfer)
 - `inregistreaza_incasare`: doar administratorul blocului, si doar cu metoda `numerar` sau
@@ -573,8 +563,6 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 
 **Plati**
 - Procesatorul de plati este simulat.
-- `PROCESATOR_SECRET` are o valoare implicita de dezvoltare in `procesator-simulat` si
-  `plata-card-webhook`. **Trebuie setat inainte de productie.**
 
 ---
 
@@ -590,7 +578,7 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | **PDF** | `src/pdf.js`: generator PDF 1.4 fara librarii, cu Helvetica si WinAnsi (de aici textele fara diacritice). Produce chitanta si lista pentru avizier. |
 | **Fotografii** | Micsorare locala la 1600 px JPEG inainte de upload (`micsoreazaPoza`) |
 | **Autentificare** | Parola de minim 10 caractere, cu litere mari, mici si cifre; adresa de email se confirma; schimbarea parolei cere autentificare recenta; sesiunea expira la 24 de ore, sau dupa 8 ore de inactivitate (`supabase/config.toml`). |
-| **Secretele din productie** | `SITE_URL` (singura adresa careia Edge Functions ii raspund cu antete CORS) si `PROCESATOR_SECRET` (semneaza confirmarile de plata). Vezi README, "Punerea in productie". |
+| **Secretele din productie** | `SITE_URL` (singura adresa careia Edge Functions ii raspund cu antete CORS). Vezi README, "Punerea in productie". |
 | **Date personale** | `identitate.anonimizeaza_profil` (doar dezvoltatorul) inlocuieste numele, emailul si telefonul, inchide legaturile si mandatele, revoca invitatiile nefolosite si sterge sesiunile, pastrand randurile contabile. |
 | **UI** | O coloana de telefon (maxim 520 px), flexbox, primitivele din sectiunea 5 (portabile pe React Native), 5 taburi cu badge-uri, toast dupa fiecare comanda, tinte mari la atingere pentru utilizatori de peste 50 de ani |
 | **Ciclul unei comenzi** | `cmd()` in `AdminBloc`: apelul catre sursa, reincarcarea datelor, toastul; ecranul primeste `{ ok, rezultat }` |
@@ -605,7 +593,6 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 | `folosesteInvitatie` | cont nou | `identitate.foloseste_invitatie` |
 | `cereVerificareAdministrator` | cont nou | Storage `atestate` + `identitate.cere_verificare_administrator` |
 | `incarca` | toti | select-uri prin RLS + `identitate.eu`, `contacte_asociatie`, `consum_mediu_bloc`, `situatie_bloc`, `sesizari_bloc`, `situatie_voturi`, `situatie_adunari` |
-| `platesteCard` | locatar | Edge `plata-card` (fara ecran, vezi §6.3) |
 | `transmiteCitire` | locatar | Storage `poze` + `contorizare.transmite_citire` |
 | `adaugaSesizare` | locatar | Storage `poze` + `sesizari.adauga_sesizare` |
 | `scrieMesaj` | ambele | `sesizari.scrie_mesaj` |

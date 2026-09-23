@@ -4,7 +4,7 @@
    Aceeasi interfata ca sursa-mock.js: incarca() aduna ce vede utilizatorul
    autentificat, in forma pe care o citesc ecranele, iar fiecare comanda este
    un apel catre baza de date (functii RPC, fiecare pe un singur agregat) sau
-   catre un Edge Function (publicarea listei, plata cu cardul).
+   catre un Edge Function (publicarea listei).
 
    Citirile trec prin RLS: locatarul primeste doar randurile lui, fara nicio
    filtrare facuta aici. Nimic nu se calculeaza aici: sumele vin din
@@ -361,7 +361,7 @@ export function creeazaSursaSupabase(url, cheie) {
         const ch = chitante.find((c) => c.plata_id === p.id);
         return {
           id: p.id, apartamentId: p.apartament_id, suma: nr(p.suma), metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmata_la,
-          referinta: p.referinta_procesator, inregistrataDe: p.inregistrata_de ? numeProfil(p.inregistrata_de) : null,
+          inregistrataDe: p.inregistrata_de ? numeProfil(p.inregistrata_de) : null,
           chitanta: ch ? { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la } : null,
           alocari: alocari.filter((a) => a.plata_id === p.id).sort(inOrdineaPlatii).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
         };
@@ -516,17 +516,6 @@ export function creeazaSursaSupabase(url, cheie) {
     },
 
     /* ---------- Locatar ---------- */
-
-    /* Raspunsul 202 (in_asteptare) nu este un esec: banca nu a apucat inca sa
-       confirme sau sa refuze, plata ramane deschisa si va fi confirmata sau
-       refuzata prin webhook. Formularul trebuie sa stie asta ca sa nu se
-       redeschida si sa lase omul sa plateasca de doua ori (H7/F8). */
-    async platesteCard({ apartamentId, suma, card }) {
-      const r = await invoca("plata-card", { apartament_id: apartamentId, suma, card });
-      if (r.stare === "confirmata") return { plataId: r.plataId };
-      if (r.stare === "in_asteptare") return { plataId: r.plataId, inAsteptare: true, mesaj: r.mesaj || "Plata asteapta confirmarea bancii." };
-      throw new Error(r.mesaj || "Plata nu a fost confirmata.");
-    },
 
     async transmiteCitire({ apartamentId, luna: l, indexuri, poza }) {
       const c = cerCtx();

@@ -61,23 +61,25 @@ describe("mesajele serverului, pe romaneste", () => {
 });
 
 describe("erorile Edge Functions", () => {
-  const plata = () => s.platesteCard({ apartamentId: SESIZARE, suma: 1, card: { numar: "4242424242424242", expira: "12/30" } });
+  /* publica-lista este Edge Function-ul pe care il cheama aplicatia; aici
+     conteaza doar ce vede omul cand raspunsul nu e cel asteptat. */
+  const publica = () => s.publicaLista(SESIZARE);
 
   it("corpul JSON fara `eroare`: mesajul clientului", async () => {
-    await cuFetch(functia("plata-card", () => json({ altceva: true }, 500)), async () => {
-      await expect(plata()).rejects.toThrow("Edge Function returned a non-2xx status code");
+    await cuFetch(functia("publica-lista", () => json({ altceva: true }, 500)), async () => {
+      await expect(publica()).rejects.toThrow("Edge Function returned a non-2xx status code");
     });
   });
 
   it("corpul care nu e JSON: mesajul clientului", async () => {
-    await cuFetch(functia("plata-card", () => new Response("Bad Gateway", { status: 502, headers: { "Content-Type": "text/plain" } })), async () => {
-      await expect(plata()).rejects.toThrow("Edge Function returned a non-2xx status code");
+    await cuFetch(functia("publica-lista", () => new Response("Bad Gateway", { status: 502, headers: { "Content-Type": "text/plain" } })), async () => {
+      await expect(publica()).rejects.toThrow("Edge Function returned a non-2xx status code");
     });
   });
 
   it("functia de neatins: mesajul clientului", async () => {
-    await cuFetch(functia("plata-card", () => { throw new TypeError("Failed to fetch"); }), async () => {
-      await expect(plata()).rejects.toThrow("Failed to send a request to the Edge Function");
+    await cuFetch(functia("publica-lista", () => { throw new TypeError("Failed to fetch"); }), async () => {
+      await expect(publica()).rejects.toThrow("Failed to send a request to the Edge Function");
     });
   });
 });

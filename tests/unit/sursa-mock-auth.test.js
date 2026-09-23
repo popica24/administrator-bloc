@@ -353,14 +353,13 @@ describe("incarca ca administrator", () => {
     perCheltuiala.forEach(([suma, bani]) => expect(bani).toBe(Math.round(suma * 100)));
   });
 
-  it("platile au chitanta, alocari si numele celui care a incasat cash", async () => {
+  it("platile au chitanta, alocari si numele celui care a incasat banii", async () => {
     const d = await (await ca(ADMIN)).incarca();
     expect(d.plati).toHaveLength(47);
     const numerar = d.plati.find((p) => p.metoda === "numerar");
-    expect(numerar).toMatchObject({ inregistrataDe: "Mihai Dobre", referinta: null, chitanta: { serie: "AP118" } });
-    const card = d.plati.find((p) => p.metoda === "card");
-    expect(card.inregistrataDe).toBeNull();
-    expect(card.referinta).toMatch(/^SIM-[A-Z0-9]+$/);
+    expect(numerar).toMatchObject({ inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118" } });
+    const transfer = d.plati.find((p) => p.metoda === "transfer");
+    expect(transfer).toMatchObject({ inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118" } });
     expect(d.plati.map((p) => p.chitanta.numar).sort((a, b) => a - b)).toEqual(Array.from({ length: 47 }, (_, i) => 417 + i));
   });
 

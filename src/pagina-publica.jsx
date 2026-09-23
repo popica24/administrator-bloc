@@ -238,8 +238,8 @@ export default function PaginaPublica() {
             demonstrativ are 20 de apartamente si patru luni de liste, citiri si plati.
           </p>
           <p>
-            Banii se incaseaza deocamdata in numerar sau prin transfer bancar, iar administratorul ii inregistreaza in
-            aplicatie, care emite chitanta. Plata cu cardul direct din aplicatie asteapta alegerea unui procesator de plati.
+            Banii se incaseaza in numerar, in mana administratorului, sau prin transfer in contul asociatiei;
+            administratorul confirma incasarea in aplicatie, care emite chitanta pe loc.
           </p>
           <p>
             Fiecare regula are teste care o verifica: peste 1.000 de teste ale aplicatiei, cu tot codul acoperit, peste

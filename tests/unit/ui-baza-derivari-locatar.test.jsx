@@ -1,7 +1,7 @@
 /* Derivarile din sectiunea 4 vazute de locatar: defalcare, sold, datoriile
    sortate, istoricLunar, frazaComparatie, descriereAlocari si chitantaPdf.
    Apartamentul 17 (Elena): lista pe august 718,09 lei, neplatita, iunie si
-   iulie platite cu cardul. */
+   iulie platite prin transfer. */
 import { describe, it, expect, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 
@@ -27,7 +27,7 @@ const datorie = (x) => ({ apartamentId: AP, luna: null, listaId: null, documentI
    suma - rest (K5): singura sursa de adevar pentru ce s-a incasat este
    suma alocarilor din registru. */
 const plataReala = (id, suma, alocari) => ({
-  id, apartamentId: AP, suma, metoda: "card", stare: "confirmata", referinta: `SIM-${id}`,
+  id, apartamentId: AP, suma, metoda: "transfer", stare: "confirmata",
   inregistrataDe: null, confirmataLa: "2026-08-20T10:00:00+03:00", chitanta: null, alocari,
 });
 
@@ -246,7 +246,7 @@ describe("istoricul si fraza de comparatie", () => {
 });
 
 describe("descriereAlocari si chitanta", () => {
-  const plataNoua = (x) => ({ apartamentId: AP, metoda: "card", stare: "confirmata", referinta: "SIM-1", inregistrataDe: null, confirmataLa: "2026-09-10T12:00:00+03:00", chitanta: { serie: "AP118", numar: 470, emisaLa: "2026-09-10T12:34:00+03:00" }, alocari: [], ...x });
+  const plataNoua = (x) => ({ apartamentId: AP, metoda: "transfer", stare: "confirmata", inregistrataDe: null, confirmataLa: "2026-09-10T12:00:00+03:00", chitanta: { serie: "AP118", numar: 470, emisaLa: "2026-09-10T12:34:00+03:00" }, alocari: [], ...x });
 
   it("descrie fiecare tip de datorie acoperit, avansul si datoriile necunoscute", async () => {
     await plata((d) => {
@@ -280,8 +280,8 @@ describe("descriereAlocari si chitanta", () => {
     }
   });
 
-  it("chitanta cu cardul are antetul asociatiei, platitorul, alocarile si referinta", async () => {
-    await plata((d) => { d.plati.find((p) => p.id === "pla-727").referinta = "SIM-204W0EKK"; });
+  it("chitanta prin transfer are antetul asociatiei, platitorul si alocarile", async () => {
+    await plata();
     await apasa("Platile mele");
     const pdf = prindePdf();
     await apasa("Descarca chitanta", 0);
@@ -295,17 +295,17 @@ describe("descriereAlocari si chitanta", () => {
     expect(text).toContain("Am primit de la Elena Marinescu, apartamentul 17, Bloc D14, scara A,");
     expect(text).toContain("suma de 631,39 lei, reprezentand:");
     expect(text).toContain("- Intretinere iulie 2026: 631,39 lei");
-    expect(text).toContain("Modalitate: plata cu cardul, referinta SIM-204W0EKK");
+    expect(text).toContain("Modalitate: transfer bancar");
     expect(text).toContain("Document emis electronic prin AdminBloc.");
   });
 
-  it("chitanta in numerar, prin transfer si cu cardul fara referinta", async () => {
+  it("chitanta in numerar, cu si fara numele celui care a incasat, si prin transfer", async () => {
     await plata((d) => {
       d.plati.length = 0;
       d.plati.push(plataNoua({ id: "p1", suma: 10, metoda: "numerar", inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118", numar: 1, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-14T12:00:00+03:00" }));
       d.plati.push(plataNoua({ id: "p2", suma: 20, metoda: "numerar", chitanta: { serie: "AP118", numar: 2, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-13T12:00:00+03:00" }));
       d.plati.push(plataNoua({ id: "p3", suma: 30, metoda: "transfer", chitanta: { serie: "AP118", numar: 3, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-12T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "card", referinta: null, chitanta: { serie: "AP118", numar: 4, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-11T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "transfer", inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118", numar: 4, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-11T12:00:00+03:00" }));
     });
     await apasa("Platile mele");
     const pdf = prindePdf();
@@ -319,7 +319,7 @@ describe("descriereAlocari si chitanta", () => {
     expect(texte[0]).toContain("- Avans pentru listele urmatoare");
     expect(texte[1]).toMatch(/Modalitate: numerar\n/);
     expect(texte[2]).toContain("Modalitate: transfer bancar");
-    expect(texte[3]).toContain("Modalitate: plata cu cardul, referinta -");
+    expect(texte[3]).toContain("Modalitate: transfer bancar, confirmat de Mihai Dobre");
     expect(texte[3]).toMatch(/Am primit de la .+, apartamentul \d+, Bloc D14, scara A,/);
     expect(within(document.body).getByText("14 septembrie 2026, numerar")).toBeTruthy();
   });

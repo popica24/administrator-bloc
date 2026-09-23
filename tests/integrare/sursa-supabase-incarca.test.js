@@ -123,7 +123,7 @@ describe("D14, administratorul (doar citire)", () => {
       expect(suma(p.alocari.map((a) => a.suma))).toBeLessThanOrEqual(p.suma);
     }
     expect(date.plati.filter((p) => p.metoda === "numerar").every((p) => p.inregistrataDe === "Mihai Dobre")).toBe(true);
-    expect(date.plati.filter((p) => p.metoda === "card").every((p) => p.inregistrataDe === null)).toBe(true);
+    expect(date.plati.filter((p) => p.metoda === "transfer").every((p) => p.inregistrataDe === "Mihai Dobre")).toBe(true);
     const idDatorii = new Set(datorii.map((d) => d.id));
     expect(date.penalizari.length).toBeGreaterThan(0);
     expect(date.penalizari.every((p) => idDatorii.has(p.datorieId) && typeof p.suma === "number")).toBe(true);
@@ -172,7 +172,7 @@ describe("D14, locatarul (doar citire)", () => {
     expect(date.apartamente[0]).toMatchObject({ numar: "17", locatari: [], invitatii: [] });
     expect(date.datorii.every((d) => d.apartamentId === date.eu.apartamentId)).toBe(true);
     expect(date.plati.every((p) => p.apartamentId === date.eu.apartamentId)).toBe(true);
-    expect(date.plati.filter((p) => p.metoda === "card").length).toBeGreaterThanOrEqual(2);
+    expect(date.plati.filter((p) => p.metoda === "transfer").length).toBeGreaterThanOrEqual(2);
     const datorii = await ok(db("financiar").from("datorii_rest").select("*").eq("apartament_id", date.eu.apartamentId));
     expect(suma(date.datorii.map((d) => d.rest))).toBe(suma(datorii.map((d) => d.rest)));
   });
@@ -390,7 +390,7 @@ describe("bloc de test: ramurile maparii", () => {
     expect(cash).toMatchObject({ metoda: "numerar", suma: 100, inregistrataDe: `Administrator ${f.id}`, alocari: [{ datorieId: sold.id, suma: 100 }] });
     expect(cash.chitanta.numar).toBe(1);
     const transfer = admin.plati.find((p) => p.id === ids.transfer);
-    expect(transfer).toMatchObject({ metoda: "transfer", chitanta: null, inregistrataDe: null, alocari: [], referinta: null });
+    expect(transfer).toMatchObject({ metoda: "transfer", chitanta: null, inregistrataDe: null, alocari: [] });
     expect(admin.situatieBloc).toEqual({ apartamente: 5, faraRestanta: 4, restanteTotal: 200 });
     expect(admin.fonduri.find((x) => x.id === ids.fondRep)).toMatchObject({ sold: 250, sumaPerApartament: null, miscari: [expect.objectContaining({ suma: 250, descriere: "Sold preluat" })] });
     expect(admin.fonduri.find((x) => x.tip === "rulment").sumaPerApartament).toBe(100);

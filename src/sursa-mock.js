@@ -144,12 +144,12 @@ function alocaAvansuri(db, apartamentId) {
     .forEach((p) => alocaPlata(db, p));
 }
 
-function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe = null }) {
+/* Orice plata trece prin administrator, care o confirma: inregistrataDe este
+   mereu cineva. platitaDe ramane pentru platile facute de locatar insusi. */
+function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe }) {
   const ap = db.apartamente.find((a) => a.id === apartamentId);
   const plata = db.adauga("plati", {
     apartamentId, blocId: ap.blocId, suma: round2(suma), metoda, stare: "confirmata",
-    procesator: metoda === "card" ? "simulat" : null,
-    referintaProcesator: metoda === "card" ? `SIM-${Math.random().toString(36).slice(2, 10).toUpperCase()}` : null,
     platitaDe, inregistrataDe, confirmataLa: la, creatLa: la,
   });
   alocaPlata(db, plata);
@@ -468,10 +468,11 @@ function construiesteDemo() {
     fa: (la) => {
       const lista = db.liste.find((l) => l.luna === p.luna);
       const datorie = db.datorii.find((d) => d.listaId === lista.id && d.apartamentId === ap[p.numar].id && d.tip === "intretinere");
-      const platitor = locatariActivi(db, ap[p.numar].id)[0];
+      /* Banii ajung la asociatie in numerar sau prin transfer, iar
+         administratorul ii confirma in aplicatie: el este cel care
+         inregistreaza plata, indiferent de drumul banilor. */
       inregistreazaPlata(db, {
-        apartamentId: ap[p.numar].id, suma: p.suma || datorie.suma, metoda: p.metoda, la,
-        platitaDe: p.metoda === "card" && platitor ? platitor.profilId : null, inregistrataDe: p.metoda === "numerar" ? admin : null,
+        apartamentId: ap[p.numar].id, suma: p.suma || datorie.suma, metoda: p.metoda, la, inregistrataDe: admin,
       });
     },
   }));
@@ -650,10 +651,10 @@ function proiecteaza(db, profilId, apartamentAles) {
   const penalizari = db.penalizari.filter((p) => idDatorii.includes(p.datorieId)).map((p) => ({ ...p }));
   const plati = db.plati.filter((p) => p.blocId === bloc.id && alMeu(p.apartamentId)).map((p) => {
     const ch = db.chitante.find((c) => c.plataId === p.id);
-    const inreg = p.inregistrataDe && db.profiluri.find((x) => x.id === p.inregistrataDe);
+    const inreg = db.profiluri.find((x) => x.id === p.inregistrataDe);
     return {
       id: p.id, apartamentId: p.apartamentId, suma: p.suma, metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmataLa,
-      referinta: p.referintaProcesator, inregistrataDe: inreg ? inreg.nume : null,
+      inregistrataDe: inreg.nume,
       chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa },
       alocari: db.alocari.filter((a) => a.plataId === p.id).map((a) => ({ datorieId: a.datorieId, suma: a.suma })),
     };
@@ -931,23 +932,6 @@ export function creeazaSursaMock() {
     },
 
     /* ---------- Locatar ---------- */
-
-    async platesteCard({ apartamentId, suma, card }) {
-      cerLocatarPe(apartamentId);
-      /* [paritate] plata-card refuza mai intai o suma care nu e pozitiva, dupa
-         aceeasi rotunjire la ban pe care o foloseste plata: o suma ca 0,004
-         lei nu trebuie sa treaca doar ca sa devina o plata de 0 lei. */
-      if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
-      const cifre = String((card && card.numar) || "").replace(/\D/g, "");
-      if (cifre.length < 13) eroare("Numarul cardului nu este complet.");
-      /* [paritate] procesatorul de test refuza cardul care se termina in
-         0002 si orice card fara data de expirare in formatul LL/AA: ambele
-         raman "refuzata" de banca, nu erori distincte de formular. */
-      const expira = String((card && card.expira) || "");
-      if (cifre.endsWith("0002") || !/^\d{2}\/\d{2}$/.test(expira)) eroare("Banca a refuzat plata. Nu s-a retras niciun ban.");
-      const plata = inregistreazaPlata(db, { apartamentId, suma, metoda: "card", la: acum(), platitaDe: eu().id });
-      return { plataId: plata.id };
-    },
 
     async transmiteCitire({ apartamentId, luna, indexuri, poza }) {
       cerLocatarPe(apartamentId);

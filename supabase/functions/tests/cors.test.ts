@@ -8,9 +8,6 @@ import { type Handler, incarcaHandler, URL_SITE, URL_TEST } from "./ajutor.ts";
 const FUNCTII = [
   "creeaza-asociatie",
   "exporta-bloc",
-  "plata-card",
-  "plata-card-webhook",
-  "procesator-simulat",
   "proceseaza-eveniment",
   "publica-lista",
 ] as const;
@@ -57,18 +54,18 @@ Deno.test("[X09] CORS: originile care doar seamana cu localhost sunt refuzate", 
 });
 
 Deno.test("[X09] CORS: o cerere fara Origin (server catre server) merge mai departe", async () => {
-  // Webhook-ul procesatorului si cron-ul nu trimit Origin. CORS nu ii priveste:
-  // nu primesc antetul, dar nici nu sunt opriti.
-  const r = await preflight("plata-card-webhook");
+  // Cron-ul nu trimite Origin. CORS nu il priveste: nu primeste antetul, dar
+  // nici nu este oprit.
+  const r = await preflight("proceseaza-eveniment");
   assertEquals(r.status, 200);
   assertEquals(r.headers.get("Access-Control-Allow-Origin"), null);
   assertEquals(await r.text(), "ok");
 });
 
-Deno.test("[X09] CORS: antetele cerute de aplicatie si de webhook raman permise", async () => {
-  const r = await preflight("plata-card", URL_SITE);
+Deno.test("[X09] CORS: antetele cerute de aplicatie raman permise", async () => {
+  const r = await preflight("publica-lista", URL_SITE);
   const antete = (r.headers.get("Access-Control-Allow-Headers") ?? "").split(", ");
-  for (const a of ["authorization", "apikey", "content-type", "x-semnatura"]) {
+  for (const a of ["authorization", "apikey", "content-type"]) {
     assertEquals(antete.includes(a), true, a);
   }
   assertEquals(r.headers.get("Access-Control-Allow-Methods"), "POST, GET, OPTIONS");

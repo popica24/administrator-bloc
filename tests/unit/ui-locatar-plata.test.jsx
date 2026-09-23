@@ -20,7 +20,7 @@ async function laPlata(optiuni) {
   return r;
 }
 
-/* Plata in numerar sau prin transfer: cat timp nu avem procesator de card,
+/* Plata in numerar sau prin transfer, confirmata de administrator:
    ecranul spune omului exact ce are de facut, cu datele deja din baza. */
 describe("Plata: cum platesti", () => {
   it("arata incasarea la administrator si datele pentru transfer bancar", async () => {
@@ -105,8 +105,8 @@ describe("Plata: lista curenta", () => {
         const dat = d.datorii.find((x) => x.luna === "2026-08");
         dat.rest = 518.09;
         d.plati.push({
-          id: "pla-test-200", apartamentId: d.eu.apartamentId, suma: 200, metoda: "card", stare: "confirmata",
-          referinta: "SIM-K5", inregistrataDe: null, confirmataLa: "2026-08-20T10:00:00+03:00", chitanta: null,
+          id: "pla-test-200", apartamentId: d.eu.apartamentId, suma: 200, metoda: "transfer", stare: "confirmata",
+          inregistrataDe: null, confirmataLa: "2026-08-20T10:00:00+03:00", chitanta: null,
           alocari: [{ datorieId: dat.id, suma: 200 }],
         });
       },
@@ -291,8 +291,8 @@ describe("Plata: Platile mele", () => {
     const d = await sursa.incarca();
     const plati = d.plati.slice().sort((a, b) => (a.confirmataLa < b.confirmataLa ? 1 : -1));
     const ecr = ecran();
-    expect(ecr).toContain("Intretinere iulie 2026: 631,39 lei12 august 2026, card");
-    expect(ecr).toContain("Intretinere iunie 2026: 655,45 lei14 iulie 2026, card");
+    expect(ecr).toContain("Intretinere iulie 2026: 631,39 lei12 august 2026, transfer");
+    expect(ecr).toContain("Intretinere iunie 2026: 655,45 lei14 iulie 2026, transfer");
     expect(ecr.indexOf("Intretinere iulie 2026: 631,39")).toBeLessThan(ecr.indexOf("Intretinere iunie 2026: 655,45"));
     expect(ecr).toContain(`Chitanta AP118 nr. ${String(plati[0].chitanta.numar).padStart(6, "0")}`);
     const butoane = screen.getAllByRole("button", { name: "Descarca chitanta" });

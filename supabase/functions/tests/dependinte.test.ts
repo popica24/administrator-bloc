@@ -24,7 +24,7 @@ const fisiere = await surse(FUNCTII);
 const lock = JSON.parse(await Deno.readTextFile(new URL("deno.lock", RADACINA)));
 
 Deno.test("[X11] dependinte: gasim sursele Edge Function-urilor", () => {
-  assert(fisiere.length >= 8, `doar ${fisiere.length} fisiere gasite`);
+  assert(fisiere.length >= 5, `doar ${fisiere.length} fisiere gasite`);
 });
 
 Deno.test("[X11] dependinte: niciun import npm: sau jsr: fara versiune exacta", async () => {
