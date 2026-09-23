@@ -120,13 +120,25 @@ autentificare, modul demonstrativ afiseaza conturile de test.
   `adaugaInConducere(nume, telefon, rol)` → Edge Function `cont-locatar` cu
   `actiune: "conducere"`, care face contul si apoi mandatul.
 - **Mandatul** se incheie cu `incheieMandat(id)` → `identitate.incheie_mandat`, care scrie
-  `activ_pana` (cel putin o zi de mandat, ca istoricul sa ramana citibil). Randul nu se sterge.
+  `activ_pana` cu data reala, ca la `inchide_acces_locatar`: un mandat incheiat azi nu mai da
+  niciun drept azi [C6]. Randul nu se sterge, iar o realegere este un rand nou, cu perioada lui
+  [C7], deci ecranul arata toate mandatele omului, nu doar ultimul.
+- **Cine nu poate fi numit:** administratorul asociatiei [C8] (el este cel verificat) si nimeni cu
+  data de inceput in viitor [C12]. Asociatia in care intra mandatul o spune ecranul
+  (`p_asociatie_id`), iar `identitate.asociatia_de_administrat()` o verifica — aceeasi asociatie
+  pe care o arata `eu()` [C5].
 - **Ce vad:** tot blocul, cu ecranele administratorului (`identitate.eu()` le da rolul, iar
   `private.blocuri_supravegheate()` dreptul de citire). Nu scriu nimic: comenzile cer
   `private.blocuri_administrate()`, iar ecranele nu le arata butoanele (steagul `doarVerifica`).
   Asa ramane separat cel care tine banii de cel care il verifica.
-- **Un presedinte care sta in bloc** vede blocul cu rolul lui; apartamentul lui il gaseste in
-  Apartamente, ca pe oricare altul (nu mai are ecranele de locatar).
+- **Sesizarile fac exceptie** [C1]: ce scrie un om despre casa lui ramane intre el si
+  administrator (migratia H11). Conducerea le vede anonim, ca orice locatar (titlu, categorie,
+  stare), iar ecranul spune de ce nu vede mai mult.
+- **Un presedinte care sta in bloc** ramane si locatar [C2]: `eu()` ii da rolul de conducere *si*
+  apartamentul lui, aplicatia porneste in ecranele lui de locatar (index, sesizare, vot), iar
+  verificarea blocului se deschide din tabul Bloc, cu butonul "Verifica blocul", si se inchide cu
+  "Inapoi la apartamentul meu". Cine nu are apartament in bloc (un cenzor contabil din afara)
+  vede direct panoul.
 
 ### 2.5 Cont fara apartament
 - **UI:** `EcranFaraAcces`: "Contul nu este legat de un apartament", cu indrumarea catre
@@ -540,9 +552,9 @@ Exista in schema, dar nu au ecran, comanda sau consumator.
 
 **Identitate**
   revoca automat codurile nefolosite ale apartamentului.
-- Nu se pot numi presedintele si cenzorul si nu se poate incheia un mandat. `eu()` nu are rol de
-  presedinte sau cenzor: un presedinte fara apartament primeste `fara_apartament`, desi RLS i-ar
-  da drept de citire.
+- Omul nu-si poate schimba singur numele de pe ecran (numai `nume` este scriibil, iar aplicatia nu
+  are ecranul); numarul de telefon nu se schimba deloc din aplicatie [A2], pentru ca el este
+  identitatea contului.
 
 **Contorizare**
 - `estimeaza_citiri` nu este programata in cron.

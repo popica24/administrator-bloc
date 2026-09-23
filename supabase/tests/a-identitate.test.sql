@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(127);
+select plan(128);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -715,6 +715,11 @@ select pg_temp.ca('locA1');
 set local role authenticated;
 select is(identitate.eu() ->> 'rol', 'cenzor',
   'identitate.eu: cenzorul care e si locatar vede blocul ca cenzor');
+-- [C2] ... fara sa-si piarda apartamentul: altfel nu mai transmite indexul,
+-- nu mai scrie sesizari si nu mai voteaza (Legea 196/2018 cere ca
+-- presedintele sa fie proprietar, deci cazul este regula).
+select is((identitate.eu() ->> 'apartament_id')::uuid, pg_temp.id('apA1'),
+  '[C2] identitate.eu: conducerea care locuieste in bloc isi pastreaza apartamentul');
 reset role;
 
 select pg_temp.ca('adminB');

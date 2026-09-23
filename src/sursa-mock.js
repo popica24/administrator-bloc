@@ -587,19 +587,24 @@ function proiecteaza(db, profilId, apartamentAles) {
      bloc (proprietar la unul, chirias la altul): toate legaturile lui din
      acest bloc raman vizibile dintr-o singura incarcare, iar apartamentAles
      (daca e chiar al lui) devine apartamentul activ. */
-  if (!esteAdmin) {
+  /* [C2] presedintele sau cenzorul care locuieste in bloc ramane si locatar */
+  if (!esteAdministrator && eu.apartamentId) {
     const legaturileBloc = legaturi.filter((l) => {
       const a = db.apartamente.find((x) => x.id === l.apartamentId);
       return a && a.blocId === bloc.id;
     });
     eu.apartamenteMele = legaturileBloc.map((l) => l.apartamentId);
+    /* un cenzor din afara blocului poate locui in alta parte: atunci nu are
+       apartament aici si ramane numai cu panoul de verificare */
+    if (!eu.apartamenteMele.includes(eu.apartamentId)) eu.apartamentId = eu.apartamenteMele[0] || null;
     if (apartamentAles && eu.apartamenteMele.includes(apartamentAles)) eu.apartamentId = apartamentAles;
     /* [P1] calitatea la apartamentul activ, ca ecranele sa stie inainte sa
        lase omul sa incerce o actiune rezervata proprietarului (votul).
        eu.apartamentId e mereu cel implicit (in legaturileBloc prin
        constructia lui bloc) sau un apartamentAles deja validat mai sus,
        deci se gaseste mereu aici. */
-    eu.calitate = legaturileBloc.find((l) => l.apartamentId === eu.apartamentId).calitate;
+    const aMea = legaturileBloc.find((l) => l.apartamentId === eu.apartamentId);
+    eu.calitate = aMea ? aMea.calitate : null;
   }
   const vizibile = esteAdmin ? apBloc.map((a) => a.id) : eu.apartamenteMele;
   const alMeu = (id) => vizibile.includes(id);

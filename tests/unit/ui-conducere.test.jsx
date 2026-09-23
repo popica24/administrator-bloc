@@ -3,7 +3,7 @@
    > Conducere). */
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
-import { pornesteApp, sursaDemo, textEcran, PAROLA } from "./ajutor.jsx";
+import { pornesteApp, sursaDemo, textEcran, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 import { pornesteAdmin, apasa, buton, butoane, scrie, toast, inDialog, mergiLa } from "./ui-admin-ajutor.js";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
@@ -272,5 +272,53 @@ describe("administratorul trece mandatele in aplicatie", () => {
   it("fara niciun mandat, spune asta in loc sa lase un gol", async () => {
     await laConducere({ modifica: (d) => { d.conducere = []; } });
     expect(ecran()).toContain("Nimeni nu are inca mandat de presedinte sau de cenzor.");
+  });
+});
+
+/* [C2] Legea 196/2018 cere ca presedintele sa fie proprietar in asociatie,
+   deci presedintele care locuieste in bloc este regula, nu exceptia. Pana la
+   auditul 4, numirea ii lua toate ecranele de locatar: nu mai transmitea
+   indexul de apa, nu mai scria o sesizare si nu mai vota. */
+describe("presedintele care locuieste in bloc", () => {
+  async function elenaPresedinte() {
+    const s = sursaDemo();
+    await s.intra(ADMIN, PAROLA);
+    const d = await s.incarca();
+    const elena = d.apartamente.find((a) => a.numar === "17").locatari[0];
+    await s.numesteInConducere(elena.profilId, "presedinte");
+    await s.intra(LOCATAR, PAROLA);
+    const r = await pornesteApp({ sursa: s });
+    await screen.findByText("Apartament 17, Bloc D14, scara A");
+    return r;
+  }
+
+  it("porneste in apartamentul lui, cu ecranele de locatar", async () => {
+    await elenaPresedinte();
+    for (const t of ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"]) {
+      expect(screen.getByRole("tab", { name: new RegExp(`^${t}( \\d+)?$`) })).toBeTruthy();
+    }
+    expect(screen.queryByText("Panou administrator")).toBeNull();
+  });
+
+  it("isi transmite indexul si isi scrie sesizarea, ca orice locatar", async () => {
+    await elenaPresedinte();
+    await mergiLa("Contoare");
+    expect(butoane("Trimite indexul").length).toBe(1);
+    await mergiLa("Sesizari");
+    expect(butoane("Sesizare noua").length).toBe(1);
+  });
+
+  it("deschide verificarea blocului din tabul Bloc si se intoarce de unde a plecat", async () => {
+    await elenaPresedinte();
+    await mergiLa("Bloc");
+    expect(ecran()).toContain("Esti presedinte al asociatiei");
+    await apasa(buton("Verifica blocul"));
+    await screen.findByText("Panou administrator");
+    expect(screen.getByText("Presedinte, Bloc D14, scara A")).toBeTruthy();
+    /* si acolo tot nu scrie nimic */
+    expect(butoane("Trimite reminder de plata").length).toBe(0);
+    await apasa(buton("Inapoi la apartamentul meu"));
+    await screen.findByText("Apartament 17, Bloc D14, scara A");
+    expect(screen.getByRole("tab", { name: /^Acasa/ })).toBeTruthy();
   });
 });

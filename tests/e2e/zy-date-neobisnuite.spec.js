@@ -12,7 +12,7 @@
 import { test, expect } from "@playwright/test";
 import {
   serviciu, URL_SUPABASE, CHEIE_SERVICIU, PAROLA, intra, buton, mergiLaTab,
-  asteaptaToast, CUVINTE_TEHNICE, descarca, textPdf, telefonTemporar,
+  asteaptaToast, CUVINTE_TEHNICE, descarca, textPdf, telefonTemporar, creeazaCont,
 } from "./ajutor.js";
 
 const STAMP = Date.now().toString(36);
@@ -106,17 +106,10 @@ async function creeazaBloc({ eticheta, cui, apartamente, contoareGenerale }) {
   return { ...creata, telefon, apartamente: apsBd };
 }
 
+/* Contul se tine pe numarul de telefon: acelasi ajutor ca in restul suitei */
 async function locatarNou(telefon, nume, apartamentId, blocId) {
   const db = serviciu();
-  const { data: p } = await db.schema("identitate").from("profiluri").select("id").eq("telefon", telefon).maybeSingle();
-  let id = p?.id;
-  if (!id) {
-    const { data, error } = await db.auth.admin.createUser({
-      telefon, password: PAROLA, email_confirm: true, user_metadata: { nume, telefon: "0700000002" },
-    });
-    if (error) throw new Error(`cont ${telefon}: ${error.message}`);
-    id = data.user.id;
-  }
+  const id = await creeazaCont(telefon, nume);
   await ok(db.schema("identitate").from("locatari").insert({
     apartament_id: apartamentId, bloc_id: blocId, profil_id: id, calitate: "proprietar", activ_din: LUNA,
   }), `locatar ${telefon}`);
@@ -128,8 +121,8 @@ async function locatarNou(telefon, nume, apartamentId, blocId) {
 let urmatorulCui = 0;
 const cuiNou = () => String(90000000 + ((Date.now() + (urmatorulCui += 7919)) % 9000000));
 
-const LOCATAR_UNUL = `e2e-neo-unul-locatar-${STAMP}@adminbloc.test`;
-const LOCATAR_GOL = `e2e-neo-gol-locatar-${STAMP}@adminbloc.test`;
+const LOCATAR_UNUL = telefonTemporar();
+const LOCATAR_GOL = telefonTemporar();
 
 let UNUL;   /* bloc cu un singur apartament, cu contoare */
 let GOL;    /* bloc cu un apartament fara contoare */

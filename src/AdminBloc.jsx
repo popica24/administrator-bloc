@@ -272,6 +272,9 @@ const ROLURI_CONTACT = { administrator: "Administrator", presedinte: "Presedinte
 const ROLURI_CONDUCERE = ["administrator", "presedinte", "cenzor"];
 const ETICHETA_ROL = { administrator: "Administrator", presedinte: "Presedinte", cenzor: "Cenzor" };
 const doarVerifica = (date) => date.eu.rol === "presedinte" || date.eu.rol === "cenzor";
+/* [C2] Presedintele sau cenzorul care locuieste in bloc: are si apartament,
+   deci poate trece intre ecranele lui de locatar si panoul de verificare. */
+const poateComuta = (date) => doarVerifica(date) && !!date.eu.apartamentId;
 
 const CALITATI = [
   { value: "proprietar", label: "Proprietar" },
@@ -2515,7 +2518,7 @@ function RezultateVot({ vot }) {
 }
 
 function LocatarBloc({ parametri }) {
-  const { date, voteaza, confirmaPrezenta, marcheazaAnunturiCitite, deschideDocument } = useApp();
+  const { date, voteaza, confirmaPrezenta, marcheazaAnunturiCitite, deschideDocument, deschideVerificarea } = useApp();
   const ap = apartamentulMeu(date);
   const [tab, setTab] = useState(parametri && parametri.tab ? parametri.tab : "avizier");
   const [confirmVot, setConfirmVot] = useState(null);
@@ -2539,6 +2542,19 @@ function LocatarBloc({ parametri }) {
   return (
     <Box gap={S.lg}>
       <AntetEcran eyebrow={date.bloc.adresa} titlu={date.bloc.denumire} />
+
+      {/* [C2] Presedintele si cenzorul care locuiesc in bloc au si
+          apartamentul lor: ecranele acestea raman ale lor, iar verificarea
+          blocului se deschide de aici, cand au nevoie de ea. */}
+      {poateComuta(date) && (
+        <Card gap={S.sm}>
+          <Txt size={13} weight={700}>Esti {ETICHETA_ROL[date.eu.rol].toLowerCase()} al asociatiei</Txt>
+          <Txt size={12.5} color={C.inkSoft}>
+            Poti vedea tot blocul: banii, listele, facturile si documentele. Nu poti schimba nimic acolo.
+          </Txt>
+          <Btn label="Verifica blocul" full size="lg" onPress={() => deschideVerificarea(true)} />
+        </Card>
+      )}
 
       <Segment
         small
@@ -2764,7 +2780,7 @@ function Kpi({ eticheta, valoare, sub, tone, flex = 1, onPress }) {
 }
 
 function AdminSumar({ go }) {
-  const { date, trimiteReminder, trimiteInstiintare, toastMsg } = useApp();
+  const { date, trimiteReminder, trimiteInstiintare, toastMsg, deschideVerificarea } = useApp();
   /* Presedintele si cenzorul verifica: vad tot, nu schimba nimic. */
   const verifica = doarVerifica(date);
   const st = statisticiAdmin(date);
@@ -2776,6 +2792,11 @@ function AdminSumar({ go }) {
   return (
     <Box gap={S.lg}>
       <AntetEcran eyebrow={`${date.asociatie.denumire} · ${st.totalApartamente} apartamente`} titlu="Panou administrator" />
+
+      {/* [C2] Iesirea din verificare, pentru cine locuieste in bloc */}
+      {poateComuta(date) && (
+        <Btn label="Inapoi la apartamentul meu" variant="secondary" full onPress={() => deschideVerificarea(false)} />
+      )}
 
       {lista ? (
         <Card gap={S.md}>
@@ -4486,9 +4507,12 @@ function TabBar({ taburi, activ, onChange, badgeuri }) {
 }
 
 function BaraSus({ date, onIesi, onAlegeApartament }) {
+  const { verificare } = useApp();
   /* Administratorul si conducerea care verifica (presedinte, cenzor) vad
      blocul intreg; locatarul, apartamentul lui. */
-  const conduceBlocul = ROLURI_CONDUCERE.includes(date.eu.rol);
+  /* [C2] Cine conduce si locuieste in bloc trece intre apartamentul lui si
+     panoul de verificare: bara de sus spune unde se afla acum. */
+  const conduceBlocul = ROLURI_CONDUCERE.includes(date.eu.rol) && !(poateComuta(date) && !verificare);
   const esteAdmin = conduceBlocul;
   const ap = !esteAdmin ? apartamentulMeu(date) : null;
   const initiale = date.bloc.denumire.replace(/^Bloc\s+/i, "").split(/[\s,]/)[0].slice(0, 3).toUpperCase();
@@ -4664,6 +4688,10 @@ export default function AdminBloc() {
      pentru toata lumea cu un singur apartament. */
   const [apartamentAles, setApartamentAles] = useState(null);
   const [tab, setTab] = useState(null);
+  /* [C2] Presedintele care locuieste in bloc are doua vieti in aplicatie:
+     apartamentul lui (ecranele de locatar) si verificarea blocului (panoul
+     de citire). Aici se tine care dintre ele este deschisa. */
+  const [verificare, setVerificare] = useState(false);
   const [parametri, setParametri] = useState(null);
   const [toast, setToast] = useState(null);
   /* [S3] Prima incarcare cazuta (sesiune expirata, retea) nu lasa omul in
@@ -4887,7 +4915,15 @@ export default function AdminBloc() {
     return protejate;
   }, [sursa, reincarca, toastMsg]);
 
-  const api = useMemo(() => ({ ...comenzi, date }), [comenzi, date]);
+  const deschideVerificarea = useCallback((pornit) => {
+    setVerificare(pornit);
+    setTab(null);
+    setParametri(null);
+  }, []);
+  const api = useMemo(
+    () => ({ ...comenzi, date, verificare, deschideVerificarea }),
+    [comenzi, date, verificare, deschideVerificarea],
+  );
 
   const go = useCallback((t, p) => {
     const parametriNoi = p ? { ...p, _n: Date.now() } : null;
@@ -4934,7 +4970,9 @@ export default function AdminBloc() {
     continut = <EcranFaraAcces />;
     cheie = "fara-acces";
   } else {
-    const esteAdmin = ROLURI_CONDUCERE.includes(date.eu.rol);
+    /* [C2] Cine conduce si locuieste in bloc porneste in apartamentul lui;
+       panoul de verificare se deschide dintr-un buton, din tabul Bloc. */
+    const esteAdmin = ROLURI_CONDUCERE.includes(date.eu.rol) && (!poateComuta(date) || verificare);
     const taburi = esteAdmin ? TABURI_ADMIN : TABURI_LOCATAR;
     const tabActiv = taburi.find((t) => t.key === tab) ? tab : taburi[0].key;
     const Ecran = taburi.find((t) => t.key === tabActiv).ecran;
@@ -4948,7 +4986,7 @@ export default function AdminBloc() {
         bloc: date.anunturi.filter((a) => !a.citit).length,
         acasa: date.notificari.filter((n) => !n.cititaLa).length,
       };
-    cheie = `${date.eu.rol}-${tabActiv}`;
+    cheie = `${date.eu.rol}${esteAdmin ? "-panou" : ""}-${tabActiv}`;
     bara = <BaraSus date={date} onIesi={comenzi.iesi} onAlegeApartament={comenzi.aleseApartament} />;
     continut = (
       <div key={`${date.eu.rol}-${tabActiv}-${parametri ? parametri._n : ""}`} className="ab-fade">

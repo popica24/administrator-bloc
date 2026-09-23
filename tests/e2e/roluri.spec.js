@@ -12,9 +12,15 @@ import {
 let ASOC;
 test.beforeAll(async () => { ASOC = await asociatieD14(); });
 
+/* [C7] Fiecare mandat este un rand nou, cu perioada lui: cheia unica este
+   partiala, pe mandatul in curs, deci aici se insereaza doar daca nu exista
+   deja unul deschis. */
 async function faceMembru(profilId, rol) {
-  const { error } = await serviciu().schema("identitate").from("membri_asociatie")
-    .upsert({ asociatie_id: ASOC, profil_id: profilId, rol }, { onConflict: "asociatie_id,profil_id,rol" });
+  const db = serviciu().schema("identitate");
+  const { data: curent } = await db.from("membri_asociatie").select("id")
+    .eq("asociatie_id", ASOC).eq("profil_id", profilId).eq("rol", rol).is("activ_pana", null).maybeSingle();
+  if (curent) return;
+  const { error } = await db.from("membri_asociatie").insert({ asociatie_id: ASOC, profil_id: profilId, rol });
   if (error) throw new Error(`faceMembru: ${error.message}`);
 }
 
@@ -42,7 +48,9 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
 
     await intra(page, PRESEDINTE);
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
-    /* Rolul ramane de locatar: cinci taburi, nu panoul de administrator */
+    /* [C2] Presedintele care locuieste in bloc porneste in apartamentul lui:
+       cinci taburi de locatar, nu panoul. Verificarea blocului se deschide
+       dintr-un buton, in tabul Bloc. */
     await expect(page.getByRole("tab")).toHaveCount(5);
     await expect(page.getByText("Panou administrator")).toHaveCount(0);
     await expect(page.getByText("Apartament 12, Bloc D14, scara A")).toBeVisible();
@@ -82,6 +90,24 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
     await expect(buton(page, "Descarca chitanta")).toHaveCount(plati);
   });
 
+  /* [C2] Verificarea blocului se deschide din tabul Bloc si se inchide de
+     unde a inceput: presedintele nu-si pierde apartamentul cat verifica. */
+  test("presedintele deschide verificarea blocului si se intoarce la apartamentul lui", async ({ page }) => {
+    const ap = await apartamentulNumarul(12);
+    const pid = await creeazaCont(PRESEDINTE, "Ioana Stancu");
+    await legaDeApartament(pid, ap.id);
+    await faceMembru(pid, "presedinte");
+
+    await intra(page, PRESEDINTE);
+    await mergiLaTab(page, "Bloc");
+    await expect(page.getByText("Esti presedinte al asociatiei")).toBeVisible({ timeout: 20000 });
+    await buton(page, "Verifica blocul").click();
+    await expect(page.getByText("Panou administrator")).toBeVisible();
+    await expect(page.getByText("Presedinte, Bloc D14, scara A")).toBeVisible();
+    await buton(page, "Inapoi la apartamentul meu").click();
+    await expect(page.getByText("Apartament 12, Bloc D14, scara A")).toBeVisible();
+  });
+
   test("contactele blocului arata presedintele si cenzorul", async ({ page }) => {
     await intraCa(page, "elena");
     const t = await textEcran(page);
@@ -96,18 +122,24 @@ test.describe("presedinte fara apartament", () => {
   const TELEFON = "0798284550";
   test.afterAll(async () => { await stergeCont(TELEFON); });
 
-  /* Documentat in harta functiilor §9: eu() nu are rol de presedinte, deci un
-     presedinte fara apartament ramane fara_apartament. Testul fixeaza
-     comportamentul de azi ca sa se vada cand se schimba. */
-  test("ramane pe ecranul fara acces si nu vede blocul", async ({ page }) => {
+  /* Un cenzor poate fi un contabil din afara blocului, iar un presedinte poate
+     sa-si fi vandut apartamentul: contul lor nu e legat de niciun apartament,
+     dar mandatul le da panoul de verificare, doar de citit. */
+  test("vede panoul de verificare, fara niciun buton care schimba ceva", async ({ page }) => {
     const pid = await creeazaCont(TELEFON, "Petre Presedinte");
     await faceMembru(pid, "presedinte");
 
     await intra(page, TELEFON);
-    await expect(page.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
-    await expect(page.getByRole("tab")).toHaveCount(0);
+    await expect(page.getByText("Panou administrator")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Presedinte, Bloc D14, scara A")).toBeVisible();
+    await expect(page.getByRole("tab")).toHaveCount(5);
+    /* nu are apartament, deci nici intoarcere la ecranele de locatar */
+    await expect(buton(page, "Inapoi la apartamentul meu")).toHaveCount(0);
+    await expect(buton(page, "Trimite reminder de plata")).toHaveCount(0);
+    await mergiLaTab(page, "Facturi");
+    await expect(buton(page, "Publica lista")).toHaveCount(0);
+    await expect(buton(page, "Adauga factura")).toHaveCount(0);
     const t = await textEcran(page);
-    expect(t).not.toContain("Bloc D14");
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
 });

@@ -151,14 +151,16 @@ export function creeazaSursaSupabase(url, cheie) {
        Interogarea sta inaintea marelui Promise.all, pentru ca alMeu() si
        prin() (folosite in el) au nevoie de lista completa. */
     /* [K17] ordonate, ca alegerea apartamentului sa nu se reaseze la fiecare incarcare */
-    const legaturileMele = esteAdmin ? [] : await ok(id.from("locatari").select("apartament_id, calitate")
+    /* [C2] Presedintele sau cenzorul care locuieste in bloc ramane si
+       locatar: are nevoie de legaturile lui, ca sa-si vada apartamentul. */
+    const legaturileMele = esteAdministrator ? [] : await ok(id.from("locatari").select("apartament_id, calitate")
       .eq("profil_id", eu.profil_id).eq("bloc_id", bloc)
       .lte("activ_din", azi).or(`activ_pana.is.null,activ_pana.gt.${azi}`)
       .order("activ_din", { ascending: true }).order("apartament_id", { ascending: true }));
     const idApartamenteMele = legaturileMele.length ? legaturileMele.map((l) => l.apartament_id) : [eu.apartament_id];
     /* Apartamentul "activ" este cel ales de om, daca e chiar unul de-al lui;
        altfel ramane cel ales de identitate.eu(). */
-    if (!esteAdmin && apartamentAles && idApartamenteMele.includes(apartamentAles)) {
+    if (!esteAdministrator && apartamentAles && idApartamenteMele.includes(apartamentAles)) {
       euUi.apartamentId = apartamentAles;
       ctx.apartamentId = apartamentAles;
     }
@@ -240,7 +242,7 @@ export function creeazaSursaSupabase(url, cheie) {
     locatari.sort(inOrdineaAdaugarii);
     fonduri.sort((x, y) => x.tip.localeCompare(y.tip));
 
-    if (!esteAdmin) {
+    if (!esteAdministrator && euUi.apartamentId) {
       /* [P1] Calitatea locatarului la apartamentul activ, ca ecranele sa
          stie inainte sa lase omul sa incerce o actiune rezervata
          proprietarului (votul, Legea 196/2018). */
