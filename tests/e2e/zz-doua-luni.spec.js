@@ -133,9 +133,9 @@ test.describe("doua luni la rand, fara derive", () => {
     await buton(page, "Emite chitanta").click();
     await asteaptaToast(page, "chitanta");
     await expect.poll(async () => soldApartament(apElena.id), { timeout: 30000 }).toBe(0);
+    await page.getByRole("dialog", { name: "Apartament 17" }).getByRole("button", { name: "Inchide" }).first().click();
 
     /* Iar de la restantier incaseaza doar o parte */
-    await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 3" }).click();
     await buton(page, "Inregistreaza incasare cash").click();
     await page.getByLabel(/Suma primita/).fill("100");
