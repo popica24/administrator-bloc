@@ -84,6 +84,14 @@ cad pe `http://localhost:5173`, iar aplicatia reala primeste "Serverul nu
 raspunde" la publicarea listei. Trebuie sa fie aceeasi adresa cu
 `auth.site_url` din `supabase/config.toml`.
 
+Tot inainte de primul deploy, in panoul proiectului (Authentication >
+Sign In / Providers) **inscrierea trebuie sa fie inchisa**, ca in
+`supabase/config.toml` (`[auth] enable_signup = false`). Contul nu si-l face
+omul: administratorul ii trece numarul de telefon in aplicatie, iar
+`cont-locatar` il creeaza cu cheia de serviciu. Cu inscrierea deschisa,
+oricine poate sa-si faca singur cont pe adresa interna a unui numar strain si
+sa primeasca apartamentul cand administratorul adauga acel numar.
+
 ## Stack
 
 React 19, Vite 7, Supabase (Postgres 17, Auth, Storage, Edge Functions, pg_cron, pg_net).

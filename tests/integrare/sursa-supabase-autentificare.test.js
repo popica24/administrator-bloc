@@ -2,8 +2,9 @@
    telefon, iesirea si contul pe care administratorul il face unui locatar.
    Conturile se creeaza la fiecare rulare, pe numere unice. */
 import { beforeAll, describe, expect, it } from "vitest";
+import { createClient } from "@supabase/supabase-js";
 import {
-  PAROLA_TEST, creeazaBloc, creeazaCont, db, intraCa, lunaCurenta, ok, pdf, pozaJpeg, serviciu, sursaNoua, telefonDeTest,
+  ANON_LOCAL, PAROLA_TEST, URL_LOCAL, creeazaBloc, creeazaCont, db, intraCa, lunaCurenta, ok, pdf, pozaJpeg, serviciu, sursaNoua, telefonDeTest,
 } from "./fixture.js";
 
 const D14_ADMIN = "0745 210 118";
@@ -40,6 +41,26 @@ describe("sesiunea", () => {
     const mesaj = "Numarul de telefon sau parola nu sunt corecte.";
     await expect(sursaNoua().intra(D14_ADMIN, "parola-gresita")).rejects.toThrow(mesaj);
     await expect(sursaNoua().intra(telefonDeTest(), PAROLA_TEST)).rejects.toThrow(mesaj);
+  });
+
+  /* [A1] Contul il face administratorul, niciodata omul. Cat timp inscrierea
+     prin API era deschisa, oricine putea sa-si faca singur cont pe adresa
+     interna a unui numar care nu este al lui ("0722..."@telefon.adminbloc.ro)
+     si sa astepte: cand administratorul adauga acel numar in bloc,
+     cont-locatar gaseste profilul gata facut si ii leaga apartamentul. */
+  it("[A1] nimeni nu-si face singur cont: inscrierea prin API este inchisa", async () => {
+    const numar = telefonDeTest();
+    const anonim = createClient(URL_LOCAL, ANON_LOCAL, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data, error } = await anonim.auth.signUp({
+      email: `${numar}@telefon.adminbloc.ro`,
+      password: PAROLA_TEST,
+      options: { data: { nume: "Cineva din afara", telefon: numar } },
+    });
+    expect(error, "inscrierea prin API trebuie refuzata").toBeTruthy();
+    expect(data.user).toBeNull();
+    const { count } = await db("identitate").from("profiluri")
+      .select("id", { count: "exact", head: true }).eq("telefon", numar);
+    expect(count, "numarul a ramas liber pentru administrator").toBe(0);
   });
 
   it("intra() cu ceva ce nu e numar de telefon nu ajunge la server", async () => {
