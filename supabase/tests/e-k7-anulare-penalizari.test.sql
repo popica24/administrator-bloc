@@ -13,7 +13,7 @@
 -- 0,2% pe zi (plafonul legal), fara zile de gratie: penalizarea este 30 de lei.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(26);
 
 create or replace function private.este_serviciu()
 returns boolean
@@ -185,6 +185,36 @@ select is(
 select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), -110.00::numeric,
   '[K7] ...si raman avans al apartamentului');
 rollback to savepoint platita;
+
+-- -----------------------------------------------------------------------------
+-- [B1] O corectura in sus, apoi una in jos sub suma initiala
+-- -----------------------------------------------------------------------------
+-- Auditul 4: corectiile negative erau scazute toate din randul de intretinere,
+-- fara sa fie compensate cu cele pozitive. Lista urca la 700 (corectie +400) si
+-- coboara la 100 (corectie -600): intretinerea ramanea cu rest -300, iar
+-- corectia de +400 cu rest 400, desi omul datoreaza 100. Plata lui se ducea pe
+-- corectie, restul negativ nu se mai putea consuma niciodata (aloca_plata sare
+-- peste rest <= 0), iar penalizarile urmatoare se calculau pe 400.
+savepoint sus_apoi_jos;
+select pg_temp.recalculeaza(700, 0);
+select pg_temp.recalculeaza(100, 600);
+select is(pg_temp.rest(pg_temp.fx('intr')), 0.00::numeric,
+  '[B1] intretinerea nu ramane cu rest negativ cand corectia negativa are cu ce sa se compenseze');
+select is(
+  (select rest from financiar.datorii_rest
+    where lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap1') and tip = 'corectie' and suma > 0),
+  100.00::numeric,
+  '[B1] corectia pozitiva ramane cu restul real: 100 de lei, nu 400');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  (select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')),
+  '[B1] suma resturilor ramane egala cu soldul din registru');
+select financiar.inregistreaza_plata(pg_temp.fx('ap1'), 100, 'numerar');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  0.00::numeric,
+  '[B1] plata soldului real inchide tot, fara rand ramas pe ecran');
+rollback to savepoint sus_apoi_jos;
 
 -- -----------------------------------------------------------------------------
 -- Doar in jos

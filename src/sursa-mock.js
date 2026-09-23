@@ -111,11 +111,30 @@ const restDatorie = (db, d) => {
   if (d.tip === "penalizare") {
     return round2(propriu + db.datorii.filter((x) => x.anuleazaDatorieId === d.id).reduce((s, x) => s + x.suma, 0));
   }
-  if (d.tip !== "intretinere") return propriu;
-  const reducere = db.datorii
-    .filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId)
+  const inPachet = d.listaId && (d.tip === "intretinere" || (d.tip === "corectie" && d.suma > 0));
+  if (!inPachet) return propriu;
+  /* [B1] Corectiile negative ale listei se compenseaza intai cu ce mai are de
+     primit lista (intretinerea, apoi corectiile pozitive, in ordinea lor) si
+     abia ce ramane cade pe intretinere, ca rest negativ, adica avans. */
+  const deScazut = -db.datorii
+    .filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId
+      && areDatorieSora(db, c))
     .reduce((s, c) => s + round2(c.suma - alocatDatorie(db, c.id)), 0);
-  return round2(propriu + reducere);
+  if (deScazut <= 0) return propriu;
+  /* aceeasi ordine ca in financiar.datorii_rest: intretinerea, apoi corectiile
+     pozitive dupa data si id */
+  const cheie = (x) => `${x.tip === "intretinere" ? 0 : 1}|${x.creatLa}|${x.id}`;
+  const pachet = db.datorii
+    .filter((x) => x.listaId === d.listaId && x.apartamentId === d.apartamentId
+      && (x.tip === "intretinere" || (x.tip === "corectie" && x.suma > 0)))
+    .sort((a, b) => cheie(a).localeCompare(cheie(b)));
+  const cap = (x) => Math.max(round2(x.suma - alocatDatorie(db, x.id)), 0);
+  const inainte = pachet.slice(0, pachet.findIndex((x) => x.id === d.id)).reduce((s, x) => s + cap(x), 0);
+  const scade = Math.max(Math.min(cap(d), deScazut - inainte), 0);
+  const ramasita = d.tip === "intretinere"
+    ? Math.max(deScazut - pachet.reduce((s, x) => s + cap(x), 0), 0)
+    : 0;
+  return round2(propriu - scade - ramasita);
 };
 
 /* Alocarea unei plati pe datorii, incepand cu cea mai veche scadenta */
@@ -587,24 +606,19 @@ function proiecteaza(db, profilId, apartamentAles) {
      bloc (proprietar la unul, chirias la altul): toate legaturile lui din
      acest bloc raman vizibile dintr-o singura incarcare, iar apartamentAles
      (daca e chiar al lui) devine apartamentul activ. */
-  /* [C2] presedintele sau cenzorul care locuieste in bloc ramane si locatar */
-  if (!esteAdministrator && eu.apartamentId) {
+  /* [C2] presedintele sau cenzorul care locuieste in bloc ramane si locatar;
+     un cenzor din afara blocului nu are apartament aici si ramane numai cu
+     panoul de verificare. */
+  if (!esteAdministrator) {
     const legaturileBloc = legaturi.filter((l) => {
       const a = db.apartamente.find((x) => x.id === l.apartamentId);
       return a && a.blocId === bloc.id;
     });
     eu.apartamenteMele = legaturileBloc.map((l) => l.apartamentId);
-    /* un cenzor din afara blocului poate locui in alta parte: atunci nu are
-       apartament aici si ramane numai cu panoul de verificare */
-    if (!eu.apartamenteMele.includes(eu.apartamentId)) eu.apartamentId = eu.apartamenteMele[0] || null;
-    if (apartamentAles && eu.apartamenteMele.includes(apartamentAles)) eu.apartamentId = apartamentAles;
+    eu.apartamentId = eu.apartamenteMele.includes(apartamentAles) ? apartamentAles : (eu.apartamenteMele[0] || null);
     /* [P1] calitatea la apartamentul activ, ca ecranele sa stie inainte sa
-       lase omul sa incerce o actiune rezervata proprietarului (votul).
-       eu.apartamentId e mereu cel implicit (in legaturileBloc prin
-       constructia lui bloc) sau un apartamentAles deja validat mai sus,
-       deci se gaseste mereu aici. */
-    const aMea = legaturileBloc.find((l) => l.apartamentId === eu.apartamentId);
-    eu.calitate = aMea ? aMea.calitate : null;
+       lase omul sa incerce o actiune rezervata proprietarului (votul). */
+    eu.calitate = (legaturileBloc.find((l) => l.apartamentId === eu.apartamentId) || {}).calitate || null;
   }
   const vizibile = esteAdmin ? apBloc.map((a) => a.id) : eu.apartamenteMele;
   const alMeu = (id) => vizibile.includes(id);

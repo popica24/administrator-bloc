@@ -37,6 +37,54 @@ describe("restDatorie", () => {
     expect(dupa.datorii.find((x) => x.id === corectie.id).rest).toBe(0);
   });
 
+  /* [B1] Corectura in sus, apoi in jos sub suma initiala: pana la auditul 4,
+     corectiile negative erau scazute toate din randul de intretinere, fara sa
+     fie compensate cu cele pozitive. Intretinerea ramanea cu rest negativ (pe
+     care nicio plata nu-l mai putea consuma), iar corectia pozitiva cerea in
+     continuare toata suma ei. */
+  it("[B1] corectiile pozitive ale listei absorb intai reducerea", async () => {
+    const { s, d } = await admin();
+    const ap = apNr(d, "9").id;
+    const listaId = "lst-test-b1";
+    const intretinere = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-08", listaId,
+      suma: 300, scadenta: "2026-09-25", descriere: "Test intretinere",
+    });
+    const inSus = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "corectie", luna: "2026-08", listaId,
+      suma: 400, scadenta: "2026-10-05", descriere: "Corectie in sus",
+    });
+    const inJos = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "corectie", luna: "2026-08", listaId,
+      suma: -600, scadenta: "2026-10-05", descriere: "Corectie in jos",
+    });
+    const dupa = await s.incarca();
+    const rest = (id) => dupa.datorii.find((x) => x.id === id).rest;
+    expect(rest(intretinere.id)).toBe(0);
+    expect(rest(inSus.id)).toBe(100);
+    expect(rest(inJos.id)).toBe(0);
+  });
+
+  /* [B1] Cand nu mai are ce reduce (totul e platit), ce ramane cade pe
+     intretinere ca rest negativ: acolo il gaseste eliberarea alocarilor si il
+     face avans. */
+  it("[B1] reducerea care nu mai are ce sa scada ramane pe intretinere, ca avans", async () => {
+    const { s, d } = await admin();
+    const ap = apNr(d, "9").id;
+    const listaId = "lst-test-b1b";
+    const intretinere = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-08", listaId,
+      suma: 300, scadenta: "2026-09-25", descriere: "Test intretinere",
+    });
+    const inJos = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "corectie", luna: "2026-08", listaId,
+      suma: -500, scadenta: "2026-10-05", descriere: "Corectie in jos",
+    });
+    const dupa = await s.incarca();
+    expect(dupa.datorii.find((x) => x.id === intretinere.id).rest).toBe(-200);
+    expect(dupa.datorii.find((x) => x.id === inJos.id).rest).toBe(0);
+  });
+
   it("[K16] o corectie negativa fara datorie sora isi pastreaza propriul rest", async () => {
     const { s, d } = await admin();
     const ap = apNr(d, "9").id;
