@@ -13,7 +13,7 @@
 //
 // Corp: { apartament_id, nume, telefon, calitate }             -> cont nou
 //        { apartament_id, locatar_id, actiune: "parola" }      -> parola noua
-//        { nume, telefon, rol, actiune: "conducere" }          -> presedinte
+//        { asociatie_id, nume, telefon, rol, actiune: "conducere" } -> presedinte
 //                                                                 sau cenzor
 //
 // Daca numarul are deja cont (acelasi om, al doilea apartament), contul se
@@ -27,7 +27,7 @@ porneste(async (req) => {
   if (req.method !== "POST") return eroare("Metoda nu este permisa.", 405);
 
   try {
-    const { apartament_id, locatar_id, nume, telefon, calitate = "proprietar", rol, actiune = "creeaza" } = await req.json();
+    const { apartament_id, asociatie_id, locatar_id, nume, telefon, calitate = "proprietar", rol, actiune = "creeaza" } = await req.json();
     const conducere = actiune === "conducere";
     if (!conducere && !apartament_id) return eroare("Lipseste apartamentul.");
 
@@ -39,12 +39,19 @@ porneste(async (req) => {
     const parola = genereazaParola();
 
     if (conducere) {
-      // Un presedinte sau un cenzor din afara blocului nu are cont. Dreptul
-      // il verifica numeste_in_conducere (asociatia administrata de cel care
-      // cere), deci aici nu se verifica apartamentul.
+      // Un presedinte sau un cenzor din afara blocului nu are cont, deci i-l
+      // face administratorul. [C4] Dreptul se verifica INAINTE de a atinge
+      // Auth: altfel orice om cu cont putea sa puna cheia de serviciu sa faca
+      // si sa stearga conturi pe numere alese de el, iar o stergere cazuta
+      // lasa un cont strain pe numarul unui om real.
       const numar = normalizeazaTelefon(telefon);
       if (!numar) return eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
       if (!String(nume ?? "").trim()) return eroare("Scrie numele persoanei.");
+      if (rol !== "presedinte" && rol !== "cenzor") return eroare("Mandatul este de presedinte sau de cenzor.");
+
+      const { data: asociatie, error: eDreptAsoc } = await cititor.schema("identitate")
+        .rpc("asociatia_de_administrat", { p_asociatie_id: asociatie_id ?? null });
+      if (eDreptAsoc) return eroare("Doar administratorul asociatiei numeste presedintele si cenzorul.", 403);
 
       const { data: existent, error: eCautare } = await admin.schema("identitate").from("profiluri")
         .select("id").eq("telefon", numar).maybeSingle();
@@ -64,9 +71,10 @@ porneste(async (req) => {
         profilId = cont.user.id;
       }
 
-      // Mandatul se scrie cu tokenul administratorului: functia verifica
-      // singura ca asociatia este a lui.
-      const { error: eMandat } = await cititor.schema("identitate").rpc("numeste_in_conducere", { p_profil_id: profilId, p_rol: rol });
+      // Mandatul se scrie cu tokenul administratorului, in asociatia pe care
+      // tocmai am verificat-o, nu in "una dintre ale lui".
+      const { error: eMandat } = await cititor.schema("identitate")
+        .rpc("numeste_in_conducere", { p_profil_id: profilId, p_rol: rol, p_asociatie_id: asociatie });
       if (eMandat) {
         if (!existent) await admin.auth.admin.deleteUser(profilId);
         return eroare(eMandat.message, 403);

@@ -671,7 +671,9 @@ export function creeazaSursaSupabase(url, cheie) {
     inchideAcces: (locatarId) => ok(id.rpc("inchide_acces_locatar", { p_locatar_id: locatarId })),
     /* Conducerea asociatiei: adunarea generala ii alege, administratorul
        trece in aplicatie ce s-a hotarat. */
-    numesteInConducere: (profilId, rol) => ok(id.rpc("numeste_in_conducere", { p_profil_id: profilId, p_rol: rol })),
+    numesteInConducere: (profilId, rol) => ok(id.rpc("numeste_in_conducere", {
+      p_profil_id: profilId, p_rol: rol, p_asociatie_id: cerCtx().asociatieId,
+    })),
     incheieMandat: (membruId) => ok(id.rpc("incheie_mandat", { p_membru_id: membruId })),
     /* Un cenzor din afara blocului nu are cont: i-l face administratorul, pe
        numarul lui, prin acelasi Edge Function care face conturile locatarilor. */

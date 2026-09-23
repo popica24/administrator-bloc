@@ -554,6 +554,18 @@ function rolul(db, profilId) {
 /* Rolurile care vad tot blocul (scriu doar administratorul) */
 const conduce = (rol) => rol === "administrator" || rol === "presedinte" || rol === "cenzor";
 
+/* [paritate identitate.numeste_in_conducere] ce opreste un mandat nou:
+   [C8] administratorul asociatiei nu se poate numi pe el insusi presedinte
+   sau cenzor (el este cel verificat), iar un mandat in curs nu se dubleaza. */
+function mandatNou(db, bloc, profilId, rol) {
+  const activ = (r) => db.membri.some((m) => m.asociatieId === bloc.asociatieId
+    && m.profilId === profilId && m.rol === r && !m.activPana);
+  if (activ("administrator")) {
+    eroare("Administratorul asociatiei nu poate fi si presedinte sau cenzor: el este cel verificat.");
+  }
+  if (activ(rol)) eroare("Persoana are deja acest mandat, in curs.");
+}
+
 function proiecteaza(db, profilId, apartamentAles) {
   const profil = db.profiluri.find((p) => p.id === profilId);
   const { rol, mandat, legaturi } = rolul(db, profilId);
@@ -1205,13 +1217,8 @@ export function creeazaSursaMock() {
       const { bloc } = cerAdmin();
       if (rol !== "presedinte" && rol !== "cenzor") eroare("Mandatul este de presedinte sau de cenzor.");
       if (!db.profiluri.some((p) => p.id === profilId)) eroare("Persoana nu exista.");
-      const vechi = db.membri.find((m) => m.asociatieId === bloc.asociatieId && m.profilId === profilId && m.rol === rol);
-      if (vechi && !vechi.activPana) eroare("Persoana are deja acest mandat, in curs.");
-      if (vechi) {
-        vechi.activDin = aziIso();
-        vechi.activPana = null;
-        return vechi.id;
-      }
+      mandatNou(db, bloc, profilId, rol);
+      /* [C7] fiecare mandat este un rand nou: cel vechi ramane in istoric */
       return db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null }).id;
     },
 
@@ -1220,9 +1227,9 @@ export function creeazaSursaMock() {
       const m = db.membri.find((x) => x.id === membruId && x.asociatieId === bloc.asociatieId
         && (x.rol === "presedinte" || x.rol === "cenzor") && !x.activPana);
       if (!m) eroare("Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.");
-      /* ca in baza: cel putin o zi de mandat, ca istoricul sa ramana citibil */
-      const maine = adaugaZile(m.activDin, 1);
-      m.activPana = aziIso() > maine ? aziIso() : maine;
+      /* [C6] data reala, ca la inchiderea accesului unui locatar: cine a fost
+         numit din greseala nu mai vede blocul nici azi */
+      m.activPana = aziIso() > m.activDin ? aziIso() : m.activDin;
     },
 
     async adaugaInConducere(nume, telefon, rol) {
@@ -1232,17 +1239,16 @@ export function creeazaSursaMock() {
       if (!numar) eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
       if (!String(nume || "").trim()) eroare("Scrie numele persoanei.");
       const contVechi = db.autentificari.find((x) => x.telefon === numar);
+      /* [C4] mandatul se verifica inainte de a face contul: altfel ramane un
+         cont pe numarul unui om caruia nu i se cuvine niciun mandat */
+      if (contVechi) mandatNou(db, bloc, contVechi.profilId, rol);
       const profilId = contVechi ? contVechi.profilId : db.adauga("profiluri", { nume: nume.trim(), telefon: numar }).id;
       let parola = null;
       if (!contVechi) {
         parola = genereazaParola();
         db.autentificari.push({ telefon: numar, parola, profilId });
       }
-      const vechi = db.membri.find((m) => m.asociatieId === bloc.asociatieId && m.profilId === profilId && m.rol === rol);
-      if (vechi && !vechi.activPana) eroare("Persoana are deja acest mandat, in curs.");
-      if (vechi) { vechi.activDin = aziIso(); vechi.activPana = null; } else {
-        db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null });
-      }
+      db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null });
       return { profil_id: profilId, telefon: numar, parola };
     },
 

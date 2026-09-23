@@ -172,13 +172,23 @@ describe("conducerea asociatiei", () => {
     expect(dupa.conducere.some((m) => m.profilId === elena.profilId && m.rol === "cenzor" && !m.activPana)).toBe(true);
   });
 
-  it("un mandat inceput azi se incheie de maine, ca istoricul sa aiba o zi", async () => {
+  /* [C6] Numit din greseala, scos imediat: administratorul alege alt nume din
+     lista, vede greseala si incheie mandatul pe loc. Omul nu mai are voie sa
+     vada blocul nici in ziua aceea. */
+  it("un mandat inceput azi se incheie azi, cu data reala", async () => {
     const { s, d } = await ca(ADMIN);
     const voicu = d.apartamente.flatMap((a) => a.locatari).find((l) => l.nume === "Gheorghe Voicu");
     const id = await s.numesteInConducere(voicu.profilId, "presedinte");
     await s.incheieMandat(id);
     const m = (await s.incarca()).conducere.find((x) => x.id === id);
-    expect(m.activPana).toBe("2026-09-20");
+    expect(m.activPana).toBe("2026-09-19");
+  });
+
+  /* [C8] Cel care tine banii nu poate fi si cel care ii verifica */
+  it("administratorul nu se poate numi pe el insusi cenzor", async () => {
+    const { s, d } = await ca(ADMIN);
+    await expect(s.numesteInConducere(d.eu.profilId, "cenzor"))
+      .rejects.toThrow("Administratorul asociatiei nu poate fi si presedinte sau cenzor: el este cel verificat.");
   });
 
   it("contul din afara blocului: pe cineva cunoscut il leaga, fara parola noua", async () => {
@@ -192,7 +202,11 @@ describe("conducerea asociatiei", () => {
     /* dupa incheiere, acelasi om poate fi numit din nou */
     const dinNou = await s.adaugaInConducere("Gheorghe Voicu", "0741 002 101", "cenzor");
     expect(dinNou.parola).toBeNull();
-    expect((await s.incarca()).conducere.find((m) => m.id === cenzor.id).activPana).toBeNull();
+    /* [C7] mandatul vechi ramane in istoric, cu perioada lui; cel nou este alt rand */
+    const mandate = (await s.incarca()).conducere.filter((m) => m.profilId === r.profil_id && m.rol === "cenzor");
+    expect(mandate).toHaveLength(2);
+    expect(mandate.find((m) => m.id === cenzor.id).activPana).toBe("2026-09-19");
+    expect(mandate.some((m) => m.id !== cenzor.id && !m.activPana)).toBe(true);
   });
 
   it("incheierea unui mandat inexistent este refuzata, ca in baza", async () => {

@@ -15,6 +15,7 @@ const P = {
   profiluri: "/rest/v1/profiluri",
   leaga: "/rest/v1/rpc/leaga_locatar",
   conducere: "/rest/v1/rpc/numeste_in_conducere",
+  asociatie: "/rest/v1/rpc/asociatia_de_administrat",
   eu: "/auth/v1/user",
 };
 const AP = "apartament-1";
@@ -29,6 +30,7 @@ function backend(o: {
   parolaNoua?: () => Response;
   stergere?: () => Response;
   conducere?: () => Response;
+  asociatie?: () => Response;
 } = {}) {
   return (a: Apel) => {
     if (a.url.pathname === P.eu) return json({ id: "admin-1" });
@@ -40,6 +42,7 @@ function backend(o: {
       case P.profiluri: return randuri(a, o.profiluri ?? []);
       case P.leaga: return o.leaga ? o.leaga() : json("locatar-nou");
       case P.conducere: return o.conducere ? o.conducere() : json("mandat-nou");
+      case P.asociatie: return o.asociatie ? o.asociatie() : json("asoc-1");
     }
   };
 }
@@ -256,7 +259,7 @@ Deno.test("cont-locatar: un cenzor din afara blocului primeste cont si mandat", 
     assertEquals(creare.corp.email, "0730415900@telefon.adminbloc.ro");
     assertEquals(creare.corp.user_metadata, { nume: "Sorin Tudose", telefon: "0730415900" });
     const mandat = f.apeluri.find((a) => a.url.pathname === P.conducere)!;
-    assertEquals(mandat.corp, { p_profil_id: PROFIL, p_rol: "cenzor" });
+    assertEquals(mandat.corp, { p_profil_id: PROFIL, p_rol: "cenzor", p_asociatie_id: "asoc-1" });
     // apartamentul nu se verifica: mandatul e pe asociatie
     assertEquals(f.apeluri.filter((a) => a.url.pathname === P.drept).length, 0);
   });
@@ -299,9 +302,41 @@ Deno.test("cont-locatar: mandatul refuzat pentru cineva care avea deja cont nu-i
   });
 });
 
+// [C4] Dreptul se verifica inainte de a atinge Auth: cat timp mandatul era
+// singura verificare, orice om cu cont putea sa faca si sa stearga conturi pe
+// numere alese de el, iar o stergere cazuta lasa un cont strain pe numarul
+// unui om real.
+Deno.test("cont-locatar: [C4] cine nu administreaza asociatia nu ajunge la Auth", async () => {
+  await cuFetch(backend({ asociatie: () => eroarePg("Nu esti administratorul acestei asociatii.", 403) }), async (f) => {
+    const r = await citeste(await trimite(CONDUCERE));
+    assertEquals(r.status, 403);
+    assertEquals(r.corp, { eroare: "Doar administratorul asociatiei numeste presedintele si cenzorul." });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0, "contul nu are voie sa existe");
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.profiluri).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: [C4] un rol inventat este refuzat inainte de orice cont", async () => {
+  await cuFetch(backend(), async (f) => {
+    const r = await citeste(await trimite({ ...CONDUCERE, rol: "administrator" }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Mandatul este de presedinte sau de cenzor." });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: [C5] asociatia ceruta de ecran este cea verificata", async () => {
+  await cuFetch(backend(), async (f) => {
+    await trimite({ ...CONDUCERE, asociatie_id: "asoc-ceruta" });
+    const drept = f.apeluri.find((a) => a.url.pathname === P.asociatie)!;
+    assertEquals(drept.corp, { p_asociatie_id: "asoc-ceruta" });
+  });
+});
+
 Deno.test("cont-locatar: conducere, cautarea contului cazuta se spune ca atare", async () => {
   await cuFetch((a: Apel) => {
     if (a.url.pathname === P.eu) return json({ id: "admin-1" });
+    if (a.url.pathname === P.asociatie) return json("asoc-1");
     if (a.url.pathname === P.profiluri) return eroarePg("nu merge cautarea", 500);
     return undefined;
   }, async () => {

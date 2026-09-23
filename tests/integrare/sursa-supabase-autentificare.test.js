@@ -243,6 +243,13 @@ describe("conducerea asociatiei", () => {
     await admin.incheieMandat(mandat.id);
     const dupa = await admin.incarca();
     expect(dupa.conducere.find((m) => m.id === mandat.id).activPana).not.toBeNull();
+    /* [C6] Drepturile se sting in ziua incheierii, nu a doua zi: altfel cine a
+       fost numit din greseala mai vede tot blocul pana la miezul noptii. */
+    const s = sursaNoua();
+    await s.intra(telefon, r.parola);
+    const alLui = await s.incarca();
+    expect(alLui.eu.rol).toBe("fara_apartament");
+    expect(alLui.apartamente, "nu mai are niciun apartament de vazut").toBeUndefined();
     await expect(admin.incheieMandat(mandat.id))
       .rejects.toThrow("Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.");
   });

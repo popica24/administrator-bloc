@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(115);
+select plan(127);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -735,10 +735,62 @@ select throws_ok($$select identitate.incheie_mandat(current_setting('fx.mandat')
   'incheie_mandat: un mandat incheiat nu se mai incheie o data');
 select lives_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA1'), 'cenzor')$$,
   'numeste_in_conducere: un mandat incheiat se poate redeschide');
+-- [C7] Realegerea nu sterge mandatul dinainte: adunarea generala il alege pe
+-- acelasi om peste cativa ani, iar ecranul trebuie sa arate amandoua perioadele.
+select is((select count(*)::int from identitate.membri_asociatie
+           where asociatie_id = pg_temp.id('asocA') and profil_id = pg_temp.id('locA1') and rol = 'cenzor'), 2,
+  '[C7] numeste_in_conducere: realegerea este un mandat nou, cel vechi ramane in istoric');
 select throws_ok($$select identitate.incheie_mandat(
     (select id from identitate.membri_asociatie where profil_id = pg_temp.id('adminA') and rol = 'administrator'))$$,
   'Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.',
   'incheie_mandat: mandatul de administrator nu se incheie de aici');
+-- [C8] Cel care tine banii nu poate fi si cel care ii verifica
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('adminA'), 'cenzor')$$,
+  'Administratorul asociatiei nu poate fi si presedinte sau cenzor: el este cel verificat.',
+  '[C8] numeste_in_conducere: administratorul nu se numeste pe el insusi');
+-- [C12] Un mandat care incepe maine ar aparea pe ecran ca fiind in curs
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA2'), 'presedinte', current_date + 1)$$,
+  'Mandatul nu poate incepe in viitor.',
+  '[C12] numeste_in_conducere: mandatul nu incepe in viitor');
+-- [C6] Numit din greseala, scos imediat: drepturile se sting azi, nu maine
+select lives_ok($$select identitate.incheie_mandat(
+    (select id from identitate.membri_asociatie
+      where asociatie_id = pg_temp.id('asocA') and profil_id = pg_temp.id('locA1')
+        and rol = 'cenzor' and activ_pana is null))$$,
+  '[C6] incheie_mandat: un mandat inceput azi se incheie azi');
+select is((select max(activ_pana) from identitate.membri_asociatie
+           where asociatie_id = pg_temp.id('asocA') and profil_id = pg_temp.id('locA1') and rol = 'cenzor'), current_date,
+  '[C6] incheie_mandat: data de incheiere este cea reala, nu ziua urmatoare');
+reset role;
+
+select pg_temp.ca('locA1');
+set local role authenticated;
+select is_empty($$select 1 from private.asociatii_supravegheate()$$,
+  '[C6] mandatul incheiat azi nu mai da drepturi de supraveghere azi');
+select is(identitate.eu() ->> 'rol', 'locatar',
+  '[C6] omul scos din conducere se intoarce azi la ecranele lui de locatar');
+reset role;
+
+-- [C5] Administratorul cu doua asociatii: mandatul merge in asociatia pe care
+-- o vede pe ecran, nu in oricare dintre ele.
+select pg_temp.ca('adminDublu');
+set local role authenticated;
+select is(identitate.asociatia_de_administrat(), (identitate.eu() ->> 'asociatie_id')::uuid,
+  '[C5] asociatia_de_administrat: aceeasi asociatie pe care o arata identitate.eu()');
+select set_config('fx.mandatB', identitate.numeste_in_conducere(pg_temp.id('locB1'), 'cenzor')::text, true);
+select is((select asociatie_id from identitate.membri_asociatie where id = current_setting('fx.mandatB')::uuid),
+  (identitate.eu() ->> 'asociatie_id')::uuid,
+  '[C5] numeste_in_conducere: fara asociatie ceruta, mandatul merge unde arata ecranul');
+select set_config('fx.mandatA', identitate.numeste_in_conducere(pg_temp.id('locB1'), 'presedinte', current_date, pg_temp.id('asocA'))::text, true);
+select is((select asociatie_id from identitate.membri_asociatie where id = current_setting('fx.mandatA')::uuid),
+  pg_temp.id('asocA'),
+  '[C5] numeste_in_conducere: asociatia ceruta este cea in care intra mandatul');
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locB1'), 'cenzor', current_date, '00000000-0000-4000-8000-000000000000')$$,
+  'Doar administratorul asociatiei numeste presedintele si cenzorul.',
+  '[C5] numeste_in_conducere: o asociatie straina este refuzata');
+select throws_ok($$select identitate.asociatia_de_administrat('00000000-0000-4000-8000-000000000000')$$,
+  'Nu esti administratorul acestei asociatii.',
+  '[C5] asociatia_de_administrat: o asociatie straina este refuzata');
 reset role;
 
 select pg_temp.ca_anonim();
