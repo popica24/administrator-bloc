@@ -610,9 +610,9 @@ const numarChitanta = (ch) => `${ch.serie} nr. ${String(ch.numar).padStart(6, "0
 
 /* Chitanta ca PDF, pentru "isi descarca chitanta" */
 function chitantaPdf(date, plata) {
-  const ap = apartamentDupaId(date, plata.apartamentId);
   const a = date.asociatie;
   const ch = plata.chitanta;
+  const pentru = ch.emisPentru;
   return documentPdf({
     titlu: `Chitanta ${numarChitanta(ch)}`,
     blocuri: [
@@ -623,8 +623,15 @@ function chitantaPdf(date, plata) {
       { tip: "titlu", text: `CHITANTA  ${numarChitanta(ch)}` },
       { tip: "text", text: `Data: ${dataLunga(ch.emisaLa)}, ora ${oraRo(ch.emisaLa)}`, marime: 10 },
       { tip: "spatiu", h: 10 },
-      { tip: "text", text: `Am primit de la ${ap.proprietar}, apartamentul ${ap.numar}, ${date.bloc.denumire},`, marime: 11 },
+      /* [B8] Chitanta nu stie cine a adus banii: poate fi chiriasul, un copil,
+         un vecin. Stie pentru ce apartament au fost primiti, iar proprietarul
+         este trecut ca atare, nu ca platitor.
+         [S4] Apartamentul, blocul si proprietarul sunt cei de la emitere, nu
+         cei de azi: dupa o vanzare, chitantele vechi nu se retiparesc pe
+         numele noului proprietar. */
+      { tip: "text", text: `Am primit pentru apartamentul ${pentru.apartament}, ${pentru.bloc},`, marime: 11 },
       { tip: "text", text: `suma de ${lei(plata.suma)}, reprezentand:`, marime: 11, bold: true },
+      { tip: "text", text: `Proprietar la data emiterii: ${pentru.proprietar}`, gri: true, marime: 9 },
       { tip: "spatiu", h: 6 },
       ...descriereAlocari(date, plata).map((t) => ({ tip: "text", text: `  -  ${t}`, marime: 10 })),
       { tip: "spatiu", h: 10 },

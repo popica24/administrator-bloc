@@ -181,9 +181,12 @@ function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = nu
   });
   const avans = round2(plata.suma - randuri.reduce((t, r) => t + r.suma, 0));
   if (avans > 0) randuri.push({ tip: "avans", luna: null, descriere: null, suma: avans });
+  const bloc = db.blocuri.find((b) => b.id === ap.blocId);
   db.adauga("chitante", {
     plataId: plata.id, serie: db.setari.chitantaSerie, numar: db.setari.chitantaUltimulNumar,
     emisaLa: la, creatLa: la, randuri,
+    /* [S4] apartamentul si proprietarul de la emitere */
+    emisPentru: { apartament: ap.numar, proprietar: ap.proprietar, bloc: bloc.denumire },
   });
   return plata;
 }
@@ -720,7 +723,7 @@ function proiecteaza(db, profilId, apartamentAles) {
       id: p.id, apartamentId: p.apartamentId, suma: p.suma, metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmataLa,
       inregistrataDe: inreg.nume,
       /* fiecare plata din sursa demonstrativa primeste chitanta la inregistrare */
-      chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa, randuri: ch.randuri },
+      chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa, randuri: ch.randuri, emisPentru: ch.emisPentru },
       alocari: db.alocari.filter((a) => a.plataId === p.id)
         .sort((a, b) => cheieDatorie(a.datorieId).localeCompare(cheieDatorie(b.datorieId)))
         .map((a) => ({ datorieId: a.datorieId, suma: a.suma })),

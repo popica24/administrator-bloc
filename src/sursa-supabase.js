@@ -353,6 +353,8 @@ export function creeazaSursaSupabase(url, cheie) {
           chitanta: ch ? {
             serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la,
             randuri: ch.randuri.map((r) => ({ tip: r.tip, luna: r.luna, descriere: r.descriere, suma: nr(r.suma) })),
+            /* [S4] apartamentul si proprietarul de la emitere */
+            emisPentru: ch.emis_pentru,
           } : null,
           alocari: alocari.filter((a) => a.plata_id === p.id).sort(inOrdineaPlatii).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
         };

@@ -173,16 +173,12 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
     }
   });
 
-  test.fixme("[S4] chitanta ramane pe numele celui care a platit, nu al proprietarului de azi", async ({ page }) => {
-    /* [S4] Chitanta nu se pastreaza nicaieri (`chitante.pdf_cale` e gol):
-       PDF-ul se genereaza de fiecare data din datele de azi, iar randul
-       "Am primit de la ..." ia `apartament.proprietar` (src/AdminBloc.jsx:561),
-       nu platitorul inregistrat (`financiar.plati.platita_de`). Dupa ce
-       apartamentul isi schimba proprietarul, toate chitantele vechi ale
-       apartamentului se retiparesc pe numele nou: un document de casa
-       incepe sa spuna altceva decat a spus cand a fost emis.
-       Asteptat: chitanta reprodusa dupa schimbarea proprietarului poarta
-       acelasi nume ca la emitere. */
+  /* [S4, reparat de auditul 4] PDF-ul chitantei se genereaza de fiecare data,
+     dar din ce s-a inghetat la emitere: randurile platii (B6) si apartamentul
+     cu proprietarul lui de atunci (financiar.chitante.emis_pentru). Dupa o
+     vanzare, chitantele vechi ale apartamentului nu se mai retiparesc pe
+     numele noului proprietar. */
+  test("[S4] chitanta ramane cu proprietarul de la emitere, nu cu cel de azi", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
     const vechi = { ...ap };
 
@@ -190,7 +186,7 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
     await mergiLaTab(page, "Plata");
     await page.getByRole("button", { name: "Platile mele" }).click();
     const inainte = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
-    expect(inainte).toContain(`Am primit de la ${vechi.proprietar_nume}`);
+    expect(inainte).toContain(`Proprietar la data emiterii: ${vechi.proprietar_nume}`);
 
     try {
       await serviciu().schema("organizare").rpc("schimba_fisa_apartament", {
@@ -203,8 +199,8 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
       await mergiLaTab(page, "Plata");
       await page.getByRole("button", { name: "Platile mele" }).click();
       const dupa = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
-      expect(dupa).toContain(`Am primit de la ${vechi.proprietar_nume}`);
-      expect(dupa).not.toContain("Am primit de la Vasile Cumparatorul");
+      expect(dupa).toContain(`Proprietar la data emiterii: ${vechi.proprietar_nume}`);
+      expect(dupa).not.toContain("Vasile Cumparatorul");
     } finally {
       await repuneFisa(vechi);
     }

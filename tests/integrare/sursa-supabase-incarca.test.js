@@ -120,7 +120,12 @@ describe("D14, administratorul (doar citire)", () => {
     for (const p of date.plati) {
       const ch = chitante.find((c) => c.plata_id === p.id);
       /* [B6] randurile inghetate la emitere merg cu chitanta */
-      expect(p.chitanta).toEqual({ serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la, randuri: expect.any(Array) });
+      expect(p.chitanta).toEqual({
+        serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la,
+        randuri: expect.any(Array),
+        /* [S4] apartamentul si proprietarul de la emitere */
+        emisPentru: expect.objectContaining({ apartament: expect.any(String), proprietar: expect.any(String), bloc: expect.any(String) }),
+      });
       expect(p.chitanta.randuri.reduce((t, r) => t + r.suma, 0)).toBeCloseTo(p.suma, 2);
       expect(suma(p.alocari.map((a) => a.suma))).toBeLessThanOrEqual(p.suma);
     }
