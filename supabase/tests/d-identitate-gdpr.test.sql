@@ -4,7 +4,7 @@
 --   identitate.foloseste_invitatie    - limita de incercari cu cod gresit,
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(28);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-* si d-*; anulat la rollback).
@@ -117,6 +117,12 @@ begin
          (pg_temp.fx('admin'), pg_temp.fx('admin')::text, 'email',
           jsonb_build_object('sub', pg_temp.fx('admin')::text, 'email', (select email from auth.users where id = pg_temp.fx('admin')),
             'name', 'Admin G', 'phone', '0711111111'));
+  -- [A8] Contul se face pe numar de telefon, deci Auth tine si o identitate
+  -- "phone", cu numarul in identity_data si fara email.
+  insert into auth.identities (user_id, provider_id, provider, identity_data)
+  values (pg_temp.fx('loc'), '4' || (select telefon from identitate.profiluri where id = pg_temp.fx('loc')), 'phone',
+          jsonb_build_object('sub', pg_temp.fx('loc')::text,
+            'phone', '4' || (select telefon from identitate.profiluri where id = pg_temp.fx('loc'))));
 
   insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
   values (gen_random_uuid(), pg_temp.fx('loc'), now(), now(), now() + interval '1 day') returning id into v_id;
@@ -194,9 +200,15 @@ select is(
 
 -- C7: identitatea Auth, sesiunile si token-urile de reimprospatare
 select is(
-  (select identity_data ->> 'email' like 'anonim-%@adminbloc.invalid' from auth.identities where user_id = pg_temp.fx('loc')),
+  (select identity_data ->> 'email' like 'anonim-%@adminbloc.invalid' from auth.identities
+    where user_id = pg_temp.fx('loc') and provider = 'email'),
   true,
   'anonimizeaza_profil: identity_data din auth.identities nu mai poarta emailul real');
+select is(
+  (select count(*)::int from auth.identities
+    where user_id = pg_temp.fx('loc') and identity_data ? 'phone'),
+  0,
+  '[A8] anonimizeaza_profil: numarul de telefon dispare si din identitatea "phone" a contului');
 select is(
   (select count(*)::int from auth.sessions where user_id = pg_temp.fx('loc')),
   0,
