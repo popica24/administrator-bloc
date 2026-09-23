@@ -92,8 +92,9 @@ describe("conducerea nu poate schimba nimic", () => {
     for (const nume of ["Adauga factura", "Publica lista", "Sterge", "Modifica", "Marcheaza platita"]) {
       expect(butoane(nume).length, nume).toBe(0);
     }
-    /* previzualizarea ramane: cenzorul vede cum se imparte lista in lucru */
-    expect(butoane("Calculeaza lista pe apartamente").length).toBe(1);
+    /* [C9] previzualizarea trece prin aceeasi functie care pazeste publicarea
+       (date_pentru_motor), deci butonul nu facea decat sa dea un mesaj tehnic */
+    expect(butoane("Calculeaza lista pe apartamente").length).toBe(0);
   });
 
   /* [C1] Sesizarile raman intre locatar si administrator (H11). Ecranul nu
@@ -135,6 +136,9 @@ describe("conducerea nu poate schimba nimic", () => {
     await apasa(buton("Remindere"));
     expect(ecran()).toContain("Reminderele pleaca automat");
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    /* [C9] nici butoanele de trimis acum: comanda cere blocul administrat */
+    expect(ecran()).not.toContain("Trimite acum");
+    expect(butoane(/^Trimite reminderele/).length).toBe(0);
   });
 });
 

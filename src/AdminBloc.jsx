@@ -3222,7 +3222,10 @@ function FisaApartament({ apId, onClose }) {
               const r = await inregistreazaIncasare(ap.id, sumaCash, metodaIncasare);
               incasareInCurs.current = false;
               setIncaseaza(false);
-              if (r.ok) { setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); } else setEroare(r.mesaj);
+              /* [B7] metoda se intoarce la "numerar": altfel a doua incasare
+                 din aceeasi fisa pornea cu "transfer bancar" preselectat, iar
+                 chitanta spunea transfer pentru bani primiti in mana. */
+              if (r.ok) { setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); setMetodaIncasare("numerar"); } else setEroare(r.mesaj);
             }} />
             <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
           </Box>
@@ -3890,7 +3893,11 @@ function AdminFacturi() {
             </Card>
           )}
 
-          {esteCiorna ? (
+          {/* [C9] Previzualizarea trece prin intretinere.date_pentru_motor, care
+              este si paza Edge Function-ului publica-lista, deci cere blocul
+              administrat: pentru conducere butonul dadea doar un mesaj tehnic.
+              Ce s-a publicat deja se vede oricum, la fiecare apartament. */}
+          {esteCiorna && !verifica ? (
             <Card gap={S.md}>
               <Titlu sub="Motorul calculeaza pe loc, fara sa salveze nimic">Previzualizarea listei</Titlu>
               <Btn label="Calculeaza lista pe apartamente" variant="secondary" onPress={calculeazaPreviz} disabled={cheltuieli.length === 0} />
@@ -4180,6 +4187,9 @@ function AdminBlocEcran({ parametri }) {
               );
             })}
           </Card>
+          {/* [C9] Conducerea nu trimite remindere: comanda cere blocul
+              administrat, deci butonul nu facea decat sa dea un mesaj tehnic. */}
+          {!verifica && (
           <Card gap={S.sm} pad={S.md}>
             <Eyebrow>Trimite acum</Eyebrow>
             <Box row gap={S.sm} style={{ flexWrap: "wrap" }}>
@@ -4191,6 +4201,7 @@ function AdminBlocEcran({ parametri }) {
               ))}
             </Box>
           </Card>
+          )}
         </Box>
       )}
 

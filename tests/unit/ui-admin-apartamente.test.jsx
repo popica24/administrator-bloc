@@ -204,6 +204,27 @@ describe("FisaApartament, incasare cash", () => {
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
   });
 
+  /* [B7] A doua incasare din aceeasi fisa pornea cu "Prin transfer bancar"
+     preselectat, de la prima: daca administratorul nu observa, chitanta si
+     registrul spuneau transfer pentru bani primiti in mana, iar stornare nu
+     exista. */
+  it("[B7] a doua incasare porneste iar de la numerar, nu de la transfer", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
+    const ap = await apDupaNumar(sursa, "3");
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    await apasa(buton("Prin transfer bancar"));
+    await act(async () => { scrie("Suma primita", "100"); });
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer");
+
+    await apasa("Inregistreaza incasare cash");
+    await act(async () => { scrie("Suma primita", "50"); });
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar");
+  });
+
   it("renunta inchide formularul fara incasare", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
