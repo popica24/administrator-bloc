@@ -23,12 +23,16 @@
 const FORMA = /^0[237]\d{8}$/;
 
 export function normalizeazaTelefon(scris) {
-  const curat = String(scris ?? "").replace(/[\s.()-]/g, "");
-  const fara = curat.startsWith("+40") ? curat.slice(3)
-    : curat.startsWith("0040") ? curat.slice(4)
-      : curat.startsWith("40") && curat.length === 11 ? curat.slice(2)
-        : null;
-  const numar = fara === null ? curat : `0${fara}`;
+  let rest = String(scris ?? "").replace(/[\s.()-]/g, "");
+  if (rest.startsWith("+40")) rest = rest.slice(3);
+  else if (rest.startsWith("0040")) rest = rest.slice(4);
+  else if (rest.startsWith("40") && rest.length === 11) rest = rest.slice(2);
+  else if (rest.startsWith("0")) rest = rest.slice(1);
+  else return null;
+  /* [A6] Multi isi scriu numarul cu prefixul tarii si cu zeroul de acasa unul
+     dupa altul: "+40 0722 123 456". Este acelasi om. */
+  if (rest.startsWith("0")) rest = rest.slice(1);
+  const numar = `0${rest}`;
   return FORMA.test(numar) ? numar : null;
 }
 

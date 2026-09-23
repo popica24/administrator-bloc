@@ -25,11 +25,13 @@ language plpgsql
 as $$
 declare
   v uuid := gen_random_uuid();
+  -- [A5] Numarul este unic si normalizat in baza, deci fiecare om de test are
+  -- numarul lui, scris asa cum il tine profilul.
+  v_numar text := '07' || substr(regexp_replace(v::text, '[^0-9]', '', 'g') || '00000000', 1, 8);
 begin
   insert into auth.users (id, email, phone, raw_user_meta_data)
-  values (v, 'g-' || v || '@test.local', '07' || substr(replace(v::text, '-', ''), 1, 8),
-          jsonb_build_object('nume', p_nume, 'telefon', '0700 000 000'));
-  update identitate.profiluri set telefon = '0700 000 000' where id = v;
+  values (v, 'g-' || v || '@test.local', v_numar,
+          jsonb_build_object('nume', p_nume, 'telefon', v_numar));
   return v;
 end;
 $$;

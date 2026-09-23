@@ -4,7 +4,8 @@ import { assertEquals } from "jsr:@std/assert@1";
 import { adresaContului, normalizeazaTelefon, telefonAfisat } from "../_shared/telefon.js";
 
 Deno.test("telefon: acelasi numar, scris in feluri diferite", () => {
-  for (const scris of ["0722123456", "0722 123 456", "0722.123.456", "0722-123-456", "(0722)123456", "+40722123456", "0040722123456", "40722123456"]) {
+  // [A6] prefixul tarii si zeroul de acasa, unul dupa altul
+  for (const scris of ["0722123456", "0722 123 456", "0722.123.456", "0722-123-456", "(0722)123456", "+40722123456", "0040722123456", "40722123456", "+40 0722 123 456", "0040-0722-123-456"]) {
     assertEquals(normalizeazaTelefon(scris), "0722123456", scris);
   }
   assertEquals(normalizeazaTelefon("0248 210 118"), "0248210118");

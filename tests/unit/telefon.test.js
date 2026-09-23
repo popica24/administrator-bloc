@@ -5,7 +5,9 @@ import { normalizeazaTelefon, adresaContului, telefonAfisat } from "../../supaba
 
 describe("normalizeazaTelefon", () => {
   it("acelasi numar scris in feluri diferite da acelasi rezultat", () => {
-    for (const scris of ["0722123456", "0722 123 456", "0722.123.456", "0722-123-456", " 0722 123456 ", "+40722123456", "+40 722 123 456", "0040722123456", "40722123456"]) {
+    /* [A6] "+40 0722 ..." este felul in care multi isi scriu numarul in
+       agenda: prefixul tarii si zeroul de la inceput, unul dupa altul. */
+    for (const scris of ["0722123456", "0722 123 456", "0722.123.456", "0722-123-456", " 0722 123456 ", "+40722123456", "+40 722 123 456", "0040722123456", "40722123456", "+40 0722 123 456", "0040 0722 123 456", "(0722) 123-456"]) {
       expect(normalizeazaTelefon(scris), scris).toBe("0722123456");
     }
   });

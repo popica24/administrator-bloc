@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(107);
+select plan(115);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -211,8 +211,8 @@ select results_eq(
   'identitate.la_cont_nou: profilul ia numele din metadate, fara email');
 select results_eq(
   $$select nume, telefon from identitate.profiluri where id = pg_temp.id('faraMeta')$$,
-  $$values ('Utilizator'::text, '0722 111 222'::text)$$,
-  'identitate.la_cont_nou: fara nume in metadate ramane "Utilizator"; telefonul se curata');
+  $$values ('Utilizator'::text, '0722111222'::text)$$,
+  'identitate.la_cont_nou: fara nume in metadate ramane "Utilizator"; telefonul se normalizeaza');
 select is(
   (select nume from identitate.profiluri where id = pg_temp.id('numeGol')),
   'Utilizator',
@@ -574,6 +574,10 @@ select is(pg_temp.randuri($$update identitate.profiluri set nume = 'Hack' where 
   'politica "Fiecare isi modifica profilul": nu si profilul altuia');
 select throws_ok($$update identitate.profiluri set email = 'x@y.z' where id = pg_temp.id('locA1')$$, '42501', null,
   'identitate.profiluri: emailul nu se modifica din aplicatie');
+-- [A2] Numarul este identitatea contului: cine si l-ar putea scrie ar primi
+-- apartamentul pe care administratorul il adauga mai tarziu pe acel numar.
+select throws_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA1')$$, '42501', null,
+  '[A2] identitate.profiluri: numarul de telefon nu se modifica din aplicatie');
 select set_eq($$select profil_id from identitate.membri_asociatie where asociatie_id in (pg_temp.id('asocA'), pg_temp.id('asocB'))$$,
   array[pg_temp.id('adminA'), pg_temp.id('adminNou'), pg_temp.id('adminFost'), pg_temp.id('presA'), pg_temp.id('adminDublu')],
   'politica "Mandatele se vad in asociatie": locatarul vede mandatele asociatiei lui, nu si ale altora');
@@ -745,6 +749,29 @@ select throws_ok($$select identitate.incheie_mandat(current_setting('fx.mandat')
   '42501', null, 'incheie_mandat: anon nu are acces');
 reset role;
 
+
+-- -----------------------------------------------------------------------------
+-- [A5] Numarul de telefon: unic si normalizat in baza, nu doar in JavaScript
+-- -----------------------------------------------------------------------------
+
+select is(private.normalizeaza_telefon('+40 0722 123 456'), '0722123456',
+  '[A6] private.normalizeaza_telefon: prefixul tarii si zeroul de acasa dau acelasi numar');
+select is(private.normalizeaza_telefon('0248 210 118'), '0248210118',
+  '[A5] private.normalizeaza_telefon: numarul fix scris cu spatii');
+select is(private.normalizeaza_telefon('+33722123456'), null,
+  '[A5] private.normalizeaza_telefon: un numar strain nu este numar romanesc');
+
+select pg_temp.ca_serviciu();
+set local role service_role;
+select lives_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA1')$$,
+  '[A5] profiluri.telefon: zece cifre care incep cu 07 intra in baza');
+select throws_ok($$update identitate.profiluri set telefon = '072212' where id = pg_temp.id('locA2')$$,
+  '23514', null, '[A5] profiluri.telefon: un numar scurt este refuzat de baza');
+select throws_ok($$update identitate.profiluri set telefon = '0722 118 005' where id = pg_temp.id('locA2')$$,
+  '23514', null, '[A5] profiluri.telefon: numarul cu spatii este refuzat, se pastreaza normalizat');
+select throws_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA2')$$,
+  '23505', null, '[A5] profiluri.telefon: doi oameni nu pot avea acelasi numar');
+reset role;
 
 select * from finish();
 rollback;
