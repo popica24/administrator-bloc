@@ -13,7 +13,7 @@
 -- 0,2% pe zi (plafonul legal), fara zile de gratie: penalizarea este 30 de lei.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(33);
 
 create or replace function private.este_serviciu()
 returns boolean
@@ -184,6 +184,14 @@ select is(
   '[K7] din 330, raman alocati 220 (200 intretinere, 20 penalizare): 110 se elibereaza');
 select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), -110.00::numeric,
   '[K7] ...si raman avans al apartamentului');
+-- [B6] Chitanta are numar si se pune la dosar: ce scrie pe ea nu se schimba
+-- dupa ce o recalculare muta banii de pe o datorie pe alta.
+select results_eq(
+  $$select r ->> 'tip', (r ->> 'suma')::numeric
+      from financiar.chitante c, jsonb_array_elements(c.randuri) r
+     where c.plata_id = (select id from financiar.plati where apartament_id = pg_temp.fx('ap1') order by creat_la desc limit 1)$$,
+  $$values ('intretinere'::text, 300.00::numeric), ('penalizare'::text, 30.00::numeric)$$,
+  '[B6] chitanta pastreaza randurile de la emitere, desi alocarile s-au schimbat');
 rollback to savepoint platita;
 
 -- -----------------------------------------------------------------------------

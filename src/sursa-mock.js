@@ -174,7 +174,17 @@ function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = nu
   });
   alocaPlata(db, plata);
   db.setari.chitantaUltimulNumar += 1;
-  db.adauga("chitante", { plataId: plata.id, serie: db.setari.chitantaSerie, numar: db.setari.chitantaUltimulNumar, emisaLa: la, creatLa: la });
+  /* [B6] randurile chitantei se scriu o data, la emitere, si raman asa */
+  const randuri = db.alocari.filter((a) => a.plataId === plata.id).map((a) => {
+    const d = db.datorii.find((x) => x.id === a.datorieId);
+    return { tip: d.tip, luna: d.luna, descriere: d.descriere, suma: a.suma };
+  });
+  const avans = round2(plata.suma - randuri.reduce((t, r) => t + r.suma, 0));
+  if (avans > 0) randuri.push({ tip: "avans", luna: null, descriere: null, suma: avans });
+  db.adauga("chitante", {
+    plataId: plata.id, serie: db.setari.chitantaSerie, numar: db.setari.chitantaUltimulNumar,
+    emisaLa: la, creatLa: la, randuri,
+  });
   return plata;
 }
 
@@ -700,11 +710,20 @@ function proiecteaza(db, profilId, apartamentAles) {
   const plati = db.plati.filter((p) => p.blocId === bloc.id && alMeu(p.apartamentId)).map((p) => {
     const ch = db.chitante.find((c) => c.plataId === p.id);
     const inreg = db.profiluri.find((x) => x.id === p.inregistrataDe);
+    /* [K13, paritate] alocarile in ordinea in care s-au facut: scadenta, apoi
+       data si id-ul datoriei */
+    const cheieDatorie = (id) => {
+      const x = db.datorii.find((y) => y.id === id);
+      return `${x.scadenta}|${x.creatLa}|${id}`;
+    };
     return {
       id: p.id, apartamentId: p.apartamentId, suma: p.suma, metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmataLa,
       inregistrataDe: inreg.nume,
-      chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa },
-      alocari: db.alocari.filter((a) => a.plataId === p.id).map((a) => ({ datorieId: a.datorieId, suma: a.suma })),
+      /* fiecare plata din sursa demonstrativa primeste chitanta la inregistrare */
+      chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa, randuri: ch.randuri },
+      alocari: db.alocari.filter((a) => a.plataId === p.id)
+        .sort((a, b) => cheieDatorie(a.datorieId).localeCompare(cheieDatorie(b.datorieId)))
+        .map((a) => ({ datorieId: a.datorieId, suma: a.suma })),
     };
   });
 

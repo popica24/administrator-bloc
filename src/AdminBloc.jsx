@@ -589,17 +589,21 @@ function restantieri(date) {
     .sort((a, b) => b.zile - a.zile);
 }
 
-/* Ce a acoperit o plata, in cuvinte, pentru chitanta */
+/* Ce a acoperit o plata, in cuvinte, pentru chitanta.
+   [B6] Randurile sunt cele inghetate la emitere: chitanta are numar si se pune
+   la dosar, deci nu are voie sa spuna altceva maine, dupa ce o recalculare a
+   mutat banii de pe o datorie pe alta. */
+const etichetaRandChitanta = (r) => (
+  r.tip === "intretinere" ? `Intretinere ${monthLabel(r.luna)}`
+    : r.tip === "penalizare" ? `Penalizare ${monthLabel(r.luna)}`
+      : r.tip === "avans" ? "Avans"
+        : r.descriere || "Datorie");
+
 function descriereAlocari(date, plata) {
-  if (plata.alocari.length === 0) return ["Avans pentru listele urmatoare"];
-  const randuri = plata.alocari.map((a) => {
-    const d = date.datorii.find((x) => x.id === a.datorieId);
-    const ce = !d ? "Datorie" : d.tip === "intretinere" ? `Intretinere ${monthLabel(d.luna)}` : d.tip === "penalizare" ? `Penalizare ${monthLabel(d.luna)}` : d.descriere;
-    return `${ce}: ${lei(a.suma)}`;
-  });
-  const avans = round2(plata.suma - suma(plata.alocari, (a) => a.suma));
-  if (avans > 0) randuri.push(`Avans: ${lei(avans)}`);
-  return randuri;
+  const randuri = plata.chitanta ? plata.chitanta.randuri : [];
+  /* o plata care n-a acoperit nicio datorie ramane intreaga avans */
+  if (randuri.every((r) => r.tip === "avans")) return ["Avans pentru listele urmatoare"];
+  return randuri.map((r) => `${etichetaRandChitanta(r)}: ${lei(r.suma)}`);
 }
 
 const numarChitanta = (ch) => `${ch.serie} nr. ${String(ch.numar).padStart(6, "0")}`;

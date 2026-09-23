@@ -349,7 +349,11 @@ export function creeazaSursaSupabase(url, cheie) {
         return {
           id: p.id, apartamentId: p.apartament_id, suma: nr(p.suma), metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmata_la,
           inregistrataDe: p.inregistrata_de ? numeProfil(p.inregistrata_de) : null,
-          chitanta: ch ? { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la } : null,
+          /* [B6] randurile inghetate la emitere: documentul nu se mai schimba */
+          chitanta: ch ? {
+            serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la,
+            randuri: ch.randuri.map((r) => ({ tip: r.tip, luna: r.luna, descriere: r.descriere, suma: nr(r.suma) })),
+          } : null,
           alocari: alocari.filter((a) => a.plata_id === p.id).sort(inOrdineaPlatii).map((a) => ({ datorieId: a.datorie_id, suma: nr(a.suma) })),
         };
       }),

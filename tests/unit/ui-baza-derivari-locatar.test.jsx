@@ -246,13 +246,24 @@ describe("istoricul si fraza de comparatie", () => {
 });
 
 describe("descriereAlocari si chitanta", () => {
-  const plataNoua = (x) => ({ apartamentId: AP, metoda: "transfer", stare: "confirmata", inregistrataDe: null, confirmataLa: "2026-09-10T12:00:00+03:00", chitanta: { serie: "AP118", numar: 470, emisaLa: "2026-09-10T12:34:00+03:00" }, alocari: [], ...x });
+  /* [B6] randurile chitantei sunt cele inghetate la emitere */
+  const chitantaCu = (randuri, numar = 470) => ({ serie: "AP118", numar, emisaLa: "2026-09-10T12:34:00+03:00", randuri });
+  const plataNoua = (x) => ({ apartamentId: AP, metoda: "transfer", stare: "confirmata", inregistrataDe: null, confirmataLa: "2026-09-10T12:00:00+03:00", chitanta: chitantaCu([]), alocari: [], ...x });
 
   it("descrie fiecare tip de datorie acoperit, avansul si datoriile necunoscute", async () => {
     await plata((d) => {
       d.datorii.push(datorie({ id: "dat-pen", tip: "penalizare", luna: "2026-07", suma: 3, rest: 0, scadenta: "2026-07-01", descriere: "Penalizare" }));
       d.datorii.push(datorie({ id: "dat-si", tip: "sold_initial", luna: "2026-05", suma: 40, rest: 0, scadenta: "2026-05-25", descriere: "Restanta preluata de pe hartie" }));
-      d.plati.push(plataNoua({ id: "pla-a", suma: 100, alocari: [{ datorieId: "dat-pen", suma: 3 }, { datorieId: "dat-si", suma: 40 }, { datorieId: "dat-lipsa", suma: 7 }] }));
+      d.plati.push(plataNoua({
+        id: "pla-a", suma: 100,
+        alocari: [{ datorieId: "dat-pen", suma: 3 }, { datorieId: "dat-si", suma: 40 }, { datorieId: "dat-lipsa", suma: 7 }],
+        chitanta: chitantaCu([
+          { tip: "penalizare", luna: "2026-07", descriere: "Penalizare", suma: 3 },
+          { tip: "sold_initial", luna: "2026-05", descriere: "Restanta preluata de pe hartie", suma: 40 },
+          { tip: "corectie", luna: "2026-08", descriere: null, suma: 7 },
+          { tip: "avans", luna: null, descriere: null, suma: 50 },
+        ]),
+      }));
       d.plati.push(plataNoua({ id: "pla-b", suma: 25, alocari: [], confirmataLa: "2026-09-11T12:00:00+03:00", chitanta: null, metoda: "transfer" }));
     });
     await apasa("Platile mele");
@@ -302,10 +313,10 @@ describe("descriereAlocari si chitanta", () => {
   it("chitanta in numerar, cu si fara numele celui care a incasat, si prin transfer", async () => {
     await plata((d) => {
       d.plati.length = 0;
-      d.plati.push(plataNoua({ id: "p1", suma: 10, metoda: "numerar", inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118", numar: 1, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-14T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p2", suma: 20, metoda: "numerar", chitanta: { serie: "AP118", numar: 2, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-13T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p3", suma: 30, metoda: "transfer", chitanta: { serie: "AP118", numar: 3, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-12T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "transfer", inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118", numar: 4, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-11T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p1", suma: 10, metoda: "numerar", inregistrataDe: "Mihai Dobre", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 10 }], 1), confirmataLa: "2026-09-14T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p2", suma: 20, metoda: "numerar", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 20 }], 2), confirmataLa: "2026-09-13T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p3", suma: 30, metoda: "transfer", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 30 }], 3), confirmataLa: "2026-09-12T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "transfer", inregistrataDe: "Mihai Dobre", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 40 }], 4), confirmataLa: "2026-09-11T12:00:00+03:00" }));
     });
     await apasa("Platile mele");
     const pdf = prindePdf();

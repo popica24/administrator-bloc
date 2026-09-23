@@ -119,7 +119,9 @@ describe("D14, administratorul (doar citire)", () => {
     expect(date.plati).toHaveLength(plati.length);
     for (const p of date.plati) {
       const ch = chitante.find((c) => c.plata_id === p.id);
-      expect(p.chitanta).toEqual({ serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la });
+      /* [B6] randurile inghetate la emitere merg cu chitanta */
+      expect(p.chitanta).toEqual({ serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la, randuri: expect.any(Array) });
+      expect(p.chitanta.randuri.reduce((t, r) => t + r.suma, 0)).toBeCloseTo(p.suma, 2);
       expect(suma(p.alocari.map((a) => a.suma))).toBeLessThanOrEqual(p.suma);
     }
     expect(date.plati.filter((p) => p.metoda === "numerar").every((p) => p.inregistrataDe === "Mihai Dobre")).toBe(true);
