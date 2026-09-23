@@ -17,6 +17,9 @@ import * as D from "./date-demo.js";
 import { documentPdf } from "./pdf.js";
 /* [K22] seara unei zile, ora Romaniei: acelasi calcul ca sursa Supabase si ecranul */
 import { oraSeriiRomania, dataOraRomania, aziRomania } from "./ora-romania.js";
+/* Contul se tine pe numar de telefon, ca in sursa Supabase */
+import { normalizeazaTelefon } from "../supabase/functions/_shared/telefon.js";
+import { genereazaParola } from "../supabase/functions/_shared/parola.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -39,12 +42,6 @@ const LUNI = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iul
 const lunaText = (l) => `${LUNI[Number(l.slice(5, 7)) - 1]} ${l.slice(0, 4)}`;
 const dataText = (d) => `${Number(d.slice(8, 10))} ${LUNI[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const acum = () => new Date().toISOString();
-/* Eticheta de test care reproduce, in modul demonstrativ, cazul "Auth cere
-   confirmarea emailului" din sursa Supabase (vezi inregistreaza() mai jos).
-   Exportata (nu doar un sir scris pe loc), ca testul de paritate sa nu
-   depinda de un literal copiat separat si ca eticheta sa fie gasibila prin
-   cautare (G14: conventia e deliberata, nu o scapare). */
-export const ETICHETA_CERE_CONFIRMARE = "+cere-confirmare";
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 const round4 = (n) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 const eroare = (mesaj) => { throw new Error(mesaj); };
@@ -64,11 +61,11 @@ const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
 
 const TABELE = [
   "asociatii", "blocuri", "contacte", "apartamente", "persoane", "profiluri", "autentificari",
-  "administratori", "membri", "locatari", "invitatii", "furnizori", "recurente", "liste",
+  "administratori", "membri", "locatari", "furnizori", "recurente", "liste",
   "cheltuieli", "repartizari", "contoare", "citiri", "documente", "datorii", "plati", "alocari",
   "chitante", "penalizari", "fonduri", "miscari", "sesizari", "mesaje", "poze", "voturi",
   "optiuni", "exprimate", "adunari", "prezente", "anunturi", "citiriAnunturi", "remindere",
-  "notificari", "incercariInvitatii",
+  "notificari",
 ];
 
 /* =============================================================================
@@ -359,8 +356,8 @@ function construiesteDemo() {
 
   const profil = {};
   D.CONTURI.forEach((c) => {
-    profil[c.cheie] = db.adauga("profiluri", { nume: c.nume, telefon: c.telefon, email: c.email });
-    db.autentificari.push({ email: c.email, parola: D.PAROLA_DEMO, profilId: profil[c.cheie].id });
+    profil[c.cheie] = db.adauga("profiluri", { nume: c.nume, telefon: normalizeazaTelefon(c.telefon) });
+    db.autentificari.push({ telefon: normalizeazaTelefon(c.telefon), parola: D.PAROLA_DEMO, profilId: profil[c.cheie].id });
     if (c.rol === "administrator") {
       db.adauga("administratori", { profilId: profil[c.cheie].id, numarAtestat: c.atestat, stare: "aprobat" });
       db.adauga("membri", { asociatieId: asoc.id, profilId: profil[c.cheie].id, rol: "administrator", activDin: "2026-05-01", activPana: null });
@@ -536,9 +533,6 @@ function rolul(db, profilId) {
   if (adm && adm.stare === "aprobat" && mandat) return { rol: "administrator", mandat, legaturi };
   if (legaturi.length) return { rol: "locatar", mandat: null, legaturi };
   if (adm && adm.stare === "in_asteptare") return { rol: "in_asteptare", legaturi };
-  /* [J4] O cerere respinsa nu se pierdea in "fara_apartament": omul trebuie
-     sa vada de ce e blocat, ca sa poata retrimite cererea corectata. */
-  if (adm && adm.stare === "respins") return { rol: "respins", legaturi };
   return { rol: "fara_apartament", legaturi };
 }
 
@@ -546,9 +540,7 @@ function proiecteaza(db, profilId, apartamentAles) {
   const profil = db.profiluri.find((p) => p.id === profilId);
   const { rol, mandat, legaturi } = rolul(db, profilId);
   const azi = aziIso();
-  const eu = { profilId, nume: profil.nume, telefon: profil.telefon, email: profil.email, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
-  /* [K21] ca identitate.eu(): doar omul respins afla motivul */
-  if (rol === "respins") eu.motivRespingere = db.administratori.find((a) => a.profilId === profilId).motivRespingere;
+  const eu = { profilId, nume: profil.nume, telefon: profil.telefon, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
   if (rol !== "administrator" && rol !== "locatar") return { azi, eu };
 
   const esteAdmin = rol === "administrator";
@@ -586,10 +578,8 @@ function proiecteaza(db, profilId, apartamentAles) {
       .map((p) => ({ valabilDin: p.valabilDin, numar: p.numar, motiv: p.motiv })),
     locatari: esteAdmin ? db.locatari.filter((l) => l.apartamentId === a.id).map((l) => {
       const p = db.profiluri.find((x) => x.id === l.profilId);
-      return { id: l.id, nume: p.nume, email: p.email, telefon: p.telefon, calitate: l.calitate, activDin: l.activDin, activPana: l.activPana };
+      return { id: l.id, nume: p.nume, telefon: p.telefon, calitate: l.calitate, activDin: l.activDin, activPana: l.activPana };
     }) : [],
-    invitatii: esteAdmin ? db.invitatii.filter((i) => i.apartamentId === a.id && !i.folositaLa && !i.revocataLa && i.expiraLa > acum())
-      .map((i) => ({ id: i.id, cod: i.cod, calitate: i.calitate, expiraLa: i.expiraLa })) : [],
   }));
 
   const liste = db.liste
@@ -764,9 +754,6 @@ function proiecteaza(db, profilId, apartamentAles) {
 /* Cat cere Supabase Auth in supabase/config.toml */
 const PAROLA_LUNGIME_MINIMA = 10;
 
-const CARACTERE_COD = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const genereazaCod = () => Array.from({ length: 8 }, () => CARACTERE_COD[Math.floor(Math.random() * CARACTERE_COD.length)]).join("");
-
 export function creeazaSursaMock() {
   const db = construiesteDemo();
   let sesiune = null;
@@ -810,94 +797,18 @@ export function creeazaSursaMock() {
 
     async sesiuneCurenta() { return sesiune; },
 
-    /* [R4] Mesajul spunea doar ce e gresit ("Emailul sau parola nu sunt
-       corecte."), fara niciun pas urmator. sursa-supabase.js:55 (traduce(),
-       in afara ariei acestei reparatii) intoarce acelasi text tradus din
-       eroarea Auth "Invalid login credentials" si are nevoie de aceeasi
-       actualizare, ca cele doua surse sa ramana la fel. */
-    async intra(email, parola) {
-      const a = db.autentificari.find((x) => x.email.toLowerCase() === String(email).trim().toLowerCase());
-      if (!a || a.parola !== parola) eroare("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
-      sesiune = { profilId: a.profilId, email: a.email };
+    /* [R4] Mesajul spunea doar ce e gresit, fara niciun pas urmator.
+       sursa-supabase.js traduce la fel eroarea Auth "Invalid login
+       credentials", ca cele doua surse sa ramana la fel. */
+    async intra(telefon, parola) {
+      const numar = normalizeazaTelefon(telefon);
+      const a = numar && db.autentificari.find((x) => x.telefon === numar);
+      if (!a || a.parola !== parola) eroare("Numarul de telefon sau parola nu sunt corecte. Verifica-le si incearca din nou.");
+      sesiune = { profilId: a.profilId };
       return sesiune;
     },
 
     async iesi() { sesiune = null; },
-
-    async inregistreaza({ email, parola, nume, telefon }) {
-      if (db.autentificari.some((x) => x.email.toLowerCase() === email.trim().toLowerCase())) eroare("Exista deja un cont cu acest email.");
-      /* Aceleasi reguli ca in Supabase Auth (supabase/config.toml, [auth]:
-         minimum_password_length si password_requirements) */
-      if (!parola || parola.length < PAROLA_LUNGIME_MINIMA) eroare(`Parola trebuie sa aiba cel putin ${PAROLA_LUNGIME_MINIMA} caractere.`);
-      if (!/[a-z]/.test(parola) || !/[A-Z]/.test(parola) || !/[0-9]/.test(parola)) {
-        eroare("Parola trebuie sa aiba si litere mici, si litere mari, si cifre.");
-      }
-      const p = db.adauga("profiluri", { nume: nume.trim(), telefon: telefon || null, email: email.trim() });
-      db.autentificari.push({ email: email.trim(), parola, profilId: p.id });
-      /* Paritate cu sursa Supabase (C1): acolo, signUp() nu deschide sesiune
-         cat timp Auth cere confirmarea emailului, iar comanda intoarce null.
-         Modul demonstrativ nu are confirmare reala prin email, deci reproduce
-         acelasi raspuns pentru orice adresa cu eticheta ETICHETA_CERE_CONFIRMARE
-         (contul se creeaza, dar ramane fara sesiune, ca la Supabase) — o
-         conventie doar pentru teste, deliberata (G14), nu date reale: nicio
-         adresa reala nu poarta aceasta eticheta. */
-      if (email.trim().toLowerCase().includes(ETICHETA_CERE_CONFIRMARE)) return null;
-      sesiune = { profilId: p.id, email: email.trim() };
-      return sesiune;
-    },
-
-    /* [J4] identitate.cere_verificare_administrator() (backend) lasa pe
-       oricine nu e deja aprobat sa retrimita cererea, cu atestatul
-       actualizat, si o intoarce mereu la in_asteptare -- inclusiv pe cineva
-       respins, ca sa aiba o cale inainte. Mock-ul refuza neconditionat a
-       doua cerere, ceea ce nu are corespondent in baza. O cerere de la
-       cineva deja aprobat nu schimba nimic (nici in baza). */
-    async cereVerificareAdministrator({ numarAtestat, fisier }) {
-      const p = eu();
-      const existent = db.administratori.find((a) => a.profilId === p.id);
-      if (existent) {
-        if (existent.stare === "aprobat") return;
-        existent.numarAtestat = numarAtestat;
-        if (fisier) existent.atestatCale = salveazaFisier(fisier, "atestate");
-        existent.stare = "in_asteptare";
-        /* [K21] ca in baza (20260920172454): cererea noua sterge motivul vechi */
-        existent.motivRespingere = null;
-      } else {
-        db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
-      }
-    },
-
-    /* Limita de 5 incercari gresite pe cont intr-un sfert de ora, ca in
-       identitate.foloseste_invitatie (C15). A doua limita din baza, cea pe
-       adresa de la care vine cererea, nu are corespondent aici: modul
-       demonstrativ ruleaza in pagina, fara cereri si fara antete. */
-    async folosesteInvitatie(cod) {
-      const p = eu();
-      const fereastra = new Date(Date.now() - 15 * 60000).toISOString();
-      db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.creatLa >= fereastra);
-      const gresite = db.incercariInvitatii.filter((x) => x.profilId === p.id).length;
-      if (gresite >= 5) {
-        eroare("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
-      }
-      const inv = db.invitatii.find((i) => i.cod === String(cod).trim().toUpperCase());
-      if (!inv || inv.revocataLa || inv.folositaLa || inv.expiraLa < acum()) {
-        db.adauga("incercariInvitatii", { profilId: p.id });
-        eroare("Codul nu este valabil. Cere administratorului un cod nou.");
-      }
-      const ap = db.apartamente.find((a) => a.id === inv.apartamentId);
-      /* [J13] identitate.foloseste_invitatie (migratia S11) insereaza "on
-         conflict do nothing", dar acum verifica daca legatura chiar s-a
-         creat: daca omul e deja legat activ de acelasi apartament, refuza
-         cu "Esti deja legat de acest apartament." si nu consuma codul -
-         comanda nu mai poate parea reusita fara niciun efect real. */
-      const legatAcum = db.locatari.some((l) => l.apartamentId === ap.id && l.profilId === p.id && !l.activPana);
-      if (legatAcum) eroare("Esti deja legat de acest apartament.");
-      db.adauga("locatari", { apartamentId: ap.id, blocId: ap.blocId, profilId: p.id, calitate: inv.calitate, activDin: aziIso(), activPana: null });
-      inv.folositaLa = acum();
-      inv.folositaDe = p.id;
-      db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.profilId !== p.id);
-      return { apartamentNumar: ap.numar };
-    },
 
     async incarca(apartamentAles) {
       if (!sesiune) return null;
@@ -1217,28 +1128,51 @@ export function creeazaSursaMock() {
       }).id;
     },
 
-    async invitaLocatar(apartamentId, calitate) {
+    /* [paritate] Edge Function-ul cont-locatar: verifica apartamentul, face
+       contul cu o parola generata si il leaga de apartament. */
+    async adaugaLocatar(apartamentId, { nume, telefon, calitate = "proprietar" }) {
       const { bloc } = cerAdmin();
-      /* [paritate] identitate.invita_locatar refuza un apartament care nu
-         exista sau nu e al blocului administrat, cu mesajul bazei. */
       if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) {
-        eroare("Doar administratorul blocului poate invita locatari.");
+        eroare("Doar administratorul blocului poate face conturi.");
       }
-      const inv = db.adauga("invitatii", { apartamentId, cod: genereazaCod(), calitate, creatDe: eu().id, expiraLa: new Date(Date.now() + 30 * 86400000).toISOString() });
-      return inv.cod;
+      const numar = normalizeazaTelefon(telefon);
+      if (!numar) eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+      if (!String(nume || "").trim()) eroare("Scrie numele locatarului.");
+      const ap = db.apartamente.find((a) => a.id === apartamentId);
+      /* [P1/P5] Acelasi om poate avea doua apartamente: numarul lui are deja
+         cont, deci contul se leaga si de apartamentul acesta, fara parola noua. */
+      const contVechi = db.autentificari.find((x) => x.telefon === numar);
+      if (contVechi) {
+        if (db.locatari.some((l) => l.profilId === contVechi.profilId && l.apartamentId === apartamentId && !l.activPana)) {
+          eroare("Contul este deja legat de acest apartament.");
+        }
+        const legat = db.adauga("locatari", { apartamentId, blocId: ap.blocId, profilId: contVechi.profilId, calitate, activDin: aziIso(), activPana: null });
+        return { locatarId: legat.id, profilId: contVechi.profilId, telefon: numar, parola: null };
+      }
+      const parola = genereazaParola();
+      const p = db.adauga("profiluri", { nume: nume.trim(), telefon: numar });
+      db.autentificari.push({ telefon: numar, parola, profilId: p.id });
+      const l = db.adauga("locatari", { apartamentId, blocId: ap.blocId, profilId: p.id, calitate, activDin: aziIso(), activPana: null });
+      return { locatarId: l.id, profilId: p.id, telefon: numar, parola };
+    },
+
+    async parolaNoua(apartamentId, locatarId) {
+      const { bloc } = cerAdmin();
+      if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) {
+        eroare("Doar administratorul blocului poate face conturi.");
+      }
+      const l = db.locatari.find((x) => x.id === locatarId && x.apartamentId === apartamentId);
+      if (!l) eroare("Locatarul nu este al acestui apartament.");
+      const cont = db.autentificari.find((x) => x.profilId === l.profilId);
+      const parola = genereazaParola();
+      cont.parola = parola;
+      return { parola };
     },
 
     async inchideAcces(locatarId) {
       cerAdmin();
       const l = db.locatari.find((x) => x.id === locatarId) || eroare("Legatura nu exista.");
       l.activPana = aziIso();
-      /* [H9] Se revoca doar codurile de invitatie nefolosite emise pana la
-         data la care se inchide legatura: un cod emis dupa aceea (de exemplu
-         cel al cumparatorului, dat inainte de a inchide accesul vanzatorului
-         cu data lui reala de plecare, adesea in trecut) ramane valabil. */
-      db.invitatii
-        .filter((i) => i.apartamentId === l.apartamentId && !i.folositaLa && !i.revocataLa && i.creatLa.slice(0, 10) <= l.activPana)
-        .forEach((i) => { i.revocataLa = acum(); });
     },
 
     async valideazaCitire(citireId, accepta, motiv) {

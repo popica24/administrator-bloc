@@ -1,0 +1,100 @@
+// cont-locatar: administratorul face contul unui locatar, sau ii da alta
+// parola cand si-a uitat-o.
+//
+// Contul nu si-l face omul: administratorul ii trece numarul de telefon in
+// aplicatie, iar sistemul creeaza contul cu o parola pe care o afla numai
+// administratorul, o singura data, si i-o da omului cum stie el (pe hartie,
+// la telefon). Nu se trimite niciun SMS si niciun email.
+//
+// Este Edge Function, nu doar SQL, pentru ca un cont se creeaza prin API-ul de
+// administrare Supabase Auth, care merge doar cu cheia de serviciu. Dreptul
+// administratorului pe apartament se verifica intai, cu tokenul lui
+// (identitate.apartament_de_administrat).
+//
+// Corp: { apartament_id, nume, telefon, calitate }            -> cont nou
+//        { apartament_id, locatar_id, actiune: "parola" }     -> parola noua
+//
+// Daca numarul are deja cont (acelasi om, al doilea apartament), contul se
+// leaga de apartamentul nou si raspunsul vine fara parola.
+
+import { adresaContului, normalizeazaTelefon } from "../_shared/telefon.js";
+import { genereazaParola } from "../_shared/parola.js";
+import { clientServiciu, clientUtilizator, eroare, porneste, raspuns } from "../_shared/server.ts";
+
+porneste(async (req) => {
+  if (req.method !== "POST") return eroare("Metoda nu este permisa.", 405);
+
+  try {
+    const { apartament_id, locatar_id, nume, telefon, calitate = "proprietar", actiune = "creeaza" } = await req.json();
+    if (!apartament_id) return eroare("Lipseste apartamentul.");
+
+    const cititor = clientUtilizator(req);
+    const { data: utilizator, error: eAuth } = await cititor.auth.getUser();
+    if (eAuth || !utilizator.user) return eroare("Nu esti autentificat.", 401);
+
+    // Verifica dreptul pe apartament cu tokenul administratorului
+    const { error: eDrept } = await cititor.schema("identitate").rpc("apartament_de_administrat", { p_apartament_id: apartament_id });
+    if (eDrept) return eroare(eDrept.message, 403);
+
+    const admin = clientServiciu();
+    const parola = genereazaParola();
+
+    if (actiune === "parola") {
+      if (!locatar_id) return eroare("Lipseste locatarul.");
+      const { data: locatar, error: e1 } = await admin.schema("identitate").from("locatari")
+        .select("profil_id").eq("id", locatar_id).eq("apartament_id", apartament_id).maybeSingle();
+      if (e1) return eroare(e1.message);
+      if (!locatar) return eroare("Locatarul nu este al acestui apartament.", 404);
+      const { error: e2 } = await admin.auth.admin.updateUserById(locatar.profil_id, { password: parola });
+      if (e2) return eroare(e2.message);
+      return raspuns({ parola });
+    }
+
+    const numar = normalizeazaTelefon(telefon);
+    if (!numar) return eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+    if (!String(nume ?? "").trim()) return eroare("Scrie numele locatarului.");
+
+    // Acelasi om poate avea doua apartamente in acelasi bloc: numarul lui are
+    // deja cont, deci nu se face altul, ci se leaga contul si de apartamentul
+    // acesta. Parola lui ramane cea pe care o stie.
+    const { data: existent, error: eCautare } = await admin.schema("identitate").from("profiluri")
+      .select("id").eq("telefon", numar).maybeSingle();
+    if (eCautare) return eroare(eCautare.message);
+    if (existent) {
+      const { data: legatId, error: eLegat } = await admin.schema("identitate").rpc("leaga_locatar", {
+        p_profil_id: existent.id, p_apartament_id: apartament_id, p_calitate: calitate,
+      });
+      if (eLegat) return eroare(eLegat.message);
+      return raspuns({ locatar_id: legatId, profil_id: existent.id, telefon: numar, parola: null });
+    }
+
+    const { data: cont, error: e3 } = await admin.auth.admin.createUser({
+      email: adresaContului(numar)!,
+      phone: `+4${numar}`,
+      password: parola,
+      email_confirm: true,
+      phone_confirm: true,
+      user_metadata: { nume: String(nume).trim(), telefon: numar },
+    });
+    if (e3) {
+      // Acelasi numar nu poate avea doua conturi: mesajul Auth este in engleza
+      // si vorbeste despre adresa, care pentru om nu exista.
+      if (/already/i.test(e3.message)) return eroare("Exista deja un cont cu acest numar de telefon.");
+      return eroare(e3.message);
+    }
+
+    const { data: locatarId, error: e4 } = await admin.schema("identitate").rpc("leaga_locatar", {
+      p_profil_id: cont.user.id, p_apartament_id: apartament_id, p_calitate: calitate,
+    });
+    if (e4) {
+      // Contul ramane fara apartament daca legarea cade: il stergem, ca
+      // administratorul sa poata incerca din nou cu acelasi numar.
+      await admin.auth.admin.deleteUser(cont.user.id);
+      return eroare(e4.message);
+    }
+
+    return raspuns({ locatar_id: locatarId, profil_id: cont.user.id, telefon: numar, parola });
+  } catch (e) {
+    return eroare((e as Error).message, 500);
+  }
+});

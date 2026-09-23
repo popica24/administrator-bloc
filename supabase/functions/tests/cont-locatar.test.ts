@@ -1,0 +1,238 @@
+// cont-locatar: administratorul face contul unui locatar (cont Auth + legatura
+// cu apartamentul) sau ii da alta parola. Dreptul pe apartament se verifica
+// intai, cu tokenul administratorului.
+import { assert, assertEquals } from "jsr:@std/assert@1";
+import { type Apel, cerere, citeste, cuFetch, eroarePg, incarcaHandler, json, JWT_UTILIZATOR, randuri } from "./ajutor.ts";
+
+const handler = await incarcaHandler("../cont-locatar/index.ts");
+
+const PROFIL = "11111111-1111-4111-8111-111111111111";
+const P = {
+  drept: "/rest/v1/rpc/apartament_de_administrat",
+  utilizatori: "/auth/v1/admin/users",
+  utilizator: `/auth/v1/admin/users/${PROFIL}`,
+  locatari: "/rest/v1/locatari",
+  profiluri: "/rest/v1/profiluri",
+  leaga: "/rest/v1/rpc/leaga_locatar",
+  eu: "/auth/v1/user",
+};
+const AP = "apartament-1";
+const NOU = { apartament_id: AP, nume: " Elena Marinescu ", telefon: "0722 123 456", calitate: "chirias" };
+
+function backend(o: {
+  drept?: () => Response;
+  creare?: () => Response;
+  leaga?: () => Response;
+  locatari?: unknown[];
+  profiluri?: unknown[];
+  parolaNoua?: () => Response;
+  stergere?: () => Response;
+} = {}) {
+  return (a: Apel) => {
+    if (a.url.pathname === P.eu) return json({ id: "admin-1" });
+    switch (a.url.pathname) {
+      case P.drept: return o.drept ? o.drept() : json({ apartament_id: AP, bloc_id: "bloc-1", numar: "17" });
+      case P.utilizatori: return o.creare ? o.creare() : json({ id: PROFIL });
+      case P.utilizator: return a.metoda === "DELETE" ? (o.stergere ? o.stergere() : json({})) : (o.parolaNoua ? o.parolaNoua() : json({ id: PROFIL }));
+      case P.locatari: return randuri(a, o.locatari ?? [{ profil_id: PROFIL }]);
+      case P.profiluri: return randuri(a, o.profiluri ?? []);
+      case P.leaga: return o.leaga ? o.leaga() : json("locatar-nou");
+    }
+  };
+}
+
+const trimite = (corp: unknown, token = JWT_UTILIZATOR) => handler(cerere("cont-locatar", { token, corp }));
+
+Deno.test("cont-locatar: OPTIONS raspunde cu 200", async () => {
+  const r = await handler(cerere("cont-locatar", { metoda: "OPTIONS" }));
+  assertEquals(r.status, 200);
+  assertEquals(await r.text(), "ok");
+});
+
+Deno.test("cont-locatar: GET nu este permis -> 405", async () => {
+  const r = await citeste(await handler(cerere("cont-locatar", { metoda: "GET", token: JWT_UTILIZATOR })));
+  assertEquals(r.status, 405);
+  assertEquals(r.corp, { eroare: "Metoda nu este permisa." });
+});
+
+Deno.test("cont-locatar: fara apartament -> 400", async () => {
+  const r = await citeste(await trimite({ nume: "X", telefon: "0722123456" }));
+  assertEquals(r.status, 400);
+  assertEquals(r.corp, { eroare: "Lipseste apartamentul." });
+});
+
+Deno.test("cont-locatar: corp care nu e JSON -> 500", async () => {
+  const r = await citeste(await handler(cerere("cont-locatar", { token: JWT_UTILIZATOR, corp: "nu e json" })));
+  assertEquals(r.status, 500);
+  assert(typeof r.corp.eroare === "string");
+});
+
+Deno.test("cont-locatar: fara sesiune -> 401", async () => {
+  await cuFetch((a: Apel) => (a.url.pathname === P.eu ? json({ msg: "invalid JWT" }, 401) : undefined), async () => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 401);
+    assertEquals(r.corp, { eroare: "Nu esti autentificat." });
+  });
+});
+
+Deno.test("cont-locatar: apartamentul altui bloc -> 403, fara sa creeze nimic", async () => {
+  await cuFetch(backend({ drept: () => eroarePg("Doar administratorul blocului poate face conturi.", 403) }), async (f) => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 403);
+    assertEquals(r.corp, { eroare: "Doar administratorul blocului poate face conturi." });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: numarul gresit este refuzat pe romaneste", async () => {
+  await cuFetch(backend(), async (f) => {
+    const r = await citeste(await trimite({ ...NOU, telefon: "07221" }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx." });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: fara nume -> 400", async () => {
+  await cuFetch(backend(), async () => {
+    const r = await citeste(await trimite({ ...NOU, nume: "   " }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Scrie numele locatarului." });
+    const fara = await citeste(await trimite({ apartament_id: AP, telefon: "0722123456" }));
+    assertEquals(fara.status, 400);
+    assertEquals(fara.corp, { eroare: "Scrie numele locatarului." });
+  });
+});
+
+Deno.test("cont-locatar: contul nou primeste numarul, parola si legatura cu apartamentul", async () => {
+  await cuFetch(backend(), async (f) => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 200);
+    assertEquals(r.corp.locatar_id, "locatar-nou");
+    assertEquals(r.corp.profil_id, PROFIL);
+    assertEquals(r.corp.telefon, "0722123456");
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+
+    const creare = f.apeluri.find((a) => a.url.pathname === P.utilizatori)!;
+    assertEquals(creare.corp.email, "0722123456@telefon.adminbloc.ro");
+    assertEquals(creare.corp.phone, "+40722123456");
+    assertEquals(creare.corp.password, r.corp.parola);
+    assertEquals(creare.corp.email_confirm, true);
+    assertEquals(creare.corp.user_metadata, { nume: "Elena Marinescu", telefon: "0722123456" });
+
+    const leaga = f.apeluri.find((a) => a.url.pathname === P.leaga)!;
+    assertEquals(leaga.corp, { p_profil_id: PROFIL, p_apartament_id: AP, p_calitate: "chirias" });
+  });
+});
+
+Deno.test("cont-locatar: fara calitate ceruta, omul este proprietar", async () => {
+  await cuFetch(backend(), async (f) => {
+    await trimite({ apartament_id: AP, nume: "Ion", telefon: "0722123456" });
+    assertEquals(f.apeluri.find((a) => a.url.pathname === P.leaga)!.corp.p_calitate, "proprietar");
+  });
+});
+
+Deno.test("cont-locatar: acelasi numar a doua oara -> mesaj pe romaneste", async () => {
+  await cuFetch(backend({ creare: () => json({ msg: "A user with this email address has already been registered" }, 422) }), async () => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Exista deja un cont cu acest numar de telefon." });
+  });
+});
+
+Deno.test("cont-locatar: alta eroare Auth se spune ca atare", async () => {
+  await cuFetch(backend({ creare: () => json({ msg: "Database error creating new user" }, 500) }), async () => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Database error creating new user" });
+  });
+});
+
+Deno.test("cont-locatar: daca legarea cade, contul nou se sterge, ca numarul sa ramana liber", async () => {
+  await cuFetch(backend({ leaga: () => eroarePg("Contul este deja legat de acest apartament.") }), async (f) => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Contul este deja legat de acest apartament." });
+    const stergere = f.apeluri.find((a) => a.url.pathname === P.utilizator && a.metoda === "DELETE");
+    assert(stergere, "contul nou a ramas in urma");
+  });
+});
+
+Deno.test("cont-locatar: parola noua se da doar pentru un locatar al apartamentului", async () => {
+  await cuFetch(backend(), async (f) => {
+    const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
+    assertEquals(r.status, 200);
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+    const schimbare = f.apeluri.find((a) => a.url.pathname === P.utilizator && a.metoda === "PUT")!;
+    assertEquals(schimbare.corp.password, r.corp.parola);
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+  });
+});
+
+Deno.test("cont-locatar: parola noua fara locatar -> 400", async () => {
+  await cuFetch(backend(), async () => {
+    const r = await citeste(await trimite({ apartament_id: AP, actiune: "parola" }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Lipseste locatarul." });
+  });
+});
+
+Deno.test("cont-locatar: parola noua pentru un locatar al altui apartament -> 404", async () => {
+  await cuFetch(backend({ locatari: [] }), async () => {
+    const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-strain", actiune: "parola" }));
+    assertEquals(r.status, 404);
+    assertEquals(r.corp, { eroare: "Locatarul nu este al acestui apartament." });
+  });
+});
+
+Deno.test("cont-locatar: cautarea locatarului cazuta se spune ca atare", async () => {
+  await cuFetch((a: Apel) => {
+    if (a.url.pathname === P.eu) return json({ id: "admin-1" });
+    if (a.url.pathname === P.drept) return json({ apartament_id: AP });
+    if (a.url.pathname === P.locatari) return eroarePg("nu merge cautarea", 500);
+    return undefined;
+  }, async () => {
+    const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "nu merge cautarea" });
+  });
+});
+
+Deno.test("cont-locatar: daca Auth refuza parola noua, mesajul lui ajunge la administrator", async () => {
+  await cuFetch(backend({ parolaNoua: () => json({ msg: "Password is too short" }, 422) }), async () => {
+    const r = await citeste(await trimite({ apartament_id: AP, locatar_id: "locatar-1", actiune: "parola" }));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Password is too short" });
+  });
+});
+
+Deno.test("cont-locatar: acelasi om, al doilea apartament: contul lui se leaga, fara parola noua", async () => {
+  await cuFetch(backend({ profiluri: [{ id: PROFIL }] }), async (f) => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 200);
+    assertEquals(r.corp, { locatar_id: "locatar-nou", profil_id: PROFIL, telefon: "0722123456", parola: null });
+    assertEquals(f.apeluri.filter((a) => a.url.pathname === P.utilizatori).length, 0);
+    assertEquals(f.apeluri.find((a) => a.url.pathname === P.leaga)!.corp.p_profil_id, PROFIL);
+  });
+});
+
+Deno.test("cont-locatar: daca legarea contului vechi cade, mesajul ajunge la administrator", async () => {
+  await cuFetch(backend({ profiluri: [{ id: PROFIL }], leaga: () => eroarePg("Contul este deja legat de acest apartament.") }), async () => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "Contul este deja legat de acest apartament." });
+  });
+});
+
+Deno.test("cont-locatar: cautarea contului cazuta se spune ca atare", async () => {
+  await cuFetch((a: Apel) => {
+    if (a.url.pathname === P.eu) return json({ id: "admin-1" });
+    if (a.url.pathname === P.drept) return json({ apartament_id: AP });
+    if (a.url.pathname === P.profiluri) return eroarePg("nu merge cautarea", 500);
+    return undefined;
+  }, async () => {
+    const r = await citeste(await trimite(NOU));
+    assertEquals(r.status, 400);
+    assertEquals(r.corp, { eroare: "nu merge cautarea" });
+  });
+});

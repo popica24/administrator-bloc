@@ -253,29 +253,10 @@ describe("TabBar si BaraSus", () => {
     expect(screen.getByText("Intra in cont")).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryByText("Mihai Dobre")).toBeNull();
-    await scrie("Email", LOCATAR);
+    await scrie("Numarul tau de telefon", LOCATAR);
     await scrie("Parola", PAROLA);
     await apasa("Intra");
     await screen.findByText("Iesi");
     expect(taburi()[0]).toEqual(["Acasa1", "true"]);
-  });
-});
-
-describe("inregistrarea administratorului in doi pasi", () => {
-  /* Audit S4: daca pasul 2 (cererea cu atestatul) esueaza, contul ramane
-     "fara apartament", iar ecranul acela nu mai ofera formularul pentru atestat */
-  it("[S4] dupa un pas 2 esuat, administratorul poate retrimite atestatul", async () => {
-    const s = sursaDemo();
-    s.cereVerificareAdministrator = () => Promise.reject(new Error("Upload esuat"));
-    await pornesteApp({ sursa: s });
-    await screen.findByText("Intra in cont");
-    await apasa("Sunt administrator si vreau cont");
-    await scrie("Numele tau", "Dana Pop");
-    await scrie("Email", "dana@admin.ro");
-    await scrie("Alege o parola", "ParolaBuna1");
-    await scrie("Numarul atestatului", "AT-1");
-    await apasa("Trimite cererea");
-    await screen.findByText("Iesi din cont");
-    expect(screen.getByLabelText("Numarul atestatului")).toBeTruthy();
   });
 });

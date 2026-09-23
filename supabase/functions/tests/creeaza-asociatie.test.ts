@@ -9,7 +9,6 @@ const P = {
   creeaza: "/rest/v1/rpc/creeaza_asociatie",
   profiluri: "/rest/v1/profiluri",
   utilizatori: "/auth/v1/admin/users",
-  invitatie: "/auth/v1/invite",
   numeste: "/rest/v1/rpc/numeste_administrator",
 };
 const CREATA = { asociatie_id: "asoc-1", bloc_id: "bloc-1" };
@@ -17,14 +16,13 @@ const CORP = {
   asociatie: { denumire: "Asociatia D14", cui: "RO123" },
   setari: { zi_scadenta: 25 },
   bloc: { cod: "D14" },
-  administrator: { email: "admin@test.ro", nume: "Maria Ionescu", telefon: "0700000000", atestat: "AT-9", parola: "Parola-1", activDin: "2026-09-01" },
+  administrator: { nume: "Maria Ionescu", telefon: "0745 210 118", atestat: "AT-9", parola: "Parola-1", activDin: "2026-09-01" },
 };
 
 function backend(o: {
   creeaza?: () => Response;
   existent?: unknown[];
   utilizatori?: () => Response;
-  invitatie?: () => Response;
   numeste?: () => Response;
 } = {}) {
   return (a: Apel) => {
@@ -32,7 +30,6 @@ function backend(o: {
       case P.creeaza: return o.creeaza ? o.creeaza() : json(CREATA);
       case P.profiluri: return randuri(a, o.existent ?? []);
       case P.utilizatori: return o.utilizatori ? o.utilizatori() : json({ id: "profil-nou", email: a.corp.email });
-      case P.invitatie: return o.invitatie ? o.invitatie() : json({ id: "profil-invitat", email: a.corp.email });
       case P.numeste: return o.numeste ? o.numeste() : json(null);
     }
   };
@@ -70,11 +67,11 @@ Deno.test("creeaza-asociatie: eroarea din creeaza_asociatie -> 400, fara cont cr
     const r = await citeste(await trimite(CORP));
     assertEquals(r.status, 400);
     assertEquals(r.corp, { eroare: "CUI invalid." });
-    assertEquals(f.catre(P.utilizatori).length + f.catre(P.invitatie).length + f.catre(P.numeste).length, 0);
+    assertEquals(f.catre(P.utilizatori).length + f.catre(P.numeste).length, 0);
   });
 });
 
-for (const [caz, administrator] of [["fara administrator", undefined], ["administrator fara email", { nume: "X" }]] as const) {
+for (const [caz, administrator] of [["fara administrator", undefined], ["administrator fara telefon", { nume: "X" }]] as const) {
   Deno.test(`creeaza-asociatie: ${caz} -> doar asociatia, administrator null`, async () => {
     await cuFetch(backend(), async (f) => {
       const r = await citeste(await trimite({ ...CORP, administrator }));
@@ -89,7 +86,7 @@ Deno.test("creeaza-asociatie: cu parola creeaza contul confirmat si il numeste a
   await cuFetch(backend(), async (f) => {
     const r = await citeste(await trimite(CORP));
     assertEquals(r.status, 200);
-    assertEquals(r.corp, { ...CREATA, administrator: "profil-nou" });
+    assertEquals(r.corp, { ...CREATA, administrator: "profil-nou", parola: "Parola-1" });
 
     const [c] = f.catre(P.creeaza);
     assertEquals(c.antete.get("Content-Profile"), "organizare");
@@ -97,15 +94,15 @@ Deno.test("creeaza-asociatie: cu parola creeaza contul confirmat si il numeste a
 
     const [prof] = f.catre(P.profiluri);
     assertEquals(prof.antete.get("Accept-Profile"), "identitate");
-    assertEquals(prof.url.searchParams.get("email"), "eq.admin@test.ro");
+    assertEquals(prof.url.searchParams.get("telefon"), "eq.0745210118");
 
     const [u] = f.catre(P.utilizatori);
     assertEquals(u.antete.get("Authorization"), `Bearer ${CHEIE_SERVICIU}`);
-    assertEquals(u.corp.email, "admin@test.ro");
+    assertEquals(u.corp.email, "0745210118@telefon.adminbloc.ro");
+    assertEquals(u.corp.phone, "+40745210118");
     assertEquals(u.corp.password, "Parola-1");
     assertEquals(u.corp.email_confirm, true);
-    assertEquals(u.corp.user_metadata, { nume: "Maria Ionescu", telefon: "0700000000" });
-    assertEquals(f.catre(P.invitatie).length, 0);
+    assertEquals(u.corp.user_metadata, { nume: "Maria Ionescu", telefon: "0745210118" });
 
     const [n] = f.catre(P.numeste);
     assertEquals(n.antete.get("Content-Profile"), "identitate");
@@ -113,16 +110,14 @@ Deno.test("creeaza-asociatie: cu parola creeaza contul confirmat si il numeste a
   });
 });
 
-Deno.test("creeaza-asociatie: fara parola trimite invitatie; atestat si data lipsa -> null si azi", async () => {
+Deno.test("creeaza-asociatie: fara parola ceruta, sistemul alege una si o intoarce; atestat si data lipsa -> null si azi", async () => {
   const { parola: _p, atestat: _a, activDin: _d, ...fara } = CORP.administrator;
   await cuFetch(backend(), async (f) => {
     const r = await citeste(await trimite({ ...CORP, administrator: fara }));
     assertEquals(r.status, 200);
-    assertEquals(r.corp.administrator, "profil-invitat");
-    const [i] = f.catre(P.invitatie);
-    assertEquals(i.corp.email, "admin@test.ro");
-    assertEquals(i.corp.data, { nume: "Maria Ionescu", telefon: "0700000000" });
-    assertEquals(f.catre(P.utilizatori).length, 0);
+    assertEquals(r.corp.administrator, "profil-nou");
+    assert(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(r.corp.parola), r.corp.parola);
+    assertEquals(f.catre(P.utilizatori)[0].corp.password, r.corp.parola);
     const [n] = f.catre(P.numeste);
     assertEquals(n.corp.p_numar_atestat, null);
     assertEquals(n.corp.p_activ_din, new Date().toISOString().slice(0, 10));
@@ -134,7 +129,7 @@ Deno.test("creeaza-asociatie: rulata din nou refoloseste profilul existent, fara
     const r = await citeste(await trimite(CORP));
     assertEquals(r.status, 200);
     assertEquals(r.corp.administrator, "profil-vechi");
-    assertEquals(f.catre(P.utilizatori).length + f.catre(P.invitatie).length, 0);
+    assertEquals(f.catre(P.utilizatori).length, 0);
     assertEquals(f.catre(P.numeste)[0].corp.p_profil_id, "profil-vechi");
   });
 });
@@ -148,13 +143,11 @@ Deno.test("creeaza-asociatie: Auth refuza crearea contului -> 400 cu mesajul Aut
   });
 });
 
-Deno.test("creeaza-asociatie: invitatia esueaza -> 400", async () => {
-  const { parola: _p, ...fara } = CORP.administrator;
-  await cuFetch(backend({ invitatie: () => json({ code: "over_email_send_rate_limit", msg: "Email rate limit exceeded" }, 429) }), async (f) => {
-    const r = await citeste(await trimite({ ...CORP, administrator: fara }));
-    assertEquals(r.status, 400);
-    assertEquals(r.corp, { eroare: "Email rate limit exceeded" });
-    assertEquals(f.catre(P.numeste).length, 0);
+Deno.test("creeaza-asociatie: rulata din nou refoloseste profilul gasit dupa numar, fara parola noua", async () => {
+  await cuFetch(backend({ existent: [{ id: "profil-vechi" }] }), async (f) => {
+    const r = await citeste(await trimite(CORP));
+    assertEquals(r.corp.parola, null);
+    assertEquals(f.catre(P.utilizatori).length, 0);
   });
 });
 

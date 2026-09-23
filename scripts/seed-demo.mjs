@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import * as D from "../src/date-demo.js";
 import { documentPdf } from "../src/pdf.js";
+import { adresaContului, normalizeazaTelefon } from "../supabase/functions/_shared/telefon.js";
 
 const URL_SUPABASE = process.env.SUPABASE_URL || "http://127.0.0.1:54321";
 /* Cheia service_role demo a stack-ului local (publica, identica pe orice
@@ -69,7 +70,7 @@ async function main() {
     asociatie: D.ASOCIATIE,
     setari: D.SETARI_FINANCIARE,
     bloc: { ...D.BLOC, uat_siruta: D.BLOC.uat.siruta, ziLimitaCitire: D.ZI_LIMITA_CITIRE, rulmentPerApartament: D.FONDURI.find((f) => f.tip === "rulment").sumaPerApartament },
-    administrator: { email: adminCont.email, parola: D.PAROLA_DEMO, nume: adminCont.nume, telefon: adminCont.telefon, atestat: adminCont.atestat, activDin: "2026-05-01" },
+    administrator: { telefon: adminCont.telefon, parola: D.PAROLA_DEMO, nume: adminCont.nume, atestat: adminCont.atestat, activDin: "2026-05-01" },
   });
   const asoc = creata.asociatie_id;
   const bloc = creata.bloc_id;
@@ -79,10 +80,12 @@ async function main() {
   /* Conturile locatarilor si administratorul inca neverificat */
   const profil = { admin };
   for (const c of D.CONTURI.filter((x) => x.rol !== "administrator")) {
+    const numar = normalizeazaTelefon(c.telefon);
     const { data, error } = await db.auth.admin.createUser({
-      email: c.email, password: D.PAROLA_DEMO, email_confirm: true, user_metadata: { nume: c.nume, telefon: c.telefon },
+      email: adresaContului(numar), phone: `+4${numar}`, password: D.PAROLA_DEMO,
+      email_confirm: true, phone_confirm: true, user_metadata: { nume: c.nume, telefon: numar },
     });
-    if (error) throw new Error(`cont ${c.email}: ${error.message}`);
+    if (error) throw new Error(`cont ${c.telefon}: ${error.message}`);
     profil[c.cheie] = data.user.id;
     if (c.rol === "administrator_in_asteptare") {
       await ok(db.schema("identitate").from("administratori").insert({ profil_id: data.user.id, numar_atestat: c.atestat, stare: "in_asteptare" }), "cerere admin");
@@ -149,7 +152,7 @@ async function main() {
   for (const c of D.CONTURI.filter((x) => x.rol === "locatar")) {
     await ok(db.schema("identitate").from("locatari").insert({
       apartament_id: ap[c.apartament], bloc_id: bloc, profil_id: profil[c.cheie], calitate: c.calitate, activ_din: "2026-06-01",
-    }), `locatar ${c.email}`);
+    }), `locatar ${c.telefon}`);
   }
   const locatarAp = (numar) => {
     const c = D.CONTURI.find((x) => x.rol === "locatar" && x.apartament === numar);

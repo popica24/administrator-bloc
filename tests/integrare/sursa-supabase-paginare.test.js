@@ -36,7 +36,7 @@ const cererileCu = (cereri, cale) => cereri.filter((c) => c.url.includes(`/rest/
 
 beforeAll(async () => {
   f = await creeazaBloc({ blocDoi: true, locatari: [{ cheie: "loc", apartament: "1" }] });
-  adm = (await intraCa(f.adminEmail)).s;
+  adm = (await intraCa(f.adminTelefon)).s;
   listaId = await adm.deschideLista(luna);
 
   /* Peste 1000 de randuri pe o singura lista, ca sa treaca de o pagina */
@@ -109,7 +109,7 @@ describe("P4: citirile pleaca filtrate pe blocul de pe ecran", () => {
   });
 
   it("locatarul primeste numai randurile apartamentului lui", async () => {
-    const loc = (await intraCa(f.conturi.loc.email)).s;
+    const loc = (await intraCa(f.conturi.loc.telefon)).s;
     const { cereri } = await cuTrafic(() => loc.incarca());
     const persoane = cererileCu(cereri, "apartamente_persoane").flatMap((c) => c.randuri || []);
     expect(persoane.length).toBeGreaterThan(0);
@@ -127,7 +127,7 @@ describe("G13: toate() nu se opreste la o pagina scurta, ca sa nu para sfarsitul
      intermediar care taie fiecare raspuns la un prag mai mic decat PAGINA. */
   it("chiar daca serverul intoarce mai putine randuri decat pragul cerut, toate() continua pana la o pagina chiar goala", async () => {
     const izolat = await creeazaBloc();
-    const admIzolat = (await intraCa(izolat.adminEmail)).s;
+    const admIzolat = (await intraCa(izolat.adminTelefon)).s;
     const randuri = [];
     for (let i = 1; i <= 5; i += 1) {
       randuri.push({ asociatie_id: izolat.asociatieId, bloc_id: izolat.blocId, titlu: `Document G13 ${i}`, tip: "altul", cale: `g13/${izolat.id}/${i}.pdf` });
@@ -221,7 +221,7 @@ describe("[K17] furnizorii, locatarii, fondurile si legaturile vin intregi si in
   });
 
   it("legaturile locatarului cu apartamentele lui se cer ordonate", async () => {
-    const loc = (await intraCa(f.conturi.loc.email)).s;
+    const loc = (await intraCa(f.conturi.loc.telefon)).s;
     const { cereri } = await cuTrafic(() => loc.incarca());
     const ale = cererileCu(cereri, "locatari");
     expect(ale.length).toBeGreaterThan(0);

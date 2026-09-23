@@ -131,7 +131,7 @@ describe("etichetele: valorile necunoscute raman asa cum sunt", () => {
       ap.locatari.push({ ...ap.locatari[0], id: "loc-x", nume: "Andrei Marinescu", calitate: "nepot", telefon: null });
     });
     expect(dialog.textContent).toContain("Elena MarinescuProprietar · din 1 iun 2026 · 0733 410 217");
-    expect(dialog.textContent).toContain("Andrei Marinescunepot · din 1 iun 2026Inchide");
+    expect(dialog.textContent).toContain("Andrei Marinescunepot · din 1 iun 2026Parola nouaInchide");
   });
 });
 

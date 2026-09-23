@@ -12,7 +12,7 @@ let date;
 
 beforeAll(async () => {
   f = await creeazaBloc({ locatari: [{ cheie: "loc", apartament: "1" }] });
-  ({ s: adm, date } = await intraCa(f.adminEmail));
+  ({ s: adm, date } = await intraCa(f.adminTelefon));
 });
 
 describe("schimbaFisaApartament()", () => {

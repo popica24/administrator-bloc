@@ -26,9 +26,9 @@ beforeAll(async () => {
   st.salubris = await ok(db("intretinere").from("furnizori").insert({
     asociatie_id: f.asociatieId, denumire: "Salubris Test", metoda_implicita: "persoane", cod_implicit: "C2",
   }).select().single());
-  adm = (await intraCa(f.adminEmail)).s;
-  loc = (await intraCa(f.conturi.loc.email)).s;
-  loc2 = (await intraCa(f.conturi.loc2.email)).s;
+  adm = (await intraCa(f.adminTelefon)).s;
+  loc = (await intraCa(f.conturi.loc.telefon)).s;
+  loc2 = (await intraCa(f.conturi.loc2.telefon)).s;
 });
 
 describe("lista lunii: facturi", () => {
@@ -379,16 +379,18 @@ describe("bani si oameni", () => {
     await expect(adm.schimbaPersoane(strain.id, 1, lunaDelta(1), null)).rejects.toThrow("Nu ai drept sa faci aceasta operatie.");
   });
 
-  it("invitaLocatar(): un cod de 8 caractere, valabil 30 de zile", async () => {
-    const cod = await adm.invitaLocatar(f.ap["2A"], "membru_familie");
-    expect(cod).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
-    const inv = await ok(db("identitate").from("invitatii").select("*").eq("cod", cod).single());
-    expect(inv).toMatchObject({ apartament_id: f.ap["2A"], calitate: "membru_familie", creat_de: f.adminId, folosita_la: null });
-    const zile = (Date.parse(inv.expira_la) - Date.now()) / 86400000;
-    expect(zile).toBeGreaterThan(29.9);
-    expect(zile).toBeLessThan(30.1);
+  it("adaugaLocatar(): contul nou apare pe fisa apartamentului", async () => {
+    const telefon = `07${String(Date.now() % 100000000).padStart(8, "0")}`;
+    const r = await adm.adaugaLocatar(f.ap["2A"], { nume: "Membru Familie", telefon, calitate: "membru_familie" });
+    expect(r.parola).toMatch(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/);
+    const legatura = await ok(db("identitate").from("locatari").select("*").eq("id", r.locatar_id).single());
+    expect(legatura).toMatchObject({ apartament_id: f.ap["2A"], calitate: "membru_familie", activ_pana: null });
     const d = await adm.incarca();
-    expect(d.apartamente.find((a) => a.id === f.ap["2A"]).invitatii.map((i) => i.cod)).toContain(cod);
+    const pe2A = d.apartamente.find((a) => a.id === f.ap["2A"]).locatari;
+    expect(pe2A.map((l) => [l.nume, l.telefon])).toContainEqual(["Membru Familie", telefon]);
+    /* Contul ramane in istoric, dar nu mai numara ca locatar activ: testele
+       de mai jos numara destinatarii reminderelor pe acelasi bloc. */
+    await adm.inchideAcces(r.locatar_id);
   });
 
   it("inchideAcces(): legatura primeste data de sfarsit; a doua oara este refuzata", async () => {

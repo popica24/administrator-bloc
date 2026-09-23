@@ -51,7 +51,12 @@ const erori = unice([...final.matchAll(/raise\s+exception\s+'((?:[^']|'')*)'/gi)
   .map((m) => m[1].replace(/''/g, "'").split("%")[0].trim())
   .filter((t) => t.length >= 8));
 
-const politici = unice([...final.matchAll(/create\s+policy\s+"([^"]+)"/gi)].map((m) => m[1]));
+/* O politica dispare odata cu tabela ei: `drop table` le sterge pe toate. */
+const tabeleSterse = new Set([...migratii.matchAll(/drop\s+table\s+(?:if\s+exists\s+)?([a-z_]+\.[a-z_0-9]+)/gi)]
+  .map((m) => m[1].toLowerCase()));
+const politici = unice([...final.matchAll(/create\s+policy\s+"([^"]+)"\s+on\s+([a-z_]+\.[a-z_0-9]+)/gi)]
+  .filter((m) => !tabeleSterse.has(m[2].toLowerCase()))
+  .map((m) => m[1]));
 
 const verifica = (nume, lista, gasit) => {
   const lipsa = lista.filter((x) => !gasit(x));

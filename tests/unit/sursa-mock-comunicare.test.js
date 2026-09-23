@@ -3,8 +3,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { ceasDemo, ZI_DEMO, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 
-const ILIE = "familia.ilie@adminbloc.test";
-const VOICU = "gheorghe.voicu@adminbloc.test";
+const ILIE = "0726 331 003";
+const VOICU = "0741 002 101";
 const ACUM = ZI_DEMO.toISOString();
 const apNr = (d, n) => d.apartamente.find((a) => a.numar === n);
 
@@ -42,9 +42,8 @@ describe("voteaza", () => {
 
   it("[K3] chiriasul nu voteaza in locul proprietarului", async () => {
     const { s, d } = await ca(ADMIN);
-    const cod = await s.invitaLocatar(apNr(d, "11").id, "chirias");
-    await s.inregistreaza({ email: "chirias@x.ro", parola: "ParolaBuna1", nume: "Chirias" });
-    await s.folosesteInvitatie(cod);
+    const { telefon, parola } = await s.adaugaLocatar(apNr(d, "11").id, { nume: "Chirias", telefon: "0722 000 011", calitate: "chirias" });
+    await s.intra(telefon, parola);
     const dl = await s.incarca();
     const v = dl.voturi[0];
     await expect(s.voteaza(v.id, v.optiuni[0].id, dl.eu.apartamentId)).rejects.toThrow();

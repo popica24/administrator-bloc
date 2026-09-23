@@ -5,7 +5,7 @@
 --        sesizari (bloc_id, creat_la) se citeau prin seq scan.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(18);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-* si d-*; anulat la rollback).
@@ -149,16 +149,6 @@ select is(pg_temp.jurnal('comunicare.documente', pg_temp.fx('doc'), 'INSERT'), 1
 update comunicare.documente set titlu = 'Contract firma de curatenie (revizuit)' where id = pg_temp.fx('doc');
 select is(pg_temp.jurnal('comunicare.documente', pg_temp.fx('doc'), 'UPDATE'), 1,
   'audit: modificarea unui document lasa urma in jurnal');
-
-select set_config('fx.cod', identitate.invita_locatar(pg_temp.fx('ap1'), 'chirias'), true);
-select set_config('fx.invitatie',
-  (select id::text from identitate.invitatii where cod = current_setting('fx.cod')), true);
-select is(pg_temp.jurnal('identitate.invitatii', pg_temp.fx('invitatie'), 'INSERT'), 1,
-  'audit: codul de invitatie lasa urma in jurnal');
-
-update identitate.invitatii set revocata_la = now() where id = pg_temp.fx('invitatie');
-select is(pg_temp.jurnal('identitate.invitatii', pg_temp.fx('invitatie'), 'UPDATE'), 1,
-  'audit: revocarea unui cod lasa urma in jurnal');
 
 insert into financiar.datorii (apartament_id, bloc_id, tip, luna, suma, scadenta, descriere)
 values (pg_temp.fx('ap1'), pg_temp.fx('bloc'), 'intretinere',

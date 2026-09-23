@@ -366,38 +366,87 @@ describe("FisaApartament, numarul de persoane", () => {
   });
 });
 
-describe("FisaApartament, invitatii si acces", () => {
-  it("genereaza un cod de invitatie pentru chirias si il arata in lista", async () => {
+describe("FisaApartament, contul locatarului si accesul", () => {
+  it("face contul pe numarul de telefon si arata parola o singura data", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "invitaLocatar");
+    const spion = vi.spyOn(sursa, "adaugaLocatar");
     const ap = await apDupaNumar(sursa, "2");
     await deschideFisa("2");
     expect(inDialog("Apartament 2").getByText("Nimeni din apartament nu are inca cont.")).toBeTruthy();
-    await apasa("Invita un locatar in aplicatie");
+    await apasa("Adauga un locatar in aplicatie");
+    scrie("Numele locatarului", " Ana Pop ");
+    scrie("Numarul lui de telefon", "0722 000 041");
     await act(async () => { fireEvent.change(screen.getByLabelText("Ce este pentru apartament"), { target: { value: "chirias" } }); });
-    await apasa("Genereaza codul");
-    expect(spion).toHaveBeenCalledWith(ap.id, "chirias");
-    const cod = await spion.mock.results[0].value;
-    expect(cod).toMatch(/^[A-Z0-9]{6,}$/);
+    await apasa("Fa contul");
+    expect(spion).toHaveBeenCalledWith(ap.id, { nume: "Ana Pop", telefon: "0722 000 041", calitate: "chirias" });
+    const { parola } = await spion.mock.results[0].value;
     const f = inDialog("Apartament 2");
-    expect(f.getAllByText(cod).length).toBeGreaterThan(0);
-    expect(f.getByText(`Cod nefolosit ${cod} (chirias), expira pe 19 oct 2026`)).toBeTruthy();
+    expect(f.getByText("Intra cu numarul 0722 000 041")).toBeTruthy();
+    expect(f.getByText(parola)).toBeTruthy();
     await apasa("Gata");
-    expect(buton("Invita un locatar in aplicatie")).toBeTruthy();
+    expect(inDialog("Apartament 2").getByText("Ana Pop")).toBeTruthy();
+    expect(screen.queryByText(parola)).toBeNull();
   });
 
-  it("renunta la invitatie si invitatia refuzata nu arata cod", async () => {
+  it("butonul asteapta un nume si un numar intreg, iar refuzul ramane pe ecran", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("2");
-    await apasa("Invita un locatar in aplicatie");
-    await apasa("Renunta");
-    expect(screen.queryByLabelText("Ce este pentru apartament")).toBeNull();
+    await apasa("Adauga un locatar in aplicatie");
+    expect(dezactivat(buton("Fa contul"))).toBe(true);
+    scrie("Numele locatarului", "Ana");
+    scrie("Numarul lui de telefon", "0722");
+    await act(async () => {});
+    expect(dezactivat(buton("Fa contul"))).toBe(true);
+    scrie("Numarul lui de telefon", "0722 000 042");
+    await act(async () => {});
+    expect(dezactivat(buton("Fa contul"))).toBe(false);
 
-    vi.spyOn(sursa, "invitaLocatar").mockRejectedValue(new Error("Refuzat"));
-    await apasa("Invita un locatar in aplicatie");
-    await apasa("Genereaza codul");
-    expect(toast().textContent).toBe("Refuzat");
-    expect(buton("Genereaza codul")).toBeTruthy();
+    vi.spyOn(sursa, "adaugaLocatar").mockRejectedValue(new Error("Exista deja un cont cu acest numar de telefon."));
+    await apasa("Fa contul");
+    expect(inDialog("Apartament 2").getByText("Exista deja un cont cu acest numar de telefon.")).toBeTruthy();
+    await apasa("Renunta");
+    expect(screen.queryByLabelText("Numele locatarului")).toBeNull();
+  });
+
+  /* [P1/P5] Un om cu doua apartamente are un singur numar: contul lui se leaga
+     si de apartamentul al doilea, fara parola noua. */
+  it("numarul care are deja cont se leaga de apartament, fara parola noua", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    await deschideFisa("2");
+    await apasa("Adauga un locatar in aplicatie");
+    scrie("Numele locatarului", "Elena Marinescu");
+    scrie("Numarul lui de telefon", "0733 410 217");
+    await apasa("Fa contul");
+    const f = inDialog("Apartament 2");
+    expect(f.getByText(/Omul avea deja cont pe acest numar/)).toBeTruthy();
+    expect(f.getByText("Intra cu numarul 0733 410 217")).toBeTruthy();
+    await apasa("Gata");
+    expect(inDialog("Apartament 2").getAllByText("Elena Marinescu").length).toBeGreaterThan(0);
+    const ap = await apDupaNumar(sursa, "2");
+    expect(ap.locatari.map((l) => l.nume)).toContain("Elena Marinescu");
+  });
+
+  it("daca parola noua este refuzata, ecranul ramane cum era", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    vi.spyOn(sursa, "parolaNoua").mockRejectedValue(new Error("Nu merge acum."));
+    await deschideFisa("17");
+    await apasa("Parola noua");
+    expect(toast().textContent).toBe("Nu merge acum.");
+    expect(screen.queryByText(/Intra cu numarul/)).toBeNull();
+  });
+
+  it("parola noua se genereaza pentru un locatar care si-a uitat-o", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "parolaNoua");
+    const ap = await apDupaNumar(sursa, "17");
+    await deschideFisa("17");
+    await apasa("Parola noua");
+    const { parola } = await spion.mock.results[0].value;
+    expect(spion).toHaveBeenCalledWith(ap.id, ap.locatari[0].id);
+    const f = inDialog("Apartament 17");
+    expect(f.getByText(/Omul avea deja cont|Contul este gata/)).toBeTruthy();
+    expect(f.getByText(parola)).toBeTruthy();
+    await apasa("Gata");
   });
 
   it("inchide accesul doar dupa confirmare", async () => {

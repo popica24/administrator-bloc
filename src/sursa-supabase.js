@@ -14,6 +14,8 @@
 import { createClient } from "@supabase/supabase-js";
 /* [J9, K22] seara unei zile, ora Romaniei, oricare ar fi fusul dispozitivului */
 import { oraSeriiRomania, aziRomania } from "./ora-romania.js";
+/* Contul se tine pe numar de telefon: adresa din Auth se face din numar */
+import { adresaContului } from "../supabase/functions/_shared/telefon.js";
 
 /* [K24] ziua Romaniei, nu a telefonului */
 const aziIso = aziRomania;
@@ -37,13 +39,10 @@ const SESIUNE_EXPIRATA = "Sesiunea a expirat. Intra din nou in cont.";
 /* Mesajele tehnice ale serverului, spuse pe romaneste */
 function traduce(error) {
   const m = (error && (error.message || error.msg)) || "A aparut o eroare.";
-  if (/Invalid login credentials/i.test(m)) return "Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.";
-  if (/Email not confirmed/i.test(m)) return "Confirma adresa de email inainte sa intri in cont.";
-  if (/you can only request this after/i.test(m)) return "Ai trimis cererea de doua ori prea repede. Mai asteapta putin si incearca din nou.";
-  if (/already registered|already been registered/i.test(m)) return "Exista deja un cont cu acest email.";
-  const lungime = m.match(/Password should be at least (\d+) characters/i);
-  if (lungime) return `Parola trebuie sa aiba cel putin ${lungime[1]} caractere.`;
-  if (/Password should contain at least one character of each/i.test(m)) return "Parola trebuie sa aiba si litere mici, si litere mari, si cifre.";
+  if (/Invalid login credentials/i.test(m)) return "Numarul de telefon sau parola nu sunt corecte. Verifica-le si incearca din nou.";
+  /* Regulile de parola si "adresa deja folosita" nu mai ajung aici: conturile
+     le face administratorul, prin Edge Function-ul cont-locatar, care isi
+     spune singur greselile pe romaneste. */
   if (/JWT expired|invalid JWT|invalid claim|permission denied for schema/i.test(m)) return SESIUNE_EXPIRATA;
   if (/row-level security/i.test(m)) return "Nu ai drept sa faci aceasta operatie.";
   if (error && error.code === "23505") return "Exista deja o inregistrare identica.";
@@ -83,23 +82,6 @@ async function toate(construieste) {
     rezultat.push(...bucata);
     ultim = bucata[bucata.length - 1].id;
   }
-}
-
-/* [J11] Ca toate(), dar cand filtrul e o lista de id-uri prea lunga pentru un
-   singur .in() (audit 2, P4: invitatii nu se poate lega de apartamente
-   printr-un join, doar printr-un filtru pe lista lor de id-uri) — o cerere
-   cu peste o mie de UUID-uri in URL pica cu "URI too long" inainte sa
-   ajunga la limita de randuri a raspunsului. Ceruta pe bucati de id-uri, cu
-   toate() pe fiecare bucata, functioneaza indiferent de cate id-uri sau
-   randuri sunt. */
-const BUCATA_IDURI = 200;
-async function toateDupaIduri(iduri, construieste) {
-  const rezultat = [];
-  for (let i = 0; i < iduri.length; i += BUCATA_IDURI) {
-    const bucataIduri = iduri.slice(i, i + BUCATA_IDURI);
-    rezultat.push(...await toate(() => construieste(bucataIduri)));
-  }
-  return rezultat;
 }
 
 /* Cele mai noi intai / cele mai vechi intai, dupa un camp de data.
@@ -144,7 +126,7 @@ export function creeazaSursaSupabase(url, cheie) {
     if (!sesiune.session) return null;
     const eu = await ok(id.rpc("eu"));
     const azi = aziIso();
-    const euUi = { profilId: eu.profil_id, nume: eu.nume, telefon: eu.telefon, email: eu.email, rol: eu.rol, apartamentId: eu.apartament_id };
+    const euUi = { profilId: eu.profil_id, nume: eu.nume, telefon: eu.telefon, rol: eu.rol, apartamentId: eu.apartament_id };
     /* [K21] doar pentru rolul "respins" trimite identitate.eu() motivul */
     if (eu.rol === "respins") euUi.motivRespingere = eu.motiv_respingere;
     ctx = { profilId: eu.profil_id, rol: eu.rol, blocId: eu.bloc_id, asociatieId: eu.asociatie_id, apartamentId: eu.apartament_id };
@@ -231,7 +213,7 @@ export function creeazaSursaSupabase(url, cheie) {
       esteAdmin ? ok(com.from("remindere_setari").select("*").eq("asociatie_id", asoc)) : Promise.resolve([]),
       ok(com.from("notificari").select("*").eq("profil_id", eu.profil_id).order("trimisa_la", { ascending: false }).limit(50)),
       esteAdmin ? toate(() => id.from("locatari").select("*").eq("bloc_id", bloc)) : Promise.resolve([]),
-      toate(() => id.from("profiluri").select("id, nume, email, telefon")),
+      toate(() => id.from("profiluri").select("id, nume, telefon")),
     ]);
     /* [K17] toate() ordoneaza dupa id, pentru paginare; id-ul e un UUID
        aleator, deci ordinea aceea nu inseamna nimic pentru om si difera de la
@@ -243,16 +225,6 @@ export function creeazaSursaSupabase(url, cheie) {
     furnizori.sort(inOrdineaAdaugarii);
     locatari.sort(inOrdineaAdaugarii);
     fonduri.sort((x, y) => x.tip.localeCompare(y.tip));
-    /* Codurile nefolosite ale blocului. Join-ul nu se poate face in cerere:
-       identitate.invitatii si organizare.apartamente sunt in scheme diferite,
-       iar PostgREST leaga doar tabele din aceeasi schema, deci filtrul merge
-       pe lista de id-uri a apartamentelor (audit 2, P4). [J11] Pe bucati de
-       id-uri, cu paginare pe fiecare bucata: un bloc cu multe apartamente nu
-       mai pica cu "URI too long" si nu mai trunchiaza tacut la max_rows. */
-    const invitatii = esteAdmin
-      ? await toateDupaIduri(apartamente.map((a) => a.id), (iduri) => id.from("invitatii").select("*").in("apartament_id", iduri)
-        .is("folosita_la", null).is("revocata_la", null).gt("expira_la", new Date().toISOString()))
-      : [];
 
     if (!esteAdmin) {
       /* [P1] Calitatea locatarului la apartamentul activ, ca ecranele sa
@@ -328,9 +300,8 @@ export function creeazaSursaSupabase(url, cheie) {
           istoricPersoane: persoane.filter((p) => p.apartament_id === a.id).map((p) => ({ valabilDin: luna(p.valabil_din), numar: p.numar_persoane, motiv: p.motiv })),
           locatari: locatari.filter((l) => l.apartament_id === a.id).map((l) => {
             const p = profiluri.find((x) => x.id === l.profil_id) || {};
-            return { id: l.id, nume: p.nume || "Locatar", email: p.email, telefon: p.telefon, calitate: l.calitate, activDin: l.activ_din, activPana: l.activ_pana };
+            return { id: l.id, nume: p.nume || "Locatar", telefon: p.telefon, calitate: l.calitate, activDin: l.activ_din, activPana: l.activ_pana };
           }),
-          invitatii: invitatii.filter((i) => i.apartament_id === a.id).map((i) => ({ id: i.id, cod: i.cod, calitate: i.calitate, expiraLa: i.expira_la })),
         })),
       liste: liste.map((l) => ({
         id: l.id, luna: luna(l.luna), stare: l.stare, versiune: l.versiune, scadenta: l.scadenta, publicataLa: l.publicata_la,
@@ -450,48 +421,24 @@ export function creeazaSursaSupabase(url, cheie) {
 
     async sesiuneCurenta() {
       const { data } = await sb.auth.getSession();
-      return data.session ? { profilId: data.session.user.id, email: data.session.user.email } : null;
+      return data.session ? { profilId: data.session.user.id } : null;
     },
 
-    async intra(email, parola) {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password: parola });
+    /* Omul stie numarul lui de telefon, nu adresa interna a contului. */
+    async intra(telefon, parola) {
+      const adresa = adresaContului(telefon);
+      if (!adresa) arunca({ message: "Invalid login credentials" });
+      const { data, error } = await sb.auth.signInWithPassword({ email: adresa, password: parola });
       if (error) arunca(error);
-      return { profilId: data.user.id, email: data.user.email };
+      return { profilId: data.user.id };
     },
 
     async iesi() {
       ctx = null;
-      await sb.auth.signOut();
-    },
-
-    /* Cand Auth cere confirmarea emailului, signUp() nu deschide sesiune.
-       Comanda intoarce null (nu arunca): ecranul stie sa arate "Confirma
-       adresa de email" doar dupa un rezultat gol, nu dupa o exceptie, care ar
-       fi tratata ca o inregistrare esuata si ar pierde codul de invitatie (C1). */
-    async inregistreaza({ email, parola, nume, telefon }) {
-      const { data, error } = await sb.auth.signUp({ email, password: parola, options: { data: { nume, telefon } } });
-      if (error) arunca(error);
-      if (!data.session) return null;
-      return { profilId: data.user.id, email };
-    },
-
-    async cereVerificareAdministrator({ numarAtestat, fisier }) {
-      const { data } = await sb.auth.getUser();
-      /* [NOU-1] Fara sesiune, data.user este null: data.user.id arunca un
-         TypeError tehnic, in loc sa spuna pe romaneste ce s-a intamplat. */
-      if (!data.user) arunca({ message: "Nu esti autentificat." });
-      let cale = null;
-      if (fisier) cale = await incarcaFisier("atestate", `${data.user.id}/atestat-${Date.now()}.${extensie(fisier)}`, fisier);
-      await ok(id.rpc("cere_verificare_administrator", { p_numar_atestat: numarAtestat, p_atestat_cale: cale }));
-    },
-
-    /* Codul gresit nu mai ridica exceptie in baza (altfel s-ar anula si randul
-       care numara incercarea, deci limita nu ar retine nimic): comanda intoarce
-       mesajul, iar aici redevine eroare, ca sa nu se schimbe nimic pe ecran. */
-    async folosesteInvitatie(cod) {
-      const r = await ok(id.rpc("foloseste_invitatie", { p_cod: cod }));
-      if (r.eroare) throw new Error(r.eroare);
-      return { apartamentNumar: r.apartament_numar };
+      /* Doar de pe dispozitivul acesta: administratorul care iese de pe
+         telefon nu trebuie scos si de pe calculatorul de acasa (signOut()
+         fara scope inchide sesiunile de peste tot). */
+      await sb.auth.signOut({ scope: "local" });
     },
 
     incarca,
@@ -698,7 +645,12 @@ export function creeazaSursaSupabase(url, cheie) {
       }));
     },
 
-    invitaLocatar: (apartamentId, calitate) => ok(id.rpc("invita_locatar", { p_apartament_id: apartamentId, p_calitate: calitate })),
+    /* Contul locatarului il face administratorul: Edge Function-ul creeaza
+       contul in Auth si intoarce parola, o singura data. */
+    adaugaLocatar: (apartamentId, { nume, telefon, calitate }) =>
+      invoca("cont-locatar", { apartament_id: apartamentId, nume, telefon, calitate }),
+    parolaNoua: (apartamentId, locatarId) =>
+      invoca("cont-locatar", { apartament_id: apartamentId, locatar_id: locatarId, actiune: "parola" }),
     inchideAcces: (locatarId) => ok(id.rpc("inchide_acces_locatar", { p_locatar_id: locatarId })),
     valideazaCitire: (citireId, accepta, motiv) => ok(cont.rpc("valideaza_citire", { p_citire_id: citireId, p_accepta: accepta, p_motiv: motiv })),
     /* [A5] Un singur apel valideaza sau respinge, dintr-o data, toate citirile

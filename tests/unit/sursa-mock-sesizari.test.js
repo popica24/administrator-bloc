@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { ceasDemo, ZI_DEMO, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 
-const ILIE = "familia.ilie@adminbloc.test";
+const ILIE = "0726 331 003";
 const ACUM = ZI_DEMO.toISOString();
 const dupaTitlu = (d, t) => d.sesizari.find((x) => x.titlu === t);
 
@@ -136,9 +136,8 @@ describe("[K4] sesizarile fostului locatar", () => {
   it("[K4] un locatar nou nu vede conversatia de dinaintea venirii lui", async () => {
     const { s, d } = await ca(ADMIN);
     const ap11 = d.apartamente.find((a) => a.numar === "11").id;
-    const cod = await s.invitaLocatar(ap11, "chirias");
-    await s.inregistreaza({ email: "nou@x.ro", parola: "ParolaBuna1", nume: "Nou" });
-    await s.folosesteInvitatie(cod);
+    const { telefon, parola } = await s.adaugaLocatar(ap11, { nume: "Nou", telefon: "0722 000 012", calitate: "chirias" });
+    await s.intra(telefon, parola);
     const veche = dupaTitlu(await s.incarca(), "Scurgere la coloana de la subsol");
     expect(veche.aMea).toBe(false);
     expect(veche.poze).toEqual([]);

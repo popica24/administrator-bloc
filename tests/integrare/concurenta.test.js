@@ -67,7 +67,7 @@ let adm;
 
 beforeAll(async () => {
   f = await creeazaBloc({ locatari: [{ cheie: "loc", apartament: "1" }] });
-  adm = (await intraCa(f.adminEmail)).s;
+  adm = (await intraCa(f.adminTelefon)).s;
 });
 
 describe("banii: doua incasari in acelasi moment", () => {
@@ -187,7 +187,7 @@ describe("cotele blocului: o redistribuire si o inrolare noua nu duc suma peste 
 
   beforeAll(async () => {
     f8 = await creeazaBloc();
-    adm8 = (await intraCa(f8.adminEmail)).s;
+    adm8 = (await intraCa(f8.adminTelefon)).s;
   });
 
   it("schimbaCoteleBlocului asteapta inrolarea in curs si vede apartamentul nou aparut", async () => {
@@ -261,7 +261,7 @@ describe("evenimente: doi consumatori pe acelasi rand", () => {
        de fapt cererea originala e inca in coada lui pg_net. Asteptam raspunsul
        chiar al acelei cereri (net._http_response, cu id-ul nostru in corp),
        singurul semnal ca livrarea declansata de INSERT chiar s-a incheiat. */
-    const loc = (await intraCa(f.conturi.loc.email)).s;
+    const loc = (await intraCa(f.conturi.loc.telefon)).s;
     const contor = (await loc.incarca()).contoare.find((c) => c.tip === "rece");
     await loc.transmiteCitire({ apartamentId: f.ap["1"], luna: lunaDelta(0), indexuri: [{ contorId: contor.id, index: 99 }] });
     idEveniment = await psql(`select id from evenimente.coada where tip = 'CitireTransmisa' and (date ->> 'bloc_id') = '${f.blocId}' order by id desc limit 1`);

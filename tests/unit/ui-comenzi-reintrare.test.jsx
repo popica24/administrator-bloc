@@ -53,12 +53,14 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     await termina();
   });
 
-  it("generarea codului de invitatie", async () => {
-    const { spion, termina } = await cuComandaBlocata(ADMIN, "invitaLocatar", "ABCD2345");
+  it("facerea contului unui locatar", async () => {
+    const { spion, termina } = await cuComandaBlocata(ADMIN, "adaugaLocatar", { telefon: "0722000061", parola: "Bloc-Casa-1234" });
     await tab("Apartamente");
     await apasa("Apartament 17");
-    await apasa("Invita un locatar in aplicatie");
-    await apasaDeDouaOri("Genereaza codul");
+    await apasa("Adauga un locatar in aplicatie");
+    scrie("Numele locatarului", "Ana");
+    scrie("Numarul lui de telefon", "0722 000 061");
+    await apasaDeDouaOri("Fa contul");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
   });

@@ -10,8 +10,6 @@ import { contextApp, toast } from "./ui-baza-ajutor.jsx";
 
 /* [comanda, argumente, metoda din sursa, ce intoarce sursa, mesajul asteptat (null = niciun mesaj)] */
 const COMENZI = [
-  ["folosesteInvitatie", ["ABCD2345"], "folosesteInvitatie", { apartamentNumar: "5" }, "Contul a fost legat de apartamentul 5"],
-  ["cereVerificareAdministrator", [{ numarAtestat: "AT-1", fisier: null }], "cereVerificareAdministrator", undefined, "Cererea a fost trimisa spre verificare"],
   ["transmiteCitire", [{ apartamentId: "apa-3", luna: "2026-09" }], "transmiteCitire", undefined, "Indexul a fost trimis administratorului"],
   ["adaugaSesizare", [{ titlu: "Bec" }], "adaugaSesizare", undefined, "Sesizarea a ajuns la administrator"],
   ["scrieMesaj", ["ses-1", "Multumesc"], "scrieMesaj", undefined, "Mesajul a fost trimis"],
@@ -29,7 +27,8 @@ const COMENZI = [
   ["inregistreazaIncasare", ["apa-3", 100, "numerar"], "inregistreazaIncasare", { plataId: "p" }, "Incasare inregistrata, chitanta emisa"],
   ["trimiteInstiintare", ["apa-3"], "trimiteInstiintare", { destinatari: 1 }, null],
   ["schimbaPersoane", ["apa-3", 3, "2026-10", "nastere"], "schimbaPersoane", undefined, "Din octombrie 2026 se calculeaza 3 persoane"],
-  ["invitaLocatar", ["apa-3", "chirias"], "invitaLocatar", "ABCD2345", "Codul de invitatie a fost generat"],
+  ["adaugaLocatar", ["apa-3", { nume: "Ana", telefon: "0722000051" }], "adaugaLocatar", { parola: "Bloc-Casa-1234" }, "Contul a fost creat"],
+  ["parolaNoua", ["apa-3", "loc-1"], "parolaNoua", { parola: "Bloc-Casa-1234" }, "Parola noua a fost generata"],
   ["inchideAcces", ["loc-1"], "inchideAcces", undefined, "Accesul a fost inchis"],
   ["schimbaFisaApartament", ["apa-3", { proprietar: "Ion Pop", cota: 5, mp: 40, scutitLift: false, etaj: 2 }], "schimbaFisaApartament", undefined, "Fisa apartamentului a fost actualizata"],
   ["schimbaCoteleBlocului", [[{ apartamentId: "apa-3", cota: 50 }, { apartamentId: "apa-4", cota: 50 }]], "schimbaCoteleBlocului", undefined, "Cotele blocului au fost actualizate"],

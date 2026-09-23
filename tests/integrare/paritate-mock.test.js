@@ -4,11 +4,11 @@
    comenzi prin sursa Supabase — este in acelasi director; mock-ul insa nu are
    nevoie de server, asa ca testele de aici ruleaza si cu stack-ul oprit. */
 import { beforeEach, describe, expect, it } from "vitest";
-import { creeazaSursaMock, ETICHETA_CERE_CONFIRMARE } from "../../src/sursa-mock.js";
+import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { PAROLA_DEMO } from "../../src/date-demo.js";
 
-const ADMIN = "administrator@adminbloc.test";
-const LOCATAR = "elena.marinescu@adminbloc.test";
+const ADMIN = "0745 210 118";
+const LOCATAR = "0733 410 217";
 
 let s;
 let date;
@@ -19,58 +19,37 @@ const intra = async (email) => {
   date = await s.incarca();
 };
 
-describe("inregistreaza() in sursa demonstrativa (C1)", () => {
-  it("un email obisnuit deschide sesiunea imediat", async () => {
-    const s = creeazaSursaMock();
-    const r = await s.inregistreaza({ email: "cont-nou@adminbloc.test", parola: "Parola12345", nume: "Cont Nou" });
-    expect(r).toEqual({ profilId: expect.any(String), email: "cont-nou@adminbloc.test" });
-    expect(await s.sesiuneCurenta()).toEqual(r);
-  });
-
-  it("un email cu eticheta ETICHETA_CERE_CONFIRMARE reproduce cazul din Supabase: contul se creeaza, dar fara sesiune", async () => {
-    const email = `cont-nou${ETICHETA_CERE_CONFIRMARE}@adminbloc.test`;
-    const s = creeazaSursaMock();
-    const r = await s.inregistreaza({ email, parola: "Parola12345", nume: "Cont Fara Sesiune" });
-    expect(r).toBeNull();
-    expect(await s.sesiuneCurenta()).toBeNull();
-    /* Contul exista totusi si poate intra normal dupa aceea */
-    const dupa = await s.intra(email, "Parola12345");
-    expect(dupa.email).toBe(email);
-  });
-});
-
-describe("folosesteInvitatie() in sursa demonstrativa: limita per cont (C15)", () => {
-  const PAROLA = "Parola12345";
-
-  it("limiteaza fiecare cont la 5 incercari gresite intr-un sfert de ora (C15)", async () => {
+describe("adaugaLocatar() in sursa demonstrativa", () => {
+  /* Perechea din baza: tests/integrare/sursa-supabase-autentificare.test.js,
+     "adaugaLocatar(): contul il face administratorul". */
+  it("contul nou intra imediat cu numarul si parola primite", async () => {
     await intra(ADMIN);
-    const cod = await s.invitaLocatar(date.apartamente[0].id, "chirias");
-    await s.inregistreaza({ email: `atacator-${Math.random()}@adminbloc.test`, parola: PAROLA, nume: "Atacator" });
-    for (let i = 0; i < 5; i += 1) {
-      await expect(s.folosesteInvitatie(`ZZZZZZZ${i}`)).rejects.toThrow("Codul nu este valabil. Cere administratorului un cod nou.");
-    }
-    await expect(s.folosesteInvitatie("ZZZZZZZZ"))
-      .rejects.toThrow("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
-    /* Cat tine limita, nici codul bun al contului nu mai trece */
-    await expect(s.folosesteInvitatie(cod))
-      .rejects.toThrow("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
+    const r = await s.adaugaLocatar(date.apartamente[0].id, { nume: "Cont Nou", telefon: "0722 000 301", calitate: "chirias" });
+    expect(r).toMatchObject({ telefon: "0722000301", parola: expect.stringMatching(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/) });
+    await s.intra(r.telefon, r.parola);
+    const dupa = await s.incarca();
+    expect(dupa.eu).toMatchObject({ nume: "Cont Nou", rol: "locatar", telefon: "0722000301" });
   });
 
-  it("un cont curat cu cod bun trece, oricat ar fi incercat altii (C16 reproiectat)", async () => {
+  it("acelasi numar pe al doilea apartament se leaga, fara parola noua", async () => {
     await intra(ADMIN);
-    const cod = await s.invitaLocatar(date.apartamente[1].id, "chirias");
-    /* Patru conturi isi epuizeaza fiecare limita proprie: 20 de incercari
-       gresite in total. In baza, plafonul care nu depinde de cont se numara
-       pe adresa cererii, deci un om de pe alta adresa nu e atins; modul
-       demonstrativ nu are adrese, deci ramane doar limita pe cont. */
-    for (let cont = 0; cont < 4; cont += 1) {
-      await s.inregistreaza({ email: `atacator-${cont}-${Math.random()}@adminbloc.test`, parola: PAROLA, nume: "Atacator" });
-      for (let i = 0; i < 5; i += 1) {
-        await expect(s.folosesteInvitatie(`ZZZZZZZ${cont}${i}`)).rejects.toThrow("Codul nu este valabil. Cere administratorului un cod nou.");
-      }
-    }
-    await s.inregistreaza({ email: `onest-${Math.random()}@adminbloc.test`, parola: PAROLA, nume: "Onest" });
-    await expect(s.folosesteInvitatie(cod)).resolves.toMatchObject({ apartamentNumar: date.apartamente[1].numar });
+    const intai = await s.adaugaLocatar(date.apartamente[0].id, { nume: "Doua", telefon: "0722 000 302" });
+    const apoi = await s.adaugaLocatar(date.apartamente[1].id, { nume: "Doua", telefon: "0722 000 302" });
+    expect(apoi.parola).toBeNull();
+    expect(apoi.profilId).toBe(intai.profilId);
+    await s.intra("0722000302", intai.parola);
+    const dupa = await s.incarca();
+    expect(dupa.apartamente).toHaveLength(2);
+  });
+
+  it("parola noua inlocuieste parola veche", async () => {
+    await intra(ADMIN);
+    const cont = await s.adaugaLocatar(date.apartamente[0].id, { nume: "Uituc", telefon: "0722 000 303" });
+    const noua = await s.parolaNoua(date.apartamente[0].id, cont.locatarId);
+    expect(noua.parola).not.toBe(cont.parola);
+    await expect(s.intra("0722000303", cont.parola)).rejects.toThrow("Numarul de telefon sau parola nu sunt corecte. Verifica-le si incearca din nou.");
+    await s.intra("0722000303", noua.parola);
+    expect((await s.incarca()).eu.nume).toBe("Uituc");
   });
 });
 
@@ -256,7 +235,7 @@ describe("transmiteCitire() cand toate citirile anterioare sunt estimari (R6)", 
     const estimata = dateAdmin.citiri.find((c) => c.luna === LUNA_ESTIMATA && c.sursa === "estimat" && c.apartamentId);
     expect(estimata).toBeDefined();
 
-    await s.intra("gheorghe.voicu@adminbloc.test", PAROLA_DEMO);
+    await s.intra("0741 002 101", PAROLA_DEMO);
     const d = await s.incarca();
     const contor = d.contoare.find((c) => c.id === estimata.contorId)
       || d.contoare.find((c) => c.apartamentId === d.eu.apartamentId);

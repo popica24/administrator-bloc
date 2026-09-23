@@ -8,10 +8,10 @@ import { vi } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { apasa } from "./ajutor.jsx";
 
-/* Conturile de locatar din date-demo.js */
-export const ELENA = "elena.marinescu@adminbloc.test"; // ap. 17: lista pe august neplatita, citirea pe septembrie netrimisa
-export const ILIE = "familia.ilie@adminbloc.test"; // ap. 3: restante din iunie si iulie, o penalizare
-export const VOICU = "gheorghe.voicu@adminbloc.test"; // ap. 1: totul platit, citirea pe septembrie validata
+/* Conturile de locatar din date-demo.js, pe numarul lor de telefon */
+export const ELENA = "0733 410 217"; // ap. 17: lista pe august neplatita, citirea pe septembrie netrimisa
+export const ILIE = "0726 331 003"; // ap. 3: restante din iunie si iulie, o penalizare
+export const VOICU = "0741 002 101"; // ap. 1: totul platit, citirea pe septembrie validata
 
 export { apasa, scrie, toast, asteapta } from "./ajutor.jsx";
 

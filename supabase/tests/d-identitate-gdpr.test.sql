@@ -2,10 +2,9 @@
 --   identitate.anonimizeaza_profil    - stergerea unei persoane, cu pastrarea
 --     randurilor contabile;
 --   identitate.foloseste_invitatie    - limita de incercari cu cod gresit,
---     tinuta in identitate.incercari_invitatii.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(44);
+select plan(27);
 
 -- ---------------------------------------------------------------------------
 -- Fixture (acelasi tipar ca in fisierele b-* si d-*; anulat la rollback).
@@ -108,18 +107,6 @@ begin
   perform set_config('fx.plata',
     financiar.inregistreaza_plata(pg_temp.fx('ap1'), 100, 'numerar', now(), pg_temp.fx('loc'), pg_temp.fx('admin'))::text, true);
 
-  -- Coduri de invitatie: unul neconsumat, unul deja folosit, toate facute de adminG.
-  insert into identitate.invitatii (apartament_id, cod, calitate, creat_de, expira_la)
-  values (pg_temp.fx('ap1'), 'GCDBUNAA', 'membru_familie', pg_temp.fx('admin'), now() + interval '30 days'),
-         (pg_temp.fx('ap1'), 'GCDBUNAB', 'membru_familie', pg_temp.fx('admin'), now() + interval '30 days'),
-         (pg_temp.fx('ap1'), 'GCDFLSTA', 'membru_familie', pg_temp.fx('admin'), now() + interval '30 days');
-  update identitate.invitatii set folosita_la = now(), folosita_de = pg_temp.fx('fost') where cod = 'GCDFLSTA';
-  -- Doua coduri fara autor, ca revocarea de la anonimizare sa nu le atinga: cu
-  -- ele se testeaza limita de incercari.
-  insert into identitate.invitatii (apartament_id, cod, calitate, creat_de, expira_la)
-  values (pg_temp.fx('ap1'), 'GCDBUNAC', 'membru_familie', null, now() + interval '30 days'),
-         (pg_temp.fx('ap1'), 'GCDBUNAD', 'membru_familie', null, now() + interval '30 days');
-
   -- Identitatea Auth (login cu email), o sesiune deschisa si un token de
   -- reimprospatare, pentru loc si pentru admin (C7).
   insert into auth.identities (user_id, provider_id, provider, identity_data)
@@ -183,7 +170,7 @@ select (select count(*) from financiar.plati where apartament_id = pg_temp.fx('a
 
 select is(
   identitate.anonimizeaza_profil(pg_temp.fx('loc')),
-  jsonb_build_object('legaturi_inchise', 1, 'invitatii_revocate', 0, 'mandate_inchise', 0, 'administrator_revocat', false),
+  jsonb_build_object('legaturi_inchise', 1, 'mandate_inchise', 0, 'administrator_revocat', false),
   'anonimizeaza_profil: raporteaza ce a inchis si ce a revocat');
 select results_eq(
   $$select nume, email, telefon from identitate.profiluri where id = pg_temp.fx('loc')$$,
@@ -243,17 +230,8 @@ reset role;
 select pg_temp.serviciu();
 select is(
   identitate.anonimizeaza_profil(pg_temp.fx('admin')),
-  jsonb_build_object('legaturi_inchise', 0, 'invitatii_revocate', 2, 'mandate_inchise', 1, 'administrator_revocat', true),
-  'anonimizeaza_profil: codurile nefolosite ale persoanei se revoca, mandatul se inchide, calitatea de administrator se revoca');
-select is(
-  (select count(*)::int from identitate.invitatii
-    where creat_de = pg_temp.fx('admin') and revocata_la is not null),
-  2,
-  'anonimizeaza_profil: cele doua coduri nefolosite sunt revocate');
-select is(
-  (select revocata_la from identitate.invitatii where cod = 'GCDFLSTA'),
-  null::timestamptz,
-  'anonimizeaza_profil: un cod deja folosit nu se revoca');
+  jsonb_build_object('legaturi_inchise', 0, 'mandate_inchise', 1, 'administrator_revocat', true),
+  'anonimizeaza_profil: mandatul se inchide, iar calitatea de administrator se revoca');
 
 -- C7: mandatul de administrator, calitatea de administrator, identitatea Auth
 -- si sesiunile administratorului
@@ -292,87 +270,8 @@ select is(
 
 select is(
   identitate.anonimizeaza_profil(pg_temp.fx('admin')),
-  jsonb_build_object('legaturi_inchise', 0, 'invitatii_revocate', 0, 'mandate_inchise', 0, 'administrator_revocat', false),
+  jsonb_build_object('legaturi_inchise', 0, 'mandate_inchise', 0, 'administrator_revocat', false),
   'anonimizeaza_profil: a doua stergere a aceleiasi persoane nu mai schimba nimic');
-
--- =============================================================================
--- identitate.foloseste_invitatie: limita de incercari (X07)
--- =============================================================================
-
-select pg_temp.ca('nou');
-set local role authenticated;
-
-select is(
-  identitate.foloseste_invitatie('ZZZZZZZZ') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.',
-  'foloseste_invitatie: un cod gresit intoarce mesajul, nu o exceptie, ca incercarea sa ramana numarata');
-select is(identitate.foloseste_invitatie('ZZZZZZZY') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.', 'foloseste_invitatie: a doua incercare gresita');
-select is(identitate.foloseste_invitatie('ZZZZZZZX') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.', 'foloseste_invitatie: a treia incercare gresita');
-select is(identitate.foloseste_invitatie('ZZZZZZZW') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.', 'foloseste_invitatie: a patra incercare gresita');
-select is(identitate.foloseste_invitatie('ZZZZZZZV') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.', 'foloseste_invitatie: a cincea incercare gresita');
-reset role;
-select is(
-  (select count(*)::int from identitate.incercari_invitatii where profil_id = pg_temp.fx('nou')),
-  5,
-  'foloseste_invitatie: cele cinci incercari gresite sunt inregistrate');
-set local role authenticated;
-select is(
-  identitate.foloseste_invitatie('ZZZZZZZU') ->> 'eroare',
-  'Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.',
-  'foloseste_invitatie: a sasea incercare este refuzata de limita');
-select is(
-  identitate.foloseste_invitatie('GCDBUNAC') ->> 'eroare',
-  'Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.',
-  'foloseste_invitatie: cat tine limita, nici codul bun nu mai trece');
-select is(
-  (select count(*)::int from identitate.locatari where profil_id = pg_temp.fx('nou')),
-  0,
-  'foloseste_invitatie: sub limita nu se leaga niciun apartament');
-reset role;
-
--- Limita este pe persoana, nu pe codurile din baza: alt cont porneste curat.
-select pg_temp.ca('nou2');
-set local role authenticated;
-select is(
-  identitate.foloseste_invitatie('ZZZZZZZZ') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.',
-  'foloseste_invitatie: limita se numara pe fiecare cont in parte');
-select is(
-  identitate.foloseste_invitatie('  gcdbunac  ') -> 'apartament_numar',
-  to_jsonb('1'::text),
-  'foloseste_invitatie: un cont curat foloseste in continuare codul bun');
-reset role;
-select is(
-  (select count(*)::int from identitate.incercari_invitatii where profil_id = pg_temp.fx('nou2')),
-  0,
-  'foloseste_invitatie: dupa un cod bun, incercarile gresite se sterg');
-
--- Incercarile mai vechi decat fereastra nu mai conteaza.
-update identitate.incercari_invitatii set creat_la = now() - interval '16 minutes' where profil_id = pg_temp.fx('nou');
-select pg_temp.ca('nou');
-set local role authenticated;
-select is(
-  identitate.foloseste_invitatie('GCDBUNAD') -> 'apartament_numar',
-  to_jsonb('1'::text),
-  'foloseste_invitatie: dupa un sfert de ora contul poate incerca din nou');
-reset role;
-
-select pg_temp.serviciu();
-select is(
-  (select count(*)::int from identitate.incercari_invitatii where profil_id = pg_temp.fx('nou')),
-  0,
-  'foloseste_invitatie: incercarile iesite din fereastra se sterg singure');
-
-set local role anon;
-select throws_ok(
-  $$select count(*) from identitate.incercari_invitatii$$,
-  '42501', null,
-  'incercari_invitatii: tabela nu se citeste din API');
-reset role;
 
 -- [minor] anonimizeaza_profil inchidea legatura cu
 -- greatest(current_date, activ_din + 1), formula pe care reparatia S11 a

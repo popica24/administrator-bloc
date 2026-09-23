@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { ceasDemo, ZI_DEMO, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 
-const ILIE = "familia.ilie@adminbloc.test";
+const ILIE = "0726 331 003";
 const apNr = (d, n) => d.apartamente.find((a) => a.numar === n);
 const restTotal = (d, apId) => Math.round(d.datorii.filter((x) => x.apartamentId === apId).reduce((t, x) => t + x.rest, 0) * 100) / 100;
 
