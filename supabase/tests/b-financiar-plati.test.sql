@@ -6,7 +6,7 @@
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(72);
+select plan(76);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -472,14 +472,29 @@ select is((select count(*)::int from financiar.chitante where plata_id = pg_temp
 select isnt(financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 25, 'numerar', gen_random_uuid()),
   pg_temp.fx('p_odata'),
   '[B2] inregistreaza_incasare: alta cerere, alta plata');
+
+-- [B5] Banii intra in cont pe 20, administratorul vede extrasul pe 2 si
+-- confirma atunci: plata si chitanta poarta ziua in care au intrat banii.
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, 'transfer', null, current_date + 1)$$,
+  'Data in care au intrat banii nu poate fi in viitor.',
+  '[B5] inregistreaza_incasare: data din viitor este refuzata');
+select throws_ok($$select financiar.inregistreaza_incasare(pg_temp.fx('ap2'), 10, 'transfer', null, current_date - 200)$$,
+  'Data in care au intrat banii nu poate fi mai veche de sase luni.',
+  '[B5] inregistreaza_incasare: data prea veche este refuzata');
+select set_config('fx.p_data', financiar.inregistreaza_incasare(
+  pg_temp.fx('ap2'), 10, 'transfer', null, current_date - 12)::text, true);
+select is((select confirmata_la::date from financiar.plati where id = pg_temp.fx('p_data')), current_date - 12,
+  '[B5] inregistreaza_incasare: plata poarta ziua in care au intrat banii');
+select is((select emisa_la::date from financiar.chitante where plata_id = pg_temp.fx('p_data')), current_date - 12,
+  '[B5] ...si chitanta la fel');
 reset role;
 select pg_temp.serviciu();
-select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap2')), -50.00::numeric,
-  'solduri: ap2 a platit tot (150 = 100,46 + 49,54), plus doua incasari de cate 25 de lei in plus [B2]');
+select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap2')), -60.00::numeric,
+  'solduri: ap2 a platit tot (150 = 100,46 + 49,54), plus incasarile in plus din testele B2 si B5');
 
 -- Chitantele raman numerotate fara goluri pe toata asociatia
 select results_eq($$select numar from financiar.chitante where asociatie_id = pg_temp.fx('asociatie') order by numar$$,
-  $$values (42), (43), (44), (45), (46), (47)$$,
+  $$values (42), (43), (44), (45), (46), (47), (48)$$,
   'chitante: numerotare continua, fara goluri, pe toata asociatia');
 
 select * from finish();

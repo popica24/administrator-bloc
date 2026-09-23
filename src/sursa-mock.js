@@ -1116,19 +1116,23 @@ export function creeazaSursaMock() {
 
     /* Administratorul confirma banii primiti: in mana lui sau in contul
        asociatiei. Aceleasi reguli ca financiar.inregistreaza_incasare. */
-    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null) {
+    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null, data = null) {
       const { bloc } = cerAdmin();
       const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
       if (metoda !== "numerar" && metoda !== "transfer") eroare("Banii primiti sunt fie in numerar, fie prin transfer bancar.");
       /* [paritate] aceeasi rotunjire la ban ca la financiar.inregistreaza_plata:
          o suma care se rotunjeste la 0 lei e refuzata, nu doar cea scrisa 0. */
       if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
+      /* [B5] ziua in care au intrat banii, daca nu e chiar azi */
+      if (data && data > aziIso()) eroare("Data in care au intrat banii nu poate fi in viitor.");
+      if (data && data < adaugaZile(aziIso(), -180)) eroare("Data in care au intrat banii nu poate fi mai veche de sase luni.");
       /* [B2] aceeasi cheie a cererii, aceeasi plata: a doua incercare dupa un
          raspuns pierdut pe drum nu mai emite inca o chitanta */
       const veche = cheieCerere && db.plati.find((x) => x.apartamentId === ap.id && x.cheieClient === cheieCerere);
       if (veche) return { plataId: veche.id };
       const p = inregistreazaPlata(db, {
-        apartamentId: ap.id, suma: Number(suma), metoda, la: acum(), inregistrataDe: eu().id, cheieClient: cheieCerere,
+        apartamentId: ap.id, suma: Number(suma), metoda, la: data ? `${data}T12:00:00+03:00` : acum(),
+        inregistrataDe: eu().id, cheieClient: cheieCerere,
       });
       return { plataId: p.id };
     },

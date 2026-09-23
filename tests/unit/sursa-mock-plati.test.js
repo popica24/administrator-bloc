@@ -41,6 +41,21 @@ describe("inregistreazaIncasare", () => {
     expect(alta.plataId).not.toBe(intai.plataId);
   });
 
+  /* [B5] Data in care au intrat banii: ziua din extrasul de cont, nu ziua in
+     care administratorul o confirma. */
+  it("[B5] transferul primeste ziua lui, iar datele imposibile sunt refuzate", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const { plataId } = await s.inregistreazaIncasare(ap3, "100", "transfer", null, "2026-09-11");
+    const p = (await s.incarca()).plati.find((x) => x.id === plataId);
+    expect(p.confirmataLa.slice(0, 10)).toBe("2026-09-11");
+    expect(p.chitanta.emisaLa.slice(0, 10)).toBe("2026-09-11");
+    await expect(s.inregistreazaIncasare(ap3, "100", "transfer", null, "2026-12-01"))
+      .rejects.toThrow("Data in care au intrat banii nu poate fi in viitor.");
+    await expect(s.inregistreazaIncasare(ap3, "100", "transfer", null, "2025-01-01"))
+      .rejects.toThrow("Data in care au intrat banii nu poate fi mai veche de sase luni.");
+  });
+
   it("alta metoda decat numerar sau transfer este refuzata", async () => {
     const { s, d } = await ca(ADMIN);
     const ap3 = apNr(d, "3").id;

@@ -616,9 +616,11 @@ export function creeazaSursaSupabase(url, cheie) {
 
     /* [B2] cheieCerere: aceeasi cheie la o a doua incercare (raspuns pierdut pe
        drum) intoarce plata deja inregistrata, nu face alta */
-    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null) {
+    /* [B5] data: ziua in care au intrat banii (pentru transfer, ea poate fi
+       mai veche decat ziua in care administratorul o confirma) */
+    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null, data = null) {
       const plataId = await ok(fin.rpc("inregistreaza_incasare", {
-        p_apartament_id: apartamentId, p_suma: suma, p_metoda: metoda, p_cheie_client: cheieCerere,
+        p_apartament_id: apartamentId, p_suma: suma, p_metoda: metoda, p_cheie_client: cheieCerere, p_data: data,
       }));
       return { plataId };
     },

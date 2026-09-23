@@ -3124,6 +3124,9 @@ function FisaApartament({ apId, onClose }) {
   const [plataNoua, setPlataNoua] = useState(null);
   /* Cum au venit banii: in mana administratorului sau in contul asociatiei */
   const [metodaIncasare, setMetodaIncasare] = useState("numerar");
+  /* [B5] Ziua in care au intrat banii: pentru un transfer, ea poate fi mai
+     veche decat ziua in care administratorul vede extrasul si confirma. */
+  const [dataIncasarii, setDataIncasarii] = useState("");
   const [persoane, setPersoane] = useState("");
   const [dinLuna, setDinLuna] = useState("");
   const [motiv, setMotiv] = useState("");
@@ -3153,7 +3156,7 @@ function FisaApartament({ apId, onClose }) {
 
   const ap = apId ? apartamentDupaId(date, apId) : null;
   const inchide = () => {
-    setActiune(null); setPlataNoua(null); setContNou(null); setNumeNou(""); setTelefonNou(""); setSumaIncasata(""); setMetodaIncasare("numerar"); setPersoane(""); setMotiv(""); setEroare(null);
+    setActiune(null); setPlataNoua(null); setContNou(null); setNumeNou(""); setTelefonNou(""); setSumaIncasata(""); setMetodaIncasare("numerar"); setDataIncasarii(""); setPersoane(""); setMotiv(""); setEroare(null);
     setProprietarEd(""); setEtajEd(""); setMpEd(""); setCotaEd(""); setScutitLiftEd(false); setCoteBloc({});
     onClose();
   };
@@ -3235,6 +3238,17 @@ function FisaApartament({ apId, onClose }) {
              care il poate face ecranul e sa spuna asta inainte de emitere,
              nu sa lase administratorul sa creada ca poate reveni. */}
           <Field label="Suma primita" value={sumaIncasata} onChange={setSumaIncasata} placeholder={lei(Math.max(0, s), false)} suffix="lei" inputMode="decimal" hint="Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua." />
+          {/* [B5] Extrasul se verifica peste cateva zile, dar banii au intrat
+              atunci: data lor merge pe chitanta si in registru. */}
+          {metodaIncasare === "transfer" && (
+            <Field
+              label="Data in care au intrat banii"
+              value={dataIncasarii || date.azi}
+              onChange={setDataIncasarii}
+              type="date"
+              hint="Ziua din extrasul de cont, nu ziua in care o confirmi."
+            />
+          )}
           <Eroare mesaj={eroare} />
           <Box row gap={S.sm}>
             <Btn label={incaseaza ? "Se emite..." : "Emite chitanta"} disabled={!(sumaCash > 0) || incaseaza} onPress={async () => {
@@ -3243,7 +3257,8 @@ function FisaApartament({ apId, onClose }) {
               setIncaseaza(true);
               setEroare(null);
               if (!cheieIncasare.current) cheieIncasare.current = cheieCerere();
-              const r = await inregistreazaIncasare(ap.id, sumaCash, metodaIncasare, cheieIncasare.current);
+              const r = await inregistreazaIncasare(ap.id, sumaCash, metodaIncasare, cheieIncasare.current,
+                metodaIncasare === "transfer" ? (dataIncasarii || date.azi) : null);
               incasareInCurs.current = false;
               setIncaseaza(false);
               /* [B7] metoda se intoarce la "numerar": altfel a doua incasare
@@ -3251,7 +3266,7 @@ function FisaApartament({ apId, onClose }) {
                  chitanta spunea transfer pentru bani primiti in mana. */
               if (r.ok) {
                 cheieIncasare.current = null;
-                setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); setMetodaIncasare("numerar");
+                setPlataNoua(r.rezultat.plataId); setActiune(null); setSumaIncasata(""); setMetodaIncasare("numerar"); setDataIncasarii("");
               } else setEroare(r.mesaj);
             }} />
             <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
@@ -4892,7 +4907,7 @@ export default function AdminBloc() {
       dateMotor: cmd((id) => sursa.dateMotor(id), null, false, false),
       publicaLista: cmd((id) => sursa.publicaLista(id), "Lista a fost publicata. Locatarii o vad acum."),
       marcheazaFacturaPlatita: cmd((id, p) => sursa.marcheazaFacturaPlatita(id, p), (r, id, p) => (p ? "Factura marcata ca platita furnizorului" : "Plata catre furnizor a fost anulata")),
-      inregistreazaIncasare: cmd((ap, s, m, cheie) => sursa.inregistreazaIncasare(ap, s, m, cheie), "Incasare inregistrata, chitanta emisa"),
+      inregistreazaIncasare: cmd((ap, s, m, cheie, data) => sursa.inregistreazaIncasare(ap, s, m, cheie, data), "Incasare inregistrata, chitanta emisa"),
       trimiteInstiintare: cmd((ap) => sursa.trimiteInstiintare(ap)),
       schimbaPersoane: cmd((ap, n, l, m) => sursa.schimbaPersoane(ap, n, l, m), (r, ap, n, l) => `Din ${monthLabel(l)} se calculeaza ${n} persoane`),
       adaugaLocatar: cmd((ap, x) => sursa.adaugaLocatar(ap, x), "Contul a fost creat"),

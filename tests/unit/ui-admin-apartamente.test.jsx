@@ -185,7 +185,7 @@ describe("FisaApartament, incasare cash", () => {
     const camp = screen.getByLabelText("Suma primita");
     expect(camp.value).toBe("2.319,36");
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
     const f = inDialog("Apartament 3");
     expect(f.getByText("Incasare inregistrata: 2.319,36 lei")).toBeTruthy();
@@ -216,7 +216,7 @@ describe("FisaApartament, incasare cash", () => {
     await act(async () => { scrie("Suma primita", "150,5"); });
     expect(dezactivat(buton("Emite chitanta"))).toBe(false);
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
+    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
     expect(inDialog("Apartament 1").getByText("Incasare inregistrata: 150,50 lei")).toBeTruthy();
   });
 
@@ -228,7 +228,7 @@ describe("FisaApartament, incasare cash", () => {
     await apasa("Inregistreaza incasare cash");
     await apasa(buton("Prin transfer bancar"));
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), "2026-09-19");
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
   });
 
@@ -245,12 +245,31 @@ describe("FisaApartament, incasare cash", () => {
     await apasa(buton("Prin transfer bancar"));
     await act(async () => { scrie("Suma primita", "100"); });
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), "2026-09-19");
 
     await apasa("Inregistreaza incasare cash");
     await act(async () => { scrie("Suma primita", "50"); });
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/));
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
+  });
+
+  /* [B5] Banii intra in cont pe 20, administratorul vede extrasul pe 2 si
+     confirma atunci: data din extras merge pe chitanta si in registru, ca
+     zilele dintre ele sa nu fie zile de intarziere. */
+  it("[B5] transferul se poate inregistra cu ziua in care au intrat banii", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
+    const ap = await apDupaNumar(sursa, "3");
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    /* pentru numerar nu se cere nicio data: banii se dau in mana, azi */
+    expect(screen.queryByLabelText("Data in care au intrat banii")).toBeNull();
+    await apasa(buton("Prin transfer bancar"));
+    const camp = screen.getByLabelText("Data in care au intrat banii");
+    expect(camp.value).toBe("2026-09-19");
+    await act(async () => { scrie("Data in care au intrat banii", "2026-09-11"); });
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.any(String), "2026-09-11");
   });
 
   it("renunta inchide formularul fara incasare", async () => {
