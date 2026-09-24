@@ -4,7 +4,7 @@
 -- Bug-uri cunoscute: F2, F4, L16 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(73);
+select plan(77);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -124,11 +124,15 @@ begin
   perform set_config('fx.fost', pg_temp.utilizator('Fost Locatar')::text, true);
   perform set_config('fx.strain', pg_temp.utilizator('Strain')::text, true);
   perform set_config('fx.pres', pg_temp.utilizator('Presedinte')::text, true);
+  -- [S3] chirias mutat azi in apartamentul 2, peste platile celui dinaintea lui
+  perform set_config('fx.nou', pg_temp.utilizator('Chirias Nou')::text, true);
   insert into identitate.locatari (apartament_id, bloc_id, profil_id, calitate, activ_din)
   values (pg_temp.fx('ap1'), pg_temp.fx('bloc'), pg_temp.fx('loc1'), 'proprietar', current_date - 30),
          (pg_temp.fx('ap2'), pg_temp.fx('bloc'), pg_temp.fx('loc2'), 'proprietar', current_date - 30);
   insert into identitate.locatari (apartament_id, bloc_id, profil_id, calitate, activ_din, activ_pana)
   values (pg_temp.fx('ap3'), pg_temp.fx('bloc'), pg_temp.fx('fost'), 'chirias', current_date - 60, current_date - 1);
+  insert into identitate.locatari (apartament_id, bloc_id, profil_id, calitate, activ_din)
+  values (pg_temp.fx('ap2'), pg_temp.fx('bloc'), pg_temp.fx('nou'), 'chirias', current_date);
   insert into identitate.membri_asociatie (asociatie_id, profil_id, rol, activ_din)
   values (pg_temp.fx('asociatie'), pg_temp.fx('pres'), 'presedinte', current_date - 30);
 
@@ -480,12 +484,27 @@ select is((select count(*)::int from financiar.datorii where bloc_id = pg_temp.f
 
 -- "Platile proprii si cele din blocurile conduse"
 select pg_temp.ca('loc2');
-select is((select count(*)::int from financiar.plati), 1, '"Platile proprii si cele din blocurile conduse": locatarul vede plata lui');
+select is((select count(*)::int from financiar.plati), 1, '"Platile din perioada mea si cele din blocurile conduse": locatarul vede plata lui');
 select pg_temp.ca('admin');
 select is((select count(*)::int from financiar.plati where bloc_id = pg_temp.fx('bloc')), 2,
-  '"Platile proprii si cele din blocurile conduse": administratorul vede toate platile blocului');
+  '"Platile din perioada mea si cele din blocurile conduse": administratorul vede toate platile blocului');
 select pg_temp.ca('strain');
-select is((select count(*)::int from financiar.plati), 0, '"Platile proprii si cele din blocurile conduse": strainul nu vede plati');
+select is((select count(*)::int from financiar.plati), 0, '"Platile din perioada mea si cele din blocurile conduse": strainul nu vede plati');
+-- [S3] Ce a platit un om din buzunarul lui este al lui: chiriasul mutat azi
+-- nu vede platile si chitantele celui dinaintea lui, la fel ca la sesizari (K4).
+-- Restul datoriilor ramane insa acelasi pentru oricine are voie sa le vada:
+-- altfel datoriile platite de cel dinainte i-ar aparea ca neplatite.
+select pg_temp.ca('nou');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap2')),
+  (select sum(d.suma - financiar.alocat_pe_datorie(d.id)) from financiar.datorii d where d.apartament_id = pg_temp.fx('ap2')),
+  '[S3] financiar.alocat_pe_datorie: restul datoriei nu depinde de cine vede plata');
+select is((select count(*)::int from financiar.plati), 0,
+  '[S3] "Platile din perioada mea si cele din blocurile conduse": chiriasul mutat azi nu vede platile de dinaintea lui');
+select is((select count(*)::int from financiar.chitante), 0,
+  '[S3] "Chitantele se vad ca plata lor": nici chitantele lor');
+select cmp_ok((select count(*)::int from financiar.datorii where apartament_id = pg_temp.fx('ap2')), '>', 0,
+  '[S3] datoriile raman pe apartament: soldul se preia cu apartament cu tot');
 
 -- "Alocarile se vad ca plata lor" si "Chitantele se vad ca plata lor"
 select pg_temp.ca('loc2');

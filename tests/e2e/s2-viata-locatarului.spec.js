@@ -56,16 +56,12 @@ test.describe("cineva se muta la mijlocul lunii", () => {
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
 
-  test.fixme("[S3] chiriasul mutat azi nu vede platile si chitantele celui dinaintea lui", async ({ page }) => {
-    /* [S3] Migratia K4 a scos conversatiile fostului locatar din ochii celui
-       nou, cu argumentul ca un chirias nou nu are ce citi din viata celui
-       dinainte. Banii au ramas nefiltrati: `financiar.plati`, `alocari_plati`
-       si `chitante` se vad dupa `private.apartamentele_mele()`, fara nicio
-       conditie de perioada (supabase/migrations/20260919120017_financiar.sql:424).
-       Un chirias mutat azi deschide "Platile mele" si vede fiecare plata a
-       fostului locatar, cu suma, data si numarul chitantei, si poate descarca
-       chitantele lui in PDF.
-       Asteptat: ca la sesizari, doar platile de dupa `activ_din`. */
+  /* [S3, reparat de auditul 4] Migratia K4 a scos conversatiile fostului
+     locatar din ochii celui nou; banii au ramas nefiltrati pana acum, deci un
+     chirias mutat azi vedea fiecare plata a celui dinaintea lui, cu suma, data
+     si numarul chitantei, si ii putea descarca chitantele in PDF. Politica
+     cere acum, ca la sesizari, ca plata sa fie din perioada lui. */
+  test("[S3] chiriasul mutat azi nu vede platile si chitantele celui dinaintea lui", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
     const pid = await creeazaCont(TELEFON, "Nicolae Mutat");
     const b = await blocD14();

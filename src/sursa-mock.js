@@ -710,7 +710,19 @@ function proiecteaza(db, profilId, apartamentAles) {
   }));
   const idDatorii = datorii.map((d) => d.id);
   const penalizari = db.penalizari.filter((p) => idDatorii.includes(p.datorieId)).map((p) => ({ ...p }));
-  const plati = db.plati.filter((p) => p.blocId === bloc.id && alMeu(p.apartamentId)).map((p) => {
+  /* [K4] "a mea" nu inseamna doar acelasi apartament, ci ca eu locuiam acolo
+     cand s-a intamplat: altfel un chirias nou ar mosteni conversatia, pozele
+     si platile fostului locatar. */
+  const legaturaCurenta = (apartamentId) => db.locatari.find((l) => l.profilId === eu.profilId && l.apartamentId === apartamentId && !l.activPana);
+  /* [S3, paritate] Ce a platit un om din buzunarul lui este al lui: chiriasul
+     mutat azi nu vede platile si chitantele celui dinaintea lui, la fel ca la
+     sesizari (K4). Conducerea vede tot blocul. */
+  const platileMele = (p) => {
+    if (esteAdmin) return true;
+    const legatura = legaturaCurenta(p.apartamentId);
+    return !!legatura && p.confirmataLa.slice(0, 10) >= legatura.activDin;
+  };
+  const plati = db.plati.filter((p) => p.blocId === bloc.id && alMeu(p.apartamentId) && platileMele(p)).map((p) => {
     const ch = db.chitante.find((c) => c.plataId === p.id);
     const inreg = db.profiluri.find((x) => x.id === p.inregistrataDe);
     /* [K13, paritate] alocarile in ordinea in care s-au facut: scadenta, apoi
@@ -748,10 +760,6 @@ function proiecteaza(db, profilId, apartamentAles) {
   });
 
   const numarAp = (id) => db.apartamente.find((a) => a.id === id).numar;
-  /* [K4] "a mea" nu inseamna doar acelasi apartament, ci ca eu locuiam acolo
-     cand a fost scrisa sesizarea: altfel un chirias nou ar mosteni
-     conversatia si pozele fostului locatar. */
-  const legaturaCurenta = (apartamentId) => db.locatari.find((l) => l.profilId === eu.profilId && l.apartamentId === apartamentId && !l.activPana);
   const sesizari = db.sesizari.filter((s) => s.blocId === bloc.id).sort((a, b) => (a.creatLa < b.creatLa ? 1 : -1)).map((s) => {
     const legatura = legaturaCurenta(s.apartamentId);
     const aMea = !!legatura && s.creatLa >= legatura.activDin;
