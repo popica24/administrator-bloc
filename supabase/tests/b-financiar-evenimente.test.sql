@@ -4,7 +4,7 @@
 -- Bug-uri cunoscute: F2, F4, L16 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(77);
+select plan(78);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -499,6 +499,11 @@ select is(
   (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap2')),
   (select sum(d.suma - financiar.alocat_pe_datorie(d.id)) from financiar.datorii d where d.apartament_id = pg_temp.fx('ap2')),
   '[S3] financiar.alocat_pe_datorie: restul datoriei nu depinde de cine vede plata');
+select is(
+  (select sum(a.suma) from financiar.alocari_pe_datorii() a
+    join financiar.datorii d on d.id = a.datorie_id where d.apartament_id = pg_temp.fx('ap2')),
+  (select sum(financiar.alocat_pe_datorie(d.id)) from financiar.datorii d where d.apartament_id = pg_temp.fx('ap2')),
+  '[S3] financiar.alocari_pe_datorii: aceleasi cifre, dintr-o singura citire');
 select is((select count(*)::int from financiar.plati), 0,
   '[S3] "Platile din perioada mea si cele din blocurile conduse": chiriasul mutat azi nu vede platile de dinaintea lui');
 select is((select count(*)::int from financiar.chitante), 0,

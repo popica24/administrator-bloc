@@ -164,6 +164,47 @@ function alocaAvansuri(db, apartamentId) {
     .forEach((p) => alocaPlata(db, p));
 }
 
+/* [B5, paritate financiar.anuleaza_penalizari_dupa_plata] O plata inregistrata
+   cu o data din trecut (transferul confirmat dupa ce administratorul vede
+   extrasul) nu are voie sa lase in urma penalizarea zilelor in care banii erau
+   deja la asociatie. Penalizarea se recalculeaza cu parametrii ei inghetati,
+   cu zilele impartite in doua: cele dinainte de plata, pe restul de atunci, si
+   cele de dupa, pe restul ramas dupa plata. Doar in jos. */
+function anuleazaPenalizariDupaPlata(db, plata) {
+  const data = plata.confirmataLa.slice(0, 10);
+  if (data >= aziIso()) return;
+  const alese = db.penalizari
+    .map((p) => ({
+      p,
+      alocare: db.alocari.find((a) => a.plataId === plata.id && a.datorieId === p.datorieSursaId),
+    }))
+    .filter((x) => x.alocare && x.p.lunaCalcul > data)
+    .sort((a, b) => (a.p.lunaCalcul < b.p.lunaCalcul ? -1 : 1));
+  alese.forEach(({ p, alocare }) => {
+    const inceput = adaugaZile(p.lunaCalcul, -p.zileTaxate);
+    const dela = data > inceput ? data : inceput;
+    const zileDupa = Math.max(zileIntre(dela, p.lunaCalcul), 0);
+    const zileInainte = p.zileTaxate - zileDupa;
+    const bazaDupa = Math.max(round2(p.restNeachitat - alocare.suma), 0);
+    const tinta = Math.min(
+      p.suma,
+      round2((p.restNeachitat * p.procentZi * zileInainte) / 100) + round2((bazaDupa * p.procentZi * zileDupa) / 100),
+    );
+    const anulateDeja = db.datorii
+      .filter((x) => x.tip === "anulare_penalizare" && x.anuleazaDatorieId === p.datorieId)
+      .reduce((t, x) => t + x.suma, 0);
+    const acum = round2(p.suma + anulateDeja);
+    if (tinta >= acum) return;
+    const datoria = db.datorii.find((x) => x.id === p.datorieId);
+    db.adauga("datorii", {
+      apartamentId: plata.apartamentId, blocId: plata.blocId, tip: "anulare_penalizare",
+      luna: datoria.luna, listaId: null, suma: round2(tinta - acum), scadenta: aziIso(),
+      descriere: "Penalizare anulata: banii intrasera deja in cont", anuleazaDatorieId: p.datorieId,
+    });
+  });
+  if (alese.length) alocaAvansuri(db, plata.apartamentId);
+}
+
 /* Orice plata trece prin administrator, care o confirma: inregistrataDe este
    mereu cineva. platitaDe ramane pentru platile facute de locatar insusi. */
 function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe, cheieClient = null }) {
@@ -173,6 +214,8 @@ function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = nu
     platitaDe, inregistrataDe, confirmataLa: la, creatLa: la, cheieClient,
   });
   alocaPlata(db, plata);
+  /* [B5] inainte de chitanta, ca documentul sa ingheata starea finala */
+  anuleazaPenalizariDupaPlata(db, plata);
   db.setari.chitantaUltimulNumar += 1;
   /* [B6] randurile chitantei se scriu o data, la emitere, si raman asa */
   const randuri = db.alocari.filter((a) => a.plataId === plata.id).map((a) => {

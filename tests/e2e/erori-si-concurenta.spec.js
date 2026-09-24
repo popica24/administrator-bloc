@@ -307,9 +307,13 @@ test.describe("dublul apasat pe comenzile administratorului", () => {
     expect(mesaj).toMatch(/Citirea a fost validata|Asteapta sa se termine/);
     for (const cuvant of CUVINTE_TEHNICE) expect(mesaj).not.toContain(cuvant);
 
-    const { data } = await sb.schema("contorizare").from("citiri")
-      .select("stare").eq("apartament_id", ap.id).eq("luna", luna);
-    expect(data.every((c) => c.stare === "validata")).toBe(true);
+    /* A doua apasare poate fi inca in aer cand toastul apare: starea se
+       asteapta, nu se citeste o data (la fel ca in admin-citiri-facturi). */
+    await expect.poll(async () => {
+      const { data } = await sb.schema("contorizare").from("citiri")
+        .select("stare").eq("apartament_id", ap.id).eq("luna", luna);
+      return data.every((c) => c.stare === "validata");
+    }, { timeout: 20000 }).toBe(true);
 
     await sb.schema("contorizare").from("citiri")
       .update({ stare: "trimisa", verificata_de: null, verificata_la: null, motiv_respingere: null })
