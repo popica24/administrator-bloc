@@ -230,7 +230,7 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     await page.getByLabel("Numarul lui de telefon").fill("0798 100 200");
     await buton(page, "Fa contul").click();
     await expect(fisa.getByText("Intra cu numarul 0798 100 200")).toBeVisible();
-    await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
+    await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
     await buton(page, "Gata").click();
 
     await buton(page, "Corecteaza datele apartamentului").click();

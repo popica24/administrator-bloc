@@ -95,7 +95,7 @@ test.describe("contul il face administratorul", () => {
 
     const fisa = page.getByRole("dialog", { name: "Apartament 12" });
     await expect(fisa.getByText(/^Intra cu numarul/)).toBeVisible({ timeout: 20000 });
-    const parola = (await fisa.locator("text=/^[A-Z][a-z]+-[A-Z][a-z]+-\\d{4}$/").first().innerText()).trim();
+    const parola = (await fisa.locator("text=/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\\d{4}$/").first().innerText()).trim();
     await buton(page, "Gata").click();
     await expect(fisa.getByText("Petre Ionescu")).toBeVisible();
     /* parola nu se mai vede dupa ce panoul s-a inchis */
@@ -121,7 +121,7 @@ test.describe("contul il face administratorul", () => {
       const fisa = page.getByRole("dialog", { name: "Apartament 14" });
       await fisa.getByRole("button", { name: "Parola noua" }).first().click();
       await expect(fisa.getByText(/^Intra cu numarul/)).toBeVisible({ timeout: 20000 });
-      const parola = (await fisa.locator("text=/^[A-Z][a-z]+-[A-Z][a-z]+-\\d{4}$/").first().innerText()).trim();
+      const parola = (await fisa.locator("text=/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\\d{4}$/").first().innerText()).trim();
       await buton(page, "Gata").click();
       await fisa.getByRole("button", { name: "Inchide" }).first().click();
       await buton(page, "Iesi").click();
