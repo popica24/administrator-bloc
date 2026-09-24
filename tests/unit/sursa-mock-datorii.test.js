@@ -106,6 +106,121 @@ describe("restDatorie", () => {
   });
 });
 
+/* [B5] Banii intra in cont pe 20, administratorul vede extrasul si ii confirma
+   pe 2: zilele dintre ele nu sunt zile de intarziere, desi jobul de penalizari
+   a rulat intre timp si le-a taxat. */
+describe("[B5] plata cu data ei taie penalizarea zilelor deja acoperite", () => {
+  it("penalizarea ramane doar pe zilele in care banii chiar lipseau", async () => {
+    const { s, d } = await admin();
+    s.db.setari.procentPenalizareZi = 0.2;
+    s.db.setari.zileGratie = 0;
+    const ap = apNr(d, "9").id;
+    const datorie = s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-08", listaId: "lst-test-b5",
+      suma: 1000, scadenta: "2026-08-10", descriere: "Intretinere de test",
+    });
+    /* penalizarea s-a calculat pe 9 septembrie, pe 30 de zile de intarziere */
+    s._calculeazaPenalizariPentruTeste("2026-09-09");
+    const inainte = (await s.incarca()).datorii.filter((x) => x.tip === "penalizare" && x.apartamentId === ap);
+    expect(inainte).toHaveLength(1);
+    expect(inainte[0].suma).toBe(60);
+
+    /* banii au intrat pe 30 august, deci 10 din cele 30 de zile nu se taxeaza */
+    await s.inregistreazaIncasare(ap, 1000, "transfer", null, "2026-08-30");
+    const dupa = await s.incarca();
+    const penalizare = dupa.datorii.find((x) => x.id === inainte[0].id);
+    expect(penalizare.rest).toBe(40);
+    expect(dupa.datorii.find((x) => x.id === datorie.id).rest).toBe(0);
+    const anulare = dupa.datorii.find((x) => x.tip === "anulare_penalizare" && x.anuleazaDatorieId === penalizare.id);
+    expect(anulare.suma).toBe(-20);
+  });
+
+  /* Doua luni de penalizari pe doua datorii, o singura plata care le acopera pe
+     amandoua: fiecare penalizare se indreapta cu zilele ei. */
+  it("mai multe penalizari se indreapta fiecare cu zilele ei", async () => {
+    const { s, d } = await admin();
+    s.db.setari.procentPenalizareZi = 0.2;
+    s.db.setari.zileGratie = 0;
+    const ap = apNr(d, "11").id;
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-07", listaId: "lst-test-b5c",
+      suma: 500, scadenta: "2026-07-10", descriere: "Intretinere iulie",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-08-09");
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-08", listaId: "lst-test-b5d",
+      suma: 500, scadenta: "2026-08-10", descriere: "Intretinere august",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-09-09");
+
+    await s.inregistreazaIncasare(ap, 1000, "transfer", null, "2026-07-15");
+    const dupa = await s.incarca();
+    const anulari = dupa.datorii.filter((x) => x.tip === "anulare_penalizare" && x.apartamentId === ap);
+    expect(anulari.length).toBeGreaterThan(1);
+    /* nicio penalizare nu ramane cu rest negativ */
+    dupa.datorii.filter((x) => x.tip === "penalizare" && x.apartamentId === ap)
+      .forEach((x) => expect(x.rest).toBeGreaterThanOrEqual(0));
+  });
+
+  /* Doua plati cu data lor pe aceeasi datorie: a doua indreapta penalizarea
+     tinand cont de ce s-a anulat deja, fara sa scada de doua ori. */
+  it("a doua plata cu data ei nu anuleaza inca o data ce s-a anulat deja", async () => {
+    const { s, d } = await admin();
+    s.db.setari.procentPenalizareZi = 0.2;
+    s.db.setari.zileGratie = 0;
+    const ap = apNr(d, "13").id;
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-05", listaId: "lst-test-b5f",
+      suma: 1000, scadenta: "2026-05-10", descriere: "Intretinere de test",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-06-09");
+    const penalizare = (await s.incarca()).datorii.find((x) => x.tip === "penalizare" && x.apartamentId === ap);
+
+    await s.inregistreazaIncasare(ap, 400, "transfer", null, "2026-05-30");
+    const dupaPrima = (await s.incarca()).datorii.find((x) => x.id === penalizare.id).rest;
+    await s.inregistreazaIncasare(ap, 600, "transfer", null, "2026-05-25");
+    const dupaADoua = (await s.incarca()).datorii.find((x) => x.id === penalizare.id).rest;
+
+    expect(dupaPrima).toBeLessThan(penalizare.suma);
+    expect(dupaADoua).toBeLessThan(dupaPrima);
+    expect(dupaADoua).toBeGreaterThanOrEqual(0);
+  });
+
+  /* O plata neinsemnata nu schimba penalizarea: dupa rotunjirea la ban, cifra
+     ramane aceeasi, deci in registru nu intra niciun rand de anulare. */
+  it("o plata de un ban nu misca penalizarea", async () => {
+    const { s, d } = await admin();
+    s.db.setari.procentPenalizareZi = 0.2;
+    s.db.setari.zileGratie = 0;
+    const ap = apNr(d, "12").id;
+    /* datoria de test este cea mai veche a apartamentului, ca banul platit sa
+       se duca pe ea, nu pe o datorie din datele demo */
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-05", listaId: "lst-test-b5e",
+      suma: 1000, scadenta: "2026-05-10", descriere: "Intretinere de test",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-06-09");
+    await s.inregistreazaIncasare(ap, 0.01, "transfer", null, "2026-05-30");
+    const dupa = await s.incarca();
+    expect(dupa.datorii.filter((x) => x.tip === "anulare_penalizare" && x.apartamentId === ap)).toHaveLength(0);
+  });
+
+  it("plata de azi nu anuleaza nimic: banii chiar au lipsit pana azi", async () => {
+    const { s, d } = await admin();
+    s.db.setari.procentPenalizareZi = 0.2;
+    s.db.setari.zileGratie = 0;
+    const ap = apNr(d, "10").id;
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-08", listaId: "lst-test-b5b",
+      suma: 1000, scadenta: "2026-08-10", descriere: "Intretinere de test",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-09-09");
+    await s.inregistreazaIncasare(ap, 1000, "numerar");
+    const dupa = await s.incarca();
+    expect(dupa.datorii.filter((x) => x.tip === "anulare_penalizare" && x.apartamentId === ap)).toHaveLength(0);
+  });
+});
+
 describe("plafonul penalizarilor", () => {
   it("[K16] plafonul foloseste baza corectata (suma - corectia sora), nu suma bruta", async () => {
     const { s, d } = await admin();

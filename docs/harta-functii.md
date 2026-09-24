@@ -454,9 +454,12 @@ starile `in_asteptare` / `esuata`.
   raspuns pierdut pe drum nu mai poate face doua plati si doua chitante pe aceiasi bani; un index
   unic pe `(apartament_id, cheie_client)` opreste si doua cereri simultane.
 - **Ziua in care au intrat banii** [B5]: pentru transfer, ecranul cere data din extrasul de cont
-  (implicit azi). Nu poate fi in viitor si nu poate fi mai veche de sase luni. Penalizarea
-  calculata intre timp peste acele zile nu se recalculeaza inca (vezi
-  `docs/audit-4-2026-09-24.md`).
+  (implicit azi). Nu poate fi in viitor si nu poate fi mai veche de sase luni.
+- **Penalizarea urmeaza data platii** [B5]: daca intre ziua in care au intrat banii si ziua in care
+  administratorul confirma a rulat jobul de penalizari, `financiar.anuleaza_penalizari_dupa_plata`
+  recalculeaza penalizarea cu parametrii ei inghetati, impartind zilele in doua — cele dinainte de
+  plata, pe restul de atunci, si cele de dupa, pe restul ramas dupa plata. Diferenta intra in
+  registru ca `anulare_penalizare`, ca la K7, si se vede pe ecranul locatarului. Doar in jos.
 
 ### 6.5 Chitante
 - Numerotare **fara goluri** pe asociatie: `setari_financiare.chitanta_ultimul_numar` se
