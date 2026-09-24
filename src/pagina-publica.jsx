@@ -163,7 +163,7 @@ export default function PaginaPublica() {
   useEffect(() => {
     (async () => {
       const s = creeazaSursaMock();
-      await s.intra("administrator@adminbloc.test", "Bloc-D14-2026");
+      await s.intra("0745 210 118", "Bloc-D14-2026");
       setDate(pregateste(await s.incarca()));
     })();
   }, []);

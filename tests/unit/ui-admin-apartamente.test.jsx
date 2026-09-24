@@ -30,6 +30,34 @@ describe("[K9] fisa apartamentului, avansul", () => {
   });
 });
 
+/* [B4] Fisa apartamentului si Sumarul administratorului trebuie sa numere la
+   fel. restanta() aduna doar randurile cu rest pozitiv, iar financiar.situatie_bloc
+   aduna restul tuturor datoriilor scadente: un apartament cu un credit pe un
+   rand (o corectie in jos dupa o recalculare) aparea in Sumar la "fara
+   restanta" si pe fisa lui cu "Restanta 400". */
+describe("[B4] restanta apartamentului, aceeasi cifra peste tot", () => {
+  it("creditul de pe un rand scade restanta aratata pe fisa", async () => {
+    await pornesteAdmin({
+      tab: "Apartamente",
+      modifica: (d) => {
+        const ap = d.apartamente.find((a) => a.numar === "1");
+        d.datorii.push({
+          id: "dat-b4-plus", apartamentId: ap.id, tip: "corectie", luna: "2026-08", listaId: null,
+          suma: 400, rest: 400, scadenta: "2026-09-01", descriere: "Corectie in plus", documentId: null,
+          creatLa: "2026-09-01T10:00:00Z",
+        });
+        d.datorii.push({
+          id: "dat-b4-minus", apartamentId: ap.id, tip: "corectie", luna: "2026-08", listaId: null,
+          suma: -400, rest: -400, scadenta: "2026-09-01", descriere: "Corectie in minus", documentId: null,
+          creatLa: "2026-09-02T10:00:00Z",
+        });
+      },
+    });
+    const ap1 = within(buton("Apartament 1"));
+    expect(ap1.queryByText(/^Restanta /)).toBeNull();
+  });
+});
+
 describe("ListaApartamente", () => {
   it("arata toate apartamentele in ordine, cu etaj, persoane, cota si badge", async () => {
     await pornesteAdmin({ tab: "Apartamente" });
@@ -157,7 +185,7 @@ describe("FisaApartament, incasare cash", () => {
     const camp = screen.getByLabelText("Suma primita");
     expect(camp.value).toBe("2.319,36");
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
     const f = inDialog("Apartament 3");
     expect(f.getByText("Incasare inregistrata: 2.319,36 lei")).toBeTruthy();
@@ -188,7 +216,7 @@ describe("FisaApartament, incasare cash", () => {
     await act(async () => { scrie("Suma primita", "150,5"); });
     expect(dezactivat(buton("Emite chitanta"))).toBe(false);
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar");
+    expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
     expect(inDialog("Apartament 1").getByText("Incasare inregistrata: 150,50 lei")).toBeTruthy();
   });
 
@@ -200,8 +228,48 @@ describe("FisaApartament, incasare cash", () => {
     await apasa("Inregistreaza incasare cash");
     await apasa(buton("Prin transfer bancar"));
     await apasa("Emite chitanta");
-    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), "2026-09-19");
     expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
+  });
+
+  /* [B7] A doua incasare din aceeasi fisa pornea cu "Prin transfer bancar"
+     preselectat, de la prima: daca administratorul nu observa, chitanta si
+     registrul spuneau transfer pentru bani primiti in mana, iar stornare nu
+     exista. */
+  it("[B7] a doua incasare porneste iar de la numerar, nu de la transfer", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
+    const ap = await apDupaNumar(sursa, "3");
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    await apasa(buton("Prin transfer bancar"));
+    await act(async () => { scrie("Suma primita", "100"); });
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), "2026-09-19");
+
+    await apasa("Inregistreaza incasare cash");
+    await act(async () => { scrie("Suma primita", "50"); });
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
+  });
+
+  /* [B5] Banii intra in cont pe 20, administratorul vede extrasul pe 2 si
+     confirma atunci: data din extras merge pe chitanta si in registru, ca
+     zilele dintre ele sa nu fie zile de intarziere. */
+  it("[B5] transferul se poate inregistra cu ziua in care au intrat banii", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare");
+    const ap = await apDupaNumar(sursa, "3");
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    /* pentru numerar nu se cere nicio data: banii se dau in mana, azi */
+    expect(screen.queryByLabelText("Data in care au intrat banii")).toBeNull();
+    await apasa(buton("Prin transfer bancar"));
+    const camp = screen.getByLabelText("Data in care au intrat banii");
+    expect(camp.value).toBe("2026-09-19");
+    await act(async () => { scrie("Data in care au intrat banii", "2026-09-11"); });
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.any(String), "2026-09-11");
   });
 
   it("renunta inchide formularul fara incasare", async () => {
@@ -212,6 +280,22 @@ describe("FisaApartament, incasare cash", () => {
     await apasa("Renunta");
     expect(screen.queryByLabelText("Suma primita")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
+  });
+
+  /* [B2] Reincercarea dupa o cadere trimite aceeasi cheie a cererii: daca
+     prima cerere ajunsese totusi la server, a doua intoarce aceeasi plata, in
+     loc sa emita inca o chitanta pe aceiasi bani. */
+  it("[B2] reincercarea dupa o eroare trimite aceeasi cheie a cererii", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "inregistreazaIncasare")
+      .mockRejectedValueOnce(new Error("Serverul nu raspunde. Incearca din nou."));
+    await deschideFisa("3");
+    await apasa("Inregistreaza incasare cash");
+    await apasa("Emite chitanta");
+    expect(toast().textContent).toBe("Serverul nu raspunde. Incearca din nou.");
+    await apasa("Emite chitanta");
+    expect(spion).toHaveBeenCalledTimes(2);
+    expect(spion.mock.calls[1][3]).toBe(spion.mock.calls[0][3]);
   });
 
   it("o incasare refuzata lasa formularul deschis, cu suma", async () => {
@@ -366,38 +450,87 @@ describe("FisaApartament, numarul de persoane", () => {
   });
 });
 
-describe("FisaApartament, invitatii si acces", () => {
-  it("genereaza un cod de invitatie pentru chirias si il arata in lista", async () => {
+describe("FisaApartament, contul locatarului si accesul", () => {
+  it("face contul pe numarul de telefon si arata parola o singura data", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    const spion = vi.spyOn(sursa, "invitaLocatar");
+    const spion = vi.spyOn(sursa, "adaugaLocatar");
     const ap = await apDupaNumar(sursa, "2");
     await deschideFisa("2");
     expect(inDialog("Apartament 2").getByText("Nimeni din apartament nu are inca cont.")).toBeTruthy();
-    await apasa("Invita un locatar in aplicatie");
+    await apasa("Adauga un locatar in aplicatie");
+    scrie("Numele locatarului", " Ana Pop ");
+    scrie("Numarul lui de telefon", "0722 000 041");
     await act(async () => { fireEvent.change(screen.getByLabelText("Ce este pentru apartament"), { target: { value: "chirias" } }); });
-    await apasa("Genereaza codul");
-    expect(spion).toHaveBeenCalledWith(ap.id, "chirias");
-    const cod = await spion.mock.results[0].value;
-    expect(cod).toMatch(/^[A-Z0-9]{6,}$/);
+    await apasa("Fa contul");
+    expect(spion).toHaveBeenCalledWith(ap.id, { nume: "Ana Pop", telefon: "0722 000 041", calitate: "chirias" });
+    const { parola } = await spion.mock.results[0].value;
     const f = inDialog("Apartament 2");
-    expect(f.getAllByText(cod).length).toBeGreaterThan(0);
-    expect(f.getByText(`Cod nefolosit ${cod} (chirias), expira pe 19 oct 2026`)).toBeTruthy();
+    expect(f.getByText("Intra cu numarul 0722 000 041")).toBeTruthy();
+    expect(f.getByText(parola)).toBeTruthy();
     await apasa("Gata");
-    expect(buton("Invita un locatar in aplicatie")).toBeTruthy();
+    expect(inDialog("Apartament 2").getByText("Ana Pop")).toBeTruthy();
+    expect(screen.queryByText(parola)).toBeNull();
   });
 
-  it("renunta la invitatie si invitatia refuzata nu arata cod", async () => {
+  it("butonul asteapta un nume si un numar intreg, iar refuzul ramane pe ecran", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("2");
-    await apasa("Invita un locatar in aplicatie");
-    await apasa("Renunta");
-    expect(screen.queryByLabelText("Ce este pentru apartament")).toBeNull();
+    await apasa("Adauga un locatar in aplicatie");
+    expect(dezactivat(buton("Fa contul"))).toBe(true);
+    scrie("Numele locatarului", "Ana");
+    scrie("Numarul lui de telefon", "0722");
+    await act(async () => {});
+    expect(dezactivat(buton("Fa contul"))).toBe(true);
+    scrie("Numarul lui de telefon", "0722 000 042");
+    await act(async () => {});
+    expect(dezactivat(buton("Fa contul"))).toBe(false);
 
-    vi.spyOn(sursa, "invitaLocatar").mockRejectedValue(new Error("Refuzat"));
-    await apasa("Invita un locatar in aplicatie");
-    await apasa("Genereaza codul");
-    expect(toast().textContent).toBe("Refuzat");
-    expect(buton("Genereaza codul")).toBeTruthy();
+    vi.spyOn(sursa, "adaugaLocatar").mockRejectedValue(new Error("Exista deja un cont cu acest numar de telefon."));
+    await apasa("Fa contul");
+    expect(inDialog("Apartament 2").getByText("Exista deja un cont cu acest numar de telefon.")).toBeTruthy();
+    await apasa("Renunta");
+    expect(screen.queryByLabelText("Numele locatarului")).toBeNull();
+  });
+
+  /* [P1/P5] Un om cu doua apartamente are un singur numar: contul lui se leaga
+     si de apartamentul al doilea, fara parola noua. */
+  it("numarul care are deja cont se leaga de apartament, fara parola noua", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    await deschideFisa("2");
+    await apasa("Adauga un locatar in aplicatie");
+    scrie("Numele locatarului", "Elena Marinescu");
+    scrie("Numarul lui de telefon", "0733 410 217");
+    await apasa("Fa contul");
+    const f = inDialog("Apartament 2");
+    expect(f.getByText(/Omul avea deja cont pe acest numar/)).toBeTruthy();
+    expect(f.getByText("Intra cu numarul 0733 410 217")).toBeTruthy();
+    await apasa("Gata");
+    expect(inDialog("Apartament 2").getAllByText("Elena Marinescu").length).toBeGreaterThan(0);
+    const ap = await apDupaNumar(sursa, "2");
+    expect(ap.locatari.map((l) => l.nume)).toContain("Elena Marinescu");
+  });
+
+  it("daca parola noua este refuzata, ecranul ramane cum era", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    vi.spyOn(sursa, "parolaNoua").mockRejectedValue(new Error("Nu merge acum."));
+    await deschideFisa("17");
+    await apasa("Parola noua");
+    expect(toast().textContent).toBe("Nu merge acum.");
+    expect(screen.queryByText(/Intra cu numarul/)).toBeNull();
+  });
+
+  it("parola noua se genereaza pentru un locatar care si-a uitat-o", async () => {
+    const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+    const spion = vi.spyOn(sursa, "parolaNoua");
+    const ap = await apDupaNumar(sursa, "17");
+    await deschideFisa("17");
+    await apasa("Parola noua");
+    const { parola } = await spion.mock.results[0].value;
+    expect(spion).toHaveBeenCalledWith(ap.id, ap.locatari[0].id);
+    const f = inDialog("Apartament 17");
+    expect(f.getByText(/Omul avea deja cont|Contul este gata/)).toBeTruthy();
+    expect(f.getByText(parola)).toBeTruthy();
+    await apasa("Gata");
   });
 
   it("inchide accesul doar dupa confirmare", async () => {

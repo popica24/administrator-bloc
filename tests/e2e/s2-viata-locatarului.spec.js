@@ -29,20 +29,20 @@ async function repuneFisa(ap) {
 }
 
 test.describe("cineva se muta la mijlocul lunii", () => {
-  const EMAIL = "e2e-viata-mutat@adminbloc.test";
-  test.beforeAll(async () => { await stergeCont(EMAIL); });
-  test.afterAll(async () => { await stergeCont(EMAIL); });
+  const TELEFON = "0798507739";
+  test.beforeAll(async () => { await stergeCont(TELEFON); });
+  test.afterAll(async () => { await stergeCont(TELEFON); });
 
   test("chiriasul mutat azi intra si vede apartamentul, cu lista intreaga a lunii", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
-    const pid = await creeazaCont(EMAIL, "Nicolae Mutat");
+    const pid = await creeazaCont(TELEFON, "Nicolae Mutat");
     const b = await blocD14();
     const { error } = await serviciu().schema("identitate").from("locatari").insert({
       apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "chirias", activ_din: azi(),
     });
     if (error) throw new Error(error.message);
 
-    await intra(page, EMAIL);
+    await intra(page, TELEFON);
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(`Apartament ${ap.numar}, Bloc D14, scara A`)).toBeVisible();
 
@@ -56,24 +56,20 @@ test.describe("cineva se muta la mijlocul lunii", () => {
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
 
-  test.fixme("[S3] chiriasul mutat azi nu vede platile si chitantele celui dinaintea lui", async ({ page }) => {
-    /* [S3] Migratia K4 a scos conversatiile fostului locatar din ochii celui
-       nou, cu argumentul ca un chirias nou nu are ce citi din viata celui
-       dinainte. Banii au ramas nefiltrati: `financiar.plati`, `alocari_plati`
-       si `chitante` se vad dupa `private.apartamentele_mele()`, fara nicio
-       conditie de perioada (supabase/migrations/20260919120017_financiar.sql:424).
-       Un chirias mutat azi deschide "Platile mele" si vede fiecare plata a
-       fostului locatar, cu suma, data si numarul chitantei, si poate descarca
-       chitantele lui in PDF.
-       Asteptat: ca la sesizari, doar platile de dupa `activ_din`. */
+  /* [S3, reparat de auditul 4] Migratia K4 a scos conversatiile fostului
+     locatar din ochii celui nou; banii au ramas nefiltrati pana acum, deci un
+     chirias mutat azi vedea fiecare plata a celui dinaintea lui, cu suma, data
+     si numarul chitantei, si ii putea descarca chitantele in PDF. Politica
+     cere acum, ca la sesizari, ca plata sa fie din perioada lui. */
+  test("[S3] chiriasul mutat azi nu vede platile si chitantele celui dinaintea lui", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
-    const pid = await creeazaCont(EMAIL, "Nicolae Mutat");
+    const pid = await creeazaCont(TELEFON, "Nicolae Mutat");
     const b = await blocD14();
     await serviciu().schema("identitate").from("locatari").insert({
       apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "chirias", activ_din: azi(),
     });
 
-    await intra(page, EMAIL);
+    await intra(page, TELEFON);
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Plata");
     await page.getByRole("button", { name: "Platile mele" }).click();
@@ -84,13 +80,13 @@ test.describe("cineva se muta la mijlocul lunii", () => {
 });
 
 test.describe("cineva pleaca la mijlocul lunii", () => {
-  const EMAIL = "e2e-viata-plecat@adminbloc.test";
-  test.beforeAll(async () => { await stergeCont(EMAIL); });
-  test.afterAll(async () => { await stergeCont(EMAIL); });
+  const TELEFON = "0798349533";
+  test.beforeAll(async () => { await stergeCont(TELEFON); });
+  test.afterAll(async () => { await stergeCont(TELEFON); });
 
   test("administratorul inchide accesul din fisa, iar datoria ramane pe apartament", async ({ page, browser }) => {
     const ap = await apartamentulNumarul(10);
-    const pid = await creeazaCont(EMAIL, "Olga Plecata");
+    const pid = await creeazaCont(TELEFON, "Olga Plecata");
     await legaDeApartament(pid, ap.id, "chirias");
     const datorie = await datorieDeTest(ap.id, 155.5, "E2E datoria celui plecat");
 
@@ -98,7 +94,7 @@ test.describe("cineva pleaca la mijlocul lunii", () => {
       /* Omul este in aplicatie chiar acum, cu un alt browser deschis */
       const ctx = await browser.newContext();
       const alPlecatului = await ctx.newPage();
-      await intra(alPlecatului, EMAIL);
+      await intra(alPlecatului, TELEFON);
       await expect(alPlecatului.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
 
       await intraCa(page, "admin");
@@ -131,9 +127,9 @@ test.describe("cineva pleaca la mijlocul lunii", () => {
 });
 
 test.describe("apartamentul se vinde cu datorii cu tot", () => {
-  const EMAIL = "e2e-viata-cumparator@adminbloc.test";
-  test.beforeAll(async () => { await stergeCont(EMAIL); });
-  test.afterAll(async () => { await stergeCont(EMAIL); });
+  const TELEFON = "0798073676";
+  test.beforeAll(async () => { await stergeCont(TELEFON); });
+  test.afterAll(async () => { await stergeCont(TELEFON); });
 
   test("noul proprietar preia soldul vechiului proprietar, scris pe fata", async ({ page }) => {
     const ap = await apartamentulNumarul(3);
@@ -157,11 +153,11 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
       expect(await soldApartament(ap.id)).toBeCloseTo(datorie, 2);
 
       /* 3. Cumparatorul primeste cont si vede datoria ca fiind a lui */
-      const pid = await creeazaCont(EMAIL, "Vasile Cumparatorul");
+      const pid = await creeazaCont(TELEFON, "Vasile Cumparatorul");
       await legaDeApartament(pid, ap.id, "proprietar");
       await buton(page, "Inchide").click();
       await buton(page, "Iesi").click();
-      await intra(page, EMAIL);
+      await intra(page, TELEFON);
       await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
       const t = await textEcran(page);
       /* Datoria vanzatorului este acum de plata cumparatorului: aplicatia nu
@@ -173,16 +169,12 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
     }
   });
 
-  test.fixme("[S4] chitanta ramane pe numele celui care a platit, nu al proprietarului de azi", async ({ page }) => {
-    /* [S4] Chitanta nu se pastreaza nicaieri (`chitante.pdf_cale` e gol):
-       PDF-ul se genereaza de fiecare data din datele de azi, iar randul
-       "Am primit de la ..." ia `apartament.proprietar` (src/AdminBloc.jsx:561),
-       nu platitorul inregistrat (`financiar.plati.platita_de`). Dupa ce
-       apartamentul isi schimba proprietarul, toate chitantele vechi ale
-       apartamentului se retiparesc pe numele nou: un document de casa
-       incepe sa spuna altceva decat a spus cand a fost emis.
-       Asteptat: chitanta reprodusa dupa schimbarea proprietarului poarta
-       acelasi nume ca la emitere. */
+  /* [S4, reparat de auditul 4] PDF-ul chitantei se genereaza de fiecare data,
+     dar din ce s-a inghetat la emitere: randurile platii (B6) si apartamentul
+     cu proprietarul lui de atunci (financiar.chitante.emis_pentru). Dupa o
+     vanzare, chitantele vechi ale apartamentului nu se mai retiparesc pe
+     numele noului proprietar. */
+  test("[S4] chitanta ramane cu proprietarul de la emitere, nu cu cel de azi", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
     const vechi = { ...ap };
 
@@ -190,7 +182,7 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
     await mergiLaTab(page, "Plata");
     await page.getByRole("button", { name: "Platile mele" }).click();
     const inainte = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
-    expect(inainte).toContain(`Am primit de la ${vechi.proprietar_nume}`);
+    expect(inainte).toContain(`Proprietar la data emiterii: ${vechi.proprietar_nume}`);
 
     try {
       await serviciu().schema("organizare").rpc("schimba_fisa_apartament", {
@@ -203,8 +195,8 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
       await mergiLaTab(page, "Plata");
       await page.getByRole("button", { name: "Platile mele" }).click();
       const dupa = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
-      expect(dupa).toContain(`Am primit de la ${vechi.proprietar_nume}`);
-      expect(dupa).not.toContain("Am primit de la Vasile Cumparatorul");
+      expect(dupa).toContain(`Proprietar la data emiterii: ${vechi.proprietar_nume}`);
+      expect(dupa).not.toContain("Vasile Cumparatorul");
     } finally {
       await repuneFisa(vechi);
     }
@@ -212,16 +204,16 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
 });
 
 test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () => {
-  const EMAIL = "e2e-viata-doua-ap@adminbloc.test";
+  const TELEFON = "0798778736";
   let DATORIE_A = null;
   let DATORIE_B = null;
 
   test.beforeAll(async () => {
-    await stergeCont(EMAIL);
+    await stergeCont(TELEFON);
     const b = await blocD14();
     const primul = await apartamentulNumarul(15);
     const alDoilea = await apartamentulNumarul(16);
-    const pid = await creeazaCont(EMAIL, "Doi Proprietari");
+    const pid = await creeazaCont(TELEFON, "Doi Proprietari");
     for (const [ap, din] of [[primul, "2026-06-01"], [alDoilea, "2026-07-01"]]) {
       const { error } = await serviciu().schema("identitate").from("locatari").insert({
         apartament_id: ap.id, bloc_id: b.id, profil_id: pid, calitate: "proprietar", activ_din: din,
@@ -233,7 +225,7 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
   });
 
   test.afterAll(async () => {
-    await stergeCont(EMAIL);
+    await stergeCont(TELEFON);
     const sb = serviciu();
     for (const id of [DATORIE_A, DATORIE_B]) if (id) await sb.schema("financiar").from("datorii").delete().eq("id", id);
   });
@@ -244,7 +236,7 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
     const soldA = await soldApartament(primul.id);
     const soldB = await soldApartament(alDoilea.id);
 
-    await intra(page, EMAIL);
+    await intra(page, TELEFON);
     await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
 
     /* Alege explicit al doilea apartament: instructiunile de plata sunt ale lui */

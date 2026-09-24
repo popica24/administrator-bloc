@@ -39,16 +39,22 @@ export const BLOC = {
 
 export const ZI_LIMITA_CITIRE = 25;
 
-/* Conturile de test. Parola este aceeasi pentru toate, ca sa fie usor de
-   folosit la verificare; conturile exista doar in mediul local. */
+/* Conturile de test. Contul se tine pe numarul de telefon; parola este
+   aceeasi pentru toate, ca sa fie usor de folosit la verificare. Conturile
+   exista doar in mediul local. */
 export const PAROLA_DEMO = "Bloc-D14-2026";
 
 export const CONTURI = [
-  { cheie: "admin", email: "administrator@adminbloc.test", nume: "Mihai Dobre", telefon: "0745 210 118", rol: "administrator", atestat: "AT-AG-2019-0412" },
-  { cheie: "elena", email: "elena.marinescu@adminbloc.test", nume: "Elena Marinescu", telefon: "0733 410 217", rol: "locatar", apartament: "17", calitate: "proprietar" },
-  { cheie: "ilie", email: "familia.ilie@adminbloc.test", nume: "Dan Ilie", telefon: "0726 331 003", rol: "locatar", apartament: "3", calitate: "proprietar" },
-  { cheie: "voicu", email: "gheorghe.voicu@adminbloc.test", nume: "Gheorghe Voicu", telefon: "0741 002 101", rol: "locatar", apartament: "1", calitate: "proprietar" },
-  { cheie: "neverificat", email: "admin.nou@adminbloc.test", nume: "Cosmin Radu", telefon: "0755 900 800", rol: "administrator_in_asteptare", atestat: "AT-AG-2026-0077" },
+  { cheie: "admin", nume: "Mihai Dobre", telefon: "0745 210 118", rol: "administrator", atestat: "AT-AG-2019-0412" },
+  { cheie: "elena", nume: "Elena Marinescu", telefon: "0733 410 217", rol: "locatar", apartament: "17", calitate: "proprietar" },
+  { cheie: "ilie", nume: "Dan Ilie", telefon: "0726 331 003", rol: "locatar", apartament: "3", calitate: "proprietar" },
+  { cheie: "voicu", nume: "Gheorghe Voicu", telefon: "0741 002 101", rol: "locatar", apartament: "1", calitate: "proprietar" },
+  { cheie: "neverificat", nume: "Cosmin Radu", telefon: "0755 900 800", rol: "administrator_in_asteptare", atestat: "AT-AG-2026-0077" },
+  /* Conducerea aleasa de adunarea generala. Amandoi vad tot blocul, fara sa
+     poata schimba ceva. (In demonstratie nu sunt si locatari, ca numerele
+     blocului sa ramana cele de pe hartie.) */
+  { cheie: "presedinte", nume: "Rodica Anton", telefon: "0722 118 005", rol: "presedinte" },
+  { cheie: "cenzor", nume: "Sorin Tudose", telefon: "0730 415 900", rol: "cenzor" },
 ];
 
 export const CONTACTE = [

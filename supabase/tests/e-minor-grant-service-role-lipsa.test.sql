@@ -17,8 +17,8 @@ select ok(
   '[minor] service_role poate executa contorizare.valideaza_citiri_apartament');
 
 select ok(
-  has_function_privilege('service_role', 'identitate.revoca_invitatie(uuid)', 'EXECUTE'),
-  '[minor] service_role poate executa identitate.revoca_invitatie');
+  has_function_privilege('service_role', 'identitate.leaga_locatar(uuid,uuid,text)', 'EXECUTE'),
+  '[minor] service_role poate executa identitate.leaga_locatar');
 
 select * from finish();
 rollback;

@@ -1,7 +1,7 @@
 -- Teste pgTAP: identitate (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(117);
+select plan(132);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -183,9 +183,6 @@ set local teste.sesiune = 'authenticator';
 -- Identitate (migratiile 20260919120011_identitate, 20260919120023_evenimente_si_joburi)
 -- =============================================================================
 
-create temp table t_cod (nume text primary key, cod text not null);
-grant all on t_cod to authenticated;
-create function pg_temp.cod(p text) returns text language sql stable as $$ select cod from pg_temp.t_cod where nume = p $$;
 
 do $$
 begin
@@ -209,16 +206,16 @@ $$;
 -- -----------------------------------------------------------------------------
 
 select results_eq(
-  $$select p.nume, p.email = u.email from identitate.profiluri p join auth.users u on u.id = p.id where p.id = pg_temp.id('locA1')$$,
-  $$values ('Test locA1'::text, true)$$,
-  'identitate.la_cont_nou: profilul ia numele din metadate si emailul contului');
+  $$select nume, telefon from identitate.profiluri where id = pg_temp.id('locA1')$$,
+  $$values ('Test locA1'::text, null::text)$$,
+  '[A11] identitate.la_cont_nou: profilul ia numele din metadate; emailul nu mai exista');
 select results_eq(
-  $$select p.nume = split_part(u.email, '@', 1), p.telefon from identitate.profiluri p join auth.users u on u.id = p.id where p.id = pg_temp.id('faraMeta')$$,
-  $$values (true, '0722 111 222'::text)$$,
-  'identitate.la_cont_nou: fara nume se foloseste partea din email; telefonul se curata');
+  $$select nume, telefon from identitate.profiluri where id = pg_temp.id('faraMeta')$$,
+  $$values ('Utilizator'::text, '0722111222'::text)$$,
+  'identitate.la_cont_nou: fara nume in metadate ramane "Utilizator"; telefonul se normalizeaza');
 select is(
-  (select p.nume = split_part(u.email, '@', 1) from identitate.profiluri p join auth.users u on u.id = p.id where p.id = pg_temp.id('numeGol')),
-  true,
+  (select nume from identitate.profiluri where id = pg_temp.id('numeGol')),
+  'Utilizator',
   'identitate.la_cont_nou: un nume din spatii nu se pastreaza');
 
 -- -----------------------------------------------------------------------------
@@ -233,6 +230,8 @@ select throws_ok(
   'identitate.verifica_administrator: un administrator nu se poate aproba pe altul');
 reset role;
 
+-- Cu drepturi de serviciu (postgres in psql), comanda merge; verificarea
+-- private.este_serviciu() ramane testata prin mesajul de mai sus.
 select pg_temp.ca_serviciu();
 select lives_ok(
   $$select identitate.verifica_administrator(pg_temp.id('deAprobat'), true, 'ignorat')$$,
@@ -281,6 +280,8 @@ select throws_ok(
   '42501', null,
   'identitate.numeste_administrator: authenticated nu are drept de executie');
 reset role;
+-- Cu drepturi de serviciu (postgres in psql), comanda merge; verificarea
+-- private.este_serviciu() ramane testata prin mesajul de mai sus.
 select pg_temp.ca_serviciu();
 select lives_ok(
   $$select identitate.numeste_administrator(pg_temp.id('adminDublu'), pg_temp.id('asocA'), 'AT-D', current_date - 1)$$,
@@ -364,173 +365,84 @@ select is(
 reset role;
 
 -- -----------------------------------------------------------------------------
--- identitate.cere_verificare_administrator
+-- identitate.apartament_de_administrat si identitate.leaga_locatar
+-- (contul locatarului il face administratorul, prin Edge Function-ul
+-- cont-locatar: intai intreaba daca are voie pe apartament, apoi serviciul
+-- leaga contul nou de el)
 -- -----------------------------------------------------------------------------
-
-select pg_temp.fara_claims();
-set local role authenticated;
-select throws_ok(
-  $$select identitate.cere_verificare_administrator('AT-1')$$,
-  'Nu esti autentificat.',
-  'identitate.cere_verificare_administrator: refuzat fara autentificare');
-reset role;
-
-select pg_temp.ca('candidat');
-set local role authenticated;
-select throws_ok(
-  $$select identitate.cere_verificare_administrator('   ')$$,
-  'Scrie numarul atestatului.',
-  'identitate.cere_verificare_administrator: numarul atestatului este obligatoriu');
-select lives_ok(
-  $$select identitate.cere_verificare_administrator('  AT-99  ', pg_temp.id('candidat')::text || '/atestat.pdf')$$,
-  'identitate.cere_verificare_administrator: cererea se inregistreaza');
-select lives_ok(
-  $$select identitate.cere_verificare_administrator('AT-100')$$,
-  'identitate.cere_verificare_administrator: cererea se poate corecta');
-select results_eq(
-  $$select stare, numar_atestat, atestat_cale from identitate.administratori where profil_id = pg_temp.id('candidat')$$,
-  $$values ('in_asteptare'::text, 'AT-100'::text, pg_temp.id('candidat')::text || '/atestat.pdf')$$,
-  'identitate.cere_verificare_administrator: numarul corectat, atestatul pastrat');
-select is(identitate.eu() ->> 'rol', 'in_asteptare', 'identitate.eu: cererea in asteptare');
-select throws_ok(
-  $$select identitate.cere_verificare_administrator('AT-100', pg_temp.id('adminA')::text || '/atestat.pdf')$$,
-  'P0001', 'Poza atestatului trebuie sa fie a ta.',
-  '[S8] atestatul trebuie sa fie sub <auth.uid()>/');
-select lives_ok(
-  $$select identitate.cere_verificare_administrator('AT-100', pg_temp.id('candidat')::text || '/alt-atestat.pdf')$$,
-  '[S8] atestatul propriu, chiar cu alt nume de fisier, este acceptat');
-reset role;
 
 select pg_temp.ca('adminA');
 set local role authenticated;
-select lives_ok(
-  $$select identitate.cere_verificare_administrator('ALT-NUMAR')$$,
-  'identitate.cere_verificare_administrator: un administrator aprobat poate apela');
-reset role;
 select is(
-  (select stare || '/' || numar_atestat from identitate.administratori where profil_id = pg_temp.id('adminA')),
-  'aprobat/AT-A2',
-  'identitate.cere_verificare_administrator: nu schimba un administrator aprobat');
-
-select pg_temp.ca('adminResp');
-set local role authenticated;
-select lives_ok(
-  $$select identitate.cere_verificare_administrator('AT-R2')$$,
-  'identitate.cere_verificare_administrator: administratorul respins retrimite');
-select is(identitate.eu() ->> 'rol', 'in_asteptare', '[NOU-1] cererea retrimisa revine in asteptare (sau e refuzata explicit)');
+  identitate.apartament_de_administrat(pg_temp.id('apA1')),
+  jsonb_build_object('apartament_id', pg_temp.id('apA1'), 'bloc_id', pg_temp.id('blocA'), 'numar', '1'),
+  'identitate.apartament_de_administrat: apartamentul propriu, cu blocul lui');
+select throws_ok($$select identitate.apartament_de_administrat(pg_temp.id('apB1'))$$,
+  'Doar administratorul blocului poate face conturi.',
+  'identitate.apartament_de_administrat: apartamentul altui bloc este refuzat');
+select throws_ok($$select identitate.leaga_locatar(pg_temp.id('nou'), pg_temp.id('apA1'))$$,
+  '42501', null,
+  'identitate.leaga_locatar: administratorul nu o poate chema direct');
 reset role;
 
--- -----------------------------------------------------------------------------
--- identitate.invita_locatar
--- -----------------------------------------------------------------------------
-
-select pg_temp.ca('adminA');
-set local role authenticated;
-insert into t_cod values ('c1', identitate.invita_locatar(pg_temp.id('apA1')));
-insert into t_cod values ('c2', identitate.invita_locatar(pg_temp.id('apA2'), 'chirias'));
-insert into t_cod values ('c3', identitate.invita_locatar(pg_temp.id('apA1')));
-insert into t_cod values ('c4', identitate.invita_locatar(pg_temp.id('apA1')));
-insert into t_cod values ('c5', identitate.invita_locatar(pg_temp.id('apA1')));
-select matches(pg_temp.cod('c1'), '^[A-HJ-NP-Z2-9]{8}$', 'identitate.invita_locatar: cod de 8 caractere fara 0/O/1/I');
-select results_eq(
-  $$select apartament_id, calitate, creat_de, expira_la = now() + interval '30 days', folosita_la is null
-    from identitate.invitatii where cod in (pg_temp.cod('c1'), pg_temp.cod('c2')) order by calitate desc$$,
-  $$values (pg_temp.id('apA1'), 'proprietar'::text, pg_temp.id('adminA'), true, true),
-           (pg_temp.id('apA2'), 'chirias'::text, pg_temp.id('adminA'), true, true)$$,
-  'identitate.invita_locatar: invitatia are apartamentul, calitatea, autorul si 30 de zile');
-select throws_ok(
-  $$select identitate.invita_locatar(pg_temp.id('apA1'), 'vecin')$$,
-  '23514', null,
-  'identitate.invita_locatar: calitatea necunoscuta este refuzata');
-reset role;
-
-select pg_temp.ca('adminB');
-set local role authenticated;
-select throws_ok($$select identitate.invita_locatar(pg_temp.id('apA1'))$$,
-  'Doar administratorul blocului poate invita locatari.',
-  'identitate.invita_locatar: administratorul altui bloc este refuzat');
-reset role;
 select pg_temp.ca('locA1');
 set local role authenticated;
-select throws_ok($$select identitate.invita_locatar(pg_temp.id('apA1'))$$,
-  'Doar administratorul blocului poate invita locatari.',
-  'identitate.invita_locatar: locatarul este refuzat');
+select throws_ok($$select identitate.apartament_de_administrat(pg_temp.id('apA1'))$$,
+  'Doar administratorul blocului poate face conturi.',
+  'identitate.apartament_de_administrat: locatarul este refuzat');
 reset role;
 select pg_temp.ca('presA');
 set local role authenticated;
-select throws_ok($$select identitate.invita_locatar(pg_temp.id('apA1'))$$,
-  'Doar administratorul blocului poate invita locatari.',
-  'identitate.invita_locatar: presedintele este refuzat');
+select throws_ok($$select identitate.apartament_de_administrat(pg_temp.id('apA1'))$$,
+  'Doar administratorul blocului poate face conturi.',
+  'identitate.apartament_de_administrat: presedintele este refuzat');
 reset role;
 select pg_temp.ca('adminFost');
 set local role authenticated;
-select throws_ok($$select identitate.invita_locatar(pg_temp.id('apA1'))$$,
-  'Doar administratorul blocului poate invita locatari.',
-  'identitate.invita_locatar: administratorul cu mandat terminat este refuzat');
+select throws_ok($$select identitate.apartament_de_administrat(pg_temp.id('apA1'))$$,
+  'Doar administratorul blocului poate face conturi.',
+  'identitate.apartament_de_administrat: administratorul cu mandat terminat este refuzat');
 reset role;
 select pg_temp.ca_anonim();
 set local role anon;
-select throws_ok($$select identitate.invita_locatar(pg_temp.id('apA1'))$$,
+select throws_ok($$select identitate.apartament_de_administrat(pg_temp.id('apA1'))$$,
   '42501', null,
-  'identitate.invita_locatar: anon nu are acces');
+  'identitate.apartament_de_administrat: anon nu are acces');
+select throws_ok($$select identitate.leaga_locatar(pg_temp.id('nou'), pg_temp.id('apA1'))$$,
+  '42501', null,
+  'identitate.leaga_locatar: anon nu are acces');
 reset role;
 
--- -----------------------------------------------------------------------------
--- identitate.foloseste_invitatie
--- -----------------------------------------------------------------------------
+-- Cu claim-uri de utilizator, private.este_serviciu() intoarce false chiar si
+-- sub postgres: comanda refuza pe romaneste, nu doar prin lipsa dreptului.
+select pg_temp.ca('adminA');
+select throws_ok($$select identitate.leaga_locatar(pg_temp.id('nou'), pg_temp.id('apA1'))$$,
+  'Doar dezvoltatorul poate lega un cont de un apartament.',
+  'identitate.leaga_locatar: fara drepturi de serviciu, refuza pe romaneste');
 
-update identitate.invitatii set expira_la = now() - interval '1 minute' where cod = pg_temp.cod('c3');
-update identitate.invitatii set revocata_la = now() where cod = pg_temp.cod('c4');
-
-select pg_temp.fara_claims();
-set local role authenticated;
-select throws_ok($$select identitate.foloseste_invitatie(pg_temp.cod('c1'))$$,
-  'Nu esti autentificat.',
-  'identitate.foloseste_invitatie: refuzat fara autentificare');
-reset role;
-
-select pg_temp.ca('nou');
-set local role authenticated;
-select is(identitate.foloseste_invitatie('ZZZZZZZZ') ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.',
-  'identitate.foloseste_invitatie: cod inexistent');
-select is(identitate.foloseste_invitatie(pg_temp.cod('c3')) ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.',
-  'identitate.foloseste_invitatie: cod expirat');
-select is(identitate.foloseste_invitatie(pg_temp.cod('c4')) ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.',
-  'identitate.foloseste_invitatie: cod revocat');
-select is(
-  identitate.foloseste_invitatie('  ' || lower(pg_temp.cod('c1')) || ' '),
-  jsonb_build_object('apartament_id', pg_temp.id('apA1'), 'apartament_numar', '1'),
-  'identitate.foloseste_invitatie: codul scris cu litere mici si spatii leaga apartamentul');
+select pg_temp.ca_serviciu();
+select lives_ok(
+  $$select identitate.leaga_locatar(pg_temp.id('nou'), pg_temp.id('apA1'), 'proprietar')$$,
+  'identitate.leaga_locatar: serviciul leaga contul de apartament');
 select results_eq(
   $$select apartament_id, bloc_id, calitate, activ_din, activ_pana from identitate.locatari where profil_id = pg_temp.id('nou')$$,
   $$values (pg_temp.id('apA1'), pg_temp.id('blocA'), 'proprietar'::text, current_date, null::date)$$,
-  'identitate.foloseste_invitatie: legatura de locatar incepe azi');
-select is(identitate.eu() ->> 'rol', 'locatar', 'identitate.eu: dupa cod, contul este locatar');
-reset role;
-select results_eq(
-  $$select folosita_de, folosita_la is not null from identitate.invitatii where cod = pg_temp.cod('c1')$$,
-  $$values (pg_temp.id('nou'), true)$$,
-  'identitate.foloseste_invitatie: codul este marcat folosit');
-
-select pg_temp.ca('strain');
-set local role authenticated;
-select is(identitate.foloseste_invitatie(pg_temp.cod('c1')) ->> 'eroare',
-  'Codul nu este valabil. Cere administratorului un cod nou.',
-  'identitate.foloseste_invitatie: codul nu se poate folosi de doua ori');
-reset role;
-
-select pg_temp.ca('nou');
-set local role authenticated;
-select throws_ok($$select identitate.foloseste_invitatie(pg_temp.cod('c5'))$$,
-  'Esti deja legat de acest apartament.',
-  '[S11] un al doilea cod pentru acelasi apartament nu se consuma fara efect');
-select is(
-  (select folosita_la from identitate.invitatii where cod = pg_temp.cod('c5')), null,
-  '[S11] codul c5 ramane nefolosit dupa refuz, nu marcat fara efect');
-reset role;
+  'identitate.leaga_locatar: legatura incepe azi, pe blocul apartamentului');
+select throws_ok(
+  $$select identitate.leaga_locatar(pg_temp.id('nou'), pg_temp.id('apA1'))$$,
+  'Contul este deja legat de acest apartament.',
+  'identitate.leaga_locatar: acelasi apartament de doua ori este refuzat');
+select lives_ok(
+  $$select identitate.leaga_locatar(pg_temp.id('nou'), pg_temp.id('apA2'), 'chirias')$$,
+  '[P1/P5] identitate.leaga_locatar: acelasi om, al doilea apartament');
+select throws_ok(
+  $$select identitate.leaga_locatar(pg_temp.id('nou'), '00000000-0000-4000-8000-000000000000')$$,
+  'Apartamentul nu exista.',
+  'identitate.leaga_locatar: apartamentul inexistent este refuzat');
+select throws_ok(
+  $$select identitate.leaga_locatar(pg_temp.id('strain'), pg_temp.id('apA1'), 'vecin')$$,
+  '23514', null,
+  'identitate.leaga_locatar: calitatea necunoscuta este refuzata');
 
 -- -----------------------------------------------------------------------------
 -- identitate.inchide_acces_locatar
@@ -538,7 +450,7 @@ reset role;
 
 insert into pg_temp.t_id select 'legA2', id from identitate.locatari where profil_id = pg_temp.id('locA2');
 insert into pg_temp.t_id select 'legA1', id from identitate.locatari where profil_id = pg_temp.id('locA1');
-insert into pg_temp.t_id select 'legNou', id from identitate.locatari where profil_id = pg_temp.id('nou');
+insert into pg_temp.t_id select 'legNou', id from identitate.locatari where profil_id = pg_temp.id('nou') and apartament_id = pg_temp.id('apA1');
 
 select pg_temp.ca('adminB');
 set local role authenticated;
@@ -574,35 +486,10 @@ reset role;
 
 select pg_temp.ca('nou');
 set local role authenticated;
-select is_empty($$select private.apartamentele_mele()$$,
+/* Contul are doua apartamente (P1/P5); cel inchis azi nu mai este intre ele */
+select set_eq($$select private.apartamentele_mele()$$, array[pg_temp.id('apA2')],
   '[S11] o legatura facuta si inchisa azi nu mai da acces azi');
 reset role;
-select isnt(
-  (select revocata_la from identitate.invitatii where cod = pg_temp.cod('c2')), null,
-  '[S11] inchiderea accesului revoca codurile nefolosite ale apartamentului');
-select has_function('identitate', 'revoca_invitatie', '[S11] exista comanda identitate.revoca_invitatie');
-
--- identitate.revoca_invitatie: un cod se poate anula si fara sa se inchida
--- vreun acces (dat gresit, trimis catre alt apartament etc).
-select pg_temp.ca('adminB');
-set local role authenticated;
-select throws_ok($$select identitate.revoca_invitatie((select id from identitate.invitatii where cod = pg_temp.cod('c3')))$$,
-  'Codul nu exista sau nu este din blocul tau.',
-  '[S11] revoca_invitatie: administratorul altui bloc este refuzat');
-reset role;
-select pg_temp.ca('adminA');
-set local role authenticated;
-insert into t_cod values ('c6', identitate.invita_locatar(pg_temp.id('apA1')));
-select lives_ok($$select identitate.revoca_invitatie((select id from identitate.invitatii where cod = pg_temp.cod('c6')))$$,
-  '[S11] revoca_invitatie: administratorul blocului revoca un cod nefolosit');
-select isnt(
-  (select revocata_la from identitate.invitatii where cod = pg_temp.cod('c6')), null,
-  '[S11] revoca_invitatie: codul c6 este marcat revocat');
-select throws_ok($$select identitate.revoca_invitatie((select id from identitate.invitatii where cod = pg_temp.cod('c1')))$$,
-  'Codul a fost deja folosit; revocarea nu mai are efect.',
-  '[S11] revoca_invitatie: un cod deja folosit nu se mai revoca');
-reset role;
-
 -- -----------------------------------------------------------------------------
 -- Functiile ajutatoare din private
 -- -----------------------------------------------------------------------------
@@ -685,20 +572,20 @@ select is(pg_temp.randuri($$update identitate.profiluri set nume = 'Ion Locatar'
   'politica "Fiecare isi modifica profilul": propriul profil');
 select is(pg_temp.randuri($$update identitate.profiluri set nume = 'Hack' where id = pg_temp.id('adminA')$$), 0,
   'politica "Fiecare isi modifica profilul": nu si profilul altuia');
-select throws_ok($$update identitate.profiluri set email = 'x@y.z' where id = pg_temp.id('locA1')$$, '42501', null,
-  'identitate.profiluri: emailul nu se modifica din aplicatie');
+-- [A2] Numarul este identitatea contului: cine si l-ar putea scrie ar primi
+-- apartamentul pe care administratorul il adauga mai tarziu pe acel numar.
+select throws_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA1')$$, '42501', null,
+  '[A2] identitate.profiluri: numarul de telefon nu se modifica din aplicatie');
 select set_eq($$select profil_id from identitate.membri_asociatie where asociatie_id in (pg_temp.id('asocA'), pg_temp.id('asocB'))$$,
   array[pg_temp.id('adminA'), pg_temp.id('adminNou'), pg_temp.id('adminFost'), pg_temp.id('presA'), pg_temp.id('adminDublu')],
   'politica "Mandatele se vad in asociatie": locatarul vede mandatele asociatiei lui, nu si ale altora');
 select set_eq($$select profil_id from identitate.locatari where bloc_id in (pg_temp.id('blocA'), pg_temp.id('blocB'))$$,
   array[pg_temp.id('locA1')],
   'politica "Legaturile proprii si cele din blocurile conduse": locatarul vede doar legatura lui');
-select is_empty($$select 1 from identitate.invitatii$$,
-  'politica "Administratorul vede invitatiile blocului": locatarul nu vede invitatii');
 select is_empty($$select 1 from identitate.administratori$$,
   'politica "Fiecare isi vede verificarea": locatarul nu vede verificari');
 select throws_ok($$insert into identitate.locatari (apartament_id, bloc_id, profil_id, calitate) values (pg_temp.id('apA2'), pg_temp.id('blocA'), pg_temp.id('locA1'), 'proprietar')$$,
-  '42501', null, 'identitate.locatari: legatura nu se scrie direct, doar prin cod');
+  '42501', null, 'identitate.locatari: legatura nu se scrie direct, ci prin comanda serviciului');
 reset role;
 
 select pg_temp.ca('adminA');
@@ -711,8 +598,6 @@ select set_eq($$select profil_id from identitate.administratori$$, array[pg_temp
   'politica "Fiecare isi vede verificarea": doar randul propriu');
 select throws_ok($$update identitate.administratori set stare = 'aprobat' where profil_id = pg_temp.id('adminNou')$$, '42501', null,
   'identitate.administratori: starea nu se schimba din aplicatie');
-select is((select count(*)::int from identitate.invitatii where apartament_id = pg_temp.id('apA1')), 5,
-  'politica "Administratorul vede invitatiile blocului": administratorul vede codurile blocului');
 reset role;
 
 select pg_temp.ca('presA');
@@ -724,8 +609,6 @@ reset role;
 
 select pg_temp.ca('adminB');
 set local role authenticated;
-select is_empty($$select 1 from identitate.invitatii where apartament_id = pg_temp.id('apA1')$$,
-  'politica "Administratorul vede invitatiile blocului": nu si pe ale altui bloc');
 select set_eq($$select profil_id from identitate.locatari where bloc_id in (pg_temp.id('blocA'), pg_temp.id('blocB'))$$,
   array[pg_temp.id('locB1')],
   'politica "Legaturile proprii si cele din blocurile conduse": administratorul B nu vede blocul A');
@@ -770,11 +653,6 @@ begin
   values (v_ap, pg_temp.id('blocA'), v_vanzator, 'proprietar', current_date - 400)
   returning id into v_leg;
 
-  -- Un cod vechi, emis cu 10 zile inainte de data reala de plecare (acum 5
-  -- zile): trebuie revocat.
-  insert into identitate.invitatii (apartament_id, cod, calitate, creat_de, expira_la, creat_la)
-  values (v_ap, 'H9VECH29', 'chirias', pg_temp.id('adminA'), now() + interval '20 days', now() - interval '15 days');
-
   insert into pg_temp.t_id values ('apH9', v_ap);
   insert into pg_temp.t_id values ('legH9', v_leg);
 end;
@@ -782,22 +660,203 @@ $$;
 
 select pg_temp.ca('adminA');
 set local role authenticated;
--- Codul cumparatorului, dat azi, inainte de inchiderea accesului vanzatorului.
-insert into t_cod values ('h9cumparator', identitate.invita_locatar(pg_temp.id('apH9')));
 select lives_ok(
   format('select identitate.inchide_acces_locatar(%L, %L)', pg_temp.id('legH9'), current_date - 5),
-  '[H9] inchide_acces_locatar: inchide accesul vanzatorului cu data reala de plecare, in trecut');
+  '[S11] inchide_acces_locatar: inchide accesul vanzatorului cu data reala de plecare, in trecut');
+reset role;
+select is(
+  (select activ_pana from identitate.locatari where id = pg_temp.id('legH9')), current_date - 5,
+  '[S11] legatura se inchide chiar la data ceruta, nu azi');
+
+-- -----------------------------------------------------------------------------
+-- Conducerea asociatiei: identitate.numeste_in_conducere si incheie_mandat
+-- (adunarea generala ii alege, administratorul trece in aplicatie hotararea)
+-- -----------------------------------------------------------------------------
+
+select pg_temp.ca('presA');
+set local role authenticated;
+select is(identitate.eu() ->> 'rol', 'presedinte',
+  'identitate.eu: presedintele isi primeste rolul, nu "fara apartament"');
+select is((identitate.eu() ->> 'asociatie_id')::uuid, pg_temp.id('asocA'),
+  'identitate.eu: presedintele primeste asociatia pe care o supravegheaza');
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA1'), 'cenzor')$$,
+  'Doar administratorul asociatiei numeste presedintele si cenzorul.',
+  'numeste_in_conducere: presedintele nu numeste pe altcineva');
 reset role;
 
-select isnt(
-  (select revocata_la from identitate.invitatii where cod = 'H9VECH29'), null,
-  '[H9] codul emis inainte de data de inchidere este revocat');
-select is(
-  (select revocata_la from identitate.invitatii where cod = pg_temp.cod('h9cumparator')), null,
-  '[H9] codul cumparatorului, emis dupa data de inchidere, nu este revocat');
-select is(
-  (select folosita_la from identitate.invitatii where cod = pg_temp.cod('h9cumparator')), null,
-  '[H9] codul cumparatorului ramane utilizabil (nefolosit, nerevocat)');
+select pg_temp.ca('locA1');
+set local role authenticated;
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA2'), 'cenzor')$$,
+  'Doar administratorul asociatiei numeste presedintele si cenzorul.',
+  'numeste_in_conducere: locatarul nu numeste pe nimeni');
+reset role;
+
+select pg_temp.ca('adminA');
+set local role authenticated;
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA1'), 'administrator')$$,
+  'Mandatul este de presedinte sau de cenzor.',
+  'numeste_in_conducere: un mandat de administrator nu se da de aici');
+select throws_ok($$select identitate.numeste_in_conducere('00000000-0000-4000-8000-000000000000', 'cenzor')$$,
+  'Persoana nu exista.',
+  'numeste_in_conducere: o persoana inexistenta este refuzata');
+select set_config('fx.mandat', identitate.numeste_in_conducere(pg_temp.id('locA1'), 'cenzor')::text, true);
+select results_eq(
+  $$select rol, activ_din, activ_pana from identitate.membri_asociatie where id = current_setting('fx.mandat')::uuid$$,
+  $$values ('cenzor'::text, current_date, null::date)$$,
+  'numeste_in_conducere: mandatul incepe azi si este deschis');
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA1'), 'cenzor')$$,
+  'Persoana are deja acest mandat, in curs.',
+  'numeste_in_conducere: acelasi mandat, a doua oara, este refuzat');
+reset role;
+
+select pg_temp.ca('locA1');
+set local role authenticated;
+select is(identitate.eu() ->> 'rol', 'cenzor',
+  'identitate.eu: cenzorul care e si locatar vede blocul ca cenzor');
+-- [C2] ... fara sa-si piarda apartamentul: altfel nu mai transmite indexul,
+-- nu mai scrie sesizari si nu mai voteaza (Legea 196/2018 cere ca
+-- presedintele sa fie proprietar, deci cazul este regula).
+select is((identitate.eu() ->> 'apartament_id')::uuid, pg_temp.id('apA1'),
+  '[C2] identitate.eu: conducerea care locuieste in bloc isi pastreaza apartamentul');
+reset role;
+
+select pg_temp.ca('adminB');
+set local role authenticated;
+select throws_ok($$select identitate.incheie_mandat(current_setting('fx.mandat')::uuid)$$,
+  'Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.',
+  'incheie_mandat: administratorul altei asociatii este refuzat');
+reset role;
+
+select pg_temp.ca('adminA');
+set local role authenticated;
+select lives_ok($$select identitate.incheie_mandat(current_setting('fx.mandat')::uuid)$$,
+  'incheie_mandat: administratorul incheie mandatul');
+select isnt((select activ_pana from identitate.membri_asociatie where id = current_setting('fx.mandat')::uuid), null,
+  'incheie_mandat: mandatul ramane in istoric, cu data de incheiere');
+select throws_ok($$select identitate.incheie_mandat(current_setting('fx.mandat')::uuid)$$,
+  'Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.',
+  'incheie_mandat: un mandat incheiat nu se mai incheie o data');
+select lives_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA1'), 'cenzor')$$,
+  'numeste_in_conducere: un mandat incheiat se poate redeschide');
+-- [C7] Realegerea nu sterge mandatul dinainte: adunarea generala il alege pe
+-- acelasi om peste cativa ani, iar ecranul trebuie sa arate amandoua perioadele.
+select is((select count(*)::int from identitate.membri_asociatie
+           where asociatie_id = pg_temp.id('asocA') and profil_id = pg_temp.id('locA1') and rol = 'cenzor'), 2,
+  '[C7] numeste_in_conducere: realegerea este un mandat nou, cel vechi ramane in istoric');
+select throws_ok($$select identitate.incheie_mandat(
+    (select id from identitate.membri_asociatie where profil_id = pg_temp.id('adminA') and rol = 'administrator'))$$,
+  'Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.',
+  'incheie_mandat: mandatul de administrator nu se incheie de aici');
+-- [C8] Cel care tine banii nu poate fi si cel care ii verifica
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('adminA'), 'cenzor')$$,
+  'Administratorul asociatiei nu poate fi si presedinte sau cenzor: el este cel verificat.',
+  '[C8] numeste_in_conducere: administratorul nu se numeste pe el insusi');
+-- [C12] Un mandat care incepe maine ar aparea pe ecran ca fiind in curs
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA2'), 'presedinte', current_date + 1)$$,
+  'Mandatul nu poate incepe in viitor.',
+  '[C12] numeste_in_conducere: mandatul nu incepe in viitor');
+-- [C6] Numit din greseala, scos imediat: drepturile se sting azi, nu maine
+select lives_ok($$select identitate.incheie_mandat(
+    (select id from identitate.membri_asociatie
+      where asociatie_id = pg_temp.id('asocA') and profil_id = pg_temp.id('locA1')
+        and rol = 'cenzor' and activ_pana is null))$$,
+  '[C6] incheie_mandat: un mandat inceput azi se incheie azi');
+select is((select max(activ_pana) from identitate.membri_asociatie
+           where asociatie_id = pg_temp.id('asocA') and profil_id = pg_temp.id('locA1') and rol = 'cenzor'), current_date,
+  '[C6] incheie_mandat: data de incheiere este cea reala, nu ziua urmatoare');
+reset role;
+
+select pg_temp.ca('locA1');
+set local role authenticated;
+select is_empty($$select 1 from private.asociatii_supravegheate()$$,
+  '[C6] mandatul incheiat azi nu mai da drepturi de supraveghere azi');
+select is(identitate.eu() ->> 'rol', 'locatar',
+  '[C6] omul scos din conducere se intoarce azi la ecranele lui de locatar');
+reset role;
+
+-- [C5] Administratorul cu doua asociatii: mandatul merge in asociatia pe care
+-- o vede pe ecran, nu in oricare dintre ele.
+select pg_temp.ca('adminDublu');
+set local role authenticated;
+select is(identitate.asociatia_de_administrat(), (identitate.eu() ->> 'asociatie_id')::uuid,
+  '[C5] asociatia_de_administrat: aceeasi asociatie pe care o arata identitate.eu()');
+select set_config('fx.mandatB', identitate.numeste_in_conducere(pg_temp.id('locB1'), 'cenzor')::text, true);
+select is((select asociatie_id from identitate.membri_asociatie where id = current_setting('fx.mandatB')::uuid),
+  (identitate.eu() ->> 'asociatie_id')::uuid,
+  '[C5] numeste_in_conducere: fara asociatie ceruta, mandatul merge unde arata ecranul');
+select set_config('fx.mandatA', identitate.numeste_in_conducere(pg_temp.id('locB1'), 'presedinte', current_date, pg_temp.id('asocA'))::text, true);
+select is((select asociatie_id from identitate.membri_asociatie where id = current_setting('fx.mandatA')::uuid),
+  pg_temp.id('asocA'),
+  '[C5] numeste_in_conducere: asociatia ceruta este cea in care intra mandatul');
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locB1'), 'cenzor', current_date, '00000000-0000-4000-8000-000000000000')$$,
+  'Doar administratorul asociatiei numeste presedintele si cenzorul.',
+  '[C5] numeste_in_conducere: o asociatie straina este refuzata');
+select throws_ok($$select identitate.asociatia_de_administrat('00000000-0000-4000-8000-000000000000')$$,
+  'Nu esti administratorul acestei asociatii.',
+  '[C5] asociatia_de_administrat: o asociatie straina este refuzata');
+reset role;
+
+select pg_temp.ca_anonim();
+set local role anon;
+select throws_ok($$select identitate.numeste_in_conducere(pg_temp.id('locA1'), 'cenzor')$$,
+  '42501', null, 'numeste_in_conducere: anon nu are acces');
+select throws_ok($$select identitate.incheie_mandat(current_setting('fx.mandat')::uuid)$$,
+  '42501', null, 'incheie_mandat: anon nu are acces');
+reset role;
+
+
+-- -----------------------------------------------------------------------------
+-- [A5] Numarul de telefon: unic si normalizat in baza, nu doar in JavaScript
+-- -----------------------------------------------------------------------------
+
+select is(private.normalizeaza_telefon('+40 0722 123 456'), '0722123456',
+  '[A6] private.normalizeaza_telefon: prefixul tarii si zeroul de acasa dau acelasi numar');
+select is(private.normalizeaza_telefon('0248 210 118'), '0248210118',
+  '[A5] private.normalizeaza_telefon: numarul fix scris cu spatii');
+select is(private.normalizeaza_telefon('+33722123456'), null,
+  '[A5] private.normalizeaza_telefon: un numar strain nu este numar romanesc');
+
+select pg_temp.ca_serviciu();
+set local role service_role;
+select lives_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA1')$$,
+  '[A5] profiluri.telefon: zece cifre care incep cu 07 intra in baza');
+select throws_ok($$update identitate.profiluri set telefon = '072212' where id = pg_temp.id('locA2')$$,
+  '23514', null, '[A5] profiluri.telefon: un numar scurt este refuzat de baza');
+select throws_ok($$update identitate.profiluri set telefon = '0722 118 005' where id = pg_temp.id('locA2')$$,
+  '23514', null, '[A5] profiluri.telefon: numarul cu spatii este refuzat, se pastreaza normalizat');
+select throws_ok($$update identitate.profiluri set telefon = '0799000111' where id = pg_temp.id('locA2')$$,
+  '23505', null, '[A5] profiluri.telefon: doi oameni nu pot avea acelasi numar');
+reset role;
+
+-- -----------------------------------------------------------------------------
+-- [A4] identitate.inchide_sesiunile: dupa o parola noua, cine era inauntru iese
+-- -----------------------------------------------------------------------------
+
+select pg_temp.ca('locA1');
+set local role authenticated;
+set local teste.sesiune = 'authenticator';
+select throws_ok($$select identitate.inchide_sesiunile(pg_temp.id('locA1'))$$,
+  '42501', null, '[A4] inchide_sesiunile: locatarul nu are drept de executie');
+reset role;
+select pg_temp.fara_claims();
+set local role service_role;
+set local teste.sesiune = 'authenticator';
+select throws_ok($$select identitate.inchide_sesiunile(pg_temp.id('locA1'))$$,
+  'Doar serviciul poate inchide sesiunile unui cont.',
+  '[A4] inchide_sesiunile: refuzata in afara serviciului');
+set local teste.sesiune = '';
+reset role;
+
+insert into auth.sessions (id, user_id, created_at, updated_at, not_after)
+values (gen_random_uuid(), pg_temp.id('locA1'), now(), now(), now() + interval '1 day');
+insert into auth.refresh_tokens (token, user_id, revoked, created_at, updated_at)
+values ('rt-a4-' || pg_temp.id('locA1'), pg_temp.id('locA1')::text, false, now(), now());
+select lives_ok($$select identitate.inchide_sesiunile(pg_temp.id('locA1'))$$,
+  '[A4] inchide_sesiunile: serviciul inchide sesiunile contului');
+select is((select count(*)::int from auth.sessions where user_id = pg_temp.id('locA1')), 0,
+  '[A4] inchide_sesiunile: sesiunile deschise dispar');
+select is((select count(*)::int from auth.refresh_tokens where user_id = pg_temp.id('locA1')::text), 0,
+  '[A4] inchide_sesiunile: si token-urile de reimprospatare');
 
 select * from finish();
 rollback;

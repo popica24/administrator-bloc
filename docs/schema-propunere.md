@@ -739,7 +739,7 @@ classDiagram
 | Eveniment de domeniu | un rand in `evenimente.coada`, scris in aceeasi tranzactie cu modificarea |
 | Handler de eveniment | un Database Webhook pe insert in `evenimente.coada` apeleaza Edge Function-ul `proceseaza-eveniment`, care ruleaza functia contextului consumator |
 | Shared kernel (nucleu comun) | schema `private`: functiile ajutatoare pentru RLS din Identitate |
-| Strat anticoruptie | Edge Function-urile care vorbesc cu procesatorul de carduri, ca vocabularul lui sa nu intre niciodata in `financiar` |
+| Strat anticoruptie | Edge Function-urile care vorbesc cu lumea din afara (in propunere: procesatorul de carduri, scos intre timp), ca vocabularul ei sa nu intre niciodata in `financiar` |
 
 `evenimente.coada` (nu e expusa prin API):
 
@@ -1233,18 +1233,21 @@ modifice datoria initiala.
 |---|---|---|
 | `apartament_id`, `bloc_id` | uuid | cheie straina compusa → `conturi` |
 | `suma` | numeric(12,2) not null | check `> 0` |
-| `metoda` | text not null | `card` · `numerar` · `transfer` |
-| `stare` | text not null | `in_asteptare` · `confirmata` · `esuata` · `rambursata` |
-| `procesator`, `referinta_procesator` | text | unique `(procesator, referinta_procesator)` |
-| `platita_de` | uuid → identitate.profiluri, null | locatarul care a platit cu cardul |
+| `metoda` | text not null | `numerar` · `transfer` (cardul a fost scos pe 23 septembrie 2026) |
+| `stare` | text not null | `confirmata` · `rambursata` |
+| `cheie_client` | uuid | unique `(apartament_id, cheie_client)`; cheia cererii care a inregistrat plata [B2] |
+| `platita_de` | uuid → identitate.profiluri, null | cine a platit, daca nu este proprietarul |
 | `inregistrata_de` | uuid → identitate.profiluri, null | administratorul care a primit numerarul |
 | `confirmata_la` | timestamptz | |
 
-**De ce:** plata cu cardul porneste ca `in_asteptare` si devine `confirmata` doar cand
-webhook-ul procesatorului de plati confirma. Referinta unica face ca webhook-ul sa poata fi
-primit de doua ori fara probleme. In solduri intra doar platile confirmate. Numerarul inseamna
-"inregistreaza banii primiti cash si emite chitanta", facut atomic prin
-`inregistreaza_plata_numerar()`.
+**De ce:** *(scris in septembrie 2026, cand plata cu cardul era inca in plan; pe 23 septembrie
+2026 a fost scoasa cu totul — vezi mai jos.)* In solduri intra doar platile confirmate.
+
+**Cum este azi:** nu exista plata cu cardul si niciun procesator. Banii ii confirma
+administratorul, cu `financiar.inregistreaza_incasare(apartament, suma, metoda, cheie_cerere)`:
+`metoda` este `numerar` sau `transfer`, starea este mereu `confirmata`, iar `cheie_client` face
+ca a doua apasare pe acelasi buton (dupa un raspuns pierdut pe drum) sa intoarca aceeasi plata,
+nu una noua [B2]. Plata + alocare + chitanta raman o singura tranzactie.
 
 #### `alocari_plati` — ce plata a acoperit ce datorie
 
@@ -1501,8 +1504,7 @@ vedea soldul fiecarui apartament.
 | Contorizare | `valideaza_citire(id, accepta, motiv)` | comanda | administratorul valideaza sau respinge o citire |
 | Financiar | `solduri` | view | datoriile minus platile confirmate, pe apartament |
 | Financiar | `sumar_luna` | view | sumarul administratorului: de incasat, incasat, restante, penalizari, apartamente in urma |
-| Financiar | `inregistreaza_plata_numerar(...)` | comanda | plata + alocare + chitanta intr-o singura tranzactie |
-| Financiar | Edge Function `plata-card` + webhook | comanda | creeaza plata in asteptare, o confirma, o aloca, emite chitanta; stratul anticoruptie fata de procesatorul de carduri |
+| Financiar | `inregistreaza_incasare(...)` | comanda | banii primiti (numerar sau transfer): plata + alocare + chitanta intr-o singura tranzactie |
 | Financiar | `la_lista_publicata(eveniment)` | handler de eveniment | creeaza datoriile si miscarea din fondul de reparatii |
 | Financiar | `pg_cron`: `calculeaza_penalizari` | job | penalizarile lunare; inregistreaza `DatorieRestanta` |
 | Comunicare | `pg_cron`: `trimite_remindere` | job | reminderele zilnice |
@@ -1567,8 +1569,9 @@ deliberata, care lucreaza in ordine.
    numele autorului.
 5. **Accesul presedintelui si al cenzorului:** doar citire pe vederea administratorului, cum se
    propune, sau mai putin?
-6. **Procesatorul de plati cu cardul** (Netopia, Stripe, EuPlatesc, ...): schimba doar coloanele
-   `procesator` / `referinta_procesator` si Edge Function-ul anticoruptie.
+6. **Procesatorul de plati cu cardul** (Netopia, Stripe, EuPlatesc, ...): *raspuns dat pe 23
+   septembrie 2026 — nu exista. Banii se dau in mana administratorului sau prin transfer
+   bancar, iar el confirma incasarea in aplicatie.*
 7. **O schema pentru fiecare context, sau totul in `public`?** Propunerea foloseste cate o schema
    pe context, ca granitele sa existe in baza de date si nu doar pe hartie. Costul: fiecare schema
    trebuie trecuta in `config.toml` si primeste grant-uri, iar aplicatia apeleaza

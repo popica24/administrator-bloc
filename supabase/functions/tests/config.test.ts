@@ -37,8 +37,12 @@ Deno.test("config: ajutorul de citire gaseste doar cheile active din sectiunea c
 
 // ---------------------------------------------------------------- X03
 
-Deno.test("[X03] config: emailul trebuie confirmat inainte de autentificare", () => {
-  assertEquals(setare("auth.email", "enable_confirmations"), "true");
+Deno.test("[X03] config: intrarea in cont merge, dar nu prin SMS", () => {
+  // Contul se tine pe o adresa interna facuta din numarul de telefon, deci
+  // furnizorul de email ramane pornit (cu el se intra in cont); SMS-ul nu se
+  // foloseste deloc: nu trimitem niciun mesaj.
+  assertEquals(setare("auth.email", "enable_signup"), "true");
+  assertEquals(setare("auth.sms", "enable_signup"), "false");
 });
 
 Deno.test("[X03] config: parola are cel putin 10 caractere", () => {

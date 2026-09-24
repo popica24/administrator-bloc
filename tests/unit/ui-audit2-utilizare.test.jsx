@@ -97,7 +97,7 @@ describe("[F25] anularea platii catre furnizor se confirma", () => {
 describe("[R5] platile se ordoneaza dupa momentul lor, nu dupa sirul ISO", () => {
   it("schimbarea de fus orar nu inverseaza ultimele doua plati", async () => {
     const plata = (id, suma, confirmataLa) => ({
-      id, apartamentId: AP, suma, stare: "confirmata", metoda: "card", confirmataLa,
+      id, apartamentId: AP, suma, stare: "confirmata", metoda: "transfer", confirmataLa,
       referinta: id, inregistrataDe: null, chitanta: null, alocari: [],
     });
     const { container } = await pornesteApp({

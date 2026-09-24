@@ -5,7 +5,7 @@
      vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
      import { pornesteApp, ZI_DEMO } from "./ajutor.jsx";
 
-     const { sursa } = await pornesteApp({ email: "elena.marinescu@adminbloc.test" });
+     const { sursa } = await pornesteApp({ email: "0733 410 217" });
 
    Datele demo sunt fixate in 2026, deci ceasul testelor se opreste pe ZI_DEMO.
    `modifica` primeste obiectul `date` intors de incarca() si il poate schimba,
@@ -17,8 +17,9 @@ import AdminBloc from "../../src/AdminBloc.jsx";
 
 export const ZI_DEMO = new Date("2026-09-19T09:00:00");
 export const PAROLA = "Bloc-D14-2026";
-export const ADMIN = "administrator@adminbloc.test";
-export const LOCATAR = "elena.marinescu@adminbloc.test";
+/* Conturile se tin pe numar de telefon (src/date-demo.js) */
+export const ADMIN = "0745 210 118";
+export const LOCATAR = "0733 410 217";
 
 /* Opreste doar Date, ca promisiunile si setTimeout sa mearga normal */
 export function ceasDemo(zi = ZI_DEMO) {

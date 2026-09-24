@@ -17,6 +17,9 @@ import * as D from "./date-demo.js";
 import { documentPdf } from "./pdf.js";
 /* [K22] seara unei zile, ora Romaniei: acelasi calcul ca sursa Supabase si ecranul */
 import { oraSeriiRomania, dataOraRomania, aziRomania } from "./ora-romania.js";
+/* Contul se tine pe numar de telefon, ca in sursa Supabase */
+import { normalizeazaTelefon } from "../supabase/functions/_shared/telefon.js";
+import { genereazaParola } from "../supabase/functions/_shared/parola.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -39,12 +42,6 @@ const LUNI = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iul
 const lunaText = (l) => `${LUNI[Number(l.slice(5, 7)) - 1]} ${l.slice(0, 4)}`;
 const dataText = (d) => `${Number(d.slice(8, 10))} ${LUNI[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const acum = () => new Date().toISOString();
-/* Eticheta de test care reproduce, in modul demonstrativ, cazul "Auth cere
-   confirmarea emailului" din sursa Supabase (vezi inregistreaza() mai jos).
-   Exportata (nu doar un sir scris pe loc), ca testul de paritate sa nu
-   depinda de un literal copiat separat si ca eticheta sa fie gasibila prin
-   cautare (G14: conventia e deliberata, nu o scapare). */
-export const ETICHETA_CERE_CONFIRMARE = "+cere-confirmare";
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 const round4 = (n) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 const eroare = (mesaj) => { throw new Error(mesaj); };
@@ -64,11 +61,11 @@ const numarSauNull = (v) => (v === "" || v == null ? null : Number(v));
 
 const TABELE = [
   "asociatii", "blocuri", "contacte", "apartamente", "persoane", "profiluri", "autentificari",
-  "administratori", "membri", "locatari", "invitatii", "furnizori", "recurente", "liste",
+  "administratori", "membri", "locatari", "furnizori", "recurente", "liste",
   "cheltuieli", "repartizari", "contoare", "citiri", "documente", "datorii", "plati", "alocari",
   "chitante", "penalizari", "fonduri", "miscari", "sesizari", "mesaje", "poze", "voturi",
   "optiuni", "exprimate", "adunari", "prezente", "anunturi", "citiriAnunturi", "remindere",
-  "notificari", "incercariInvitatii",
+  "notificari",
 ];
 
 /* =============================================================================
@@ -114,11 +111,34 @@ const restDatorie = (db, d) => {
   if (d.tip === "penalizare") {
     return round2(propriu + db.datorii.filter((x) => x.anuleazaDatorieId === d.id).reduce((s, x) => s + x.suma, 0));
   }
-  if (d.tip !== "intretinere") return propriu;
-  const reducere = db.datorii
-    .filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId)
+  const inPachet = d.listaId && (d.tip === "intretinere" || (d.tip === "corectie" && d.suma > 0));
+  if (!inPachet) return propriu;
+  /* [B1] Corectiile negative ale listei se compenseaza intai cu ce mai are de
+     primit lista (intretinerea, apoi corectiile pozitive, in ordinea lor) si
+     abia ce ramane cade pe intretinere, ca rest negativ, adica avans. */
+  const deScazut = -db.datorii
+    .filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId
+      && areDatorieSora(db, c))
     .reduce((s, c) => s + round2(c.suma - alocatDatorie(db, c.id)), 0);
-  return round2(propriu + reducere);
+  if (deScazut <= 0) return propriu;
+  /* [B3] aceeasi ordine ca in financiar.datorii_rest: intai corectiile
+     pozitive, de la cea mai noua (o corectie negativa o anuleaza de obicei pe
+     cea dinaintea ei), si abia la urma randul de intretinere, care isi
+     pastreaza scadenta initiala */
+  const alePachetului = (tip) => db.datorii.filter((x) => x.listaId === d.listaId
+    && x.apartamentId === d.apartamentId && x.tip === tip);
+  const pachet = [
+    ...alePachetului("corectie").filter((x) => x.suma > 0)
+      .sort((a, b) => `${b.creatLa}|${b.id}`.localeCompare(`${a.creatLa}|${a.id}`)),
+    ...alePachetului("intretinere"),
+  ];
+  const cap = (x) => Math.max(round2(x.suma - alocatDatorie(db, x.id)), 0);
+  const inainte = pachet.slice(0, pachet.findIndex((x) => x.id === d.id)).reduce((s, x) => s + cap(x), 0);
+  const scade = Math.max(Math.min(cap(d), deScazut - inainte), 0);
+  const ramasita = d.tip === "intretinere"
+    ? Math.max(deScazut - pachet.reduce((s, x) => s + cap(x), 0), 0)
+    : 0;
+  return round2(propriu - scade - ramasita);
 };
 
 /* Alocarea unei plati pe datorii, incepand cu cea mai veche scadenta */
@@ -146,28 +166,38 @@ function alocaAvansuri(db, apartamentId) {
 
 /* Orice plata trece prin administrator, care o confirma: inregistrataDe este
    mereu cineva. platitaDe ramane pentru platile facute de locatar insusi. */
-function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe }) {
+function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = null, inregistrataDe, cheieClient = null }) {
   const ap = db.apartamente.find((a) => a.id === apartamentId);
   const plata = db.adauga("plati", {
     apartamentId, blocId: ap.blocId, suma: round2(suma), metoda, stare: "confirmata",
-    platitaDe, inregistrataDe, confirmataLa: la, creatLa: la,
+    platitaDe, inregistrataDe, confirmataLa: la, creatLa: la, cheieClient,
   });
   alocaPlata(db, plata);
   db.setari.chitantaUltimulNumar += 1;
-  db.adauga("chitante", { plataId: plata.id, serie: db.setari.chitantaSerie, numar: db.setari.chitantaUltimulNumar, emisaLa: la, creatLa: la });
+  /* [B6] randurile chitantei se scriu o data, la emitere, si raman asa */
+  const randuri = db.alocari.filter((a) => a.plataId === plata.id).map((a) => {
+    const d = db.datorii.find((x) => x.id === a.datorieId);
+    return { tip: d.tip, luna: d.luna, descriere: d.descriere, suma: a.suma };
+  });
+  const avans = round2(plata.suma - randuri.reduce((t, r) => t + r.suma, 0));
+  if (avans > 0) randuri.push({ tip: "avans", luna: null, descriere: null, suma: avans });
+  const bloc = db.blocuri.find((b) => b.id === ap.blocId);
+  db.adauga("chitante", {
+    plataId: plata.id, serie: db.setari.chitantaSerie, numar: db.setari.chitantaUltimulNumar,
+    emisaLa: la, creatLa: la, randuri,
+    /* [S4] apartamentul si proprietarul de la emitere */
+    emisPentru: { apartament: ap.numar, proprietar: ap.proprietar, bloc: bloc.denumire },
+  });
   return plata;
 }
 
 /* Penalizarile lunii: pentru fiecare datorie ramasa neachitata dupa zilele de
    gratie, rest x procent pe zi x zilele de intarziere de la ultimul calcul. */
-/* [K16/H3] Baza de calcul a unei datorii de intretinere: suma ei redusa de
-   corectiile negative surori (aceeasi lista, acelasi apartament) -- exact
-   formula din financiar.calculeaza_penalizari (migratia H3). Pentru orice
-   alt tip de datorie, baza e chiar suma ei. */
-function bazaIntretinere(db, d) {
-  if (d.tip !== "intretinere") return d.suma;
-  const corectii = db.datorii.filter((c) => c.tip === "corectie" && c.suma < 0 && c.listaId === d.listaId && c.apartamentId === d.apartamentId);
-  return round2(d.suma + corectii.reduce((s, c) => s + c.suma, 0));
+/* [B3] Baza pe care se calculeaza penalizarea: cat a ramas din datorie dupa
+   corectiile listei, fara sa tina cont de ce s-a platit pe ea -- exact
+   financiar.baza_dupa_corectii. */
+function bazaDupaCorectii(db, d) {
+  return Math.max(round2(restDatorie(db, d) + alocatDatorie(db, d.id)), 0);
 }
 
 function calculeazaPenalizari(db, la) {
@@ -180,14 +210,18 @@ function calculeazaPenalizari(db, la) {
       const dela = anterioare.length && anterioare[anterioare.length - 1] > inceput ? anterioare[anterioare.length - 1] : inceput;
       const zileTaxate = zileIntre(dela, la);
       if (zileTaxate <= 0) return;
-      /* [K16/H3] baza corectata: o corectie negativa sora (aceeasi lista,
-         acelasi apartament) reduce direct baza pe care se calculeaza restul
-         si plafonul unei datorii de intretinere. */
-      const baza = bazaIntretinere(db, d);
+      /* [B3] baza corectata: cat a ramas din datorie dupa corectiile listei */
+      const baza = bazaDupaCorectii(db, d);
       const rest = round2(baza - alocatDatorie(db, d.id));
       if (rest <= 0) return;
-      /* Legea 196/2018: toate penalizarile unei datorii nu depasesc datoria (corectata) */
-      const plafon = round2(baza - db.penalizari.filter((p) => p.datorieSursaId === d.id).reduce((s, p) => s + p.suma, 0));
+      /* Legea 196/2018: toate penalizarile unei datorii nu depasesc datoria
+         (corectata), nete de anularile K7 */
+      const penalizate = db.penalizari.filter((p) => p.datorieSursaId === d.id);
+      const anulate = db.datorii.filter((x) => x.tip === "anulare_penalizare"
+        && penalizate.some((p) => p.datorieId === x.anuleazaDatorieId));
+      const plafon = round2(baza
+        - penalizate.reduce((s, p) => s + p.suma, 0)
+        - anulate.reduce((s, x) => s + x.suma, 0));
       const suma = Math.min(rest, plafon, round2((rest * procentPenalizareZi * zileTaxate) / 100));
       if (suma <= 0) return;
       const pen = db.adauga("datorii", {
@@ -358,9 +392,12 @@ function construiesteDemo() {
   D.FURNIZORI.forEach((f) => { furnizor[f.cheie] = db.adauga("furnizori", { asociatieId: asoc.id, ...f }); });
 
   const profil = {};
-  D.CONTURI.forEach((c) => {
-    profil[c.cheie] = db.adauga("profiluri", { nume: c.nume, telefon: c.telefon, email: c.email });
-    db.autentificari.push({ email: c.email, parola: D.PAROLA_DEMO, profilId: profil[c.cheie].id });
+  /* Conducerea (presedinte, cenzor) se creeaza la sfarsit, dupa toate
+     celelalte date: identificatorii din sursa demo sunt o secventa unica, iar
+     testele se sprijina pe ei (lis-807, che-12 si asa mai departe). */
+  D.CONTURI.filter((c) => c.rol !== "presedinte" && c.rol !== "cenzor").forEach((c) => {
+    profil[c.cheie] = db.adauga("profiluri", { nume: c.nume, telefon: normalizeazaTelefon(c.telefon) });
+    db.autentificari.push({ telefon: normalizeazaTelefon(c.telefon), parola: D.PAROLA_DEMO, profilId: profil[c.cheie].id });
     if (c.rol === "administrator") {
       db.adauga("administratori", { profilId: profil[c.cheie].id, numarAtestat: c.atestat, stare: "aprobat" });
       db.adauga("membri", { asociatieId: asoc.id, profilId: profil[c.cheie].id, rol: "administrator", activDin: "2026-05-01", activPana: null });
@@ -522,6 +559,13 @@ function construiesteDemo() {
     profilId: l.profilId, asociatieId: asoc.id, tip: "restanta", la: "2026-09-01T09:00:00+03:00",
     titlu: "Instiintare de plata", corp: "Aveti sume neachitate trecute de scadenta. Va rugam sa le achitati ca sa opriti penalizarile.",
   }));
+  /* Conducerea asociatiei, la urma (vezi mai sus, despre identificatori) */
+  D.CONTURI.filter((c) => c.rol === "presedinte" || c.rol === "cenzor").forEach((c) => {
+    const p = db.adauga("profiluri", { nume: c.nume, telefon: normalizeazaTelefon(c.telefon) });
+    db.autentificari.push({ telefon: normalizeazaTelefon(c.telefon), parola: D.PAROLA_DEMO, profilId: p.id });
+    db.adauga("membri", { asociatieId: asoc.id, profilId: p.id, rol: c.rol, activDin: "2026-06-01", activPana: null });
+  });
+
   return db;
 }
 
@@ -534,24 +578,43 @@ function rolul(db, profilId) {
   const mandat = db.membri.find((m) => m.profilId === profilId && m.rol === "administrator" && !m.activPana);
   const legaturi = db.locatari.filter((l) => l.profilId === profilId && !l.activPana);
   if (adm && adm.stare === "aprobat" && mandat) return { rol: "administrator", mandat, legaturi };
+  /* [paritate identitate.eu()] conducerea care verifica: presedintele intai,
+     apoi cenzorul. Vad tot blocul, fara sa poata schimba ceva. */
+  const mandate = db.membri.filter((m) => m.profilId === profilId && (m.rol === "presedinte" || m.rol === "cenzor") && !m.activPana);
+  const supraveghere = mandate.find((m) => m.rol === "presedinte") || mandate[0];
+  if (supraveghere) return { rol: supraveghere.rol, mandat: supraveghere, legaturi };
   if (legaturi.length) return { rol: "locatar", mandat: null, legaturi };
   if (adm && adm.stare === "in_asteptare") return { rol: "in_asteptare", legaturi };
-  /* [J4] O cerere respinsa nu se pierdea in "fara_apartament": omul trebuie
-     sa vada de ce e blocat, ca sa poata retrimite cererea corectata. */
-  if (adm && adm.stare === "respins") return { rol: "respins", legaturi };
   return { rol: "fara_apartament", legaturi };
+}
+
+/* Rolurile care vad tot blocul (scriu doar administratorul) */
+const conduce = (rol) => rol === "administrator" || rol === "presedinte" || rol === "cenzor";
+
+/* [paritate identitate.numeste_in_conducere] ce opreste un mandat nou:
+   [C8] administratorul asociatiei nu se poate numi pe el insusi presedinte
+   sau cenzor (el este cel verificat), iar un mandat in curs nu se dubleaza. */
+function mandatNou(db, bloc, profilId, rol) {
+  const activ = (r) => db.membri.some((m) => m.asociatieId === bloc.asociatieId
+    && m.profilId === profilId && m.rol === r && !m.activPana);
+  if (activ("administrator")) {
+    eroare("Administratorul asociatiei nu poate fi si presedinte sau cenzor: el este cel verificat.");
+  }
+  if (activ(rol)) eroare("Persoana are deja acest mandat, in curs.");
 }
 
 function proiecteaza(db, profilId, apartamentAles) {
   const profil = db.profiluri.find((p) => p.id === profilId);
   const { rol, mandat, legaturi } = rolul(db, profilId);
   const azi = aziIso();
-  const eu = { profilId, nume: profil.nume, telefon: profil.telefon, email: profil.email, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
-  /* [K21] ca identitate.eu(): doar omul respins afla motivul */
-  if (rol === "respins") eu.motivRespingere = db.administratori.find((a) => a.profilId === profilId).motivRespingere;
-  if (rol !== "administrator" && rol !== "locatar") return { azi, eu };
+  const eu = { profilId, nume: profil.nume, telefon: profil.telefon, rol, apartamentId: legaturi[0] ? legaturi[0].apartamentId : null };
+  if (!conduce(rol) && rol !== "locatar") return { azi, eu };
 
-  const esteAdmin = rol === "administrator";
+  /* [paritate] presedintele si cenzorul vad tot blocul, ca administratorul */
+  const esteAdmin = conduce(rol);
+  /* [C1] Sesizarile raman intre locatar si administrator (H11): presedintele
+     si cenzorul vad blocul, dar sesizarile numai anonim, ca orice locatar. */
+  const esteAdministrator = rol === "administrator";
   const bloc = esteAdmin
     ? db.blocuri.find((b) => b.asociatieId === mandat.asociatieId)
     : db.blocuri.find((b) => b.id === db.apartamente.find((a) => a.id === eu.apartamentId).blocId);
@@ -561,19 +624,19 @@ function proiecteaza(db, profilId, apartamentAles) {
      bloc (proprietar la unul, chirias la altul): toate legaturile lui din
      acest bloc raman vizibile dintr-o singura incarcare, iar apartamentAles
      (daca e chiar al lui) devine apartamentul activ. */
-  if (!esteAdmin) {
+  /* [C2] presedintele sau cenzorul care locuieste in bloc ramane si locatar;
+     un cenzor din afara blocului nu are apartament aici si ramane numai cu
+     panoul de verificare. */
+  if (!esteAdministrator) {
     const legaturileBloc = legaturi.filter((l) => {
       const a = db.apartamente.find((x) => x.id === l.apartamentId);
       return a && a.blocId === bloc.id;
     });
     eu.apartamenteMele = legaturileBloc.map((l) => l.apartamentId);
-    if (apartamentAles && eu.apartamenteMele.includes(apartamentAles)) eu.apartamentId = apartamentAles;
+    eu.apartamentId = eu.apartamenteMele.includes(apartamentAles) ? apartamentAles : (eu.apartamenteMele[0] || null);
     /* [P1] calitatea la apartamentul activ, ca ecranele sa stie inainte sa
-       lase omul sa incerce o actiune rezervata proprietarului (votul).
-       eu.apartamentId e mereu cel implicit (in legaturileBloc prin
-       constructia lui bloc) sau un apartamentAles deja validat mai sus,
-       deci se gaseste mereu aici. */
-    eu.calitate = legaturileBloc.find((l) => l.apartamentId === eu.apartamentId).calitate;
+       lase omul sa incerce o actiune rezervata proprietarului (votul). */
+    eu.calitate = (legaturileBloc.find((l) => l.apartamentId === eu.apartamentId) || {}).calitate || null;
   }
   const vizibile = esteAdmin ? apBloc.map((a) => a.id) : eu.apartamenteMele;
   const alMeu = (id) => vizibile.includes(id);
@@ -586,10 +649,8 @@ function proiecteaza(db, profilId, apartamentAles) {
       .map((p) => ({ valabilDin: p.valabilDin, numar: p.numar, motiv: p.motiv })),
     locatari: esteAdmin ? db.locatari.filter((l) => l.apartamentId === a.id).map((l) => {
       const p = db.profiluri.find((x) => x.id === l.profilId);
-      return { id: l.id, nume: p.nume, email: p.email, telefon: p.telefon, calitate: l.calitate, activDin: l.activDin, activPana: l.activPana };
+      return { id: l.id, profilId: l.profilId, nume: p.nume, telefon: p.telefon, calitate: l.calitate, activDin: l.activDin, activPana: l.activPana };
     }) : [],
-    invitatii: esteAdmin ? db.invitatii.filter((i) => i.apartamentId === a.id && !i.folositaLa && !i.revocataLa && i.expiraLa > acum())
-      .map((i) => ({ id: i.id, cod: i.cod, calitate: i.calitate, expiraLa: i.expiraLa })) : [],
   }));
 
   const liste = db.liste
@@ -649,14 +710,35 @@ function proiecteaza(db, profilId, apartamentAles) {
   }));
   const idDatorii = datorii.map((d) => d.id);
   const penalizari = db.penalizari.filter((p) => idDatorii.includes(p.datorieId)).map((p) => ({ ...p }));
-  const plati = db.plati.filter((p) => p.blocId === bloc.id && alMeu(p.apartamentId)).map((p) => {
+  /* [K4] "a mea" nu inseamna doar acelasi apartament, ci ca eu locuiam acolo
+     cand s-a intamplat: altfel un chirias nou ar mosteni conversatia, pozele
+     si platile fostului locatar. */
+  const legaturaCurenta = (apartamentId) => db.locatari.find((l) => l.profilId === eu.profilId && l.apartamentId === apartamentId && !l.activPana);
+  /* [S3, paritate] Ce a platit un om din buzunarul lui este al lui: chiriasul
+     mutat azi nu vede platile si chitantele celui dinaintea lui, la fel ca la
+     sesizari (K4). Conducerea vede tot blocul. */
+  const platileMele = (p) => {
+    if (esteAdmin) return true;
+    const legatura = legaturaCurenta(p.apartamentId);
+    return !!legatura && p.confirmataLa.slice(0, 10) >= legatura.activDin;
+  };
+  const plati = db.plati.filter((p) => p.blocId === bloc.id && alMeu(p.apartamentId) && platileMele(p)).map((p) => {
     const ch = db.chitante.find((c) => c.plataId === p.id);
     const inreg = db.profiluri.find((x) => x.id === p.inregistrataDe);
+    /* [K13, paritate] alocarile in ordinea in care s-au facut: scadenta, apoi
+       data si id-ul datoriei */
+    const cheieDatorie = (id) => {
+      const x = db.datorii.find((y) => y.id === id);
+      return `${x.scadenta}|${x.creatLa}|${id}`;
+    };
     return {
       id: p.id, apartamentId: p.apartamentId, suma: p.suma, metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmataLa,
       inregistrataDe: inreg.nume,
-      chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa },
-      alocari: db.alocari.filter((a) => a.plataId === p.id).map((a) => ({ datorieId: a.datorieId, suma: a.suma })),
+      /* fiecare plata din sursa demonstrativa primeste chitanta la inregistrare */
+      chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa, randuri: ch.randuri, emisPentru: ch.emisPentru },
+      alocari: db.alocari.filter((a) => a.plataId === p.id)
+        .sort((a, b) => cheieDatorie(a.datorieId).localeCompare(cheieDatorie(b.datorieId)))
+        .map((a) => ({ datorieId: a.datorieId, suma: a.suma })),
     };
   });
 
@@ -678,14 +760,10 @@ function proiecteaza(db, profilId, apartamentAles) {
   });
 
   const numarAp = (id) => db.apartamente.find((a) => a.id === id).numar;
-  /* [K4] "a mea" nu inseamna doar acelasi apartament, ci ca eu locuiam acolo
-     cand a fost scrisa sesizarea: altfel un chirias nou ar mosteni
-     conversatia si pozele fostului locatar. */
-  const legaturaCurenta = (apartamentId) => db.locatari.find((l) => l.profilId === eu.profilId && l.apartamentId === apartamentId && !l.activPana);
   const sesizari = db.sesizari.filter((s) => s.blocId === bloc.id).sort((a, b) => (a.creatLa < b.creatLa ? 1 : -1)).map((s) => {
     const legatura = legaturaCurenta(s.apartamentId);
     const aMea = !!legatura && s.creatLa >= legatura.activDin;
-    const complet = esteAdmin || aMea;
+    const complet = esteAdministrator || aMea;
     return {
       id: s.id, aMea, titlu: s.titlu, categorie: s.categorie, stare: s.stare, creataLa: s.creatLa,
       preluataLa: s.preluataLa, rezolvataLa: s.rezolvataLa,
@@ -752,6 +830,18 @@ function proiecteaza(db, profilId, apartamentAles) {
     datorii, penalizari, plati, situatieBloc, fonduri, sesizari, anunturi, documente, voturi, adunari,
     furnizori: esteAdmin ? db.furnizori.filter((f) => f.asociatieId === asociatie.id).map((f) => ({ id: f.id, denumire: f.denumire, cui: f.cui, categorie: f.categorie, metoda: f.metoda, tipApa: f.tipApa || null, cod: f.cod })) : [],
     remindere: esteAdmin ? db.remindere.filter((r) => r.asociatieId === asociatie.id).map((r) => ({ tip: r.tip, activ: r.activ, zile: r.zile })) : [],
+    /* Conducerea asociatiei: mandatele de presedinte si de cenzor, cu
+       istoricul lor (cele incheiate raman, cu data de incheiere). */
+    conducere: esteAdmin
+      ? db.membri.filter((m) => m.asociatieId === asociatie.id && m.rol !== "administrator")
+        .map((m) => ({
+          id: m.id, rol: m.rol, activDin: m.activDin, activPana: m.activPana,
+          profilId: m.profilId,
+          nume: db.profiluri.find((p) => p.id === m.profilId).nume,
+          telefon: db.profiluri.find((p) => p.id === m.profilId).telefon,
+        }))
+        .sort((a, b) => (a.activPana ? 1 : 0) - (b.activPana ? 1 : 0) || a.rol.localeCompare(b.rol) || a.nume.localeCompare(b.nume))
+      : [],
     notificari: db.notificari.filter((n) => n.profilId === profilId).sort((a, b) => (a.trimisaLa < b.trimisaLa ? 1 : -1))
       .map((n) => ({ id: n.id, tip: n.tip, titlu: n.titlu, corp: n.corp, trimisaLa: n.trimisaLa, cititaLa: n.cititaLa })),
   };
@@ -763,9 +853,6 @@ function proiecteaza(db, profilId, apartamentAles) {
 
 /* Cat cere Supabase Auth in supabase/config.toml */
 const PAROLA_LUNGIME_MINIMA = 10;
-
-const CARACTERE_COD = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const genereazaCod = () => Array.from({ length: 8 }, () => CARACTERE_COD[Math.floor(Math.random() * CARACTERE_COD.length)]).join("");
 
 export function creeazaSursaMock() {
   const db = construiesteDemo();
@@ -810,94 +897,18 @@ export function creeazaSursaMock() {
 
     async sesiuneCurenta() { return sesiune; },
 
-    /* [R4] Mesajul spunea doar ce e gresit ("Emailul sau parola nu sunt
-       corecte."), fara niciun pas urmator. sursa-supabase.js:55 (traduce(),
-       in afara ariei acestei reparatii) intoarce acelasi text tradus din
-       eroarea Auth "Invalid login credentials" si are nevoie de aceeasi
-       actualizare, ca cele doua surse sa ramana la fel. */
-    async intra(email, parola) {
-      const a = db.autentificari.find((x) => x.email.toLowerCase() === String(email).trim().toLowerCase());
-      if (!a || a.parola !== parola) eroare("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
-      sesiune = { profilId: a.profilId, email: a.email };
+    /* [R4] Mesajul spunea doar ce e gresit, fara niciun pas urmator.
+       sursa-supabase.js traduce la fel eroarea Auth "Invalid login
+       credentials", ca cele doua surse sa ramana la fel. */
+    async intra(telefon, parola) {
+      const numar = normalizeazaTelefon(telefon);
+      const a = numar && db.autentificari.find((x) => x.telefon === numar);
+      if (!a || a.parola !== parola) eroare("Numarul de telefon sau parola nu sunt corecte. Verifica-le si incearca din nou.");
+      sesiune = { profilId: a.profilId };
       return sesiune;
     },
 
     async iesi() { sesiune = null; },
-
-    async inregistreaza({ email, parola, nume, telefon }) {
-      if (db.autentificari.some((x) => x.email.toLowerCase() === email.trim().toLowerCase())) eroare("Exista deja un cont cu acest email.");
-      /* Aceleasi reguli ca in Supabase Auth (supabase/config.toml, [auth]:
-         minimum_password_length si password_requirements) */
-      if (!parola || parola.length < PAROLA_LUNGIME_MINIMA) eroare(`Parola trebuie sa aiba cel putin ${PAROLA_LUNGIME_MINIMA} caractere.`);
-      if (!/[a-z]/.test(parola) || !/[A-Z]/.test(parola) || !/[0-9]/.test(parola)) {
-        eroare("Parola trebuie sa aiba si litere mici, si litere mari, si cifre.");
-      }
-      const p = db.adauga("profiluri", { nume: nume.trim(), telefon: telefon || null, email: email.trim() });
-      db.autentificari.push({ email: email.trim(), parola, profilId: p.id });
-      /* Paritate cu sursa Supabase (C1): acolo, signUp() nu deschide sesiune
-         cat timp Auth cere confirmarea emailului, iar comanda intoarce null.
-         Modul demonstrativ nu are confirmare reala prin email, deci reproduce
-         acelasi raspuns pentru orice adresa cu eticheta ETICHETA_CERE_CONFIRMARE
-         (contul se creeaza, dar ramane fara sesiune, ca la Supabase) — o
-         conventie doar pentru teste, deliberata (G14), nu date reale: nicio
-         adresa reala nu poarta aceasta eticheta. */
-      if (email.trim().toLowerCase().includes(ETICHETA_CERE_CONFIRMARE)) return null;
-      sesiune = { profilId: p.id, email: email.trim() };
-      return sesiune;
-    },
-
-    /* [J4] identitate.cere_verificare_administrator() (backend) lasa pe
-       oricine nu e deja aprobat sa retrimita cererea, cu atestatul
-       actualizat, si o intoarce mereu la in_asteptare -- inclusiv pe cineva
-       respins, ca sa aiba o cale inainte. Mock-ul refuza neconditionat a
-       doua cerere, ceea ce nu are corespondent in baza. O cerere de la
-       cineva deja aprobat nu schimba nimic (nici in baza). */
-    async cereVerificareAdministrator({ numarAtestat, fisier }) {
-      const p = eu();
-      const existent = db.administratori.find((a) => a.profilId === p.id);
-      if (existent) {
-        if (existent.stare === "aprobat") return;
-        existent.numarAtestat = numarAtestat;
-        if (fisier) existent.atestatCale = salveazaFisier(fisier, "atestate");
-        existent.stare = "in_asteptare";
-        /* [K21] ca in baza (20260920172454): cererea noua sterge motivul vechi */
-        existent.motivRespingere = null;
-      } else {
-        db.adauga("administratori", { profilId: p.id, numarAtestat, atestatCale: salveazaFisier(fisier, "atestate"), stare: "in_asteptare" });
-      }
-    },
-
-    /* Limita de 5 incercari gresite pe cont intr-un sfert de ora, ca in
-       identitate.foloseste_invitatie (C15). A doua limita din baza, cea pe
-       adresa de la care vine cererea, nu are corespondent aici: modul
-       demonstrativ ruleaza in pagina, fara cereri si fara antete. */
-    async folosesteInvitatie(cod) {
-      const p = eu();
-      const fereastra = new Date(Date.now() - 15 * 60000).toISOString();
-      db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.creatLa >= fereastra);
-      const gresite = db.incercariInvitatii.filter((x) => x.profilId === p.id).length;
-      if (gresite >= 5) {
-        eroare("Ai incercat de prea multe ori cu un cod gresit. Mai asteapta un sfert de ora si incearca din nou.");
-      }
-      const inv = db.invitatii.find((i) => i.cod === String(cod).trim().toUpperCase());
-      if (!inv || inv.revocataLa || inv.folositaLa || inv.expiraLa < acum()) {
-        db.adauga("incercariInvitatii", { profilId: p.id });
-        eroare("Codul nu este valabil. Cere administratorului un cod nou.");
-      }
-      const ap = db.apartamente.find((a) => a.id === inv.apartamentId);
-      /* [J13] identitate.foloseste_invitatie (migratia S11) insereaza "on
-         conflict do nothing", dar acum verifica daca legatura chiar s-a
-         creat: daca omul e deja legat activ de acelasi apartament, refuza
-         cu "Esti deja legat de acest apartament." si nu consuma codul -
-         comanda nu mai poate parea reusita fara niciun efect real. */
-      const legatAcum = db.locatari.some((l) => l.apartamentId === ap.id && l.profilId === p.id && !l.activPana);
-      if (legatAcum) eroare("Esti deja legat de acest apartament.");
-      db.adauga("locatari", { apartamentId: ap.id, blocId: ap.blocId, profilId: p.id, calitate: inv.calitate, activDin: aziIso(), activPana: null });
-      inv.folositaLa = acum();
-      inv.folositaDe = p.id;
-      db.incercariInvitatii = db.incercariInvitatii.filter((x) => x.profilId !== p.id);
-      return { apartamentNumar: ap.numar };
-    },
 
     async incarca(apartamentAles) {
       if (!sesiune) return null;
@@ -1116,14 +1127,24 @@ export function creeazaSursaMock() {
 
     /* Administratorul confirma banii primiti: in mana lui sau in contul
        asociatiei. Aceleasi reguli ca financiar.inregistreaza_incasare. */
-    async inregistreazaIncasare(apartamentId, suma, metoda) {
+    async inregistreazaIncasare(apartamentId, suma, metoda, cheieCerere = null, data = null) {
       const { bloc } = cerAdmin();
       const ap = db.apartamente.find((a) => a.id === apartamentId && a.blocId === bloc.id) || eroare("Apartamentul nu exista.");
       if (metoda !== "numerar" && metoda !== "transfer") eroare("Banii primiti sunt fie in numerar, fie prin transfer bancar.");
       /* [paritate] aceeasi rotunjire la ban ca la financiar.inregistreaza_plata:
          o suma care se rotunjeste la 0 lei e refuzata, nu doar cea scrisa 0. */
       if (!(round2(Number(suma)) > 0)) eroare("Suma trebuie sa fie mai mare decat zero.");
-      const p = inregistreazaPlata(db, { apartamentId: ap.id, suma: Number(suma), metoda, la: acum(), inregistrataDe: eu().id });
+      /* [B5] ziua in care au intrat banii, daca nu e chiar azi */
+      if (data && data > aziIso()) eroare("Data in care au intrat banii nu poate fi in viitor.");
+      if (data && data < adaugaZile(aziIso(), -180)) eroare("Data in care au intrat banii nu poate fi mai veche de sase luni.");
+      /* [B2] aceeasi cheie a cererii, aceeasi plata: a doua incercare dupa un
+         raspuns pierdut pe drum nu mai emite inca o chitanta */
+      const veche = cheieCerere && db.plati.find((x) => x.apartamentId === ap.id && x.cheieClient === cheieCerere);
+      if (veche) return { plataId: veche.id };
+      const p = inregistreazaPlata(db, {
+        apartamentId: ap.id, suma: Number(suma), metoda, la: data ? `${data}T12:00:00+03:00` : acum(),
+        inregistrataDe: eu().id, cheieClient: cheieCerere,
+      });
       return { plataId: p.id };
     },
 
@@ -1217,28 +1238,93 @@ export function creeazaSursaMock() {
       }).id;
     },
 
-    async invitaLocatar(apartamentId, calitate) {
+    /* [paritate] Edge Function-ul cont-locatar: verifica apartamentul, face
+       contul cu o parola generata si il leaga de apartament. */
+    async adaugaLocatar(apartamentId, { nume, telefon, calitate = "proprietar" }) {
       const { bloc } = cerAdmin();
-      /* [paritate] identitate.invita_locatar refuza un apartament care nu
-         exista sau nu e al blocului administrat, cu mesajul bazei. */
       if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) {
-        eroare("Doar administratorul blocului poate invita locatari.");
+        eroare("Doar administratorul blocului poate face conturi.");
       }
-      const inv = db.adauga("invitatii", { apartamentId, cod: genereazaCod(), calitate, creatDe: eu().id, expiraLa: new Date(Date.now() + 30 * 86400000).toISOString() });
-      return inv.cod;
+      const numar = normalizeazaTelefon(telefon);
+      if (!numar) eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+      if (!String(nume || "").trim()) eroare("Scrie numele locatarului.");
+      const ap = db.apartamente.find((a) => a.id === apartamentId);
+      /* [P1/P5] Acelasi om poate avea doua apartamente: numarul lui are deja
+         cont, deci contul se leaga si de apartamentul acesta, fara parola noua. */
+      const contVechi = db.autentificari.find((x) => x.telefon === numar);
+      if (contVechi) {
+        if (db.locatari.some((l) => l.profilId === contVechi.profilId && l.apartamentId === apartamentId && !l.activPana)) {
+          eroare("Contul este deja legat de acest apartament.");
+        }
+        const legat = db.adauga("locatari", { apartamentId, blocId: ap.blocId, profilId: contVechi.profilId, calitate, activDin: aziIso(), activPana: null });
+        return { locatarId: legat.id, profilId: contVechi.profilId, telefon: numar, parola: null };
+      }
+      const parola = genereazaParola();
+      const p = db.adauga("profiluri", { nume: nume.trim(), telefon: numar });
+      db.autentificari.push({ telefon: numar, parola, profilId: p.id });
+      const l = db.adauga("locatari", { apartamentId, blocId: ap.blocId, profilId: p.id, calitate, activDin: aziIso(), activPana: null });
+      return { locatarId: l.id, profilId: p.id, telefon: numar, parola };
+    },
+
+    async parolaNoua(apartamentId, locatarId) {
+      const { bloc } = cerAdmin();
+      if (!db.apartamente.some((a) => a.id === apartamentId && a.blocId === bloc.id)) {
+        eroare("Doar administratorul blocului poate face conturi.");
+      }
+      const l = db.locatari.find((x) => x.id === locatarId && x.apartamentId === apartamentId);
+      if (!l) eroare("Locatarul nu este al acestui apartament.");
+      /* [A4] cine s-a mutat nu mai primeste parola noua pe apartamentul acela */
+      if (l.activPana && l.activPana <= aziIso()) eroare("Locatarul nu mai are acces la acest apartament.");
+      const cont = db.autentificari.find((x) => x.profilId === l.profilId);
+      const parola = genereazaParola();
+      cont.parola = parola;
+      return { parola };
+    },
+
+    /* [paritate] identitate.numeste_in_conducere / incheie_mandat */
+    async numesteInConducere(profilId, rol) {
+      const { bloc } = cerAdmin();
+      if (rol !== "presedinte" && rol !== "cenzor") eroare("Mandatul este de presedinte sau de cenzor.");
+      if (!db.profiluri.some((p) => p.id === profilId)) eroare("Persoana nu exista.");
+      mandatNou(db, bloc, profilId, rol);
+      /* [C7] fiecare mandat este un rand nou: cel vechi ramane in istoric */
+      return db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null }).id;
+    },
+
+    async incheieMandat(membruId) {
+      const { bloc } = cerAdmin();
+      const m = db.membri.find((x) => x.id === membruId && x.asociatieId === bloc.asociatieId
+        && (x.rol === "presedinte" || x.rol === "cenzor") && !x.activPana);
+      if (!m) eroare("Mandatul nu exista, s-a incheiat deja sau nu este in asociatia ta.");
+      /* [C6] data reala, ca la inchiderea accesului unui locatar: cine a fost
+         numit din greseala nu mai vede blocul nici azi */
+      m.activPana = aziIso() > m.activDin ? aziIso() : m.activDin;
+    },
+
+    async adaugaInConducere(nume, telefon, rol) {
+      const { bloc } = cerAdmin();
+      if (rol !== "presedinte" && rol !== "cenzor") eroare("Mandatul este de presedinte sau de cenzor.");
+      const numar = normalizeazaTelefon(telefon);
+      if (!numar) eroare("Numarul de telefon nu este bun. Scrie-l ca in agenda: 07xx xxx xxx.");
+      if (!String(nume || "").trim()) eroare("Scrie numele persoanei.");
+      const contVechi = db.autentificari.find((x) => x.telefon === numar);
+      /* [C4] mandatul se verifica inainte de a face contul: altfel ramane un
+         cont pe numarul unui om caruia nu i se cuvine niciun mandat */
+      if (contVechi) mandatNou(db, bloc, contVechi.profilId, rol);
+      const profilId = contVechi ? contVechi.profilId : db.adauga("profiluri", { nume: nume.trim(), telefon: numar }).id;
+      let parola = null;
+      if (!contVechi) {
+        parola = genereazaParola();
+        db.autentificari.push({ telefon: numar, parola, profilId });
+      }
+      db.adauga("membri", { asociatieId: bloc.asociatieId, profilId, rol, activDin: aziIso(), activPana: null });
+      return { profil_id: profilId, telefon: numar, parola };
     },
 
     async inchideAcces(locatarId) {
       cerAdmin();
       const l = db.locatari.find((x) => x.id === locatarId) || eroare("Legatura nu exista.");
       l.activPana = aziIso();
-      /* [H9] Se revoca doar codurile de invitatie nefolosite emise pana la
-         data la care se inchide legatura: un cod emis dupa aceea (de exemplu
-         cel al cumparatorului, dat inainte de a inchide accesul vanzatorului
-         cu data lui reala de plecare, adesea in trecut) ramane valabil. */
-      db.invitatii
-        .filter((i) => i.apartamentId === l.apartamentId && !i.folositaLa && !i.revocataLa && i.creatLa.slice(0, 10) <= l.activPana)
-        .forEach((i) => { i.revocataLa = acum(); });
     },
 
     async valideazaCitire(citireId, accepta, motiv) {

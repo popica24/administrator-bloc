@@ -46,9 +46,9 @@ test.afterAll(() => {
   server = null;
 });
 
-async function intraDemo(page, email) {
+async function intraDemo(page, telefon) {
   await page.goto(`${DEMO}/`);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Numarul tau de telefon").fill(telefon);
   await page.getByLabel("Parola").fill(PAROLA);
   await page.getByRole("button", { name: "Intra", exact: true }).click();
   await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
@@ -211,7 +211,7 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     expect(textPdf(intern.octeti)).toContain("Document intern");
   });
 
-  test("fisa apartamentului: incasare, chitanta, cod de invitatie si corectie", async ({ page }) => {
+  test("fisa apartamentului: incasare, chitanta, cont de locatar si corectie", async ({ page }) => {
     await intraDemo(page, CONTURI.admin);
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 3", exact: true }).click();
@@ -225,9 +225,12 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     const chitanta = await descarcaDemo(page, () => buton(page, "Descarca chitanta").click());
     expect(textPdf(chitanta.octeti)).toContain("CHITANTA");
 
-    await buton(page, "Invita un locatar in aplicatie").click();
-    await buton(page, "Genereaza codul").click();
-    await expect(fisa.getByText(/^[A-Z2-9]{8}$/)).toBeVisible();
+    await buton(page, "Adauga un locatar in aplicatie").click();
+    await page.getByLabel("Numele locatarului").fill("Vecin Nou");
+    await page.getByLabel("Numarul lui de telefon").fill("0798 100 200");
+    await buton(page, "Fa contul").click();
+    await expect(fisa.getByText("Intra cu numarul 0798 100 200")).toBeVisible();
+    await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
     await buton(page, "Gata").click();
 
     await buton(page, "Corecteaza datele apartamentului").click();

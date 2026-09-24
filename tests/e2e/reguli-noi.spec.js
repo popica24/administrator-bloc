@@ -10,7 +10,7 @@
 import { test, expect } from "@playwright/test";
 import {
   buton, intraCa, intra, mergiLaTab, serviciu, blocD14, apartamentulNumarul,
-  creeazaCont, stergeCont, profilDupaEmail,
+  creeazaCont, stergeCont, profilDupaTelefon,
   asteaptaToast, textEcran, CUVINTE_TEHNICE, PAROLA, CONTURI, aziRo,
 } from "./ajutor.js";
 
@@ -18,9 +18,9 @@ const VOT = "Inlocuirea usii de la intrare";
 
 /* Conturile temporare ale acestui fisier, sterse la final oricum s-ar termina */
 const TEMPORARE = [
-  "e2e-chirias@adminbloc.test",
-  "e2e-proprietar-nou@adminbloc.test",
-  "e2e-mutat-azi@adminbloc.test",
+  "0798146858",
+  "0798278553",
+  "0798839599",
 ];
 
 test.beforeAll(async () => {
@@ -51,10 +51,10 @@ async function voturiAle(apartamentId) {
 
 test.describe("Doar proprietarul voteaza [K3]", () => {
   test("chiriasul vede votul, dar i se spune ca nu poate vota, fara sa fie lasat sa incerce", async ({ page }) => {
-    const ap = await leaga("e2e-chirias@adminbloc.test", "Chirias de Test", 19, "chirias");
+    const ap = await leaga("0798146858", "Chirias de Test", 19, "chirias");
     expect(await voturiAle(ap.id)).toHaveLength(0);
 
-    await intra(page, "e2e-chirias@adminbloc.test");
+    await intra(page, "0798146858");
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Bloc");
     await page.getByRole("button", { name: "Vot si adunare" }).click();
@@ -69,7 +69,7 @@ test.describe("Doar proprietarul voteaza [K3]", () => {
   });
 
   test("[P1] Acasa nu ii cere chiriasului o sarcina pe care nu o poate duce", async ({ page }) => {
-    await intra(page, "e2e-chirias@adminbloc.test");
+    await intra(page, "0798146858");
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await expect(page.getByText("Ce ai de facut in perioada urmatoare")).toBeVisible();
     await expect(page.getByText(`Voteaza: ${VOT}`)).toHaveCount(0);
@@ -80,9 +80,9 @@ test.describe("Sesizarile se vad dupa perioada de locuire [K4]", () => {
   test("locatarul mutat azi nu vede conversatia celui dinaintea lui", async ({ page }) => {
     /* Ap. 17 are sesizari din august si din septembrie, scrise de Elena */
     const azi = aziRo();
-    await leaga("e2e-mutat-azi@adminbloc.test", "Mutat Azi", 17, "chirias", azi);
+    await leaga("0798839599", "Mutat Azi", 17, "chirias", azi);
 
-    await intra(page, "e2e-mutat-azi@adminbloc.test");
+    await intra(page, "0798839599");
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Sesizari");
     await expect(page.getByText("Nu ai trimis nicio sesizare")).toBeVisible();
@@ -159,8 +159,8 @@ test.describe("Vederea anonima a blocului [K10, K14]", () => {
 test.describe("Reminderul de plata [K5]", () => {
   test("restantierul primeste instiintare, nu 'se apropie termenul'", async ({ page }) => {
     const sb = serviciu();
-    const ilie = await profilDupaEmail(CONTURI.ilie);
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const ilie = await profilDupaTelefon(CONTURI.ilie);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     const inainte = new Date().toISOString();
 
     await intraCa(page, "admin");
@@ -213,7 +213,7 @@ test.describe("Convocarea adunarii ajunge cu ora [K6]", () => {
 
   test("notificarea si cardul locatarului spun ora", async ({ page }) => {
     const sb = serviciu();
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     const zi = new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10);
 
     await intraCa(page, "admin");
@@ -251,7 +251,7 @@ test.describe("Convocarea adunarii ajunge cu ora [K6]", () => {
 test.describe("Avizierul marcheaza tot lotul deodata [K1]", () => {
   test("trei anunturi necitite fac o singura reincarcare", async ({ page }) => {
     const sb = serviciu();
-    const elena = await profilDupaEmail(CONTURI.elena);
+    const elena = await profilDupaTelefon(CONTURI.elena);
     /* Toate anunturile asociatiei redevin necitite pentru Elena */
     const b = await blocD14();
     const { data: anunturi } = await sb.schema("comunicare").from("anunturi")

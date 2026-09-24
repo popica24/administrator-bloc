@@ -37,7 +37,7 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     expect(screen.getByText("Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua.")).toBeTruthy();
     expect(within(screen.getByRole("dialog")).getByText("lei")).toBeTruthy();
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.38, "numerar");
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.38, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
 
     for (const gol of ["   ", "abc", "0", "-5"]) {
       await incaseaza(gol);
@@ -47,15 +47,15 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
 
     await incaseaza("1.234,5");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar");
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
 
     await incaseaza(" 1234.5 ");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar");
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
 
     await incaseaza("12 50");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1250, "numerar");
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1250, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
     expect(numerar).toHaveBeenCalledTimes(4);
   });
 
@@ -76,7 +76,7 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     const numerar = vi.spyOn(sursa, "inregistreazaIncasare").mockResolvedValue({ plataId: null });
     await incaseaza("1.500");
     await apasa("Emite chitanta");
-    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1500, "numerar");
+    expect(numerar).toHaveBeenLastCalledWith("apa-23", 1500, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
   });
 });
 
@@ -131,7 +131,7 @@ describe("etichetele: valorile necunoscute raman asa cum sunt", () => {
       ap.locatari.push({ ...ap.locatari[0], id: "loc-x", nume: "Andrei Marinescu", calitate: "nepot", telefon: null });
     });
     expect(dialog.textContent).toContain("Elena MarinescuProprietar · din 1 iun 2026 · 0733 410 217");
-    expect(dialog.textContent).toContain("Andrei Marinescunepot · din 1 iun 2026Inchide");
+    expect(dialog.textContent).toContain("Andrei Marinescunepot · din 1 iun 2026Parola nouaInchide");
   });
 });
 

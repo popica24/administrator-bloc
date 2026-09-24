@@ -46,17 +46,17 @@ describe("D14, administratorul (doar citire)", () => {
   let blocId;
 
   beforeAll(async () => {
-    ({ date } = await intraCa("administrator@adminbloc.test"));
+    ({ date } = await intraCa("0745 210 118"));
     blocId = date.bloc.id;
   });
 
   it("eu, asociatia, setarile si blocul vin din tabelele lor", async () => {
-    const eu = await ok(db("identitate").from("profiluri").select("*").eq("email", "administrator@adminbloc.test").single());
+    const eu = await ok(db("identitate").from("profiluri").select("*").eq("telefon", "0745210118").single());
     const bloc = await ok(db("organizare").from("blocuri").select("*").eq("id", blocId).single());
     const asoc = await ok(db("organizare").from("asociatii").select("*").eq("id", bloc.asociatie_id).single());
     const fin = await ok(db("financiar").from("setari_financiare").select("*").eq("asociatie_id", asoc.id).single());
     const cont = await ok(db("contorizare").from("setari_contorizare").select("*").eq("bloc_id", blocId).single());
-    expect(date.eu).toEqual({ profilId: eu.id, nume: eu.nume, telefon: eu.telefon, email: eu.email, rol: "administrator", apartamentId: null });
+    expect(date.eu).toEqual({ profilId: eu.id, nume: eu.nume, telefon: eu.telefon, rol: "administrator", apartamentId: null });
     expect(date.asociatie).toEqual({
       id: asoc.id, denumire: asoc.denumire, cui: asoc.cui, iban: asoc.iban, banca: asoc.banca, adresa: asoc.adresa, telefon: asoc.telefon, email: asoc.email,
     });
@@ -119,7 +119,14 @@ describe("D14, administratorul (doar citire)", () => {
     expect(date.plati).toHaveLength(plati.length);
     for (const p of date.plati) {
       const ch = chitante.find((c) => c.plata_id === p.id);
-      expect(p.chitanta).toEqual({ serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la });
+      /* [B6] randurile inghetate la emitere merg cu chitanta */
+      expect(p.chitanta).toEqual({
+        serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la,
+        randuri: expect.any(Array),
+        /* [S4] apartamentul si proprietarul de la emitere */
+        emisPentru: expect.objectContaining({ apartament: expect.any(String), proprietar: expect.any(String), bloc: expect.any(String) }),
+      });
+      expect(p.chitanta.randuri.reduce((t, r) => t + r.suma, 0)).toBeCloseTo(p.suma, 2);
       expect(suma(p.alocari.map((a) => a.suma))).toBeLessThanOrEqual(p.suma);
     }
     expect(date.plati.filter((p) => p.metoda === "numerar").every((p) => p.inregistrataDe === "Mihai Dobre")).toBe(true);
@@ -143,7 +150,7 @@ describe("D14, administratorul (doar citire)", () => {
     }
   });
 
-  it("administratorul vede furnizorii, reminderele, invitatiile si cine a citit anunturile", async () => {
+  it("administratorul vede furnizorii, reminderele si cine a citit anunturile", async () => {
     expect(date.furnizori.length).toBeGreaterThan(0);
     expect(date.furnizori[0]).toEqual(expect.objectContaining({ id: expect.any(String), denumire: expect.any(String), metoda: expect.any(String) }));
     expect(date.remindere.map((r) => r.tip).sort()).toEqual(["adunare_generala", "citire_contoare", "lista_publicata", "plata", "restanta"]);
@@ -163,13 +170,13 @@ describe("D14, locatarul (doar citire)", () => {
   let date;
 
   beforeAll(async () => {
-    ({ date } = await intraCa("elena.marinescu@adminbloc.test"));
+    ({ date } = await intraCa("0733 410 217"));
   });
 
   it("vede doar apartamentul, datoriile si platile lui", async () => {
     expect(date.eu.rol).toBe("locatar");
     expect(date.apartamente.map((a) => a.id)).toEqual([date.eu.apartamentId]);
-    expect(date.apartamente[0]).toMatchObject({ numar: "17", locatari: [], invitatii: [] });
+    expect(date.apartamente[0]).toMatchObject({ numar: "17", locatari: [] });
     expect(date.datorii.every((d) => d.apartamentId === date.eu.apartamentId)).toBe(true);
     expect(date.plati.every((p) => p.apartamentId === date.eu.apartamentId)).toBe(true);
     expect(date.plati.filter((p) => p.metoda === "transfer").length).toBeGreaterThanOrEqual(2);
@@ -182,7 +189,7 @@ describe("D14, locatarul (doar citire)", () => {
      zilei), calitate ramane necunoscuta in loc sa arunce: nu poate incerca sa
      citeasca .calitate dintr-un rezultat gasit cand cautarea n-a gasit nimic. */
   it("[P1/P5] fara nicio legatura gasita, calitate este null, nu o eroare", async () => {
-    const { s } = await intraCa("elena.marinescu@adminbloc.test", { incarca: false });
+    const { s } = await intraCa("0733 410 217", { incarca: false });
     const d = await cuFetch(modifica("/rest/v1/locatari?", () => []), () => s.incarca());
     expect(d.eu.calitate).toBeNull();
     expect(d.eu.apartamenteMele).toEqual([d.eu.apartamentId]);
@@ -320,18 +327,9 @@ describe("bloc de test: ramurile maparii", () => {
       profil_id: c.loc1.id, asociatie_id: f.asociatieId, tip: "anunt", titlu: "Salut", corp: "Bun venit",
     }).select().single())).id;
 
-    /* Invitatii: una valabila, una expirata, una folosita */
-    const cod = () => Array.from({ length: 8 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
-    const inv = await ok(db("identitate").from("invitatii").insert([
-      { apartament_id: f.ap["2"], cod: cod(), calitate: "proprietar", creat_de: f.adminId, expira_la: new Date(acum + 86400000).toISOString() },
-      { apartament_id: f.ap["2"], cod: cod(), calitate: "chirias", creat_de: f.adminId, expira_la: new Date(acum - 86400000).toISOString() },
-      { apartament_id: f.ap["2"], cod: cod(), calitate: "chirias", creat_de: f.adminId, expira_la: new Date(acum + 86400000).toISOString(), folosita_la: new Date().toISOString(), folosita_de: c.pres.id },
-    ]).select());
-    ids.invValabila = inv[0];
-
-    admin = (await intraCa(f.adminEmail)).date;
-    loc1 = (await intraCa(c.loc1.email)).date;
-    pres = (await intraCa(c.pres.email)).date;
+    admin = (await intraCa(f.adminTelefon)).date;
+    loc1 = (await intraCa(c.loc1.telefon)).date;
+    pres = (await intraCa(c.pres.telefon)).date;
   });
 
   it("apartamentele: ordinea numerica (10 dupa 3) si persoanele valabile azi", () => {
@@ -352,18 +350,16 @@ describe("bloc de test: ramurile maparii", () => {
   it("[NOU-2] un numar cu litera (2A) se aseaza intre 2 si 3, nu dupa 10", async () => {
     const ordine = ["10", "2A", "1", "2", "3"];
     const inOrdine = (randuri) => [...randuri].sort((a, b) => ordine.indexOf(a.numar) - ordine.indexOf(b.numar));
-    const { s } = await intraCa(f.adminEmail, { incarca: false });
+    const { s } = await intraCa(f.adminTelefon, { incarca: false });
     const date = await cuFetch(modificaPrimaPagina("/apartamente?select", inOrdine), () => s.incarca());
     expect(date.apartamente.map((a) => a.numar)).toEqual(["1", "2", "2A", "3", "10"]);
   });
 
-  it("locatarii apartamentului, cu fostul locatar, si doar invitatiile valabile", () => {
+  it("locatarii apartamentului, cu fostul locatar si cu numerele lor", () => {
     const a1 = admin.apartamente.find((a) => a.numar === "1");
     expect(a1.locatari.map((l) => l.nume).sort()).toEqual([`Locatar fost ${f.id}`, `Locatar loc1 ${f.id}`]);
     expect(a1.locatari.find((l) => l.id === f.locatari.fost)).toMatchObject({ activPana: `${new Date().getUTCFullYear() - 1}-01-01`, calitate: "proprietar" });
-    const a2 = admin.apartamente.find((a) => a.numar === "2");
-    expect(a2.invitatii).toEqual([{ id: ids.invValabila.id, cod: ids.invValabila.cod, calitate: "proprietar", expiraLa: expect.any(String) }]);
-    expect(Date.parse(a2.invitatii[0].expiraLa)).toBe(Date.parse(ids.invValabila.expira_la));
+    expect(a1.locatari.every((l) => /^0\d{9}$/.test(l.telefon))).toBe(true);
   });
 
   it("contactele, cu numarul apartamentului doar unde exista", () => {
@@ -448,7 +444,7 @@ describe("bloc de test: ramurile maparii", () => {
   it("[P1] eu.calitate reflecta legatura proprie a locatarului cu apartamentul, dar nu apare la administrator", async () => {
     expect(loc1.eu.calitate).toBe("proprietar");
     expect(admin.eu.calitate).toBeUndefined();
-    const chirias = (await intraCa(f.conturi.viitor.email)).date;
+    const chirias = (await intraCa(f.conturi.viitor.telefon)).date;
     expect(chirias.eu).toMatchObject({ rol: "locatar", apartamentId: f.ap["2A"], calitate: "chirias" });
   });
 
@@ -466,9 +462,12 @@ describe("bloc de test: ramurile maparii", () => {
     expect(loc1.plati.find((p) => p.id === ids.cash).inregistrataDe).toBe(`Administrator ${f.id}`);
   });
 
-  it("[S2] presedintele care locuieste in bloc vede ca ale lui doar platile apartamentului lui", () => {
-    expect(pres.eu.rol).toBe("locatar");
-    expect(pres.plati.map((p) => p.apartamentId)).toEqual([]);
+  /* Presedintele are acum rolul lui: vede blocul intreg, ca sa-l poata
+     verifica, iar apartamentul lui il gaseste in lista, ca pe oricare altul. */
+  it("[S2] presedintele care locuieste in bloc vede blocul, cu rolul lui", () => {
+    expect(pres.eu.rol).toBe("presedinte");
+    expect(pres.apartamente.length).toBeGreaterThan(1);
+    expect(pres.conducere.some((m) => m.profilId === pres.eu.profilId && m.rol === "presedinte")).toBe(true);
   });
 
   it("[S2] presedintele care locuieste in bloc nu vede sesizarile de doua ori", () => {
@@ -482,24 +481,26 @@ describe("bloc de test: ramurile maparii", () => {
 
   it("[S10] fiecare citire pe pagini cere o ordine stabila (altfel randurile se pot pierde sau dubla)", async () => {
     const cereri = [];
-    const { s } = await intraCa(f.adminEmail, { incarca: false });
+    const { s } = await intraCa(f.adminTelefon, { incarca: false });
     await cuFetch((url) => { if (url.includes("limit=1000")) cereri.push(decodeURIComponent(url)); }, () => s.incarca());
     expect(cereri.length).toBeGreaterThan(10);
     expect(cereri.filter((u) => !/[?&]order=/.test(u))).toEqual([]);
   });
 
   it("raspuns sintetic: un apartament lipsa din lista nu strica sesizarea", async () => {
-    const { s } = await intraCa(f.adminEmail, { incarca: false });
+    const { s } = await intraCa(f.adminTelefon, { incarca: false });
     const date = await cuFetch(modifica("/rest/v1/apartamente?", (rows) => rows.filter((a) => a.numar !== "10")), () => s.incarca());
     expect(date.apartamente.map((a) => a.numar).sort()).toEqual(["1", "2", "2A", "3"]);
     expect(date.sesizari.find((x) => x.id === ids.sMulte).apartamentNumar).toBeUndefined();
   });
 
   it("raspuns sintetic: un locatar fara profil vizibil apare ca \"Locatar\"", async () => {
-    const { s } = await intraCa(f.adminEmail, { incarca: false });
-    const date = await cuFetch(modifica("/rest/v1/profiluri?", (rows) => rows.filter((p) => p.id !== f.conturi.loc1.id)), () => s.incarca());
+    const { s } = await intraCa(f.adminTelefon, { incarca: false });
+    const date = await cuFetch(modifica("/rest/v1/profiluri?", (rows) => rows.filter((p) => p.id !== f.conturi.loc1.id && p.id !== f.conturi.pres.id)), () => s.incarca());
     const l = date.apartamente.find((a) => a.numar === "1").locatari.find((x) => x.id === f.locatari.loc1);
-    expect(l).toMatchObject({ nume: "Locatar", email: undefined, telefon: undefined });
+    expect(l).toMatchObject({ nume: "Locatar", telefon: undefined });
+    /* acelasi lucru pentru mandatul al carui profil nu se vede */
+    expect(date.conducere.find((m) => m.profilId === f.conturi.pres.id)).toMatchObject({ nume: "Persoana", telefon: null });
   });
 });
 
@@ -508,7 +509,7 @@ describe("asociatie fara setari salvate", () => {
     const f = await creeazaBloc({ apartamente: [{ numar: "1", etaj: 0, persoane: 1, cota: 100, index_rece: 1, index_calda: 1 }] });
     await ok(db("financiar").from("setari_financiare").delete().eq("asociatie_id", f.asociatieId));
     await ok(db("contorizare").from("setari_contorizare").delete().eq("bloc_id", f.blocId));
-    const { date } = await intraCa(f.adminEmail);
+    const { date } = await intraCa(f.adminTelefon);
     expect(date.setari).toEqual({ procentPenalizareZi: 0.02, zileGratie: 30, ziScadenta: 25, chitantaSerie: "", ziLimitaCitire: 25 });
   });
 });
@@ -540,7 +541,7 @@ describe("[P5] un locatar legat de doua apartamente in acelasi bloc", () => {
     await ok(db("identitate").from("locatari").insert({
       apartament_id: ap2, bloc_id: f.blocId, profil_id: f.conturi.dubla.id, calitate: "chirias", activ_din: `${an - 1}-02-01`, activ_pana: null,
     }));
-    ({ s } = await intraCa(f.conturi.dubla.email));
+    ({ s } = await intraCa(f.conturi.dubla.telefon));
   });
 
   it("eu.apartamenteMele contine ambele apartamente, iar eu.apartamentId ramane cel implicit (ap1)", async () => {

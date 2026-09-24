@@ -3,7 +3,7 @@
 import { test, expect } from "@playwright/test";
 import {
   CONTURI, buton, intraCa, mergiLaTab, serviciu, apartamentulNumarul,
-  asociatieD14, soldApartament, textEcran, CUVINTE_TEHNICE, aziRo,
+  asociatieD14, soldApartament, textEcran, CUVINTE_TEHNICE, aziRo, profilDupaTelefon,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -55,8 +55,7 @@ test.describe("Acasa", () => {
 
   test("mesajul necitit se marcheaza citit si ramane citit", async ({ page }) => {
     const sb = serviciu();
-    const { data: profil } = await sb.schema("identitate").from("profiluri")
-      .select("id").eq("email", CONTURI.ilie).single();
+    const profil = await profilDupaTelefon(CONTURI.ilie);
     const { data: necitite } = await sb.schema("comunicare").from("notificari")
       .select("id, titlu").eq("profil_id", profil.id).is("citita_la", null)
       .order("trimisa_la", { ascending: false }).limit(1);

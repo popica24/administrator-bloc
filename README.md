@@ -18,8 +18,10 @@ cp .env.example .env.local   # si completeaza ANON_KEY din `supabase status`
 npm run dev               # http://localhost:5173
 ```
 
-Conturile de test sunt in `conturi-test.txt`. Fara `.env.local`, aplicatia porneste in modul
-demonstrativ, cu aceleasi date tinute in memorie.
+Contul se tine pe numarul de telefon: omul intra cu numarul lui si cu parola primita de la
+administrator, care ii face contul din fisa apartamentului. Conturile de test (numere si parola)
+sunt in `conturi-test.txt`. Fara `.env.local`, aplicatia porneste in modul demonstrativ, cu
+aceleasi date tinute in memorie.
 
 ## Scripturi
 
@@ -81,6 +83,14 @@ supabase secrets set SITE_URL=https://adresa-aplicatiei
 cad pe `http://localhost:5173`, iar aplicatia reala primeste "Serverul nu
 raspunde" la publicarea listei. Trebuie sa fie aceeasi adresa cu
 `auth.site_url` din `supabase/config.toml`.
+
+Tot inainte de primul deploy, in panoul proiectului (Authentication >
+Sign In / Providers) **inscrierea trebuie sa fie inchisa**, ca in
+`supabase/config.toml` (`[auth] enable_signup = false`). Contul nu si-l face
+omul: administratorul ii trece numarul de telefon in aplicatie, iar
+`cont-locatar` il creeaza cu cheia de serviciu. Cu inscrierea deschisa,
+oricine poate sa-si faca singur cont pe adresa interna a unui numar strain si
+sa primeasca apartamentul cand administratorul adauga acel numar.
 
 ## Stack
 

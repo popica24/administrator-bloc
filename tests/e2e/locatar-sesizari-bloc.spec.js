@@ -123,18 +123,18 @@ test.describe("Sesizari", () => {
 });
 
 test.describe("Bloc: avizier", () => {
-  const EMAIL = "e2e-avizier@adminbloc.test";
+  const TELEFON = "0798680509";
 
-  test.afterEach(async () => { await stergeCont(EMAIL); });
+  test.afterEach(async () => { await stergeCont(TELEFON); });
 
   test("anunturile se marcheaza citite la deschiderea avizierului", async ({ page }) => {
     const ap = await apartamentulNumarul(13);
-    const pid = await creeazaCont(EMAIL, "Paul Enache");
+    const pid = await creeazaCont(TELEFON, "Paul Enache");
     await legaDeApartament(pid, ap.id);
     const { count: anunturi } = await serviciu().schema("comunicare").from("anunturi")
       .select("id", { count: "exact", head: true }).eq("asociatie_id", ASOC);
 
-    await intra(page, EMAIL);
+    await intra(page, TELEFON);
     await expect(tab(page, "Bloc")).toBeVisible({ timeout: 20000 });
     await expect(tab(page, "Bloc")).toContainText(String(anunturi));
 

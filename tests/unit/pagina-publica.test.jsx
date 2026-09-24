@@ -18,7 +18,7 @@ async function deschide() {
 /* Ce a calculat motorul pentru lista din august, direct din sursa demo */
 async function repartizareaDin(cod, numar) {
   const s = creeazaSursaMock();
-  await s.intra("administrator@adminbloc.test", "Bloc-D14-2026");
+  await s.intra("0745 210 118", "Bloc-D14-2026");
   const d = await s.incarca();
   const lista = d.liste.find((l) => l.luna === "2026-08");
   const c = d.cheltuieli.find((x) => x.listaId === lista.id && x.cod === cod);

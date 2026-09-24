@@ -4,12 +4,14 @@
 // de administrare Supabase Auth. Doar cu cheia de serviciu.
 //
 // Poate rula de mai multe ori fara efecte duble: asociatia cu acelasi CUI se
-// refoloseste, iar un cont cu acelasi email nu se mai creeaza.
+// refoloseste, iar un cont pe acelasi numar de telefon nu se mai creeaza.
 //
 // Corp: { asociatie: {...}, setari: {...}, bloc: {...},
-//         administrator: { email, nume, telefon, atestat, parola? } }
-// Fara parola, administratorul primeste invitatie pe email.
+//         administrator: { nume, telefon, atestat, parola? } }
+// Fara parola, sistemul alege una si o intoarce in raspuns, o singura data.
 
+import { adresaContului, normalizeazaTelefon } from "../_shared/telefon.js";
+import { genereazaParola } from "../_shared/parola.js";
 import { clientServiciu, eroare, esteServiciu, porneste, raspuns } from "../_shared/server.ts";
 
 porneste(async (req) => {
@@ -23,20 +25,20 @@ porneste(async (req) => {
     if (e1) return eroare(e1.message);
 
     const a = corp.administrator;
-    if (!a?.email) return raspuns({ ...creata, administrator: null });
+    const numar = normalizeazaTelefon(a?.telefon);
+    if (!numar) return raspuns({ ...creata, administrator: null });
 
     let profilId: string | null = null;
-    const { data: existent } = await admin.schema("identitate").from("profiluri").select("id").eq("email", a.email).maybeSingle();
+    let parola: string | null = null;
+    const { data: existent } = await admin.schema("identitate").from("profiluri").select("id").eq("telefon", numar).maybeSingle();
     if (existent) {
       profilId = existent.id;
-    } else if (a.parola) {
-      const { data, error } = await admin.auth.admin.createUser({
-        email: a.email, password: a.parola, email_confirm: true, user_metadata: { nume: a.nume, telefon: a.telefon },
-      });
-      if (error) return eroare(error.message);
-      profilId = data.user.id;
     } else {
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(a.email, { data: { nume: a.nume, telefon: a.telefon } });
+      parola = a.parola ?? genereazaParola();
+      const { data, error } = await admin.auth.admin.createUser({
+        email: adresaContului(numar)!, phone: `+4${numar}`, password: parola,
+        email_confirm: true, phone_confirm: true, user_metadata: { nume: a.nume, telefon: numar },
+      });
       if (error) return eroare(error.message);
       profilId = data.user.id;
     }
@@ -46,7 +48,7 @@ porneste(async (req) => {
     });
     if (e2) return eroare(e2.message);
 
-    return raspuns({ ...creata, administrator: profilId });
+    return raspuns({ ...creata, administrator: profilId, parola });
   } catch (e) {
     return eroare((e as Error).message, 500);
   }

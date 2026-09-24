@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 import {
   buton, intra, intraCa, mergiLaTab, serviciu, blocD14, apartamente, apartamentulNumarul,
   creeazaCont, stergeCont, legaDeApartament, datorieDeTest, soldApartament,
-  asteaptaToast, textEcran, CUVINTE_TEHNICE, aziRo,
+  asteaptaToast, textEcran, CUVINTE_TEHNICE, aziRo, telefonTemporar, profilDupaTelefon,
 } from "./ajutor.js";
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
@@ -259,34 +259,37 @@ test.describe("Fisa apartamentului", () => {
       .delete().eq("apartament_id", ap.id).eq("motiv", "Test e2e");
   });
 
-  test("codul de invitatie se genereaza si apare in fisa", async ({ page }) => {
-    const ap = await apartamentulNumarul(11);
-    await serviciu().schema("identitate").from("invitatii").delete().eq("apartament_id", ap.id).is("folosita_la", null);
+  test("contul locatarului se face din fisa, cu parola aratata o singura data", async ({ page }) => {
+    const telefon = telefonTemporar();
+    try {
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: "Apartament 11" }).click();
+      await buton(page, "Adauga un locatar in aplicatie").click();
+      await page.getByLabel("Numele locatarului").fill("Chirias Nou");
+      await page.getByLabel("Numarul lui de telefon").fill(telefon);
+      await page.getByLabel("Ce este pentru apartament").selectOption("chirias");
+      await buton(page, "Fa contul").click();
+      await asteaptaToast(page, "Contul a fost creat");
 
-    await intraCa(page, "admin");
-    await mergiLaTab(page, "Apartamente");
-    await page.getByRole("button", { name: "Apartament 11" }).click();
-    await buton(page, "Invita un locatar in aplicatie").click();
-    await page.getByLabel("Ce este pentru apartament").selectOption("chirias");
-    await buton(page, "Genereaza codul").click();
-    await asteaptaToast(page, "Codul de invitatie a fost generat");
+      const fisa = page.getByRole("dialog", { name: "Apartament 11" });
+      await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
+      const profil = await profilDupaTelefon(telefon);
+      expect(profil.nume).toBe("Chirias Nou");
 
-    const { data } = await serviciu().schema("identitate").from("invitatii")
-      .select("cod, calitate, expira_la").eq("apartament_id", ap.id).is("folosita_la", null).single();
-    expect(data.cod).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
-    expect(data.calitate).toBe("chirias");
-    await expect(page.getByText(data.cod, { exact: true })).toBeVisible();
-
-    await buton(page, "Gata").click();
-    await expect(page.getByText(`Cod nefolosit ${data.cod} (chirias), expira pe`)).toBeVisible();
-    await serviciu().schema("identitate").from("invitatii").delete().eq("cod", data.cod);
+      await buton(page, "Gata").click();
+      await expect(fisa.getByText("Chirias · din")).toBeVisible();
+      await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toHaveCount(0);
+    } finally {
+      await stergeCont(telefon);
+    }
   });
 
   test("inchiderea accesului scoate locatarul din aplicatie", async ({ page }) => {
-    const EMAIL = "e2e-acces-inchis@adminbloc.test";
+    const TELEFON = "0798591002";
     const ap = await apartamentulNumarul(10);
-    await stergeCont(EMAIL);
-    const pid = await creeazaCont(EMAIL, "Sanda Croitoru");
+    await stergeCont(TELEFON);
+    const pid = await creeazaCont(TELEFON, "Sanda Croitoru");
     await legaDeApartament(pid, ap.id);
 
     await intraCa(page, "admin");
@@ -306,9 +309,9 @@ test.describe("Fisa apartamentului", () => {
     /* Fostul locatar nu mai are acces la datele blocului */
     await fisa.getByRole("button", { name: "Inchide" }).click();
     await buton(page, "Iesi").click();
-    await intra(page, EMAIL);
+    await intra(page, TELEFON);
     await expect(page.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
-    await stergeCont(EMAIL);
+    await stergeCont(TELEFON);
   });
 });
 

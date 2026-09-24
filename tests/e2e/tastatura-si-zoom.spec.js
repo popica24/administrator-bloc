@@ -44,8 +44,8 @@ test.describe("treburile principale, numai din tastatura", () => {
 
   test("intrarea in cont se face fara maus", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await scrieCuTastatura(page, page.getByLabel("Email"), CONTURI.elena);
+    await expect(page.getByLabel("Numarul tau de telefon")).toBeVisible();
+    await scrieCuTastatura(page, page.getByLabel("Numarul tau de telefon"), CONTURI.elena);
     await scrieCuTastatura(page, page.getByLabel("Parola"), PAROLA);
     await apasaCuTastatura(page, buton(page, "Intra"));
     await expect(buton(page, "Iesi")).toBeVisible({ timeout: 25000 });
@@ -202,17 +202,14 @@ test.describe("fiecare refuz spune ce are omul de facut", () => {
   test("refuzurile cele mai probabile spun si pasul urmator", async ({ page }) => {
     const mesaje = {};
 
-    /* 1. Cod de invitatie gresit, pe ecranul de intrare */
+    /* 1. Numar sau parola gresite, pe ecranul de intrare */
     await page.goto("/");
-    await buton(page, "Am un cod de la administrator").click();
-    await page.getByLabel(/[Cc]od/).first().fill("ZZZZ9999");
-    const trimite = page.getByRole("button", { name: /Continu|Verific|Intra/ }).first();
-    if (await trimite.count()) {
-      await trimite.click();
-      await page.waitForTimeout(1200);
-      const t = await page.locator(".ab-shell").innerText();
-      mesaje.codGresit = (t.match(/Codul[^\n]*/) || [""])[0];
-    }
+    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
+    await page.getByLabel("Parola").fill("parola-gresita-1234");
+    await buton(page, "Intra").click();
+    await page.waitForTimeout(1200);
+    const t = await page.locator(".ab-shell").innerText();
+    mesaje.parolaGresita = (t.match(/Numarul de telefon[^\n]*/) || [""])[0];
 
     /* 2. Comanda fara server */
     await intraCa(page, "admin");
@@ -241,7 +238,7 @@ test.describe("fiecare refuz spune ce are omul de facut", () => {
 test.describe("refuzul de la intrarea in cont", () => {
   test("[R4] parola gresita spune si ce are omul de facut", async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel("Email").fill(CONTURI.elena);
+    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
     await page.getByLabel("Parola").fill("Parola-Gresita-1");
     await buton(page, "Intra").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 25000 });

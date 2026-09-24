@@ -246,13 +246,28 @@ describe("istoricul si fraza de comparatie", () => {
 });
 
 describe("descriereAlocari si chitanta", () => {
-  const plataNoua = (x) => ({ apartamentId: AP, metoda: "transfer", stare: "confirmata", inregistrataDe: null, confirmataLa: "2026-09-10T12:00:00+03:00", chitanta: { serie: "AP118", numar: 470, emisaLa: "2026-09-10T12:34:00+03:00" }, alocari: [], ...x });
+  /* [B6] randurile chitantei sunt cele inghetate la emitere */
+  const chitantaCu = (randuri, numar = 470) => ({
+    serie: "AP118", numar, emisaLa: "2026-09-10T12:34:00+03:00", randuri,
+    /* [S4] apartamentul si proprietarul de la emitere */
+    emisPentru: { apartament: "17", proprietar: "Elena Marinescu", bloc: "Bloc D14, scara A" },
+  });
+  const plataNoua = (x) => ({ apartamentId: AP, metoda: "transfer", stare: "confirmata", inregistrataDe: null, confirmataLa: "2026-09-10T12:00:00+03:00", chitanta: chitantaCu([]), alocari: [], ...x });
 
   it("descrie fiecare tip de datorie acoperit, avansul si datoriile necunoscute", async () => {
     await plata((d) => {
       d.datorii.push(datorie({ id: "dat-pen", tip: "penalizare", luna: "2026-07", suma: 3, rest: 0, scadenta: "2026-07-01", descriere: "Penalizare" }));
       d.datorii.push(datorie({ id: "dat-si", tip: "sold_initial", luna: "2026-05", suma: 40, rest: 0, scadenta: "2026-05-25", descriere: "Restanta preluata de pe hartie" }));
-      d.plati.push(plataNoua({ id: "pla-a", suma: 100, alocari: [{ datorieId: "dat-pen", suma: 3 }, { datorieId: "dat-si", suma: 40 }, { datorieId: "dat-lipsa", suma: 7 }] }));
+      d.plati.push(plataNoua({
+        id: "pla-a", suma: 100,
+        alocari: [{ datorieId: "dat-pen", suma: 3 }, { datorieId: "dat-si", suma: 40 }, { datorieId: "dat-lipsa", suma: 7 }],
+        chitanta: chitantaCu([
+          { tip: "penalizare", luna: "2026-07", descriere: "Penalizare", suma: 3 },
+          { tip: "sold_initial", luna: "2026-05", descriere: "Restanta preluata de pe hartie", suma: 40 },
+          { tip: "corectie", luna: "2026-08", descriere: null, suma: 7 },
+          { tip: "avans", luna: null, descriere: null, suma: 50 },
+        ]),
+      }));
       d.plati.push(plataNoua({ id: "pla-b", suma: 25, alocari: [], confirmataLa: "2026-09-11T12:00:00+03:00", chitanta: null, metoda: "transfer" }));
     });
     await apasa("Platile mele");
@@ -292,8 +307,10 @@ describe("descriereAlocari si chitanta", () => {
     expect(text).toContain("IBAN RO49RNCB0082004512340001, BCR, sucursala Pitesti");
     expect(text).toContain("CHITANTA  AP118 nr. 000440");
     expect(text).toContain("Data: 12 august 2026, ora 21:03");
-    expect(text).toContain("Am primit de la Elena Marinescu, apartamentul 17, Bloc D14, scara A,");
+    /* [B8, S4] apartamentul si proprietarul, asa cum erau la emitere */
+    expect(text).toContain("Am primit pentru apartamentul 17, Bloc D14, scara A,");
     expect(text).toContain("suma de 631,39 lei, reprezentand:");
+    expect(text).toContain("Proprietar la data emiterii: Elena Marinescu");
     expect(text).toContain("- Intretinere iulie 2026: 631,39 lei");
     expect(text).toContain("Modalitate: transfer bancar");
     expect(text).toContain("Document emis electronic prin AdminBloc.");
@@ -302,10 +319,10 @@ describe("descriereAlocari si chitanta", () => {
   it("chitanta in numerar, cu si fara numele celui care a incasat, si prin transfer", async () => {
     await plata((d) => {
       d.plati.length = 0;
-      d.plati.push(plataNoua({ id: "p1", suma: 10, metoda: "numerar", inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118", numar: 1, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-14T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p2", suma: 20, metoda: "numerar", chitanta: { serie: "AP118", numar: 2, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-13T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p3", suma: 30, metoda: "transfer", chitanta: { serie: "AP118", numar: 3, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-12T12:00:00+03:00" }));
-      d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "transfer", inregistrataDe: "Mihai Dobre", chitanta: { serie: "AP118", numar: 4, emisaLa: "2026-09-10T08:05:00+03:00" }, confirmataLa: "2026-09-11T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p1", suma: 10, metoda: "numerar", inregistrataDe: "Mihai Dobre", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 10 }], 1), confirmataLa: "2026-09-14T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p2", suma: 20, metoda: "numerar", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 20 }], 2), confirmataLa: "2026-09-13T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p3", suma: 30, metoda: "transfer", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 30 }], 3), confirmataLa: "2026-09-12T12:00:00+03:00" }));
+      d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "transfer", inregistrataDe: "Mihai Dobre", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 40 }], 4), confirmataLa: "2026-09-11T12:00:00+03:00" }));
     });
     await apasa("Platile mele");
     const pdf = prindePdf();
@@ -320,17 +337,20 @@ describe("descriereAlocari si chitanta", () => {
     expect(texte[1]).toMatch(/Modalitate: numerar\n/);
     expect(texte[2]).toContain("Modalitate: transfer bancar");
     expect(texte[3]).toContain("Modalitate: transfer bancar, confirmat de Mihai Dobre");
-    expect(texte[3]).toMatch(/Am primit de la .+, apartamentul \d+, Bloc D14, scara A,/);
+    expect(texte[3]).toMatch(/Am primit pentru apartamentul \d+, Bloc D14, scara A,/);
     expect(within(document.body).getByText("14 septembrie 2026, numerar")).toBeTruthy();
   });
 
   /* Audit F9: pdf.js pastreaza doar octetul de jos, deci diacriticele devin alte litere */
   it("[F9] numele cu diacritice apare lizibil pe chitanta", async () => {
-    await plata((d) => { d.apartamente[0].proprietar = "Ștefan Țăranu"; });
+    await plata((d) => {
+      d.apartamente[0].proprietar = "Ștefan Țăranu";
+      d.plati.forEach((p) => { if (p.chitanta) p.chitanta.emisPentru = { ...p.chitanta.emisPentru, proprietar: "Ștefan Țăranu" }; });
+    });
     await apasa("Platile mele");
     const pdf = prindePdf();
     await apasa("Descarca chitanta", 0);
     const { text } = await pdf.ultimul();
-    expect(text).toMatch(/Am primit de la (Ștefan Țăranu|Stefan Taranu),/);
+    expect(text).toMatch(/Proprietar la data emiterii: (Ștefan Țăranu|Stefan Taranu)/);
   });
 });

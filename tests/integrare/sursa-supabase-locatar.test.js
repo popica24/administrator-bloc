@@ -15,7 +15,7 @@ beforeAll(async () => {
     ],
     locatari: [{ cheie: "loc", apartament: "1" }, { cheie: "vecin", apartament: "2" }],
   });
-  ({ s } = await intraCa(f.conturi.loc.email));
+  ({ s } = await intraCa(f.conturi.loc.telefon));
 });
 
 describe("transmiteCitire()", () => {
@@ -210,9 +210,9 @@ describe("[K13] alocarile unei plati", () => {
       apartament_id: f.ap["2"], bloc_id: f.blocId, tip: "sold_initial", suma: 10,
       scadenta: new Date(Date.now() - z * 86400000).toISOString().slice(0, 10), descriere: `Restanta K13, acum ${z} zile`,
     }))).select("id, scadenta"));
-    const { s: admin } = await intraCa(f.adminEmail);
+    const { s: admin } = await intraCa(f.adminTelefon);
     const r = await admin.inregistreazaIncasare(f.ap["2"], 50, "numerar");
-    const vecin = (await intraCa(f.conturi.vecin.email)).s;
+    const vecin = (await intraCa(f.conturi.vecin.telefon)).s;
     const plata = (await vecin.incarca()).plati.find((p) => p.id === r.plataId);
     const asteptat = [...inserate].sort((a, b) => a.scadenta.localeCompare(b.scadenta)).map((d) => d.id);
     expect(plata.alocari.map((a) => a.datorieId)).toEqual(asteptat);

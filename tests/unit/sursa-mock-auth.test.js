@@ -4,8 +4,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { creeazaSursaMock, aziIso } from "../../src/sursa-mock.js";
 import { ceasDemo, ZI_DEMO, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 
-const ILIE = "familia.ilie@adminbloc.test";
-const NEVERIFICAT = "admin.nou@adminbloc.test";
+const ILIE = "0726 331 003";
+const NEVERIFICAT = "0755 900 800";
 const apNr = (d, n) => d.apartamente.find((a) => a.numar === n);
 
 async function ca(email, s = creeazaSursaMock()) {
@@ -31,201 +31,29 @@ describe("sesiunea", () => {
     expect(await s.incarca()).toBeNull();
   });
 
-  it("intra accepta emailul cu majuscule si spatii, apoi iesi inchide sesiunea", async () => {
+  it("intra accepta numarul scris oricum, apoi iesi inchide sesiunea", async () => {
     const s = creeazaSursaMock();
-    const ses = await s.intra("  Elena.Marinescu@AdminBloc.test ", PAROLA);
-    expect(ses).toEqual({ profilId: expect.any(String), email: LOCATAR });
+    const ses = await s.intra(" +40733 410 217 ", PAROLA);
+    expect(ses).toEqual({ profilId: expect.any(String) });
     expect(await s.sesiuneCurenta()).toBe(ses);
     await s.iesi();
     expect(await s.sesiuneCurenta()).toBeNull();
     expect(await s.incarca()).toBeNull();
   });
 
-  it("parola gresita sau email necunoscut: acelasi mesaj", async () => {
+  it("parola gresita, numar necunoscut sau numar gresit: acelasi mesaj", async () => {
     const s = creeazaSursaMock();
-    await expect(s.intra(LOCATAR, "gresit")).rejects.toThrow("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
-    await expect(s.intra("nimeni@x.ro", PAROLA)).rejects.toThrow("Emailul sau parola nu sunt corecte. Verifica-le si incearca din nou.");
+    const mesaj = "Numarul de telefon sau parola nu sunt corecte. Verifica-le si incearca din nou.";
+    await expect(s.intra(LOCATAR, "gresit")).rejects.toThrow(mesaj);
+    await expect(s.intra("0722 000 999", PAROLA)).rejects.toThrow(mesaj);
+    await expect(s.intra("nu e numar", PAROLA)).rejects.toThrow(mesaj);
     expect(await s.sesiuneCurenta()).toBeNull();
   });
 
   it("orice comanda fara sesiune cere autentificare", async () => {
     const s = creeazaSursaMock();
-    await expect(s.cereVerificareAdministrator({ numarAtestat: "X" })).rejects.toThrow("Nu esti autentificat.");
     await expect(s.deschideLista("2026-10")).rejects.toThrow("Nu esti autentificat.");
     await expect(s.marcheazaAnuntCitit("anu-1")).rejects.toThrow("Nu esti autentificat.");
-  });
-});
-
-describe("inregistreaza", () => {
-  it("creeaza contul, intra direct in el si nu are inca apartament", async () => {
-    const s = creeazaSursaMock();
-    const ses = await s.inregistreaza({ email: " ion@x.ro ", parola: "ParolaBuna1", nume: "  Ion Pop " });
-    expect(ses.email).toBe("ion@x.ro");
-    const d = await s.incarca();
-    expect(d).toEqual({
-      azi: "2026-09-19",
-      eu: { profilId: ses.profilId, nume: "Ion Pop", telefon: null, email: "ion@x.ro", rol: "fara_apartament", apartamentId: null },
-    });
-    await s.iesi();
-    await s.intra("ion@x.ro", "ParolaBuna1");
-    expect((await s.incarca()).eu.nume).toBe("Ion Pop");
-  });
-
-  it("pastreaza telefonul", async () => {
-    const s = creeazaSursaMock();
-    await s.inregistreaza({ email: "a@x.ro", parola: "ParolaBuna1", nume: "A", telefon: "0700" });
-    expect((await s.incarca()).eu.telefon).toBe("0700");
-  });
-
-  it("refuza un email existent (fara sa conteze majusculele) si parola scurta sau lipsa", async () => {
-    const s = creeazaSursaMock();
-    await expect(s.inregistreaza({ email: "ADMINISTRATOR@adminbloc.test", parola: "ParolaBuna1", nume: "X" }))
-      .rejects.toThrow("Exista deja un cont cu acest email.");
-    await expect(s.inregistreaza({ email: "b@x.ro", parola: "Scurta1", nume: "X" }))
-      .rejects.toThrow("Parola trebuie sa aiba cel putin 10 caractere.");
-    await expect(s.inregistreaza({ email: "b@x.ro", nume: "X" }))
-      .rejects.toThrow("Parola trebuie sa aiba cel putin 10 caractere.");
-    await expect(s.inregistreaza({ email: "b@x.ro", parola: "parolafaracifre", nume: "X" }))
-      .rejects.toThrow("Parola trebuie sa aiba si litere mici, si litere mari, si cifre.");
-  });
-});
-
-describe("cereVerificareAdministrator", () => {
-  it("contul nou devine administrator in asteptare si nu vede niciun bloc", async () => {
-    const s = creeazaSursaMock();
-    await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-1", fisier: new File(["x"], "atestat.pdf") });
-    const d = await s.incarca();
-    expect(d.eu.rol).toBe("in_asteptare");
-    expect(Object.keys(d)).toEqual(["azi", "eu"]);
-  });
-
-  it("merge si fara fisier", async () => {
-    const s = creeazaSursaMock();
-    await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-1" });
-    const d = await s.incarca();
-    expect(d.eu.rol).toBe("in_asteptare");
-  });
-
-  /* [J4] Backend-ul (identitate.cere_verificare_administrator) lasa pe
-     oricine nu e deja aprobat sa retrimita cererea (numar de atestat
-     corectat, eventual poza noua): cererea se intoarce mereu la
-     in_asteptare. Mock-ul o refuza pe a doua necondiționat ("Cererea a fost
-     deja trimisa."), ceea ce nu are corespondent in baza si bloca exact
-     scenariul pe care J4 il repara in ecran (un administrator respins care
-     vrea sa incerce din nou). */
-  it("[J4] o a doua cerere, de la cineva neaprobat, actualizeaza atestatul in loc sa fie refuzata", async () => {
-    const s = creeazaSursaMock();
-    await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-1" });
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-2" });
-    expect((await s.incarca()).eu.rol).toBe("in_asteptare");
-    const { profilId } = await s.sesiuneCurenta();
-    expect(s.db.administratori.find((a) => a.profilId === profilId).numarAtestat).toBe("AT-2");
-  });
-
-  /* [J4] Un administrator respins (stare pe care doar o cerere de
-     dezvoltator din Studio > SQL o poate scrie astazi, ca in
-     conturi-test.txt) trebuie sa poata retrimite cererea si sa redevina
-     in_asteptare, exact ca unul in_asteptare. */
-  it("[J4] un administrator respins retrimite cererea si redevine in asteptare", async () => {
-    const s = creeazaSursaMock();
-    await s.inregistreaza({ email: "adm@x.ro", parola: "ParolaBuna1", nume: "Adm" });
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-1" });
-    const { profilId } = await s.sesiuneCurenta();
-    const rand = s.db.administratori.find((a) => a.profilId === profilId);
-    rand.stare = "respins";
-    rand.motivRespingere = "Atestatul nu se citeste.";
-    /* [K21] ca identitate.eu(): motivul ajunge la omul respins */
-    expect((await s.incarca()).eu).toMatchObject({ rol: "respins", motivRespingere: "Atestatul nu se citeste." });
-
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-1 corectat", fisier: new File(["x"], "atestat-nou.pdf") });
-    expect((await s.incarca()).eu.rol).toBe("in_asteptare");
-    expect((await s.incarca()).eu).not.toHaveProperty("motivRespingere");
-    expect(rand.motivRespingere).toBeNull();
-    expect(rand.numarAtestat).toBe("AT-1 corectat");
-    expect(rand.atestatCale).toMatch(/atestat-nou\.pdf$/);
-  });
-
-  it("[J4] o cerere de la cineva deja aprobat nu schimba nimic", async () => {
-    const s = await ca(ADMIN);
-    const { profilId } = await s.sesiuneCurenta();
-    const rand = s.db.administratori.find((a) => a.profilId === profilId);
-    const atestatDinainte = rand.numarAtestat;
-    await s.cereVerificareAdministrator({ numarAtestat: "AT-ALTUL" });
-    expect(rand.numarAtestat).toBe(atestatDinainte);
-    expect(rand.stare).toBe("aprobat");
-  });
-
-  it("contul demo neverificat vede doar ecranul de asteptare", async () => {
-    const d = await (await ca(NEVERIFICAT)).incarca();
-    expect(d.eu).toMatchObject({ nume: "Cosmin Radu", rol: "in_asteptare", apartamentId: null });
-    expect(d.bloc).toBeUndefined();
-  });
-});
-
-describe("folosesteInvitatie", () => {
-  async function codPentru(numar, calitate = "chirias") {
-    const s = await ca(ADMIN);
-    const d = await s.incarca();
-    const cod = await s.invitaLocatar(apNr(d, numar).id, calitate);
-    await s.iesi();
-    return { s, cod, apId: apNr(d, numar).id };
-  }
-
-  it("leaga contul nou de apartament; codul se scrie oricum", async () => {
-    const { s, cod, apId } = await codPentru("11");
-    expect(cod).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
-    await s.inregistreaza({ email: "chirias@x.ro", parola: "ParolaBuna1", nume: "Chirias" });
-    expect(await s.folosesteInvitatie(`  ${cod.toLowerCase()} `)).toEqual({ apartamentNumar: "11" });
-    const d = await s.incarca();
-    expect(d.eu).toMatchObject({ rol: "locatar", apartamentId: apId });
-    expect(d.apartamente.map((a) => a.numar)).toEqual(["11"]);
-
-    await s.intra(ADMIN, PAROLA);
-    const a = apNr(await s.incarca(), "11");
-    expect(a.locatari).toEqual([{ id: expect.any(String), nume: "Chirias", email: "chirias@x.ro", telefon: null, calitate: "chirias", activDin: "2026-09-19", activPana: null }]);
-    expect(a.invitatii).toEqual([]);
-  });
-
-  it("codul folosit, inexistent sau expirat nu mai merge", async () => {
-    const { s, cod } = await codPentru("11");
-    await s.inregistreaza({ email: "u1@x.ro", parola: "ParolaBuna1", nume: "U1" });
-    await expect(s.folosesteInvitatie("NUEXISTA")).rejects.toThrow("Codul nu este valabil. Cere administratorului un cod nou.");
-    await s.folosesteInvitatie(cod);
-    await s.inregistreaza({ email: "u2@x.ro", parola: "ParolaBuna1", nume: "U2" });
-    await expect(s.folosesteInvitatie(cod)).rejects.toThrow("Codul nu este valabil.");
-
-    const { s: s2, cod: cod2 } = await codPentru("15");
-    await s2.inregistreaza({ email: "u3@x.ro", parola: "ParolaBuna1", nume: "U3" });
-    ceasDemo(new Date("2026-10-20T09:00:00"));
-    await expect(s2.folosesteInvitatie(cod2)).rejects.toThrow("Codul nu este valabil.");
-  });
-
-  it("codul nefolosit apare la administrator pana expira", async () => {
-    const { s, cod } = await codPentru("11", "proprietar");
-    await s.intra(ADMIN, PAROLA);
-    expect(apNr(await s.incarca(), "11").invitatii).toEqual([{ id: expect.any(String), cod, calitate: "proprietar", expiraLa: new Date(ZI_DEMO.getTime() + 30 * 86400000).toISOString() }]);
-    ceasDemo(new Date("2026-10-20T09:00:00"));
-    expect(apNr(await s.incarca(), "11").invitatii).toEqual([]);
-  });
-
-  /* [J13] identitate.foloseste_invitatie() (migratia S11,
-     revoca_invitatie_si_inchide_acces_corect) refuza cu "Esti deja legat de
-     acest apartament." si nu consuma codul cand omul e deja legat activ de
-     acelasi apartament -- "on conflict do nothing" nu mai lasa comanda sa
-     para reusita fara niciun efect real. Mock-ul intorcea succes si consuma
-     codul oricum: paritatea era doar in comentariu, nu si in cod. */
-  it("[J13] codul folosit de cineva deja legat de apartament este refuzat, nu consumat", async () => {
-    const { s, cod } = await codPentru("17", "proprietar");
-    await s.intra(LOCATAR, PAROLA);
-    await expect(s.folosesteInvitatie(cod)).rejects.toThrow("Esti deja legat de acest apartament.");
-    await s.intra(ADMIN, PAROLA);
-    const ap17 = apNr(await s.incarca(), "17");
-    expect(ap17.locatari).toHaveLength(1);
-    /* codul ramane nefolosit, nu disparut ca "deja consumat" */
-    expect(ap17.invitatii).toEqual([{ id: expect.any(String), cod, calitate: "proprietar", expiraLa: expect.any(String) }]);
   });
 });
 
@@ -237,9 +65,9 @@ describe("[P1/P5] un locatar legat de doua apartamente ale aceluiasi bloc", () =
     const ap3 = apNr(d, "3").id;
     const ap5 = apNr(d, "5").id;
     const ap9 = apNr(d, "9").id;
-    const cod = await s.invitaLocatar(ap5, "chirias");
+    /* [P1/P5] acelasi om, al doilea apartament: numarul lui are deja cont */
+    await s.adaugaLocatar(ap5, { nume: "Dan Ilie", telefon: ILIE, calitate: "chirias" });
     await s.intra(ILIE, PAROLA);
-    await s.folosesteInvitatie(cod);
     const dupa = await s.incarca();
     expect([...dupa.eu.apartamenteMele].sort()).toEqual([ap3, ap5].sort());
     expect(dupa.apartamente.map((a) => a.id).sort()).toEqual([ap3, ap5].sort());
@@ -260,7 +88,7 @@ describe("incarca ca locatar", () => {
     const ap = apNr(d, "17");
     expect(d.eu).toMatchObject({ nume: "Elena Marinescu", rol: "locatar", apartamentId: ap.id });
     expect(d.apartamente).toHaveLength(1);
-    expect(ap).toMatchObject({ numar: "17", etaj: 4, persoane: 3, cota: 4.63, scutitLift: false, locatari: [], invitatii: [] });
+    expect(ap).toMatchObject({ numar: "17", etaj: 4, persoane: 3, cota: 4.63, scutitLift: false, locatari: [] });
     expect(ap.istoricPersoane).toEqual([{ valabilDin: "2026-05", numar: 3, motiv: "Preluat de pe lista de plata din mai 2026" }]);
     expect(d.liste.map((l) => l.luna)).toEqual(["2026-08", "2026-07", "2026-06"]);
     expect(d.liste.every((l) => l.stare === "publicata")).toBe(true);

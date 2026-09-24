@@ -51,7 +51,21 @@ const erori = unice([...final.matchAll(/raise\s+exception\s+'((?:[^']|'')*)'/gi)
   .map((m) => m[1].replace(/''/g, "'").split("%")[0].trim())
   .filter((t) => t.length >= 8));
 
-const politici = unice([...final.matchAll(/create\s+policy\s+"([^"]+)"/gi)].map((m) => m[1]));
+/* O politica poate fi stearsa (`drop policy`) sau poate dispare odata cu
+   tabela ei (`drop table`), si poate fi refacuta dupa aceea cu acelasi nume:
+   conteaza ultima stare din ordinea migratiilor, ca la functii. */
+const tabeleSterse = new Set([...migratii.matchAll(/drop\s+table\s+(?:if\s+exists\s+)?([a-z_]+\.[a-z_0-9]+)/gi)]
+  .map((m) => m[1].toLowerCase()));
+const starePolitici = new Map();
+const POLITICA = /create\s+policy\s+"([^"]+)"\s+on\s+([a-z_]+\.[a-z_0-9]+)|drop\s+policy\s+(?:if\s+exists\s+)?"([^"]+)"\s+on\s+([a-z_]+\.[a-z_0-9]+)/gi;
+for (const m of migratii.matchAll(POLITICA)) {
+  const [, creata, tabelaC, stearsa, tabelaD] = m;
+  if (creata) starePolitici.set(`${tabelaC.toLowerCase()}|${creata}`, creata);
+  else starePolitici.delete(`${tabelaD.toLowerCase()}|${stearsa}`);
+}
+const politici = unice([...starePolitici.entries()]
+  .filter(([cheie]) => !tabeleSterse.has(cheie.split("|")[0]))
+  .map(([, nume]) => nume));
 
 const verifica = (nume, lista, gasit) => {
   const lipsa = lista.filter((x) => !gasit(x));

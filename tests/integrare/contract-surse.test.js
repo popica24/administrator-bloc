@@ -15,8 +15,8 @@ import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { PAROLA_DEMO } from "../../src/date-demo.js";
 import { intraCa } from "./fixture.js";
 
-const ADMIN = "administrator@adminbloc.test";
-const LOCATAR = "elena.marinescu@adminbloc.test";
+const ADMIN = "0745 210 118";
+const LOCATAR = "0733 410 217";
 
 /* Divergentele stiute intre surse (auditul 1, §8). Sunt ignorate aici ca sa nu
    ascunda regresiile noi, dar lista trebuie sa se scurteze, nu sa creasca:

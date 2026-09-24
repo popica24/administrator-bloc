@@ -21,9 +21,9 @@ beforeAll(async () => {
   f = await creeazaBloc({
     locatari: [{ cheie: "loc", apartament: "1" }, { cheie: "loc2", apartament: "2" }],
   });
-  adm = (await intraCa(f.adminEmail)).s;
-  loc = (await intraCa(f.conturi.loc.email)).s;
-  loc2 = (await intraCa(f.conturi.loc2.email)).s;
+  adm = (await intraCa(f.adminTelefon)).s;
+  loc = (await intraCa(f.conturi.loc.telefon)).s;
+  loc2 = (await intraCa(f.conturi.loc2.telefon)).s;
   await loc.transmiteCitire({ apartamentId: f.ap["1"], luna, indexuri: [{ contorId: f.contoare["1:rece"], index: 15 }, { contorId: f.contoare["1:calda"], index: 9 }] });
   await loc2.transmiteCitire({ apartamentId: f.ap["2"], luna, indexuri: [{ contorId: f.contoare["2:rece"], index: 25 }, { contorId: f.contoare["2:calda"], index: 12 }] });
 });

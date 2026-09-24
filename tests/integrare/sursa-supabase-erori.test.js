@@ -8,7 +8,7 @@ const SESIZARE = "00000000-0000-4000-8000-000000000000";
 let s;
 
 beforeAll(async () => {
-  ({ s } = await intraCa("elena.marinescu@adminbloc.test"));
+  ({ s } = await intraCa("0733 410 217"));
 });
 
 const rpc = (nume, raspuns) => (url) => (url.includes(`/rpc/${nume}`) ? raspuns() : undefined);

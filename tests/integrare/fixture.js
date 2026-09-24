@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { URL_LOCAL, ANON_LOCAL, SERVICE_LOCAL, PAROLA_TEST } from "../setup-integrare.js";
 import { creeazaSursaSupabase } from "../../src/sursa-supabase.js";
+import { adresaContului, normalizeazaTelefon } from "../../supabase/functions/_shared/telefon.js";
 
 export { URL_LOCAL, ANON_LOCAL, SERVICE_LOCAL, PAROLA_TEST };
 
@@ -67,21 +68,20 @@ export const pdf = (nume = "document.pdf") => new File([Buffer.from("%PDF-1.4\n%
 
 /* O sursa noua, cu sesiunea ei (fiecare client tine sesiunea in memorie) */
 export const sursaNoua = () => creeazaSursaSupabase(URL_LOCAL, ANON_LOCAL);
-export async function intraCa(email, { incarca = true } = {}) {
+export async function intraCa(telefon, { incarca = true } = {}) {
   const s = sursaNoua();
-  await s.intra(email, PAROLA_TEST);
+  await s.intra(telefon, PAROLA_TEST);
   const date = incarca ? await s.incarca() : null;
   return { s, date };
 }
 
-/* Un cont nou, confirmat, cu sesiunea deschisa. Inregistrarea prin aplicatie
-   nu mai deschide sesiune: Auth cere confirmarea emailului (config.toml,
-   [auth.email] enable_confirmations), iar testele nu citesc cutia postala. */
-export async function contNou({ email, nume, telefon } = {}) {
-  const c = await creeazaCont({ email, nume, telefon });
+/* Un cont nou, cu sesiunea deschisa. Contul se face cu cheia de serviciu, ca
+   in aplicatie: omul nu isi face singur cont. */
+export async function contNou({ nume, telefon } = {}) {
+  const c = await creeazaCont({ nume, telefon });
   const s = sursaNoua();
-  await s.intra(c.email, PAROLA_TEST);
-  return { s, profilId: c.id, email: c.email };
+  await s.intra(c.telefon, PAROLA_TEST);
+  return { s, profilId: c.id, telefon: c.telefon };
 }
 
 export async function functie(nume, corp) {
@@ -95,14 +95,20 @@ export async function functie(nume, corp) {
   return j;
 }
 
-export async function creeazaCont({ email, nume, telefon } = {}) {
-  const e = email || `cont-${unic()}@adminbloc.test`;
-  const metadate = {};
+/* Numere de telefon de test, unice pe rulare: contul se tine pe numar. */
+let urmatorulNumar = 0;
+export const telefonDeTest = () => `07${String(Date.now() % 100000000 + (urmatorulNumar += 1)).padStart(8, "0")}`;
+
+export async function creeazaCont({ nume, telefon } = {}) {
+  const numar = normalizeazaTelefon(telefon) || telefonDeTest();
+  const metadate = { telefon: numar };
   if (nume !== undefined) metadate.nume = nume;
-  if (telefon !== undefined) metadate.telefon = telefon;
-  const { data, error } = await serviciu.auth.admin.createUser({ email: e, password: PAROLA_TEST, email_confirm: true, user_metadata: metadate });
-  if (error) throw new Error(`cont ${e}: ${error.message}`);
-  return { id: data.user.id, email: e };
+  const { data, error } = await serviciu.auth.admin.createUser({
+    email: adresaContului(numar), phone: `+4${numar}`, password: PAROLA_TEST,
+    email_confirm: true, phone_confirm: true, user_metadata: metadate,
+  });
+  if (error) throw new Error(`cont ${numar}: ${error.message}`);
+  return { id: data.user.id, telefon: numar };
 }
 
 /* Apartamentele implicite: cotele insumeaza 100; "2A" verifica sortarea */
@@ -126,6 +132,7 @@ export async function creeazaBloc({ apartamente = APARTAMENTE, locatari = [], bl
   const id = unic();
   const cui = `RO${id}`.toUpperCase();
   const an = new Date().getUTCFullYear();
+  const telefonAdmin = telefonDeTest();
   const corp = (denumire) => ({
     asociatie: {
       denumire: `Asociatia de test ${id}`, cui, iban: "RO49AAAA1B31007593840000", banca: "Banca Test",
@@ -134,14 +141,14 @@ export async function creeazaBloc({ apartamente = APARTAMENTE, locatari = [], bl
     setari: { chitantaSerie: `T${id.slice(-4).toUpperCase()}` },
     bloc: { denumire, adresa: "Str. Testelor nr. 1", etaje: 4, ziLimitaCitire: 25, rulmentPerApartament: 100 },
     administrator: {
-      email: `admin-${id}@adminbloc.test`, parola: PAROLA_TEST, nume: `Administrator ${id}`, telefon: "0711 111 111",
+      telefon: telefonAdmin, parola: PAROLA_TEST, nume: `Administrator ${id}`,
       atestat: `AT-${id}`, activDin: `${an - 1}-01-01`,
     },
   });
   const creata = await functie("creeaza-asociatie", corp(`Bloc test ${id}`));
   const f = {
     id, cui, asociatieId: creata.asociatie_id, blocId: creata.bloc_id, adminId: creata.administrator,
-    adminEmail: `admin-${id}@adminbloc.test`, denumireAsociatie: `Asociatia de test ${id}`, lunaStart,
+    adminTelefon: telefonAdmin, denumireAsociatie: `Asociatia de test ${id}`, lunaStart,
     ap: {}, conturi: {}, locatari: {}, contoare: {}, general: {},
   };
 

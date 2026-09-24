@@ -1,7 +1,7 @@
 -- Teste pgTAP: documente (agentul a-). Vezi antetul pentru ajutoare si este_serviciu().
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(53);
 
 -- =============================================================================
 -- Ajutoare comune fisierelor a-*.test.sql (acelasi text in fiecare fisier).
@@ -207,6 +207,8 @@ begin
     ('poze', pg_temp.n('blocA', 'apA1', 'p1.jpg')),
     ('poze', pg_temp.n('blocA', 'apA2', 'p2.jpg')),
     ('poze', pg_temp.n('blocB', 'apB1', 'p3.jpg')),
+    -- [C11] poza unei sesizari: numai locatarul ei si administratorul blocului
+    ('poze', pg_temp.n('blocA', 'apA2', 'sesizare-1758000000000-1.jpg')),
     ('atestate', pg_temp.id('adminNou')::text || '/atestat.pdf');
 end;
 $$;
@@ -375,7 +377,7 @@ select pg_temp.ca('presA');
 set local role authenticated;
 select set_eq($$select pg_temp.obiecte_vazute('poze')$$,
   array[pg_temp.n('blocA', 'apA1', 'p1.jpg'), pg_temp.n('blocA', 'apA2', 'p2.jpg')],
-  'politica "Poze: citire de catre apartament si conducerea blocului": presedintele vede pozele blocului');
+  '[C11] politica "Poze: citire de catre apartament, bloc si administrator": presedintele vede pozele de contor, nu si pe cele ale sesizarilor');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA1', 'pres.jpg'))$$,
   '42501', null, 'politica "Poze: incarcare pentru apartamentul propriu": presedintele fara apartament nu incarca');
 reset role;
@@ -384,7 +386,7 @@ select pg_temp.ca('locA1');
 set local role authenticated;
 select set_eq($$select pg_temp.obiecte_vazute('poze')$$,
   array[pg_temp.n('blocA', 'apA1', 'p1.jpg')],
-  'politica "Poze: citire de catre apartament si conducerea blocului": locatarul vede doar pozele apartamentului lui');
+  'politica "Poze: citire de catre apartament, bloc si administrator": locatarul vede doar pozele apartamentului lui');
 select lives_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA1', 'citire.jpg'))$$,
   'politica "Poze: incarcare pentru apartamentul propriu": locatarul incarca pentru apartamentul lui');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA2', 'vecin.jpg'))$$,
@@ -396,14 +398,14 @@ reset role;
 select pg_temp.ca('locA2');
 set local role authenticated;
 select set_eq($$select pg_temp.obiecte_vazute('poze')$$,
-  array[pg_temp.n('blocA', 'apA2', 'p2.jpg')],
-  'politica "Poze: citire de catre apartament si conducerea blocului": vecinul nu vede pozele altuia');
+  array[pg_temp.n('blocA', 'apA2', 'p2.jpg'), pg_temp.n('blocA', 'apA2', 'sesizare-1758000000000-1.jpg')],
+  '[C11] politica "Poze: citire de catre apartament, bloc si administrator": vecinul nu vede pozele altuia, dar le vede pe ale lui');
 reset role;
 
 select pg_temp.ca('fostA1');
 set local role authenticated;
 select is_empty($$select pg_temp.obiecte_vazute('poze')$$,
-  'politica "Poze: citire de catre apartament si conducerea blocului": fostul locatar nu mai vede');
+  'politica "Poze: citire de catre apartament, bloc si administrator": fostul locatar nu mai vede');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA1', 'fost.jpg'))$$,
   '42501', null, 'politica "Poze: incarcare pentru apartamentul propriu": fostul locatar nu mai incarca');
 reset role;
@@ -412,13 +414,16 @@ select pg_temp.ca('adminA');
 set local role authenticated;
 select lives_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA2', 'admin.jpg'))$$,
   'politica "Poze: incarcare pentru apartamentul propriu": administratorul incarca in blocul lui');
+select is(
+  (select count(*)::int from storage.objects where bucket_id = 'poze' and name like '%/sesizare-%'), 1,
+  '[C11] politica "Poze: citire de catre apartament, bloc si administrator": administratorul blocului vede poza sesizarii');
 reset role;
 
 select pg_temp.ca('adminB');
 set local role authenticated;
 select set_eq($$select pg_temp.obiecte_vazute('poze')$$,
   array[pg_temp.n('blocB', 'apB1', 'p3.jpg')],
-  'politica "Poze: citire de catre apartament si conducerea blocului": administratorul B vede doar blocul lui');
+  'politica "Poze: citire de catre apartament, bloc si administrator": administratorul B vede doar blocul lui');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('poze', pg_temp.n('blocA', 'apA1', 'b.jpg'))$$,
   '42501', null, 'politica "Poze: incarcare pentru apartamentul propriu": nu in blocul altuia');
 reset role;

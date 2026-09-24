@@ -132,3 +132,84 @@ describe("AdminFonduri, inregistrarea unei iesiri (C3/E5)", () => {
     expect(spion).toHaveBeenCalledWith(expect.objectContaining({ fondId: rulment.id }));
   });
 });
+
+/* AlegeFisier si micsoreazaPoza: butonul deschide selectorul ascuns, iar o
+   poza mare se micsoreaza inainte sa plece spre server (o poza de telefon are
+   cateva mii de pixeli pe latura si cateva MB; bucketul primeste 1 MB). */
+describe("poza atasata unui document", () => {
+  const fals = () => {
+    const canvas = { width: 0, height: 0, getContext: () => ({ drawImage: () => {} }), toBlob: (cb) => cb(new Blob(["mica"], { type: "image/jpeg" })) };
+    const creeaza = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag) => (tag === "canvas" ? canvas : creeaza(tag)));
+    vi.stubGlobal("Image", class {
+      constructor() { this.width = 3000; this.height = 1500; }
+      set src(_v) { Promise.resolve().then(() => this.onload()); }
+    });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:poza");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    return canvas;
+  };
+
+  it("butonul deschide selectorul, iar poza se micsoreaza la 1600 px", async () => {
+    const canvas = fals();
+    await deschideFonduri();
+    await apasa("Inregistreaza o iesire", 0);
+    const selector = screen.getByLabelText("Ataseaza documentul");
+    const clic = vi.spyOn(selector, "click");
+    await apasa("Ataseaza documentul");
+    expect(clic).toHaveBeenCalled();
+
+    const poza = new File(["x".repeat(100)], "IMG_2026.HEIC.jpeg", { type: "image/jpeg" });
+    await act(async () => { fireEvent.change(selector, { target: { files: [poza] } }); });
+    expect(canvas.width).toBe(1600);
+    expect(canvas.height).toBe(800);
+    expect(screen.getByText("IMG_2026.HEIC.jpg")).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("daca micsorarea nu reuseste, ramane poza originala", async () => {
+    const canvas = fals();
+    canvas.toBlob = (cb) => cb(null);
+    await deschideFonduri();
+    await apasa("Inregistreaza o iesire", 0);
+    const poza = new File(["x"], "contor.jpg", { type: "image/jpeg" });
+    await act(async () => { fireEvent.change(screen.getByLabelText("Ataseaza documentul"), { target: { files: [poza] } }); });
+    expect(screen.getByText("contor.jpg")).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("selectorul inchis fara alegere nu trimite nimic, iar o poza fara nume devine poza.jpg", async () => {
+    fals();
+    await deschideFonduri();
+    await apasa("Inregistreaza o iesire", 0);
+    const selector = screen.getByLabelText("Ataseaza documentul");
+    await act(async () => { fireEvent.change(selector, { target: { files: [] } }); });
+    expect(screen.queryByText(/\.jpg$/)).toBeNull();
+
+    const faraNume = new File(["x"], "", { type: "image/jpeg" });
+    await act(async () => { fireEvent.change(selector, { target: { files: [faraNume] } }); });
+    expect(screen.getByText("poza.jpg")).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("o poza pe care browserul nu o poate deschide ramane cum a venit", async () => {
+    fals();
+    vi.stubGlobal("Image", class {
+      set src(_v) { Promise.resolve().then(() => this.onerror()); }
+    });
+    await deschideFonduri();
+    await apasa("Inregistreaza o iesire", 0);
+    const stricata = new File(["x"], "stricata.jpg", { type: "image/jpeg" });
+    await act(async () => { fireEvent.change(screen.getByLabelText("Ataseaza documentul"), { target: { files: [stricata] } }); });
+    expect(screen.getByText("stricata.jpg")).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("un fisier care nu e poza (PDF) ramane neschimbat", async () => {
+    await deschideFonduri();
+    await apasa("Inregistreaza o iesire", 0);
+    ataseaza();
+    await act(async () => {});
+    expect(screen.getByText("chitanta.pdf")).toBeTruthy();
+  });
+});

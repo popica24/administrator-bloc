@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { creeazaSursaMock } from "../../src/sursa-mock.js";
 import { ceasDemo, ZI_DEMO, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 
-const ILIE = "familia.ilie@adminbloc.test";
+const ILIE = "0726 331 003";
 const apNr = (d, n) => d.apartamente.find((a) => a.numar === n);
 const restTotal = (d, apId) => Math.round(d.datorii.filter((x) => x.apartamentId === apId).reduce((t, x) => t + x.rest, 0) * 100) / 100;
 
@@ -23,6 +23,37 @@ describe("inregistreazaIncasare", () => {
     const p = (await s.incarca()).plati.find((x) => x.id === plataId);
     expect(p).toMatchObject({ suma: 100, metoda: "transfer", inregistrataDe: "Mihai Dobre" });
     expect(p.chitanta.numar).toBeGreaterThan(0);
+  });
+
+  /* [B2] paritate cu financiar.inregistreaza_incasare: aceeasi cheie a cererii
+     (raspuns pierdut pe drum, administratorul apasa din nou) nu face a doua
+     plata si a doua chitanta pe aceiasi bani. */
+  it("[B2] aceeasi cheie a cererii intoarce aceeasi plata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const cheie = "cerere-de-test-1";
+    const intai = await s.inregistreazaIncasare(ap3, "100", "numerar", cheie);
+    const apoi = await s.inregistreazaIncasare(ap3, "100", "numerar", cheie);
+    expect(apoi.plataId).toBe(intai.plataId);
+    const dupa = await s.incarca();
+    expect(dupa.plati.filter((x) => x.id === intai.plataId)).toHaveLength(1);
+    const alta = await s.inregistreazaIncasare(ap3, "100", "numerar", "cerere-de-test-2");
+    expect(alta.plataId).not.toBe(intai.plataId);
+  });
+
+  /* [B5] Data in care au intrat banii: ziua din extrasul de cont, nu ziua in
+     care administratorul o confirma. */
+  it("[B5] transferul primeste ziua lui, iar datele imposibile sunt refuzate", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const { plataId } = await s.inregistreazaIncasare(ap3, "100", "transfer", null, "2026-09-11");
+    const p = (await s.incarca()).plati.find((x) => x.id === plataId);
+    expect(p.confirmataLa.slice(0, 10)).toBe("2026-09-11");
+    expect(p.chitanta.emisaLa.slice(0, 10)).toBe("2026-09-11");
+    await expect(s.inregistreazaIncasare(ap3, "100", "transfer", null, "2026-12-01"))
+      .rejects.toThrow("Data in care au intrat banii nu poate fi in viitor.");
+    await expect(s.inregistreazaIncasare(ap3, "100", "transfer", null, "2025-01-01"))
+      .rejects.toThrow("Data in care au intrat banii nu poate fi mai veche de sase luni.");
   });
 
   it("alta metoda decat numerar sau transfer este refuzata", async () => {

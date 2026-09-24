@@ -13,7 +13,7 @@
 -- 0,2% pe zi (plafonul legal), fara zile de gratie: penalizarea este 30 de lei.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(33);
 
 create or replace function private.este_serviciu()
 returns boolean
@@ -184,7 +184,82 @@ select is(
   '[K7] din 330, raman alocati 220 (200 intretinere, 20 penalizare): 110 se elibereaza');
 select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), -110.00::numeric,
   '[K7] ...si raman avans al apartamentului');
+-- [B6] Chitanta are numar si se pune la dosar: ce scrie pe ea nu se schimba
+-- dupa ce o recalculare muta banii de pe o datorie pe alta.
+select results_eq(
+  $$select r ->> 'tip', (r ->> 'suma')::numeric
+      from financiar.chitante c, jsonb_array_elements(c.randuri) r
+     where c.plata_id = (select id from financiar.plati where apartament_id = pg_temp.fx('ap1') order by creat_la desc limit 1)$$,
+  $$values ('intretinere'::text, 300.00::numeric), ('penalizare'::text, 30.00::numeric)$$,
+  '[B6] chitanta pastreaza randurile de la emitere, desi alocarile s-au schimbat');
 rollback to savepoint platita;
+
+-- -----------------------------------------------------------------------------
+-- [B1] O corectura in sus, apoi una in jos sub suma initiala
+-- -----------------------------------------------------------------------------
+-- Auditul 4: corectiile negative erau scazute toate din randul de intretinere,
+-- fara sa fie compensate cu cele pozitive. Lista urca la 700 (corectie +400) si
+-- coboara la 100 (corectie -600): intretinerea ramanea cu rest -300, iar
+-- corectia de +400 cu rest 400, desi omul datoreaza 100. Plata lui se ducea pe
+-- corectie, restul negativ nu se mai putea consuma niciodata (aloca_plata sare
+-- peste rest <= 0), iar penalizarile urmatoare se calculau pe 400.
+savepoint sus_apoi_jos;
+select pg_temp.recalculeaza(700, 0);
+select pg_temp.recalculeaza(100, 600);
+select is(pg_temp.rest(pg_temp.fx('intr')), 100.00::numeric,
+  '[B1] reducerea se scade intai din corectia pe care o anuleaza; pe intretinere ramane datoria reala');
+select is(
+  (select rest from financiar.datorii_rest
+    where lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap1') and tip = 'corectie' and suma > 0),
+  0.00::numeric,
+  '[B1] corectia pozitiva anulata de una negativa nu mai cere nimic');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  (select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')),
+  '[B1] suma resturilor ramane egala cu soldul din registru');
+-- datoria ramane pe randul de intretinere, cu scadenta lui: penalizarea se
+-- recalculeaza pe 100 de lei (10 lei in loc de 30), deci soldul este 110
+select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), 110.00::numeric,
+  '[B1] soldul este datoria reala plus penalizarea ei recalculata');
+select financiar.inregistreaza_plata(pg_temp.fx('ap1'),
+  (select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')), 'numerar');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  0.00::numeric,
+  '[B1] plata soldului real inchide tot, fara rand ramas pe ecran');
+rollback to savepoint sus_apoi_jos;
+
+-- -----------------------------------------------------------------------------
+-- [B3] Datoria nu a scazut, doar s-a mutat de pe un rand pe altul
+-- -----------------------------------------------------------------------------
+-- Auditul 4: K7 se uita doar la penalizarile calculate pe randul de
+-- intretinere si scadea din baza lor toate corectiile negative de dupa calcul,
+-- fara sa tina cont de cele pozitive. Lista urca la 700, corectia de +400
+-- primeste si ea penalizare, apoi lista coboara inapoi la 300: datoria reala a
+-- fost 300 tot timpul, dar penalizarea intretinerii era taiata ca si cum ar fi
+-- fost 0, iar penalizarea corectiei ramanea neatinsa.
+savepoint mutata;
+select pg_temp.recalculeaza(700, 0);
+update financiar.datorii set scadenta = current_date - 20
+  where tip = 'corectie' and suma > 0 and lista_id = pg_temp.fx('lista') and apartament_id = pg_temp.fx('ap1');
+select financiar.calculeaza_penalizari(current_date);
+select set_config('fx.pen_cor', (select p.datorie_id from financiar.penalizari p
+  join financiar.datorii d on d.id = p.datorie_sursa_id
+  where d.tip = 'corectie' and d.lista_id = pg_temp.fx('lista') and d.apartament_id = pg_temp.fx('ap1'))::text, true);
+select cmp_ok((select suma from financiar.datorii where id = pg_temp.fx('pen_cor')), '>', 0::numeric,
+  '[B3] pregatire: corectia in sus, ajunsa scadenta, primeste si ea penalizare');
+select pg_temp.recalculeaza(300, 400);
+select is(financiar.baza_dupa_corectii(pg_temp.fx('intr')), 300.00::numeric,
+  '[B3] financiar.baza_dupa_corectii: datoria de baza a ramas intreaga, corectiile s-au anulat intre ele');
+select is(pg_temp.rest(pg_temp.fx('pen_cor')), 0.00::numeric,
+  '[B3] corectia anulata isi pierde penalizarea');
+select is(pg_temp.rest(pg_temp.fx('pen')), 30.00::numeric,
+  '[B3] ...iar penalizarea datoriei care nu s-a schimbat ramane intreaga');
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  (select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')),
+  '[B3] suma resturilor ramane egala cu soldul din registru');
+rollback to savepoint mutata;
 
 -- -----------------------------------------------------------------------------
 -- Doar in jos
