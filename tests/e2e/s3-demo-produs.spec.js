@@ -254,10 +254,16 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     await buton(page, "Respinge citirea").click();
     await expect(page.getByText(/Citirea a fost respinsa/)).toBeVisible({ timeout: 25000 });
 
-    /* Estimarea inainte de termen: refuz explicat, nu un buton mort */
+    /* Estimarea: raspunsul este explicat, nu un buton mort. Modul demonstrativ
+       merge pe ceasul real, deci inainte de termenul de citire estimarea este
+       refuzata, iar dupa el chiar se poate face -- amandoua sunt raspunsuri
+       cinstite, si amandoua trebuie sa fie pe romaneste. */
     page.once("dialog", (d) => d.accept());
     await buton(page, "Estimeaza citirile lipsa").click();
-    await expect(page.getByText(/Nu poti estima inainte de termenul de citire/)).toBeVisible({ timeout: 25000 });
+    await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
+    const raspuns = await page.locator(".ab-toast").innerText();
+    expect(raspuns).toMatch(/Nu poti estima inainte de termenul de citire|Au fost estimate \d+ citiri/);
+    for (const cuvant of CUVINTE_TEHNICE) expect(raspuns).not.toContain(cuvant);
     await ecranSanatos(page, 300);
   });
 

@@ -178,33 +178,62 @@ test.describe("Citiri contoare", () => {
     expect(raspuns.status()).toBe(200);
   });
 
-  /* A6, reparat: estimarea nu mai porneste inainte de termenul de citire */
+  /* Termenul de citire pus inaintea zilei de azi, ca refuzul sa fie acelasi in
+     orice zi a lunii; la sfarsit se pune la loc cel din datele demo. */
+  const ziuaDeAzi = () => Number(new Date().toLocaleDateString("ro-RO", { timeZone: "Europe/Bucharest", day: "numeric" }));
+  async function cuTermenInViitor(fn) {
+    const b = await blocD14();
+    const sb = serviciu();
+    const { data: setari } = await sb.schema("contorizare").from("setari_contorizare")
+      .select("zi_limita_citire").eq("bloc_id", b.id).single();
+    await sb.schema("contorizare").from("setari_contorizare")
+      .update({ zi_limita_citire: Math.min(28, ziuaDeAzi() + 1) }).eq("bloc_id", b.id);
+    try {
+      await fn();
+    } finally {
+      await sb.schema("contorizare").from("setari_contorizare")
+        .update({ zi_limita_citire: setari.zi_limita_citire }).eq("bloc_id", b.id);
+    }
+  }
+
+  /* A6, reparat: estimarea nu mai porneste inainte de termenul de citire.
+     Termenul se pune inaintea rularii, ca testul sa nu depinda de ziua din
+     luna: cu termenul implicit (25), in a doua jumatate a lunii estimarea era
+     deja permisa, testul cadea si, cazand, estima toate citirile lipsa --
+     stricand si testele de dupa el. Regula din SQL este verificata determinist
+     de pgTAP (b-contorizare). */
   test("[A6] estimarea inainte de termen este refuzata cu un mesaj pe romaneste", async ({ page }) => {
-    await intraCa(page, "admin");
-    await mergiLaTab(page, "Apartamente");
-    await page.getByRole("button", { name: "Citiri contoare" }).click();
-    await expect(page.getByText(/\d+ apartamente nu au transmis indexul/)).toBeVisible();
-    page.once("dialog", (d) => d.accept());
-    await buton(page, "Estimeaza citirile lipsa").click();
-    await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
-    const mesaj = await page.locator(".ab-toast").innerText();
-    expect(mesaj).toMatch(/termen|25/i);
-    for (const cuvant of CUVINTE_TEHNICE) expect(mesaj).not.toContain(cuvant);
+    test.skip(ziuaDeAzi() >= 28, "in ultimele zile ale lunii nu mai exista un termen viitor de pus");
+    await cuTermenInViitor(async () => {
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: "Citiri contoare" }).click();
+      await expect(page.getByText(/\d+ apartamente nu au transmis indexul/)).toBeVisible();
+      page.once("dialog", (d) => d.accept());
+      await buton(page, "Estimeaza citirile lipsa").click();
+      await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
+      const mesaj = await page.locator(".ab-toast").innerText();
+      expect(mesaj).toMatch(/abia dupa ziua/i);
+      for (const cuvant of CUVINTE_TEHNICE) expect(mesaj).not.toContain(cuvant);
+    });
   });
 
   /* [P6] Vezi raportul: refuzurile scrise in SQL pun luna in mesaj cu `%`,
      deci ajunge la om asa cum o tine baza ("2026-09-01"), nu cum o scrie
      restul aplicatiei ("septembrie 2026"). */
   test("[P6] mesajele de refuz scriu luna pe romaneste, nu ca in baza", async ({ page }) => {
-    await intraCa(page, "admin");
-    await mergiLaTab(page, "Apartamente");
-    await page.getByRole("button", { name: "Citiri contoare" }).click();
-    page.once("dialog", (d) => d.accept());
-    await buton(page, "Estimeaza citirile lipsa").click();
-    await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
-    const mesaj = await page.locator(".ab-toast").innerText();
-    expect(mesaj).not.toMatch(/\d{4}-\d{2}-\d{2}/);
-    expect(mesaj).toContain("septembrie");
+    test.skip(ziuaDeAzi() >= 28, "in ultimele zile ale lunii nu mai exista un termen viitor de pus");
+    await cuTermenInViitor(async () => {
+      await intraCa(page, "admin");
+      await mergiLaTab(page, "Apartamente");
+      await page.getByRole("button", { name: "Citiri contoare" }).click();
+      page.once("dialog", (d) => d.accept());
+      await buton(page, "Estimeaza citirile lipsa").click();
+      await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
+      const mesaj = await page.locator(".ab-toast").innerText();
+      expect(mesaj).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+      expect(mesaj).toContain("septembrie");
+    });
   });
 });
 
