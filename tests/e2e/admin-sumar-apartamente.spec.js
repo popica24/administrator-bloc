@@ -205,6 +205,41 @@ test.describe("Fisa apartamentului", () => {
     expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
   });
 
+  /* [T1] Greseala de casierie: administratorul a scris suma gresit. Storneaza
+     incasarea din aceeasi fisa, cu motiv, iar banii se intorc in ce are de
+     platit apartamentul. Locatarul vede plata taiata si afla de ce. */
+  test("[T1] incasarea scrisa gresit se storneaza si banii se intorc in sold", async ({ page }) => {
+    const ap = await apartamentulNumarul(18);
+    await datorieDeTest(ap.id, 33.33, "Test stornare");
+    const sold = await soldApartament(ap.id);
+
+    await intraCa(page, "admin");
+    await mergiLaTab(page, "Apartamente");
+    await page.getByRole("button", { name: "Apartament 18" }).click();
+    await buton(page, "Inregistreaza incasare cash").click();
+    await buton(page, "Emite chitanta").click();
+    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
+    expect(await soldApartament(ap.id)).toBe(0);
+
+    await buton(page, "Storneaza incasarea").first().click();
+    /* fara motiv nu se poate */
+    await expect(buton(page, "Storneaza").last()).toHaveAttribute("aria-disabled", "true");
+    await page.getByLabel("De ce o anulezi").fill("Suma a fost scrisa gresit");
+    await buton(page, "Storneaza").last().click();
+    await asteaptaToast(page, "Incasarea a fost anulata");
+
+    expect(await soldApartament(ap.id)).toBeCloseTo(sold, 2);
+    const { data: plata } = await serviciu().schema("financiar").from("plati")
+      .select("stare, motiv_stornare").eq("apartament_id", ap.id)
+      .order("creat_la", { ascending: false }).limit(1).single();
+    expect(plata).toMatchObject({ stare: "rambursata", motiv_stornare: "Suma a fost scrisa gresit" });
+    /* chitanta ramane in carnet, cu numarul ei */
+    const { count } = await serviciu().schema("financiar").from("chitante")
+      .select("id", { count: "exact", head: true });
+    expect(count).toBeGreaterThan(0);
+    await expect(page.getByText("Anulata").first()).toBeVisible();
+  });
+
   test("suma scrisa cu punct de mii este citita ca mii", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");

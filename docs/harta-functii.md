@@ -461,6 +461,24 @@ starile `in_asteptare` / `esuata`.
   plata, pe restul de atunci, si cele de dupa, pe restul ramas dupa plata. Diferenta intra in
   registru ca `anulare_penalizare`, ca la K7, si se vede pe ecranul locatarului. Doar in jos.
 
+### 6.4.1 Stornarea unei incasari [T1]
+- **Cand:** administratorul a scris suma gresita, apartamentul gresit, a confirmat un transfer care
+  nu a intrat in cont, sau da banii inapoi. `storneazaIncasare(plataId, motiv)` →
+  `financiar.storneaza_incasare`.
+- **Ce se intampla:** plata **nu se sterge si nu se scrie in oglinda**. Trece in `stare =
+  'rambursata'`, cu motivul, cine si cand, si de acolo inainte nu se mai socoteste nicaieri:
+  `solduri` aduna doar platile confirmate, alocarile ei se elibereaza (datoriile se redeschid),
+  iar anularile de penalizare pe care le-a provocat (B5, prin `provocata_de_plata_id`) nu se mai
+  scad din penalizare. `datorii_rest` si `solduri` folosesc acelasi filtru
+  (`financiar.plati_stornate()`), ca sa nu existe doua cifre pentru aceiasi bani.
+- **Numai luna curenta**, dupa **ziua scrierii** (`plati.creat_la`, nu data din extras): greseala
+  se face cand scrii, deci se repara in luna in care ai scris-o, iar lunile inchise nu se clintesc.
+  De aceea `inregistreaza_plata` pune in `creat_la` ziua scrierii, si in `confirmata_la` ziua in
+  care au intrat banii.
+- **Ce vede omul:** chitanta ramane cu numarul ei, marcata anulata (pe ecran si cu "ANULATA" in
+  PDF), plata ramane in "Platile mele" cu motivul scris, iar locatarul primeste instiintare
+  (`PlataStornata` → `comunicare.la_plata_stornata`).
+
 ### 6.5 Chitante
 - Numerotare **fara goluri** pe asociatie: `setari_financiare.chitanta_ultimul_numar` se
   incrementeaza cu blocare in aceeasi tranzactie. Formatul este `SERIE nr. 000123`.

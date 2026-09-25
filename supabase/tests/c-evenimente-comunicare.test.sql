@@ -2,7 +2,7 @@
 -- Toate datele sunt create aici si se anuleaza la rollback.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(61);
+select plan(65);
 
 -- -----------------------------------------------------------------------------
 -- Ajutoare si date proprii testului (pg_temp: dispar odata cu sesiunea; totul
@@ -245,6 +245,25 @@ select results_eq(
 select is((select corp from comunicare.notificari where tip = 'plata' and profil_id = pg_temp.id('loc1')),
   'Am primit 1.234,50 lei. Chitanta AP nr. 000001 este in aplicatie, la Platile mele.',
   '[NOU-1] la_plata_confirmata: suma scrisa romaneste, 1.234,50 lei');
+
+-- =============================================================================
+-- [T1] PlataStornata -> comunicare.la_plata_stornata
+-- =============================================================================
+-- Plata dispare din ce are omul de platit, deci el trebuie sa afle de ce si sa
+-- poata pune cifra langa chitanta pe care o are in mana.
+select pg_temp.curata();
+select pg_temp.ca('adm');
+select financiar.storneaza_incasare(pg_temp.id('plata'), 'Suma a fost scrisa gresit');
+reset role;
+select is(evenimente.proceseaza(pg_temp.eveniment('PlataStornata', pg_temp.id('a1'))), true,
+  '[T1] evenimente.proceseaza: PlataStornata se proceseaza');
+select set_eq($$ select pg_temp.destinatari('plata') $$, $$ values (pg_temp.id('loc1')), (pg_temp.id('chirias1')) $$,
+  '[T1] comunicare.la_plata_stornata: locatarii apartamentului afla');
+select is((select corp from comunicare.notificari where tip = 'plata' and profil_id = pg_temp.id('loc1')),
+  'Incasarea de 1.234,50 lei, cu chitanta AP nr. 000001, a fost anulata de administrator: Suma a fost scrisa gresit. Suma a intrat la loc in ce ai de plata.',
+  '[T1] la_plata_stornata: suma, chitanta si motivul, pe romaneste');
+select is((select count(*)::int from financiar.plati_stornate() s where s.plata_id = pg_temp.id('plata')), 1,
+  '[T1] financiar.plati_stornate: plata stornata nu se mai socoteste nicaieri');
 
 -- =============================================================================
 -- VotDeschis / VotReamintit / AdunareConvocata -> comunicare.la_vot

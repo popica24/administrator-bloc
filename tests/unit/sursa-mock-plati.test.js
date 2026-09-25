@@ -6,6 +6,7 @@ import { ceasDemo, ZI_DEMO, PAROLA, ADMIN, LOCATAR } from "./ajutor.jsx";
 
 const ILIE = "0726 331 003";
 const apNr = (d, n) => d.apartamente.find((a) => a.numar === n);
+const round2 = (n) => Math.round(n * 100) / 100;
 const restTotal = (d, apId) => Math.round(d.datorii.filter((x) => x.apartamentId === apId).reduce((t, x) => t + x.rest, 0) * 100) / 100;
 
 async function ca(email, s = creeazaSursaMock()) {
@@ -54,6 +55,86 @@ describe("inregistreazaIncasare", () => {
       .rejects.toThrow("Data in care au intrat banii nu poate fi in viitor.");
     await expect(s.inregistreazaIncasare(ap3, "100", "transfer", null, "2025-01-01"))
       .rejects.toThrow("Data in care au intrat banii nu poate fi mai veche de sase luni.");
+  });
+
+  /* [T1] Administratorul a scris gresit: suma, apartamentul, sau a confirmat un
+     transfer care nu a intrat. Incasarea se storneaza, si atunci nu se mai
+     socoteste nicaieri -- dar ramane in istoric, cu motivul ei. */
+  it("[T1] stornarea scoate incasarea din socoteala si o lasa in istoric", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const soldInainte = restTotal(d, ap3);
+    const { plataId } = await s.inregistreazaIncasare(ap3, "100", "numerar");
+    expect(restTotal(await s.incarca(), ap3)).toBe(round2(soldInainte - 100));
+
+    await s.storneazaIncasare(plataId, "  Suma a fost scrisa gresit  ");
+    const dupa = await s.incarca();
+    expect(restTotal(dupa, ap3)).toBe(soldInainte);
+    const plata = dupa.plati.find((p) => p.id === plataId);
+    expect(plata).toMatchObject({ stare: "rambursata", motivStornare: "Suma a fost scrisa gresit" });
+    expect(plata.chitanta.numar).toBeGreaterThan(0);
+  });
+
+  it("[T1] stornarea cere un motiv si nu se face de doua ori", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const { plataId } = await s.inregistreazaIncasare(ap3, "50", "numerar");
+    await expect(s.storneazaIncasare(plataId, "   ")).rejects.toThrow("Scrie de ce stornezi incasarea.");
+    await s.storneazaIncasare(plataId, "Bani dati inapoi");
+    await expect(s.storneazaIncasare(plataId, "Inca o data")).rejects.toThrow("Incasarea a fost deja stornata.");
+  });
+
+  it("[T1] o incasare scrisa luna trecuta nu se mai storneaza", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const { plataId } = await s.inregistreazaIncasare(ap3, "50", "numerar");
+    s.db.plati.find((p) => p.id === plataId).creatLa = "2026-08-15T10:00:00+03:00";
+    await expect(s.storneazaIncasare(plataId, "Suma gresita"))
+      .rejects.toThrow("Se storneaza doar incasarile inregistrate in luna aceasta.");
+  });
+
+  it("[T1] o incasare din alt bloc sau inexistenta este refuzata", async () => {
+    const { s } = await ca(ADMIN);
+    await expect(s.storneazaIncasare("pla-0", "Suma gresita"))
+      .rejects.toThrow("Incasarea nu exista sau nu este in blocul tau.");
+  });
+
+  it("[T1] stornarea fara niciun motiv scris este refuzata", async () => {
+    const { s, d } = await ca(ADMIN);
+    const { plataId } = await s.inregistreazaIncasare(apNr(d, "3").id, "50", "numerar");
+    await expect(s.storneazaIncasare(plataId)).rejects.toThrow("Scrie de ce stornezi incasarea.");
+  });
+
+  it("[T1] locatarul nu storneaza incasari", async () => {
+    const { s, d } = await ca(ADMIN);
+    const ap3 = apNr(d, "3").id;
+    const { plataId } = await s.inregistreazaIncasare(ap3, "50", "numerar");
+    const { s: alLocatarului } = await ca(LOCATAR, s);
+    await expect(alLocatarului.storneazaIncasare(plataId, "Vreau banii inapoi"))
+      .rejects.toThrow("Doar administratorul poate face asta.");
+  });
+
+  /* [T1] Penalizarea taiata fiindca banii intrasera deja in cont se intoarce
+     intreaga daca acea incasare se dovedeste gresita. */
+  it("[T1] penalizarea anulata de o plata stornata se intoarce", async () => {
+    const { s, d } = await ca(ADMIN);
+    s.db.setari.procentPenalizareZi = 0.2;
+    s.db.setari.zileGratie = 0;
+    const ap = apNr(d, "14").id;
+    s.db.adauga("datorii", {
+      apartamentId: ap, blocId: d.bloc.id, tip: "intretinere", luna: "2026-05", listaId: "lst-test-t1",
+      suma: 1000, scadenta: "2026-05-10", descriere: "Intretinere de test",
+    });
+    s._calculeazaPenalizariPentruTeste("2026-06-09");
+    const penalizare = (await s.incarca()).datorii.find((x) => x.tip === "penalizare" && x.apartamentId === ap);
+    expect(penalizare.suma).toBe(60);
+
+    const { plataId } = await s.inregistreazaIncasare(ap, 1000, "transfer", null, "2026-05-30");
+    expect((await s.incarca()).datorii.find((x) => x.id === penalizare.id).rest).toBe(40);
+
+    await s.storneazaIncasare(plataId, "Transferul nu a intrat in cont");
+    const dupa = await s.incarca();
+    expect(dupa.datorii.find((x) => x.id === penalizare.id).rest).toBe(60);
   });
 
   it("alta metoda decat numerar sau transfer este refuzata", async () => {

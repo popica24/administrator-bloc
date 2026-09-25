@@ -6,7 +6,7 @@
 -- Bug nou: NOU-2 (todo).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(76);
+select plan(90);
 
 -- ---------------------------------------------------------------------------
 -- Fixture comun pentru testele b-* (copiat in fiecare fisier, anulat la rollback).
@@ -405,11 +405,15 @@ select throws_ok($$select financiar.inregistreaza_plata(pg_temp.fx('ap2'), null,
 select set_config('fx.p_transfer', financiar.inregistreaza_plata(pg_temp.fx('ap2'), 100.456, 'transfer', '2026-02-03 08:00:00+00',
   pg_temp.fx('loc2'), null)::text, true);
 select results_eq(
-  $$select suma, metoda, stare, creat_la, confirmata_la, platita_de, inregistrata_de
+  $$select suma, metoda, stare, confirmata_la, platita_de, inregistrata_de
     from financiar.plati where id = pg_temp.fx('p_transfer')$$,
-  $$values (100.46::numeric(12,2), 'transfer'::text, 'confirmata'::text, '2026-02-03 08:00:00+00'::timestamptz, '2026-02-03 08:00:00+00'::timestamptz,
+  $$values (100.46::numeric(12,2), 'transfer'::text, 'confirmata'::text, '2026-02-03 08:00:00+00'::timestamptz,
             pg_temp.fx('loc2'), null::uuid)$$,
   'inregistreaza_plata: plata confirmata, rotunjita la ban, cu data ei');
+-- [T1] ziua in care banii au intrat si ziua in care s-a scris plata sunt doua
+-- lucruri diferite: stornarea se uita la a doua.
+select is((select creat_la::date from financiar.plati where id = pg_temp.fx('p_transfer')), current_date,
+  '[T1] inregistreaza_plata: creat_la este ziua scrierii, nu data din extras');
 select is((select sum(suma) from financiar.alocari_plati where plata_id = pg_temp.fx('p_transfer')), 100.46::numeric,
   'inregistreaza_plata: plata se aloca pe datorie');
 select results_eq($$select serie, numar, emisa_la from financiar.chitante where plata_id = pg_temp.fx('p_transfer')$$,
@@ -492,9 +496,88 @@ select pg_temp.serviciu();
 select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap2')), -60.00::numeric,
   'solduri: ap2 a platit tot (150 = 100,46 + 49,54), plus incasarile in plus din testele B2 si B5');
 
+-- =============================================================================
+-- financiar.storneaza_incasare
+-- =============================================================================
+-- Administratorul a scris suma gresita, apartamentul gresit, a confirmat un
+-- transfer care nu a intrat sau da banii inapoi: incasarea se anuleaza si nu
+-- se mai socoteste nicaieri. Se storneaza numai ce a fost inregistrat in luna
+-- curenta (dupa ziua inregistrarii, nu dupa data din extras).
+
+select pg_temp.serviciu();
+select set_config('fx.p_storno', financiar.inregistreaza_plata(pg_temp.fx('ap1'), 60, 'numerar')::text, true);
+select set_config('fx.sold_inainte',
+  (select sold::text from financiar.solduri where apartament_id = pg_temp.fx('ap1')), true);
+
+set local role authenticated;
+select pg_temp.ca('loc1');
+select throws_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_storno'), 'Suma gresita')$$,
+  'Doar administratorul blocului storneaza incasari.',
+  '[T1] storneaza_incasare: locatarul nu storneaza');
+select pg_temp.ca('pres');
+select throws_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_storno'), 'Suma gresita')$$,
+  'Doar administratorul blocului storneaza incasari.',
+  '[T1] storneaza_incasare: presedintele nu storneaza');
+select pg_temp.ca('admin2');
+select throws_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_storno'), 'Suma gresita')$$,
+  'Doar administratorul blocului storneaza incasari.',
+  '[T1] storneaza_incasare: administratorul altui bloc nu storneaza');
+
+select pg_temp.ca('admin');
+select throws_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_storno'), '   ')$$,
+  'Scrie de ce stornezi incasarea.',
+  '[T1] storneaza_incasare: motivul este obligatoriu');
+select throws_ok($$select financiar.storneaza_incasare(gen_random_uuid(), 'Suma gresita')$$,
+  'Incasarea nu exista sau nu este in blocul tau.',
+  '[T1] storneaza_incasare: o incasare care nu exista este refuzata');
+reset role;
+
+-- o incasare scrisa luna trecuta nu se mai storneaza
+select pg_temp.serviciu();
+select set_config('fx.p_veche', financiar.inregistreaza_plata(pg_temp.fx('ap2'), 10, 'numerar')::text, true);
+update financiar.plati set creat_la = now() - interval '2 months' where id = pg_temp.fx('p_veche');
+set local role authenticated;
+select pg_temp.ca('admin');
+select throws_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_veche'), 'Suma gresita')$$,
+  'Se storneaza doar incasarile inregistrate in luna aceasta.',
+  '[T1] storneaza_incasare: incasarea din luna trecuta nu se mai storneaza');
+
+-- stornarea propriu-zisa
+select lives_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_storno'), '  Suma gresita  ')$$,
+  '[T1] storneaza_incasare: administratorul storneaza o incasare din luna curenta');
+select throws_ok($$select financiar.storneaza_incasare(pg_temp.fx('p_storno'), 'Suma gresita')$$,
+  'Incasarea a fost deja stornata.',
+  '[T1] storneaza_incasare: a doua oara este refuzata');
+reset role;
+
+select pg_temp.serviciu();
+select results_eq(
+  $$select stare, motiv_stornare, stornata_de, stornata_la is not null
+      from financiar.plati where id = pg_temp.fx('p_storno')$$,
+  $$values ('rambursata'::text, 'Suma gresita'::text, pg_temp.fx('admin'), true)$$,
+  '[T1] storneaza_incasare: plata ramane, dar nu mai este confirmata, si poarta motivul');
+select is((select count(*)::int from financiar.alocari_plati where plata_id = pg_temp.fx('p_storno')), 0,
+  '[T1] storneaza_incasare: alocarile se elibereaza, deci datoriile se redeschid');
+select is((select sold from financiar.solduri where apartament_id = pg_temp.fx('ap1')),
+  current_setting('fx.sold_inainte')::numeric + 60,
+  '[T1] storneaza_incasare: soldul se intoarce la cat era inainte de incasare');
+select is((select count(*)::int from financiar.chitante where plata_id = pg_temp.fx('p_storno')), 1,
+  '[T1] storneaza_incasare: chitanta ramane cu numarul ei, nu se sterge');
+-- Sigma(rest) = sold + avansul nealocat: dupa stornare, banii altei plati
+-- raman neasezati pana la lista urmatoare, exact ca dupa orice supraplata.
+select is(
+  (select sum(rest) from financiar.datorii_rest where apartament_id = pg_temp.fx('ap1')),
+  (select s.sold + coalesce((
+     select sum(p.suma) - coalesce((select sum(a.suma) from financiar.alocari_plati a
+                                     join financiar.plati p2 on p2.id = a.plata_id
+                                    where p2.apartament_id = pg_temp.fx('ap1')), 0)
+     from financiar.plati p where p.apartament_id = pg_temp.fx('ap1') and p.stare = 'confirmata'), 0)
+   from financiar.solduri s where s.apartament_id = pg_temp.fx('ap1')),
+  '[T1] storneaza_incasare: suma resturilor ramane soldul plus avansul nealocat');
+
 -- Chitantele raman numerotate fara goluri pe toata asociatia
 select results_eq($$select numar from financiar.chitante where asociatie_id = pg_temp.fx('asociatie') order by numar$$,
-  $$values (42), (43), (44), (45), (46), (47), (48)$$,
+  $$values (42), (43), (44), (45), (46), (47), (48), (49), (50)$$,
   'chitante: numerotare continua, fara goluri, pe toata asociatia');
 
 select * from finish();
