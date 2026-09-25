@@ -30,9 +30,9 @@ const px = (el, prop) => Number.parseFloat(el.style[prop]);
 describe("[F13] textele secundare trec pragul AA de 4,5:1", () => {
   it("culoarea gri pe hartie si pe fundalul mai inchis", async () => {
     await pornesteApp({ email: LOCATAR });
-    const peHartie = contrastul(screen.getByText("Ce ai de facut in perioada urmatoare"));
+    const peHartie = contrastul(screen.getByText("Ce ai de făcut în perioada următoare"));
     await tab("Plata");
-    const pePaperDeep = contrastul(screen.getByRole("button", { name: "Platile mele" }).querySelector("span"));
+    const pePaperDeep = contrastul(screen.getByRole("button", { name: "Plățile mele" }).querySelector("span"));
 
     /* valorile masurate raman scrise aici, ca o schimbare de paleta sa se vada */
     expect(peHartie).toBeGreaterThanOrEqual(4.5);
@@ -68,14 +68,14 @@ describe("[F15] tintele de atingere au cel putin 44 px", () => {
       expect(px(t, "minHeight")).toBeGreaterThanOrEqual(44);
     });
 
-    await tab("Sesizari");
+    await tab("Sesizări");
     const segment = screen.getByRole("button", { name: "Ale mele" });
     expect(px(segment, "minHeight")).toBeGreaterThanOrEqual(44);
-    const mic = screen.getByRole("button", { name: "Sesizare noua" });
+    const mic = screen.getByRole("button", { name: "Sesizare nouă" });
     expect(px(mic, "minHeight")).toBeGreaterThanOrEqual(44);
 
-    await apasa("Sesizare noua");
-    const inchide = screen.getByRole("button", { name: "Inchide" });
+    await apasa("Sesizare nouă");
+    const inchide = screen.getByRole("button", { name: "Închide" });
     expect(px(inchide, "minHeight")).toBeGreaterThanOrEqual(44);
     expect(px(inchide, "minWidth")).toBeGreaterThanOrEqual(44);
   });
@@ -97,8 +97,8 @@ describe("[R3] bara de taburi se ingusteaza in loc sa iasa din ecran la zoom mar
 describe("[F16] panoul de jos se poarta ca un dialog modal", () => {
   async function sesizareNoua() {
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
     return screen.getByRole("dialog");
   }
 
@@ -119,7 +119,7 @@ describe("[F16] panoul de jos se poarta ca un dialog modal", () => {
     await act(async () => { fireEvent.click(dialog.parentElement); });
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    await apasa("Sesizare noua");
+    await apasa("Sesizare nouă");
     await scrie("Sau scrie pe scurt problema", "Curge apa la etajul 3");
     await act(async () => { fireEvent.click(screen.getByRole("dialog").parentElement); });
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -145,7 +145,7 @@ describe("[F17] erorile se anunta si nu dispar singure", () => {
     const camp = screen.getByLabelText("Apa rece, index anterior 244,5");
     expect(camp.getAttribute("aria-invalid")).toBe("true");
     const explicatie = document.getElementById(camp.getAttribute("aria-describedby"));
-    expect(explicatie.textContent).toBe("Indexul nou nu poate fi mai mic decat cel anterior. Verifica cifrele.");
+    expect(explicatie.textContent).toBe("Indexul nou nu poate fi mai mic decât cel anterior. Verifică cifrele.");
 
     await scrie("Apa rece, index anterior 244,5", "250");
     expect(screen.getByLabelText("Apa rece, index anterior 244,5").getAttribute("aria-invalid")).toBeNull();
@@ -157,8 +157,8 @@ describe("[F17] erorile se anunta si nu dispar singure", () => {
     vi.spyOn(sursa, "inregistreazaIncasare").mockRejectedValue(new Error("Chitantierul nu are setari."));
     await tab("Apartamente");
     await apasa("Apartament 17");
-    await apasa("Inregistreaza incasare cash");
-    await apasa("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    await apasa("Emite chitanța");
     await dupaMesajulZburator();
     expect(screen.getByText("Chitantierul nu are setari.")).toBeTruthy();
   });
@@ -168,8 +168,8 @@ describe("[F17] erorile se anunta si nu dispar singure", () => {
     ceasCuTemporizatoare();
     vi.spyOn(sursa, "publicaLista").mockRejectedValue(new Error("Lista nu are nicio cheltuiala."));
     await tab("Facturi");
-    await apasa("Publica lista");
-    await apasa("Da, publica lista");
+    await apasa("Publică lista");
+    await apasa("Da, publică lista");
     await dupaMesajulZburator();
     expect(within(screen.getByRole("dialog")).getByText("Lista nu are nicio cheltuiala.")).toBeTruthy();
   });
@@ -178,11 +178,11 @@ describe("[F17] erorile se anunta si nu dispar singure", () => {
 describe("[F18] randurile de sume incap si pe un ecran de 320 px", () => {
   it("randul De plata acum si randul de sumar se aseaza pe doua linii la nevoie", async () => {
     await pornesteApp({ email: LOCATAR });
-    const locatar = screen.getByText("De plata acum").parentElement.parentElement;
+    const locatar = screen.getByText("De plată acum").parentElement.parentElement;
     expect(locatar.style.flexWrap).toBe("wrap");
 
     await pornesteApp({ email: ADMIN });
-    const admin = screen.getByText(/^Lista de plata /).parentElement.parentElement;
+    const admin = screen.getByText(/^Lista de plată /).parentElement.parentElement;
     expect(admin.style.flexWrap).toBe("wrap");
   });
 });

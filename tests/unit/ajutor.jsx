@@ -47,7 +47,7 @@ export async function pornesteApp({ email, parola = PAROLA, modifica, sursa, zi 
   if (email) await s.intra(email, parola);
   globalThis.sursaTest = s;
   const rezultat = render(<AdminBloc />);
-  if (email) await screen.findAllByText("Iesi");
+  if (email) await screen.findAllByText("Ieși");
   return { sursa: s, ...rezultat };
 }
 
@@ -56,7 +56,7 @@ export async function pornesteApp({ email, parola = PAROLA, modifica, sursa, zi 
    Acceptam toate formele folosite in suita:
      apasa("Trimite")            dupa text sau nume accesibil
      apasa("Sterge", 2)          al treilea buton cu acelasi nume
-     apasa(/^Plateste /)         dupa tipar
+     apasa(/^Plătește /)         dupa tipar
      apasa(element)              elementul gasit de test
      apasa("Trimite", within(x)) doar in zona x
 ============================================================================= */
@@ -78,7 +78,7 @@ export function butonul(tinta, optiuni) {
   const index = typeof optiuni === "number" ? optiuni : 0;
   const zona = optiuni && optiuni.getAllByRole ? optiuni : screen;
   const gasite = zona.getAllByRole("button").filter((b) => potrivit(b, tinta));
-  if (!gasite[index]) throw new Error(`Butonul "${tinta}" nu exista`);
+  if (!gasite[index]) throw new Error(`Butonul "${tinta}" nu există`);
   return gasite[index];
 }
 
@@ -114,7 +114,7 @@ export function zonaCu(texte, trepte = 6) {
     if (lista.every((t) => potrivire(el, t))) return el;
     el = el.parentElement;
   }
-  throw new Error(`Nicio zona apropiata nu contine ${lista.join(" + ")}`);
+  throw new Error(`Nicio zona apropiata nu conține ${lista.join(" + ")}`);
 }
 
 /* Zona de mai sus, gata de interogat cu within() */

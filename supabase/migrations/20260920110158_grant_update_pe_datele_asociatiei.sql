@@ -1,7 +1,7 @@
 -- S16: politica "Administratorul modifica datele asociatiei" pe
 -- organizare.asociatii exista din migratia initiala, dar tabelul nu a primit
 -- niciodata grant-ul de update (grant-ul din 20260919120009_organizare.sql
--- acopera blocuri, apartamente, contacte, inrolare_apartamente — nu si
+-- acopera blocuri, apartamente, contacte, inrolare_apartamente, nu si
 -- asociatii). Politica era moarta: administratorul nu-si putea schimba
 -- contul bancar sau telefonul asociatiei prin nicio cale.
 --

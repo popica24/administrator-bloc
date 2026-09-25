@@ -1,4 +1,4 @@
-# AdminBloc — propunere de schema pentru baza de date
+# AdminBloc: propunere de schema pentru baza de date
 
 Sursa: `AdminBloc-functii.pdf` (4 pagini: functionalitati, ce vede si ce face un locatar, ce vede
 si ce face un administrator, ce vede si ce face dezvoltatorul), verificata fata de datele mock si
@@ -82,9 +82,9 @@ PDF-ul spune "Toate blocurile si toate asociatiile din platforma". O asociatie d
 blocuri/scari. Mock-ul arata exact asta: `"Bloc D14, scara A"` apartine de
 `"Asociatia de proprietari nr. 118"`.
 
-- **Nivelul asociatiei:** chestiuni juridice si de oameni — administratori, setari financiare,
+- **Nivelul asociatiei:** chestiuni juridice si de oameni: administratori, setari financiare,
   furnizori, numerotarea chitantelor, adunari generale, voturi.
-- **Nivelul blocului:** tot ce se calculeaza — apartamente, contoare, liste lunare, fonduri,
+- **Nivelul blocului:** tot ce se calculeaza: apartamente, contoare, liste lunare, fonduri,
   sesizari.
 
 Sectiunea 2 merge mai departe si imparte domeniul in bounded contexts. Aceasta impartire pe doua
@@ -814,9 +814,9 @@ Toate sumele sunt `numeric(12,2)` (exacte la ban, niciodata `float`).
 Tabelele sunt grupate pe bounded context (§2.1). Titlul fiecarui grup numeste schema Postgres,
 iar cheile straine catre alt context sunt scrise cu prefixul schemei.
 
-### A. Organizare — schema `organizare`
+### A. Organizare: schema `organizare`
 
-#### `asociatii` — asociatia de proprietari (administratia blocului)
+#### `asociatii`: asociatia de proprietari (administratia blocului)
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -831,7 +831,7 @@ banii, semneaza contractele si are un administrator. Setarile care stateau aici 
 contextul care detine fiecare regula: penalizarile, ziua scadentei si numerotarea chitantelor
 in `financiar.setari_financiare`, termenul pentru citiri in `contorizare.setari_contorizare`.
 
-#### `blocuri` — o cladire / scara, unitatea pentru care se calculeaza o lista lunara
+#### `blocuri`: o cladire / scara, unitatea pentru care se calculeaza o lista lunara
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -849,7 +849,7 @@ explicita, `TOTAL_PERSOANE` si `TOTAL_APARTAMENTE` devin interogari simple. Sume
 fonduri care erau aici s-au mutat in `intretinere.cheltuieli_recurente` (contributia lunara)
 si in `financiar.fonduri` (suma pentru fondul de rulment pe apartament).
 
-#### `apartamente` — fisa apartamentului
+#### `apartamente`: fisa apartamentului
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -874,7 +874,7 @@ Suma `cota_indiviza` pe bloc ar trebui sa fie 100. Un `check` nu poate impune as
 multe randuri, asa ca abaterea e raportata de view-ul `verificari_bloc` (§5) si afisata
 administratorului.
 
-#### `apartamente_persoane` — cate persoane locuiesc acolo, in timp
+#### `apartamente_persoane`: cate persoane locuiesc acolo, in timp
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -893,7 +893,7 @@ diferenta la apa. Numarul pentru luna L este randul cu cel mai recent `valabil_d
 Astfel, recalcularea unei luni vechi (o actiune a dezvoltatorului in PDF) da acelasi rezultat
 ca prima data.
 
-#### `inrolare_apartamente` — apartamentele propuse, inainte de confirmare
+#### `inrolare_apartamente`: apartamentele propuse, inainte de confirmare
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -913,7 +913,7 @@ fata. `date` este `jsonb` pentru ca randul este o propunere, nu inca un apartame
 complet abia la confirmare, cand devine randuri in `apartamente`, `apartamente_persoane`,
 `contorizare.citiri` si `financiar.datorii`.
 
-#### `contacte` — "Pe cine suna"
+#### `contacte`: "Pe cine suna"
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -930,9 +930,9 @@ el nu va avea niciodata cont. Contactele sunt ce vede locatarul; calitatea de me
 da acces. Daca le-am amesteca, am fi obligati sa facem conturi false pentru oameni care au
 doar un numar de telefon.
 
-### B. Identitate — schema `identitate`
+### B. Identitate: schema `identitate`
 
-#### `profiluri` — un rand pentru fiecare cont de autentificare
+#### `profiluri`: un rand pentru fiecare cont de autentificare
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -944,7 +944,7 @@ doar un numar de telefon.
 `profiluri`, niciodata direct la `auth.users`, asa ca API-ul nu trebuie sa expuna niciodata
 schema `auth`. Randul e creat de un trigger la insert in `auth.users`.
 
-#### `administratori` — verificarea administratorilor
+#### `administratori`: verificarea administratorilor
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -960,7 +960,7 @@ un administrator care se inregistreaza". Doar service role poate schimba `stare`
 ajutatoare pentru RLS trateaza un administrator ca activ **doar daca** `stare = 'aprobat'`,
 asa ca un cont neverificat nu vede nimic din nicio asociatie, chiar daca e legat de una.
 
-#### `membri_asociatie` — cine conduce o asociatie si in ce rol
+#### `membri_asociatie`: cine conduce o asociatie si in ce rol
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -975,7 +975,7 @@ Unic `(asociatie_id, profil_id, rol)`.
 reale, cu atributii de control: propunerea le da acces de **citire** la ecranele
 administratorului si acces de scriere la nimic. Vezi intrebarea deschisa din §8.
 
-#### `locatari` — ce persoana tine de ce apartament
+#### `locatari`: ce persoana tine de ce apartament
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -992,7 +992,7 @@ legatura activa cu un apartament, iar legaturile vechi raman ca istoric.
 **De ce o tabela de legatura:** o familie imparte acelasi apartament (mai multe conturi), iar o
 persoana poate detine doua apartamente. Ambele cazuri sunt frecvente.
 
-#### `invitatii` — cum intra un locatar in apartamentul lui
+#### `invitatii`: cum intra un locatar in apartamentul lui
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1009,9 +1009,9 @@ scurt, il scrii si ai intrat" este cel mai simplu mod de a lega un cont de un ap
 fara ca oricine sa poata revendica apartamentul altcuiva. Codul se foloseste printr-o functie
 `security definer`, niciodata printr-un insert direct in `locatari`.
 
-### C. Intretinere (domeniul central) — schema `intretinere`
+### C. Intretinere (domeniul central): schema `intretinere`
 
-#### `furnizori` — furnizorii
+#### `furnizori`: furnizorii
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1025,7 +1025,7 @@ fara ca oricine sa poata revendica apartamentul altcuiva. Codul se foloseste pri
 "Adauga o factura" devine "alegi furnizorul, scrii suma", ceea ce li se potriveste
 utilizatorilor.
 
-#### `cheltuieli_recurente` — randurile care revin in fiecare luna
+#### `cheltuieli_recurente`: randurile care revin in fiecare luna
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1044,7 +1044,7 @@ noua in ciorna e precompletata din randurile active, iar administratorul poate a
 continuare ciorna. Schimbarea sumei aici nu modifica niciodata o lista publicata, pentru ca
 lista are propria copie in `cheltuieli`.
 
-#### `liste_lunare` — lista lunara de intretinere a unui bloc
+#### `liste_lunare`: lista lunara de intretinere a unui bloc
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1062,7 +1062,7 @@ locatarii o vad si datoriile exista. Dupa publicare, administratorul nu mai poat
 cheltuielile listei (RLS). Doar o recalculare (o actiune a dezvoltatorului in PDF) o mai poate
 schimba, si creeaza o `versiune` noua in loc sa suprascrie. Vezi §7.
 
-#### `cheltuieli` — un rand de impartit intr-o luna (o factura sau o contributie la un fond)
+#### `cheltuieli`: un rand de impartit intr-o luna (o factura sau o contributie la un fond)
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1090,7 +1090,7 @@ check elimina riscul asta.
 **Numele metodei:** `persoaneFaraParter` devine `persoane_fara_lift`, ca sa se potriveasca cu
 `scutit_lift` (§A); eticheta pe care o vede locatarul poate ramane "Pe persoane, fara parter".
 
-#### `repartizari` — rezultatul motorului: cat plateste fiecare apartament pentru fiecare rand
+#### `repartizari`: rezultatul motorului: cat plateste fiecare apartament pentru fiecare rand
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1114,9 +1114,9 @@ filtreaza niciodata dupa ea. Restul de la rotunjire e o coloana adevarata pentru
 platesc cu 2 bani mai mult decat ceilalti?" este exact intrebarea la care aplicatia trebuie sa
 raspunda. Se pastreaza si randurile cu suma zero ("de ce platesc 0 la lift?").
 
-### D. Contorizare — schema `contorizare`
+### D. Contorizare: schema `contorizare`
 
-#### `setari_contorizare` — regulile de citire pentru un bloc
+#### `setari_contorizare`: regulile de citire pentru un bloc
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1128,7 +1128,7 @@ raspunda. Se pastreaza si randurile cu suma zero ("de ce platesc 0 la lift?").
 ultimelor trei luni". Asta e o regula, iar azi exista doar ca text. Aici devine date pe care le
 citeste jobul de estimare.
 
-#### `contoare` — contoarele de apa
+#### `contoare`: contoarele de apa
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1146,7 +1146,7 @@ and scos_la is null`.
 din mock devine citirile contorului fara apartament. Un apartament cu contor si la bucatarie,
 si la baie are pur si simplu doua randuri; motorul le aduna.
 
-#### `citiri` — citirile contoarelor, cu poza
+#### `citiri`: citirile contoarelor, cu poza
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1177,9 +1177,9 @@ trecuta), citirea se explica singura si rezista la inlocuirea contorului. `estim
 `consum_mediu_bloc(bloc_id, luna)` intoarce doar media pe persoana. Un locatar se poate compara
 cu ea fara sa citeasca randurile altor apartamente.
 
-### E. Financiar — schema `financiar`
+### E. Financiar: schema `financiar`
 
-#### `conturi` — contul unui apartament (radacina agregatului pentru bani)
+#### `conturi`: contul unui apartament (radacina agregatului pentru bani)
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1191,7 +1191,7 @@ cu ea fara sa citeasca randurile altor apartamente.
 platile simultane pentru acelasi apartament si nimic altceva. Este singura tabela din Financiar
 care trimite in Organizare. Randul e creat de un trigger cand se creeaza apartamentul.
 
-#### `setari_financiare` — regulile de bani ale unei asociatii
+#### `setari_financiare`: regulile de bani ale unei asociatii
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1208,7 +1208,7 @@ Primii doi stau aici (al treilea e in `intretinere.cheltuieli_recurente`). `PROC
 din mock devine date. Setarile sunt coloane, nu o tabela cheie-valoare, pentru ca sunt putine,
 au tipuri diferite, iar check-urile se pot pune doar pe coloane reale.
 
-#### `datorii` — tot ce datoreaza un apartament
+#### `datorii`: tot ce datoreaza un apartament
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1227,7 +1227,7 @@ au tipuri diferite, iar check-urile se pot pune doar pe coloane reale.
 (§11.4). Prin `corectie` o luna recalculata schimba suma datorata fara sa
 modifice datoria initiala.
 
-#### `plati` — platile primite
+#### `plati`: platile primite
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1241,7 +1241,7 @@ modifice datoria initiala.
 | `confirmata_la` | timestamptz | |
 
 **De ce:** *(scris in septembrie 2026, cand plata cu cardul era inca in plan; pe 23 septembrie
-2026 a fost scoasa cu totul — vezi mai jos.)* In solduri intra doar platile confirmate.
+2026 a fost scoasa cu totul, vezi mai jos.)* In solduri intra doar platile confirmate.
 
 **Cum este azi:** nu exista plata cu cardul si niciun procesator. Banii ii confirma
 administratorul, cu `financiar.inregistreaza_incasare(apartament, suma, metoda, cheie_cerere)`:
@@ -1249,7 +1249,7 @@ administratorul, cu `financiar.inregistreaza_incasare(apartament, suma, metoda, 
 ca a doua apasare pe acelasi buton (dupa un raspuns pierdut pe drum) sa intoarca aceeasi plata,
 nu una noua [B2]. Plata + alocare + chitanta raman o singura tranzactie.
 
-#### `alocari_plati` — ce plata a acoperit ce datorie
+#### `alocari_plati`: ce plata a acoperit ce datorie
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1262,7 +1262,7 @@ Penalizarile se calculeaza pe ce a ramas neachitat din fiecare datorie, deci baz
 trebuie sa stie la ce datorie s-au dus banii. Alocarea o face serverul, incepand cu cea mai
 veche datorie (verificarea legala e in §8).
 
-#### `chitante` — chitante
+#### `chitante`: chitante
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1280,7 +1280,7 @@ Numarul se ia cu
 aceeasi tranzactie cu plata. Blocarea (lock) pe rand serializeaza chitantele simultane ale
 aceleiasi asociatii, iar un rollback nu lasa niciun gol.
 
-#### `penalizari` — cum s-a calculat o penalizare
+#### `penalizari`: cum s-a calculat o penalizare
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1299,7 +1299,7 @@ randul acesta este explicatia ei, cu parametrii inghetati. Check-ul `<= rest_nea
 exprima regula ca o penalizare nu poate depasi datoria la care se aplica. Calculul il face un
 job programat (`pg_cron`), o data pe luna.
 
-#### `fonduri` si `miscari_fond` — fond de reparatii si fond de rulment
+#### `fonduri` si `miscari_fond`: fond de reparatii si fond de rulment
 
 `fonduri`: `bloc_id`, `tip` (`reparatii` · `rulment` · `special`), `denumire`,
 `suma_per_apartament` (null; doar pentru `rulment`, adica `FONDURI.rulment.perApartament` din mock); unique
@@ -1313,9 +1313,9 @@ job programat (`pg_cron`), o data pe luna.
 reparatii si din fondul de rulment". Soldul este `sum(suma)` si nu se stocheaza niciodata,
 dupa acelasi principiu ca in §1.3. `FONDURI.reparatii.sold` din mock devine un view.
 
-### F. Sesizari — schema `sesizari`
+### F. Sesizari: schema `sesizari`
 
-#### `sesizari`, `sesizari_mesaje`, `sesizari_poze` — sesizari
+#### `sesizari`, `sesizari_mesaje`, `sesizari_poze`: sesizari
 
 `sesizari`:
 
@@ -1336,9 +1336,9 @@ merge"). Momentele de schimbare a starii dau "sesizarile deschise si de cat timp
 vreo coloana in plus. Categoriile sunt un `check`, nu o tabela, pentru ca lista e fixa in
 aplicatie si scurta.
 
-### G. Guvernanta — schema `guvernanta`
+### G. Guvernanta: schema `guvernanta`
 
-#### `voturi`, `voturi_optiuni`, `voturi_exprimate` — voturi
+#### `voturi`, `voturi_optiuni`, `voturi_exprimate`: voturi
 
 `voturi`: `asociatie_id`, `adunare_id` (null), `titlu`, `descriere`, `deschis_la`, `inchide_la`
 (check `> deschis_la`), `numarare` (`apartament` · `cota`), `creat_de`.
@@ -1353,7 +1353,7 @@ pentru ca unele hotarari se iau ponderat cu cota indiviza. Rezultatele se numara
 stocheaza niciodata (`voturi: 7` din mock), iar "reaminteste celor care nu au votat" este un
 anti-join intre apartamente si `voturi_exprimate`.
 
-#### `adunari_generale` si `adunari_prezente` — adunare generala
+#### `adunari_generale` si `adunari_prezente`: adunare generala
 
 `adunari_generale`: `asociatie_id`, `data_ora`, `loc`, `ordine_de_zi`, `document_id`
 (procesul-verbal, null pana e redactat).
@@ -1363,9 +1363,9 @@ anti-join intre apartamente si `voturi_exprimate`.
 **De ce:** "confirma prezenta la adunarea generala". Cvorumul este o numaratoare raportata la
 apartamentele asociatiei.
 
-### H. Comunicare — schema `comunicare`
+### H. Comunicare: schema `comunicare`
 
-#### `anunturi` si `anunturi_citiri` — avizier
+#### `anunturi` si `anunturi_citiri`: avizier
 
 `anunturi`: `asociatie_id`, `bloc_id` (null = toata asociatia), `autor_id`, `titlu`, `corp`,
 `urgent` boolean, `publicat_la`, `expira_la`.
@@ -1375,7 +1375,7 @@ apartamentele asociatiei.
 O oprire a apei priveste o singura scara, o adunare generala priveste toata asociatia, de aici
 `bloc_id` optional.
 
-#### `documente` — biblioteca de documente
+#### `documente`: biblioteca de documente
 
 | Coloana | Tip | Note |
 |---|---|---|
@@ -1393,7 +1393,7 @@ documente, asa ca `cheltuieli`, `miscari_fond`, `liste_lunare` si `adunari_gener
 aici. Dimensiunea fisierului si tipul MIME nu se dubleaza; Storage le retine deja in
 `storage.objects`.
 
-#### `remindere_setari` si `notificari` — remindere
+#### `remindere_setari` si `notificari`: remindere
 
 `remindere_setari`: cheie primara `(asociatie_id, tip)`, `tip` in `lista_publicata` ·
 `citire_contoare` · `plata` · `restanta` · `adunare_generala` (cele cinci din PDF), `activ`,
@@ -1406,7 +1406,7 @@ aici. Dimensiunea fisierului si tipul MIME nu se dubleaza; Storage le retine dej
 randuri in `notificari`, care sunt totodata dovada ca instiintarea a fost trimisa. Propozitia
 `cand` din mock ("Cu 5 zile inainte de termen") este generata in aplicatie din `tip` + `zile`.
 
-### I. Audit — schema `audit` (neexpusa prin API)
+### I. Audit: schema `audit` (neexpusa prin API)
 
 #### `audit.jurnal`
 
@@ -1449,15 +1449,15 @@ doar pentru `nomenclator`). Fara acest grant, RLS nici nu ajunge sa ruleze.
 | Context | Tabela | Locatar | Administrator | Presedinte / cenzor |
 |---|---|---|---|---|
 | Organizare | asociatii, blocuri, contacte | citeste ce e al lui | citire + scriere | citire |
-| Organizare | inrolare_apartamente | — | citire + scriere; confirmare prin functie | citire |
+| Organizare | inrolare_apartamente |: | citire + scriere; confirmare prin functie | citire |
 | Organizare | apartamente, apartamente_persoane | citeste apartamentul propriu | citire + scriere | citire |
-| Intretinere | furnizori, cheltuieli_recurente | — | citire + scriere | citire |
+| Intretinere | furnizori, cheltuieli_recurente |: | citire + scriere | citire |
 | Intretinere | liste_lunare | citeste `publicata` | citire + scriere cat timp e `ciorna` | citire |
 | Intretinere | cheltuieli | citeste, din listele publicate | scriere cat timp lista e `ciorna` | citire |
 | Intretinere | repartizari | citeste apartamentul propriu | citire | citire |
 | Contorizare | setari_contorizare, contoare | citeste ce e al lui | citire + scriere | citire |
 | Contorizare | citiri | citeste ce e al lui; insereaza `trimisa` pentru contoarele proprii | citire; valideaza / respinge prin functie | citire |
-| Financiar | setari_financiare | — | citire + scriere | citire |
+| Financiar | setari_financiare |: | citire + scriere | citire |
 | Financiar | conturi, datorii, penalizari, alocari_plati | citeste ce e al lui | citire | citire |
 | Financiar | plati, chitante | citeste ce e al lui | citire; numerar doar prin functie | citire |
 | Financiar | fonduri, miscari_fond | citire | citire + scriere miscari | citire |
@@ -1466,10 +1466,10 @@ doar pentru `nomenclator`). Fara acest grant, RLS nici nu ajunge sa ruleze.
 | Guvernanta | voturi_exprimate, adunari_prezente | insereaza / citeste ce e al lui | citire | citire |
 | Comunicare | anunturi, documente | citire (`vizibil_locatarilor`) | citire + scriere | citire |
 | Comunicare | anunturi_citiri | insereaza ce e al lui | citire (numarari) | citire |
-| Comunicare | remindere_setari | — | citire + scriere | citire |
-| Comunicare | notificari | citeste ce e al lui; marcheaza ca citit | citeste ce a trimis el | — |
+| Comunicare | remindere_setari |: | citire + scriere | citire |
+| Comunicare | notificari | citeste ce e al lui; marcheaza ca citit | citeste ce a trimis el |, |
 | Identitate | profiluri | citeste + editeaza profilul propriu | citeste oamenii asociatiei | citire |
-| — | audit, evenimente, private | — | — | — (scheme neexpuse) |
+| (| audit, evenimente, private |) |: |, (scheme neexpuse) |
 
 "Scriere" nu include niciodata `repartizari`, `datorii`, `penalizari`, `alocari_plati`, `chitante`
 si nici confirmarea unui rand din `plati`. Acestea vin doar din codul de pe server (§1.7). Storage
@@ -1570,7 +1570,7 @@ deliberata, care lucreaza in ordine.
 5. **Accesul presedintelui si al cenzorului:** doar citire pe vederea administratorului, cum se
    propune, sau mai putin?
 6. **Procesatorul de plati cu cardul** (Netopia, Stripe, EuPlatesc, ...): *raspuns dat pe 23
-   septembrie 2026 — nu exista. Banii se dau in mana administratorului sau prin transfer
+   septembrie 2026, nu exista. Banii se dau in mana administratorului sau prin transfer
    bancar, iar el confirma incasarea in aplicatie.*
 7. **O schema pentru fiecare context, sau totul in `public`?** Propunerea foloseste cate o schema
    pe context, ca granitele sa existe in baza de date si nu doar pe hartie. Costul: fiecare schema

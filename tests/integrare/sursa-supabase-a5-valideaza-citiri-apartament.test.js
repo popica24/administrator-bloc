@@ -2,8 +2,8 @@
    exista doar in src/sursa-mock.js: butoanele "Valideaza" / "Respinge" din
    AdminCitiri (AdminBloc.jsx:3396, :3416) apelau o metoda pe care
    sursa-supabase.js nu o avea, deci pe stack-ul real ambele butoane arunca.
-   Acest fisier dovedeste apelul exact al UI-ului — un singur parametru de
-   apartament si luna, fara id de citire — functioneaza capat la capat
+   Acest fisier dovedeste apelul exact al UI-ului, un singur parametru de
+   apartament si luna, fara id de citire, functioneaza capat la capat
    impotriva Postgres-ului real si ca un apel refuzat nu lasa nimic pe
    jumatate validat (motorul de repartizare are nevoie de "totul sau nimic",
    exact bug-ul A1 pe care comanda veche, pe cate un contor, il putea lasa in

@@ -6,7 +6,7 @@
 -- publicata inainte de sfarsitul lunii ei: daca administratorul publica
 -- lista lunii curente mai devreme, iar locatarul transmite (sau retrimite)
 -- un index dupa aceea, citirea intra cu stare "trimisa" si ramane asa
--- pentru totdeauna — valideaza_citire refuza sa o verifice pentru ca luna
+-- pentru totdeauna, valideaza_citire refuza sa o verifice pentru ca luna
 -- ei e deja publicata, deci badge-ul "De verificat" al administratorului nu
 -- mai ajunge niciodata la zero.
 --

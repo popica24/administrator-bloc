@@ -48,13 +48,13 @@ test.describe("internetul cade in mijlocul comenzii", () => {
 
     await intraCa(page, "admin");
     await mergiLaTab(page, "Comunicare");
-    await buton(page, "Scrie un anunt").click();
-    const panou = page.getByRole("dialog", { name: "Anunt nou" });
-    await panou.getByLabel("Titlu").fill("E2E anunt fara internet");
+    await buton(page, "Scrie un anunț").click();
+    const panou = page.getByRole("dialog", { name: "Anunț nou" });
+    await panou.getByLabel("Titlu").fill("E2E anunț fără internet");
     await panou.getByLabel("Continut").fill("Nu ajunge la server.");
 
     await page.route("**/rest/v1/rpc/publica_anunt", (r) => r.abort());
-    await buton(page, "Publica anuntul").click();
+    await buton(page, "Publică anunțul").click();
 
     const toast = page.locator(".ab-toast");
     await expect(toast).toBeVisible({ timeout: 20000 });
@@ -68,7 +68,7 @@ test.describe("internetul cade in mijlocul comenzii", () => {
     expect(dupa).toBe(inainte);
 
     /* Formularul ramane deschis, cu textul scris, ca omul sa reincerce */
-    await expect(panou.getByLabel("Titlu")).toHaveValue("E2E anunt fara internet");
+    await expect(panou.getByLabel("Titlu")).toHaveValue("E2E anunț fără internet");
   });
 
   /* reincarca() isi prinde singur erorile, deci o comanda reusita a carei
@@ -82,11 +82,11 @@ test.describe("internetul cade in mijlocul comenzii", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 18" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
+    await buton(page, "Înregistrează încasare cash").click();
 
     /* Comanda trece; doar reincarcarea de dupa ea nu mai are internet */
     await page.route("**/rest/v1/rpc/eu", (r) => r.abort());
-    await buton(page, "Emite chitanta").click();
+    await buton(page, "Emite chitanța").click();
     const toast = page.locator(".ab-toast");
     await expect(toast).toBeVisible({ timeout: 20000 });
     const mesaj = await toast.innerText();
@@ -94,7 +94,7 @@ test.describe("internetul cade in mijlocul comenzii", () => {
 
     /* Chitanta chiar s-a emis: mesajul nu are voie sa spuna altceva */
     expect(await chitante()).toBe(inainte + 1);
-    expect(mesaj).toContain("Incasare inregistrata");
+    expect(mesaj).toContain("Încasare înregistrată");
   });
 
   test("reincarcarea cazuta dupa o incasare nu face totusi doua chitante", async ({ page }) => {
@@ -107,9 +107,9 @@ test.describe("internetul cade in mijlocul comenzii", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 13" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
+    await buton(page, "Înregistrează încasare cash").click();
     await page.route("**/rest/v1/rpc/eu", (r) => r.abort());
-    await buton(page, "Emite chitanta").click();
+    await buton(page, "Emite chitanța").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
     await page.unroute("**/rest/v1/rpc/eu");
 
@@ -141,10 +141,10 @@ async function inchideSesiuneaDinServer(page) {
 async function anuntInceput(page) {
   await intraCa(page, "admin");
   await mergiLaTab(page, "Comunicare");
-  await buton(page, "Scrie un anunt").click();
-  const panou = page.getByRole("dialog", { name: "Anunt nou" });
-  await panou.getByLabel("Titlu").fill("E2E anunt cu sesiunea inchisa");
-  await panou.getByLabel("Continut").fill("Sesiunea s-a inchis intre timp.");
+  await buton(page, "Scrie un anunț").click();
+  const panou = page.getByRole("dialog", { name: "Anunț nou" });
+  await panou.getByLabel("Titlu").fill("E2E anunț cu sesiunea inchisa");
+  await panou.getByLabel("Continut").fill("Sesiunea s-a închis între timp.");
   return panou;
 }
 
@@ -155,7 +155,7 @@ test.describe("sesiunea expira cu formularul deschis", () => {
     await anuntInceput(page);
     await inchideSesiuneaDinServer(page);
 
-    await buton(page, "Publica anuntul").click();
+    await buton(page, "Publică anunțul").click();
     const toast = page.locator(".ab-toast");
     await expect(toast).toBeVisible({ timeout: 20000 });
     const mesaj = await toast.innerText();
@@ -167,18 +167,18 @@ test.describe("sesiunea expira cu formularul deschis", () => {
   /* [R1] Reparatia P3 (`AdminBloc.jsx:4673`) scoate omul la ecranul de
      autentificare de indata ce o comanda loveste sesiunea moarta:
      `setSesiune(null)` demonteaza tot ecranul, cu panoul deschis cu tot, deci
-     anuntul scris se pierde. Cele doua reparatii se bat cap in cap — mesajul
+     anuntul scris se pierde. Cele doua reparatii se bat cap in cap, mesajul
      pe romaneste a ramas, ce scrisese omul nu. Testul a fost verificat de 8
      ori la rand: cade de fiecare data. */
   test("[R1] sesiunea inchisa nu pierde ce s-a scris in formular", async ({ page }) => {
     const panou = await anuntInceput(page);
     await inchideSesiuneaDinServer(page);
 
-    await buton(page, "Publica anuntul").click();
+    await buton(page, "Publică anunțul").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
 
-    await expect(panou.getByLabel("Titlu")).toHaveValue("E2E anunt cu sesiunea inchisa");
-    await expect(panou.getByLabel("Continut")).toHaveValue("Sesiunea s-a inchis intre timp.");
+    await expect(panou.getByLabel("Titlu")).toHaveValue("E2E anunț cu sesiunea inchisa");
+    await expect(panou.getByLabel("Continut")).toHaveValue("Sesiunea s-a închis între timp.");
   });
 
   test("comanda refuzata dupa inchiderea sesiunii nu scrie nimic", async ({ page }) => {
@@ -189,7 +189,7 @@ test.describe("sesiunea expira cu formularul deschis", () => {
 
     await anuntInceput(page);
     await inchideSesiuneaDinServer(page);
-    await buton(page, "Publica anuntul").click();
+    await buton(page, "Publică anunțul").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
 
     const { count: dupa } = await sb.schema("comunicare").from("anunturi")
@@ -200,7 +200,7 @@ test.describe("sesiunea expira cu formularul deschis", () => {
 
 test.describe("aplicatia deschisa in doua locuri deodata", () => {
   test("al doilea tab sterge factura pe care primul o modifica", async ({ browser }) => {
-    const categorie = `E2E doua taburi ${Date.now()}`;
+    const categorie = `E2E două taburi ${Date.now()}`;
     const contextA = await browser.newContext();
     const contextB = await browser.newContext();
     const a = await contextA.newPage();
@@ -208,18 +208,18 @@ test.describe("aplicatia deschisa in doua locuri deodata", () => {
     try {
       await intraCa(a, "admin");
       await mergiLaTab(a, "Facturi");
-      await buton(a, "Adauga factura").click();
-      let panou = a.getByRole("dialog", { name: "Factura noua" });
-      await panou.getByLabel("Sau scrie un furnizor nou").fill(`E2E Doua Taburi ${Date.now()}`);
-      await panou.getByLabel("Ce cheltuiala este").fill(categorie);
+      await buton(a, "Adaugă factură").click();
+      let panou = a.getByRole("dialog", { name: "Factură nouă" });
+      await panou.getByLabel("Sau scrie un furnizor nou").fill(`E2E Două Taburi ${Date.now()}`);
+      await panou.getByLabel("Ce cheltuială este").fill(categorie);
       await panou.getByLabel("Suma facturii").fill("120");
-      await buton(a, "Salveaza factura").click();
-      await asteaptaToast(a, "Factura a fost adaugata");
+      await buton(a, "Salvează factura").click();
+      await asteaptaToast(a, "Factura a fost adăugată");
 
       /* Primul tab deschide "Modifica" pe randul tocmai salvat */
       const rand = a.getByText(categorie).locator("xpath=../../../..");
-      await rand.getByRole("button", { name: "Modifica" }).click();
-      panou = a.getByRole("dialog", { name: "Modifica factura" });
+      await rand.getByRole("button", { name: "Modifică" }).click();
+      panou = a.getByRole("dialog", { name: "Modifică factura" });
       await panou.getByLabel("Suma facturii").fill("130");
 
       /* Al doilea tab sterge acelasi rand */
@@ -227,11 +227,11 @@ test.describe("aplicatia deschisa in doua locuri deodata", () => {
       await mergiLaTab(b, "Facturi");
       const randB = b.getByText(categorie).locator("xpath=../../../..");
       b.once("dialog", (d) => d.accept());
-      await randB.getByRole("button", { name: "Sterge" }).click();
-      await asteaptaToast(b, "Cheltuiala a fost stearsa");
+      await randB.getByRole("button", { name: "Șterge" }).click();
+      await asteaptaToast(b, "Cheltuiala a fost ștearsă");
 
       /* Primul tab salveaza peste un rand care nu mai exista */
-      await buton(a, "Salveaza factura").click();
+      await buton(a, "Salvează factura").click();
       const toast = a.locator(".ab-toast");
       await expect(toast).toContainText("Reincarca lista", { timeout: 20000 });
       const mesaj = await toast.innerText();
@@ -250,34 +250,34 @@ test.describe("aplicatia deschisa in doua locuri deodata", () => {
   /* [P4] Vezi raportul: factura scanata se inregistreaza ca document vizibil
      locatarilor inainte ca randul de cheltuiala sa fie salvat. Daca salvarea
      cade (randul sters intre timp, lista publicata in alt tab), documentul
-     ramane la "Acte", in fata locatarilor, fara nicio cheltuiala in spate —
+     ramane la "Acte", in fata locatarilor, fara nicio cheltuiala in spate -
      acelasi tipar reparat la iesirea din fond (F3). */
   test("[P4] o salvare cazuta nu lasa factura scanata la Acte", async ({ page }) => {
     const sb = serviciu();
     const categorie = `E2E scan orfan ${Date.now()}`;
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Adauga factura").click();
-    let panou = page.getByRole("dialog", { name: "Factura noua" });
+    await buton(page, "Adaugă factură").click();
+    let panou = page.getByRole("dialog", { name: "Factură nouă" });
     await panou.getByLabel("Sau scrie un furnizor nou").fill(`E2E Scan ${Date.now()}`);
-    await panou.getByLabel("Ce cheltuiala este").fill(categorie);
+    await panou.getByLabel("Ce cheltuială este").fill(categorie);
     await panou.getByLabel("Suma facturii").fill("150");
-    await buton(page, "Salveaza factura").click();
-    await asteaptaToast(page, "Factura a fost adaugata");
+    await buton(page, "Salvează factura").click();
+    await asteaptaToast(page, "Factura a fost adăugată");
 
     const { data: c } = await sb.schema("intretinere").from("cheltuieli")
       .select("id").eq("lista_id", LISTA_CIORNA).eq("categorie", categorie).single();
 
     const rand = page.getByText(categorie).locator("xpath=../../../..");
-    await rand.getByRole("button", { name: "Modifica" }).click();
-    panou = page.getByRole("dialog", { name: "Modifica factura" });
-    await panou.getByLabel("Serie si numar factura").fill("E2E-ORFAN");
+    await rand.getByRole("button", { name: "Modifică" }).click();
+    panou = page.getByRole("dialog", { name: "Modifică factura" });
+    await panou.getByLabel("Serie și număr factură").fill("E2E-ORFAN");
     await panou.locator('input[type="file"]').setInputFiles(fisierPdf());
 
     /* Randul dispare de sub formular (sters din alt tab) */
     await sb.schema("intretinere").from("cheltuieli").delete().eq("id", c.id);
 
-    await buton(page, "Salveaza factura").click();
+    await buton(page, "Salvează factura").click();
     await asteaptaToast(page, "Reincarca lista");
 
     const { data: orfane } = await sb.schema("comunicare").from("documente")
@@ -304,7 +304,7 @@ test.describe("dublul apasat pe comenzile administratorului", () => {
     const mesaj = await page.locator(".ab-toast").innerText();
     /* Ori a mers o data, ori a doua apasare a fost oprita politicos; in niciun
        caz un mesaj tehnic sau "nu mai sunt citiri de verificat" */
-    expect(mesaj).toMatch(/Citirea a fost validata|Asteapta sa se termine/);
+    expect(mesaj).toMatch(/Citirea a fost validată|Așteaptă să se termine/);
     for (const cuvant of CUVINTE_TEHNICE) expect(mesaj).not.toContain(cuvant);
 
     /* A doua apasare poate fi inca in aer cand toastul apare: starea se

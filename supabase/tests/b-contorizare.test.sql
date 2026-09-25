@@ -623,7 +623,7 @@ select throws_ok(
 
 -- O citire deja inregistrata pe luna urmatoare fixeaza plafonul de sus:
 -- indexul de pe luna curenta nu poate trece de indexul CHIAR INREGISTRAT
--- (index_curent, citit efectiv de pe cadran) al lunii urmatoare — atat cat
+-- (index_curent, citit efectiv de pe cadran) al lunii urmatoare, atat cat
 -- e imposibil ca un contor sa mearga inapoi. [J7] Plafonul nu mai e
 -- index_anterior-ul inghetat al lunii urmatoare: acela poate fi stale (o
 -- corectura legitima in sus a lunii curente il face oricum invechit), iar

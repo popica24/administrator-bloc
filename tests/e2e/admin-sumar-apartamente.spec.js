@@ -33,9 +33,9 @@ test.describe("Sumar", () => {
     const st = await statistici();
     await intraCa(page, "admin");
     const t = await textEcran(page);
-    expect(t).toContain("RESTANTE");
+    expect(t).toContain("RESTANȚE");
     expect(t).toContain(lei(st.restante));
-    expect(t).toContain(`${st.apCuRestanta} apartamente in urma`);
+    expect(t).toContain(`${st.apCuRestanta} apartamente în urmă`);
     expect(t).toContain(lei(st.penalizari));
     expect(t).toContain("CITIRI DE VERIFICAT");
     expect(t).toContain("ASOCIATIA DE PROPRIETARI NR. 118 · 20 APARTAMENTE");
@@ -44,15 +44,15 @@ test.describe("Sumar", () => {
 
   test("lista curenta arata incasarile si procentul", async ({ page }) => {
     await intraCa(page, "admin");
-    await expect(page.getByText("LISTA DE PLATA AUGUST 2026")).toBeVisible();
-    await expect(page.getByText(/Incasat pana acum [\d.]+,\d\d lei/)).toBeVisible();
-    await expect(page.getByText(/Au platit integral \d+ din 20 apartamente\./)).toBeVisible();
-    await expect(page.getByText(/Publicata \d+ \w+ 2026/)).toBeVisible();
+    await expect(page.getByText("LISTA DE PLATĂ AUGUST 2026")).toBeVisible();
+    await expect(page.getByText(/Încasat până acum [\d.]+,\d\d lei/)).toBeVisible();
+    await expect(page.getByText(/Au plătit integral \d+ din 20 apartamente\./)).toBeVisible();
+    await expect(page.getByText(/Publicată \d+ \w+ 2026/)).toBeVisible();
   });
 
   test("restantierii sunt in ordine, cel mai vechi primul", async ({ page }) => {
     await intraCa(page, "admin");
-    const zile = await page.getByText(/^\d+ (de )?zile intarziere/).allInnerTexts();
+    const zile = await page.getByText(/^\d+ (de )?zile întârziere/).allInnerTexts();
     const numere = zile.map((t) => Number(t.match(/^\d+/)[0]));
     expect(numere.length).toBeGreaterThan(0);
     expect([...numere].sort((a, b) => b - a)).toEqual(numere);
@@ -60,29 +60,29 @@ test.describe("Sumar", () => {
 
   test("lista in lucru duce la Facturi", async ({ page }) => {
     await intraCa(page, "admin");
-    await expect(page.getByText("Lista pe septembrie 2026 este in lucru")).toBeVisible();
-    await page.getByText("Lista pe septembrie 2026 este in lucru").click();
-    await expect(page.getByText("Facturi si liste")).toBeVisible();
+    await expect(page.getByText("Lista pe septembrie 2026 este în lucru")).toBeVisible();
+    await page.getByText("Lista pe septembrie 2026 este în lucru").click();
+    await expect(page.getByText("Facturi și liste")).toBeVisible();
   });
 
   test("reminderul de plata spune catre cati a plecat", async ({ page }) => {
     await intraCa(page, "admin");
-    await buton(page, "Trimite reminder de plata").click();
-    await asteaptaToast(page, "Reminder trimis catre");
+    await buton(page, "Trimite reminder de plată").click();
+    await asteaptaToast(page, "Reminder trimis către");
     const mesaj = await page.locator(".ab-toast").innerText();
-    expect(mesaj).toMatch(/Reminder trimis catre .*, din .* cu sold/);
+    expect(mesaj).toMatch(/Reminder trimis către .*, din .* cu sold/);
   });
 
   test("instiintarea unui restantier raporteaza rezultatul", async ({ page }) => {
     await intraCa(page, "admin");
-    await buton(page, "Instiintare").first().click();
-    await expect(page.locator(".ab-toast")).toContainText(/Instiintare trimisa in aplicatie|nu are cont in aplicatie/, { timeout: 20000 });
+    await buton(page, "Înștiințare").first().click();
+    await expect(page.locator(".ab-toast")).toContainText(/Înștiințare trimisă în aplicație|nu are cont în aplicație/, { timeout: 20000 });
   });
 
   test("exportul listei de plata da un PDF", async ({ page }) => {
     await intraCa(page, "admin");
     const descarcare = page.waitForEvent("download");
-    await buton(page, "Exporta lista PDF").click();
+    await buton(page, "Exportă lista PDF").click();
     const f = await descarcare;
     /* [F4] Butonul de pe Sumar descarca varianta interna, cu alt nume decat
        cel de avizier (vezi pdf-liste.spec.js) */
@@ -97,14 +97,14 @@ test.describe("Sumar", () => {
     await intraCa(page, "admin");
     /* KPI-ul "Restante", nu nota de sub exportul intern, care contine si ea
        cuvantul (potrivirea dupa text nu tine cont de majuscule) */
-    await page.getByRole("button", { name: /^Restante/ }).first().click();
-    await expect(page.getByText(/^Restante \d+$/)).toBeVisible();
+    await page.getByRole("button", { name: /^Restanțe/ }).first().click();
+    await expect(page.getByText(/^Restanțe \d+$/)).toBeVisible();
     await mergiLaTab(page, "Sumar");
     await page.getByText("CITIRI DE VERIFICAT").click();
     await expect(page.getByText("Contorul general al blocului")).toBeVisible();
     await mergiLaTab(page, "Sumar");
-    await buton(page, "Scrie un anunt").click();
-    await expect(buton(page, "Scrie un anunt")).toBeVisible();
+    await buton(page, "Scrie un anunț").click();
+    await expect(buton(page, "Scrie un anunț")).toBeVisible();
     await mergiLaTab(page, "Sumar");
     await buton(page, "Deschide un vot").click();
     await expect(buton(page, "Deschide un vot nou")).toBeVisible();
@@ -116,12 +116,12 @@ test.describe("Apartamente: lista", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await expect(page.getByText("20 apartamente,")).toBeVisible();
-    await page.getByLabel("Cauta dupa nume sau numar").fill("Marinescu");
+    await page.getByLabel("Caută după nume sau număr").fill("Marinescu");
     await expect(page.getByRole("button", { name: /^Apartament \d+$/ })).toHaveCount(1);
     await expect(page.getByText("Elena Marinescu")).toBeVisible();
-    await page.getByLabel("Cauta dupa nume sau numar").fill("3");
+    await page.getByLabel("Caută după nume sau număr").fill("3");
     await expect(page.getByRole("button", { name: "Apartament 3" })).toHaveCount(1);
-    await page.getByLabel("Cauta dupa nume sau numar").fill("zzz");
+    await page.getByLabel("Caută după nume sau număr").fill("zzz");
     await expect(page.getByText("Niciun rezultat")).toBeVisible();
   });
 
@@ -136,8 +136,8 @@ test.describe("Apartamente: lista", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await expect(page.getByRole("button", { name: `Cu sold ${cuSold}` })).toBeVisible();
-    await expect(page.getByRole("button", { name: `Restante ${cuRestanta}` })).toBeVisible();
-    await page.getByRole("button", { name: `Restante ${cuRestanta}` }).click();
+    await expect(page.getByRole("button", { name: `Restanțe ${cuRestanta}` })).toBeVisible();
+    await page.getByRole("button", { name: `Restanțe ${cuRestanta}` }).click();
     await expect(page.getByRole("button", { name: /^Apartament / })).toHaveCount(cuRestanta);
   });
 
@@ -164,34 +164,34 @@ test.describe("Fisa apartamentului", () => {
     await expect(dialog).toContainText("Familia Ilie");
     await expect(dialog).toContainText("Sold la zi");
     await expect(dialog).toContainText(lei(sold));
-    await expect(dialog).toContainText("Intretinere iunie 2026");
+    await expect(dialog).toContainText("Întreținere iunie 2026");
     await expect(dialog).toContainText("Penalizare");
-    await expect(dialog).toContainText("Defalcarea intretinerii");
+    await expect(dialog).toContainText("Defalcarea întreținerii");
     await expect(dialog).toContainText("Istoricul persoanelor");
-    await expect(dialog).toContainText("Consum apa");
+    await expect(dialog).toContainText("Consum apă");
   });
 
   test("instiintarea este blocata pe un apartament fara restanta", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 2", exact: true }).click();
-    await expect(buton(page, "Trimite instiintare de plata")).toHaveAttribute("aria-disabled", "true");
+    await expect(buton(page, "Trimite înștiințare de plată")).toHaveAttribute("aria-disabled", "true");
   });
 
   test("incasarea cash emite chitanta si stinge datoria", async ({ page }) => {
     const ap = await apartamentulNumarul(16);
-    await datorieDeTest(ap.id, 25.5, "Test incasare cash");
+    await datorieDeTest(ap.id, 25.5, "Test încasare cash");
     const sold = await soldApartament(ap.id);
 
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 16" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await expect(page.getByLabel("Suma primita")).toHaveValue(lei(sold));
-    await buton(page, "Emite chitanta").click();
-    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
-    await expect(page.getByText(`Incasare inregistrata: ${lei(sold)} lei`)).toBeVisible();
-    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible();
+    await buton(page, "Înregistrează încasare cash").click();
+    await expect(page.getByLabel("Suma primită")).toHaveValue(lei(sold));
+    await buton(page, "Emite chitanța").click();
+    await asteaptaToast(page, "Încasare înregistrată, chitanța emisă");
+    await expect(page.getByText(`Încasare înregistrată: ${lei(sold)} lei`)).toBeVisible();
+    await expect(page.getByText(/Chitanța [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible();
 
     const { data: plata } = await serviciu().schema("financiar").from("plati")
       .select("id, suma, metoda, stare").eq("apartament_id", ap.id).eq("metoda", "numerar")
@@ -201,7 +201,7 @@ test.describe("Fisa apartamentului", () => {
     expect(await soldApartament(ap.id)).toBe(0);
 
     const descarcare = page.waitForEvent("download");
-    await buton(page, "Descarca chitanta").click();
+    await buton(page, "Descarcă chitanța").click();
     expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
   });
 
@@ -216,40 +216,40 @@ test.describe("Fisa apartamentului", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 18" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await buton(page, "Emite chitanta").click();
-    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
+    await buton(page, "Înregistrează încasare cash").click();
+    await buton(page, "Emite chitanța").click();
+    await asteaptaToast(page, "Încasare înregistrată, chitanța emisă");
     expect(await soldApartament(ap.id)).toBe(0);
 
-    await buton(page, "Storneaza incasarea").first().click();
+    await buton(page, "Stornează încasarea").first().click();
     /* fara motiv nu se poate */
-    await expect(buton(page, "Storneaza").last()).toHaveAttribute("aria-disabled", "true");
-    await page.getByLabel("De ce o anulezi").fill("Suma a fost scrisa gresit");
-    await buton(page, "Storneaza").last().click();
-    await asteaptaToast(page, "Incasarea a fost anulata");
+    await expect(buton(page, "Stornează").last()).toHaveAttribute("aria-disabled", "true");
+    await page.getByLabel("De ce o anulezi").fill("Suma a fost scrisă greșit");
+    await buton(page, "Stornează").last().click();
+    await asteaptaToast(page, "Încasarea a fost anulată");
 
     expect(await soldApartament(ap.id)).toBeCloseTo(sold, 2);
     const { data: plata } = await serviciu().schema("financiar").from("plati")
       .select("stare, motiv_stornare").eq("apartament_id", ap.id)
       .order("creat_la", { ascending: false }).limit(1).single();
-    expect(plata).toMatchObject({ stare: "rambursata", motiv_stornare: "Suma a fost scrisa gresit" });
+    expect(plata).toMatchObject({ stare: "rambursata", motiv_stornare: "Suma a fost scrisă greșit" });
     /* chitanta ramane in carnet, cu numarul ei */
     const { count } = await serviciu().schema("financiar").from("chitante")
       .select("id", { count: "exact", head: true });
     expect(count).toBeGreaterThan(0);
-    await expect(page.getByText("Anulata").first()).toBeVisible();
+    await expect(page.getByText("Anulată").first()).toBeVisible();
   });
 
   test("suma scrisa cu punct de mii este citita ca mii", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 15" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await page.getByLabel("Suma primita").fill("1.500");
+    await buton(page, "Înregistrează încasare cash").click();
+    await page.getByLabel("Suma primită").fill("1.500");
     /* Butonul ramane activ: 1.500 inseamna o mie cinci sute, nu 1,50 lei */
-    await expect(buton(page, "Emite chitanta")).not.toHaveAttribute("aria-disabled", "true");
-    await buton(page, "Renunta").click();
-    await expect(buton(page, "Inregistreaza incasare cash")).toBeVisible();
+    await expect(buton(page, "Emite chitanța")).not.toHaveAttribute("aria-disabled", "true");
+    await buton(page, "Renunță").click();
+    await expect(buton(page, "Înregistrează încasare cash")).toBeVisible();
   });
 
   test("dublul apasat pe Emite chitanta emite o singura chitanta", async ({ page }) => {
@@ -261,9 +261,9 @@ test.describe("Fisa apartamentului", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 14" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await buton(page, "Emite chitanta").dblclick();
-    await asteaptaToast(page, "Incasare inregistrata");
+    await buton(page, "Înregistrează încasare cash").click();
+    await buton(page, "Emite chitanța").dblclick();
+    await asteaptaToast(page, "Încasare înregistrată");
 
     const { count: dupa } = await serviciu().schema("financiar").from("chitante")
       .select("id", { count: "exact", head: true });
@@ -278,12 +278,12 @@ test.describe("Fisa apartamentului", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 12" }).click();
-    await buton(page, "Modifica numarul de persoane").click();
-    await page.getByLabel("Numar nou de persoane").fill("5");
+    await buton(page, "Modifică numărul de persoane").click();
+    await page.getByLabel("Număr nou de persoane").fill("5");
     await page.getByLabel("Motivul").fill("Test e2e");
-    const luna = await page.getByLabel("Incepand cu luna").inputValue();
-    await buton(page, "Salveaza").click();
-    await asteaptaToast(page, "se calculeaza 5 persoane");
+    const luna = await page.getByLabel("Începând cu luna").inputValue();
+    await buton(page, "Salvează").click();
+    await asteaptaToast(page, "se calculează 5 persoane");
 
     const { data } = await serviciu().schema("organizare").from("apartamente_persoane")
       .select("valabil_din, numar_persoane, motiv").eq("apartament_id", ap.id).eq("motiv", "Test e2e").single();
@@ -300,11 +300,11 @@ test.describe("Fisa apartamentului", () => {
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Apartament 11" }).click();
-      await buton(page, "Adauga un locatar in aplicatie").click();
+      await buton(page, "Adaugă un locatar în aplicație").click();
       await page.getByLabel("Numele locatarului").fill("Chirias Nou");
-      await page.getByLabel("Numarul lui de telefon").fill(telefon);
+      await page.getByLabel("Numărul lui de telefon").fill(telefon);
       await page.getByLabel("Ce este pentru apartament").selectOption("chirias");
-      await buton(page, "Fa contul").click();
+      await buton(page, "Fă contul").click();
       await asteaptaToast(page, "Contul a fost creat");
 
       const fisa = page.getByRole("dialog", { name: "Apartament 11" });
@@ -333,19 +333,19 @@ test.describe("Fisa apartamentului", () => {
     const fisa = page.getByRole("dialog", { name: "Apartament 10" });
     await expect(fisa.getByText("Sanda Croitoru").first()).toBeVisible();
     page.once("dialog", (d) => d.accept());
-    await buton(page, "Inchide accesul").click();
-    await asteaptaToast(page, "Accesul a fost inchis");
-    await expect(page.getByText(/Sanda Croitoru, acces inchis pe/)).toBeVisible();
+    await buton(page, "Închide accesul").click();
+    await asteaptaToast(page, "Accesul a fost închis");
+    await expect(page.getByText(/Sanda Croitoru, acces închis pe/)).toBeVisible();
 
     const { data } = await serviciu().schema("identitate").from("locatari")
       .select("activ_pana").eq("profil_id", pid).single();
     expect(data.activ_pana).not.toBeNull();
 
     /* Fostul locatar nu mai are acces la datele blocului */
-    await fisa.getByRole("button", { name: "Inchide" }).click();
-    await buton(page, "Iesi").click();
+    await fisa.getByRole("button", { name: "Închide" }).click();
+    await buton(page, "Ieși").click();
     await intra(page, TELEFON);
-    await expect(page.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("leagă contul de apartamentul tău")).toBeVisible({ timeout: 20000 });
     await stergeCont(TELEFON);
   });
 });
@@ -359,11 +359,11 @@ test.describe("corectarea fisei si banii din fond", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 5" }).click();
-    await buton(page, "Corecteaza datele apartamentului").click();
+    await buton(page, "Corectează datele apartamentului").click();
 
     const nume = `Proprietar Nou ${Date.now()}`;
     await page.getByLabel("Proprietar").fill(nume);
-    await buton(page, "Salveaza corectia").click();
+    await buton(page, "Salvează corecția").click();
     await expect(page.getByText(nume).first()).toBeVisible();
 
     const dupa = await apartamentulNumarul(5);
@@ -378,7 +378,7 @@ test.describe("corectarea fisei si banii din fond", () => {
      iar soldul nu are voie sa treaca sub zero. */
   /* Testul scoate bani din fondul demo; fara curatenie, fiecare rulare il
      subtiaza cu inca 250 de lei si soldul afisat nu mai e cel din seed. */
-  const DESCRIERE_IESIRE = "E2E iesire hidrofor";
+  const DESCRIERE_IESIRE = "E2E ieșire hidrofor";
   async function curataIesireaDeTest() {
     const sb = serviciu();
     const { data } = await sb.schema("financiar").from("miscari_fond")
@@ -401,17 +401,17 @@ test.describe("corectarea fisei si banii din fond", () => {
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Fonduri" }).click();
-      await page.getByRole("button", { name: "Inregistreaza o iesire" }).first().click();
+      await page.getByRole("button", { name: "Înregistrează o ieșire" }).first().click();
 
-      await page.getByLabel("Suma iesita").fill("250");
+      await page.getByLabel("Suma ieșită").fill("250");
       await page.getByLabel("Pentru ce").fill(DESCRIERE_IESIRE);
       /* fara document, salvarea nu e disponibila */
-      await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
+      await expect(buton(page, "Înregistrează ieșirea")).toBeDisabled();
 
       await page.setInputFiles("input[type=file]", {
         name: "factura-hidrofor.jpg", mimeType: "image/jpeg", buffer: Buffer.from("jpeg-de-test"),
       });
-      await buton(page, "Inregistreaza iesirea").click();
+      await buton(page, "Înregistrează ieșirea").click();
       await expect(page.getByText(DESCRIERE_IESIRE).first()).toBeVisible();
     } finally {
       await curataIesireaDeTest();
@@ -424,11 +424,11 @@ test.describe("locatar fara datorii", () => {
     const ap = await apartamentulNumarul(1);
     expect(await soldApartament(ap.id)).toBe(0);
     await intraCa(page, "voicu");
-    await expect(page.getByText("Totul este platit")).toBeVisible();
+    await expect(page.getByText("Totul este plătit")).toBeVisible();
     await expect(page.getByText("Achitat").first()).toBeVisible();
-    await expect(buton(page, "Cum platesc")).toHaveCount(0);
+    await expect(buton(page, "Cum plătesc")).toHaveCount(0);
     const descarcare = page.waitForEvent("download");
-    await buton(page, "Descarca ultima chitanta").click();
+    await buton(page, "Descarcă ultima chitanță").click();
     expect((await descarcare).suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
   });
 });

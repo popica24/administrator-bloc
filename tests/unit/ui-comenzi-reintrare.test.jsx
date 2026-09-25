@@ -17,7 +17,7 @@ function amanat() {
 /* Apasa de doua ori la rand, inainte ca prima comanda sa apuce sa raspunda */
 async function apasaDeDouaOri(nume) {
   const b = screen.getAllByRole("button").find((x) => x.textContent === nume || x.getAttribute("aria-label") === nume);
-  if (!b) throw new Error(`Butonul "${nume}" nu exista`);
+  if (!b) throw new Error(`Butonul "${nume}" nu există`);
   await act(async () => {
     fireEvent.click(b);
     fireEvent.click(b);
@@ -36,8 +36,8 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
   it("publicarea listei de plata", async () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "publicaLista");
     await tab("Facturi");
-    await apasa("Publica lista");
-    await apasaDeDouaOri("Da, publica lista");
+    await apasa("Publică lista");
+    await apasaDeDouaOri("Da, publică lista");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
   });
@@ -45,10 +45,10 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
   it("publicarea unui anunt", async () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "publicaAnunt");
     await tab("Comunicare");
-    await apasa("Scrie un anunt");
-    await scrie("Titlu", "Curatenie generala");
+    await apasa("Scrie un anunț");
+    await scrie("Titlu", "Curățenie generală");
     await scrie("Continut", "Sambata la ora 10");
-    await apasaDeDouaOri("Publica anuntul");
+    await apasaDeDouaOri("Publică anunțul");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
   });
@@ -57,10 +57,10 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "adaugaLocatar", { telefon: "0722000061", parola: "Bloc-Casa-1234" });
     await tab("Apartamente");
     await apasa("Apartament 17");
-    await apasa("Adauga un locatar in aplicatie");
+    await apasa("Adaugă un locatar în aplicație");
     scrie("Numele locatarului", "Ana");
-    scrie("Numarul lui de telefon", "0722 000 061");
-    await apasaDeDouaOri("Fa contul");
+    scrie("Numărul lui de telefon", "0722 000 061");
+    await apasaDeDouaOri("Fă contul");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
   });
@@ -68,12 +68,12 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
   it("deschiderea unui vot", async () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "deschideVot");
     await tab("Comunicare");
-    await apasa("Vot si AG");
+    await apasa("Vot și AG");
     await apasa("Deschide un vot nou");
-    await scrie("Ce se voteaza", "Schimbam usa");
+    await scrie("Ce se votează", "Schimbam ușa");
     await scrie("Varianta 1", "Da");
     await scrie("Varianta 2", "Nu");
-    await scrie("Votul se inchide pe", "2026-10-30");
+    await scrie("Votul se închide pe", "2026-10-30");
     await apasaDeDouaOri("Deschide votul");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
@@ -82,8 +82,8 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
   it("convocarea adunarii generale", async () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "convoacaAdunare", { destinatari: 3 });
     await tab("Comunicare");
-    await apasa("Vot si AG");
-    await apasa("Convoaca adunarea");
+    await apasa("Vot și AG");
+    await apasa("Convoacă adunarea");
     await scrie("Data", "2026-10-30");
     await scrie("Locul", "La parter");
     await scrie("Ordinea de zi", "Bugetul pe 2027");
@@ -96,11 +96,11 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "incarcaDocument");
     await tab("Comunicare");
     await apasa("Acte");
-    await apasa("Incarca un document");
+    await apasa("Încarcă un document");
     await scrie("Titlu", "Proces verbal");
-    const fisier = screen.getAllByLabelText("Alege fisierul").find((x) => x.tagName === "INPUT");
+    const fisier = screen.getAllByLabelText("Alege fișierul").find((x) => x.tagName === "INPUT");
     await act(async () => { fireEvent.change(fisier, { target: { files: [new File(["x"], "pv.pdf", { type: "" })] } }); });
-    await apasaDeDouaOri("Incarca documentul");
+    await apasaDeDouaOri("Încarcă documentul");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
   });
@@ -110,8 +110,8 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     const { spion, termina } = await cuComandaBlocata(LOCATAR, "transmiteCitire");
     await tab("Contoare");
     await scrie("Apa rece, index anterior 244,5", "250");
-    await scrie("Apa calda, index anterior 133,7", "140");
-    const poza = screen.getAllByLabelText("Fotografiaza contoarele").find((x) => x.tagName === "INPUT");
+    await scrie("Apa caldă, index anterior 133,7", "140");
+    const poza = screen.getAllByLabelText("Fotografiază contoarele").find((x) => x.tagName === "INPUT");
     await act(async () => { fireEvent.change(poza, { target: { files: [new File(["x"], "c.jpg", { type: "" })] } }); });
     await apasaDeDouaOri("Trimite indexul");
     expect(spion).toHaveBeenCalledTimes(1);
@@ -120,16 +120,16 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
 
   it("adaugarea unei sesizari", async () => {
     const { spion, termina } = await cuComandaBlocata(LOCATAR, "adaugaSesizare");
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
-    await apasa("Bec ars pe scara");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
+    await apasa("Bec ars pe scară");
     await apasaDeDouaOri("Trimite sesizarea");
     expect(spion).toHaveBeenCalledTimes(1);
     await termina();
   });
 
-  /* [C10] paza de reintrare cheia doar dupa numele comenzii: "Instiintare"
-     pe apartamentul 3 tinea blocata si "Instiintare" pe apartamentul 5,
+  /* [C10] paza de reintrare cheia doar dupa numele comenzii: "Înștiințare"
+     pe apartamentul 3 tinea blocata si "Înștiințare" pe apartamentul 5,
      apasat imediat dupa, in aceeasi secunda. */
   it("[C10] Instiintare pe un apartament nu blocheaza Instiintare pe alt apartament", async () => {
     const { sursa } = await pornesteApp({ email: ADMIN });
@@ -139,7 +139,7 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
       apeluri.push(ap);
       return new Promise((r) => rezolva.push(r));
     });
-    const butoane = screen.getAllByRole("button").filter((b) => b.textContent === "Instiintare");
+    const butoane = screen.getAllByRole("button").filter((b) => b.textContent === "Înștiințare");
     expect(butoane.length).toBeGreaterThan(1);
     await act(async () => {
       fireEvent.click(butoane[0]);
@@ -155,10 +155,10 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
   it("[E6] o comanda blocata anunta omul, nu tace", async () => {
     const { spion, termina } = await cuComandaBlocata(ADMIN, "publicaAnunt");
     await tab("Comunicare");
-    await apasa("Scrie un anunt");
-    await scrie("Titlu", "Curatenie generala");
+    await apasa("Scrie un anunț");
+    await scrie("Titlu", "Curățenie generală");
     await scrie("Continut", "Sambata la ora 10");
-    await apasaDeDouaOri("Publica anuntul");
+    await apasaDeDouaOri("Publică anunțul");
     expect(spion).toHaveBeenCalledTimes(1);
     expect(toast()).toBeTruthy();
     expect(toast().textContent).not.toBe("");
@@ -169,14 +169,14 @@ describe("[F1] o comanda in curs nu se porneste a doua oara", () => {
     const { sursa } = await pornesteApp({ email: ADMIN });
     const spion = vi.spyOn(sursa, "publicaAnunt");
     await tab("Comunicare");
-    await apasa("Scrie un anunt");
-    await scrie("Titlu", "Primul anunt");
+    await apasa("Scrie un anunț");
+    await scrie("Titlu", "Primul anunț");
     await scrie("Continut", "Text");
-    await apasa("Publica anuntul");
-    await apasa("Scrie un anunt");
-    await scrie("Titlu", "Al doilea anunt");
+    await apasa("Publică anunțul");
+    await apasa("Scrie un anunț");
+    await scrie("Titlu", "Al doilea anunț");
     await scrie("Continut", "Text");
-    await apasa("Publica anuntul");
+    await apasa("Publică anunțul");
     expect(spion).toHaveBeenCalledTimes(2);
   });
 

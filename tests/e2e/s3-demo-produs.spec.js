@@ -1,8 +1,8 @@
 /* Modul demonstrativ ca produs, nu ca oglinda a bazei.
 
    `z-demo-paritate` compara cifrele celor doua surse. Aici intrebarea e alta:
-   cineva deschide aplicatia fara niciun server — un administrator care o
-   incearca seara, acasa — si trebuie sa poata duce la capat tot ce duce la
+   cineva deschide aplicatia fara niciun server, un administrator care o
+   incearca seara, acasa, si trebuie sa poata duce la capat tot ce duce la
    capat in aplicatia adevarata, fara sa dea peste un ecran gol, un buton care
    nu face nimic sau un cuvant de programator.
 
@@ -36,7 +36,7 @@ test.beforeAll(async () => {
   });
   const pornire = Date.now();
   while (!(await raspunde(DEMO))) {
-    if (Date.now() - pornire > 60000) throw new Error("Serverul modului demonstrativ nu porneste");
+    if (Date.now() - pornire > 60000) throw new Error("Serverul modului demonstrativ nu pornește");
     await new Promise((r) => setTimeout(r, 400));
   }
 });
@@ -48,17 +48,17 @@ test.afterAll(() => {
 
 async function intraDemo(page, telefon) {
   await page.goto(`${DEMO}/`);
-  await page.getByLabel("Numarul tau de telefon").fill(telefon);
+  await page.getByLabel("Numărul tău de telefon").fill(telefon);
   await page.getByLabel("Parola").fill(PAROLA);
-  await page.getByRole("button", { name: "Intra", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
+  await page.getByRole("button", { name: "Intră", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Ieși", exact: true })).toBeVisible({ timeout: 25000 });
 }
 
 /* Ecranul de fata nu are voie sa fie gol si nu are voie sa vorbeasca tehnic */
 async function ecranSanatos(page, minimCaractere = 120) {
   const t = await textEcran(page);
   expect(t.length, `ecran prea gol:\n${t}`).toBeGreaterThan(minimCaractere);
-  for (const cuvant of CUVINTE_TEHNICE) expect(t, `ecranul contine "${cuvant}"`).not.toContain(cuvant);
+  for (const cuvant of CUVINTE_TEHNICE) expect(t, `ecranul conține "${cuvant}"`).not.toContain(cuvant);
   expect(t).not.toMatch(/\bnull\b|\[object|Infinity|\bNaN\b/);
   return t;
 }
@@ -88,12 +88,12 @@ test.describe("locatarul duce la capat tot ce are de facut, fara server", () => 
   test("cele cinci ecrane sunt pline si pe romaneste", async ({ page }) => {
     await intraDemo(page, CONTURI.elena);
     await ecranSanatos(page, 300);
-    for (const tabul of ["Plata", "Contoare", "Sesizari", "Bloc"]) {
+    for (const tabul of ["Plata", "Contoare", "Sesizări", "Bloc"]) {
       await mergiLaTab(page, tabul);
       await ecranSanatos(page, 200);
     }
     /* Subtaburile au si ele continut, nu doar titlu */
-    for (const sub of ["Vot si adunare", "Acte", "Fonduri"]) {
+    for (const sub of ["Vot și adunare", "Acte", "Fonduri"]) {
       await page.getByRole("button", { name: sub, exact: true }).click();
       await ecranSanatos(page, 100);
     }
@@ -107,26 +107,26 @@ test.describe("locatarul duce la capat tot ce are de facut, fara server", () => 
     await expect(rand).toHaveAttribute("aria-expanded", "true");
     const t = await ecranSanatos(page, 300);
     expect(t).toContain("Contor general al blocului");
-    expect(t).toContain("Pret pe metru cub");
+    expect(t).toContain("Preț pe metru cub");
     expect(t).toContain("Consumul apartamentului");
   });
 
   test("ecranul de plata spune cum se plateste, fara jargon", async ({ page }) => {
     await intraDemo(page, CONTURI.elena);
     await mergiLaTab(page, "Plata");
-    await expect(page.getByText("Cum platesti")).toBeVisible();
+    await expect(page.getByText("Cum plătești")).toBeVisible();
     const t = await ecranSanatos(page, 200);
     /* Titlurile mici se scriu cu majuscule pe ecran (text-transform) */
-    expect(t).toContain("IN NUMERAR, LA ADMINISTRATOR");
+    expect(t).toContain("ÎN NUMERAR, LA ADMINISTRATOR");
     expect(t).toContain("PRIN TRANSFER BANCAR");
-    expect(t).toContain("Chitanta o primesti in Platile mele");
+    expect(t).toContain("Chitanța o primești în Plățile mele");
   });
 
   test("indexul contorului se transmite cu poza si ecranul confirma", async ({ page }) => {
     /* Ap. 3 nu a transmis inca indexul in datele demo, deci formularul e deschis */
     await intraDemo(page, CONTURI.ilie);
     await mergiLaTab(page, "Contoare");
-    for (const eticheta of [/^Apa rece, index anterior /, /^Apa calda, index anterior /]) {
+    for (const eticheta of [/^Apa rece, index anterior /, /^Apa caldă, index anterior /]) {
       const camp = page.getByLabel(eticheta);
       const anterior = Number((await camp.getAttribute("placeholder")).replace(",", "."));
       await camp.fill(String(anterior + 6));
@@ -140,20 +140,20 @@ test.describe("locatarul duce la capat tot ce are de facut, fara server", () => 
 
   test("sesizarea noua, raspunsul si votul merg pana la capat", async ({ page }) => {
     await intraDemo(page, CONTURI.elena);
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
-    await buton(page, "Bec ars pe scara").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
+    await buton(page, "Bec ars pe scară").click();
     await buton(page, "Trimite sesizarea").click();
     await expect(page.getByText(/Sesizarea a ajuns la administrator/)).toBeVisible({ timeout: 25000 });
-    await expect(page.getByText("Bec ars pe scara").first()).toBeVisible();
+    await expect(page.getByText("Bec ars pe scară").first()).toBeVisible();
 
-    await page.getByRole("textbox", { name: "Adauga un mesaj pentru administrator" }).first()
+    await page.getByRole("textbox", { name: "Adaugă un mesaj pentru administrator" }).first()
       .fill("Becul de la etajul 2, va rog.");
     await buton(page, "Trimite").first().click();
     await expect(page.getByText("Becul de la etajul 2, va rog.")).toBeVisible({ timeout: 25000 });
 
     await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare", exact: true }).click();
+    await page.getByRole("button", { name: "Vot și adunare", exact: true }).click();
     const t = await ecranSanatos(page, 150);
     expect(t).toMatch(/vot|adunare/i);
   });
@@ -174,40 +174,40 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     }
 
     await mergiLaTab(page, "Facturi");
-    await expect(page.getByText(/in lucru/i).first()).toBeVisible();
+    await expect(page.getByText(/în lucru/i).first()).toBeVisible();
 
-    await buton(page, "Adauga factura").click();
-    const panou = page.getByRole("dialog", { name: "Factura noua" });
-    await panou.getByLabel("Sau scrie un furnizor nou").fill("Demo Curatenie SRL");
-    await panou.getByLabel("Ce cheltuiala este").fill("Demo curatenie");
+    await buton(page, "Adaugă factură").click();
+    const panou = page.getByRole("dialog", { name: "Factură nouă" });
+    await panou.getByLabel("Sau scrie un furnizor nou").fill("Demo Curățenie SRL");
+    await panou.getByLabel("Ce cheltuială este").fill("Demo curățenie");
     await panou.getByLabel("Suma facturii").fill("600");
-    await panou.getByLabel("Cum se imparte").selectOption("apartamente");
-    await panou.getByLabel("Serie si numar factura").fill("DEMO-1");
-    await buton(page, "Salveaza factura").click();
+    await panou.getByLabel("Cum se împarte").selectOption("apartamente");
+    await panou.getByLabel("Serie și număr factură").fill("DEMO-1");
+    await buton(page, "Salvează factura").click();
     await expect(panou).toBeHidden({ timeout: 25000 });
-    await expect(page.getByText("Demo curatenie", { exact: true })).toBeVisible();
+    await expect(page.getByText("Demo curățenie", { exact: true })).toBeVisible();
 
-    await buton(page, "Calculeaza lista pe apartamente").click();
+    await buton(page, "Calculează lista pe apartamente").click();
     await expect(page.getByText("Total repartizat")).toBeVisible({ timeout: 25000 });
     const previz = await ecranSanatos(page, 400);
     expect(previz).toContain("Total facturi");
 
-    await buton(page, "Publica lista").click();
-    await expect(page.getByRole("dialog", { name: "Publica lista" })).toContainText("Termenul de plata va fi");
-    await buton(page, "Da, publica lista").click();
-    await expect(page.getByText(/Lista a fost publicata/)).toBeVisible({ timeout: 25000 });
+    await buton(page, "Publică lista").click();
+    await expect(page.getByRole("dialog", { name: "Publică lista" })).toContainText("Termenul de plată va fi");
+    await buton(page, "Da, publică lista").click();
+    await expect(page.getByText(/Lista a fost publicată/)).toBeVisible({ timeout: 25000 });
 
     const publicata = await ecranSanatos(page, 300);
     expect(publicata).toContain("Nealocat");
     expect(publicata).toMatch(/Nealocat\s*0,00/);
 
-    const avizier = await descarcaDemo(page, () => buton(page, "Exporta PDF pentru avizier").click());
+    const avizier = await descarcaDemo(page, () => buton(page, "Exportă PDF pentru avizier").click());
     const textAvizier = textPdf(avizier.octeti);
     expect(textAvizier).toContain("Lista de plata pe");
     expect(textAvizier).toContain("Demo curatenie");
     expect(textAvizier).not.toMatch(/NaN|undefined|Invalid/);
 
-    const intern = await descarcaDemo(page, () => buton(page, "Exporta lista interna (uz administrativ)").click());
+    const intern = await descarcaDemo(page, () => buton(page, "Exportă lista internă (uz administrativ)").click());
     expect(textPdf(intern.octeti)).toContain("Document intern");
   });
 
@@ -218,26 +218,26 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     const fisa = page.getByRole("dialog", { name: "Apartament 3" });
     await ecranSanatos(page, 300);
 
-    await buton(page, "Inregistreaza incasare cash").click();
-    await page.getByLabel("Suma primita").fill("100");
-    await buton(page, "Emite chitanta").click();
-    await expect(fisa.getByText(/Incasare inregistrata/)).toBeVisible({ timeout: 25000 });
-    const chitanta = await descarcaDemo(page, () => buton(page, "Descarca chitanta").click());
+    await buton(page, "Înregistrează încasare cash").click();
+    await page.getByLabel("Suma primită").fill("100");
+    await buton(page, "Emite chitanța").click();
+    await expect(fisa.getByText(/Încasare înregistrată/)).toBeVisible({ timeout: 25000 });
+    const chitanta = await descarcaDemo(page, () => buton(page, "Descarcă chitanța").click());
     expect(textPdf(chitanta.octeti)).toContain("CHITANTA");
 
-    await buton(page, "Adauga un locatar in aplicatie").click();
+    await buton(page, "Adaugă un locatar în aplicație").click();
     await page.getByLabel("Numele locatarului").fill("Vecin Nou");
-    await page.getByLabel("Numarul lui de telefon").fill("0798 100 200");
-    await buton(page, "Fa contul").click();
-    await expect(fisa.getByText("Intra cu numarul 0798 100 200")).toBeVisible();
+    await page.getByLabel("Numărul lui de telefon").fill("0798 100 200");
+    await buton(page, "Fă contul").click();
+    await expect(fisa.getByText("Intră cu numărul 0798 100 200")).toBeVisible();
     await expect(fisa.getByText(/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/)).toBeVisible();
     await buton(page, "Gata").click();
 
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await page.getByLabel("Proprietar").fill("Familia Ilie si fiul");
-    await buton(page, "Salveaza corectia").click();
-    await expect(page.getByText(/Fisa apartamentului a fost actualizata/)).toBeVisible({ timeout: 25000 });
-    await expect(fisa.getByText("Familia Ilie si fiul")).toBeVisible();
+    await buton(page, "Corectează datele apartamentului").click();
+    await page.getByLabel("Proprietar").fill("Familia Ilie și fiul");
+    await buton(page, "Salvează corecția").click();
+    await expect(page.getByText(/Fișa apartamentului a fost actualizată/)).toBeVisible({ timeout: 25000 });
+    await expect(fisa.getByText("Familia Ilie și fiul")).toBeVisible();
   });
 
   test("citirile se valideaza si se resping, iar refuzurile sunt pe romaneste", async ({ page }) => {
@@ -247,19 +247,19 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     await ecranSanatos(page, 400);
 
     await buton(page, "Valideaza").first().click();
-    await expect(page.getByText(/Citirea a fost validata/)).toBeVisible({ timeout: 25000 });
+    await expect(page.getByText(/Citirea a fost validată/)).toBeVisible({ timeout: 25000 });
 
     await buton(page, "Respinge").first().click();
-    await page.getByRole("button", { name: "Poza este neclara, nu se vad cifrele." }).click();
+    await page.getByRole("button", { name: "Poza este neclară, nu se văd cifrele." }).click();
     await buton(page, "Respinge citirea").click();
-    await expect(page.getByText(/Citirea a fost respinsa/)).toBeVisible({ timeout: 25000 });
+    await expect(page.getByText(/Citirea a fost respinsă/)).toBeVisible({ timeout: 25000 });
 
     /* Estimarea: raspunsul este explicat, nu un buton mort. Modul demonstrativ
        merge pe ceasul real, deci inainte de termenul de citire estimarea este
        refuzata, iar dupa el chiar se poate face -- amandoua sunt raspunsuri
        cinstite, si amandoua trebuie sa fie pe romaneste. */
     page.once("dialog", (d) => d.accept());
-    await buton(page, "Estimeaza citirile lipsa").click();
+    await buton(page, "Estimează citirile lipsă").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
     const raspuns = await page.locator(".ab-toast").innerText();
     expect(raspuns).toMatch(/Nu poti estima inainte de termenul de citire|Au fost estimate \d+ citiri/);
@@ -271,28 +271,28 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
     await intraDemo(page, CONTURI.admin);
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Fonduri", exact: true }).click();
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await page.getByLabel("Suma iesita").fill("250");
-    await page.getByLabel("Pentru ce").fill("Demo reparatie interfon");
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await page.getByLabel("Suma ieșită").fill("250");
+    await page.getByLabel("Pentru ce").fill("Demo reparație interfon");
     await page.setInputFiles("input[type=file]", fisierPoza("deviz.jpg"));
-    await buton(page, "Inregistreaza iesirea").click();
-    await expect(page.getByText(/Iesirea din fond a fost inregistrata/)).toBeVisible({ timeout: 25000 });
+    await buton(page, "Înregistrează ieșirea").click();
+    await expect(page.getByText(/Ieșirea din fond a fost înregistrată/)).toBeVisible({ timeout: 25000 });
     const t = await ecranSanatos(page, 300);
-    expect(t).toContain("Demo reparatie interfon");
+    expect(t).toContain("Demo reparație interfon");
     expect(t).toContain("-250,00");
   });
 
   test("comunicarea: anunt, vot, adunare si un act incarcat", async ({ page }) => {
     await intraDemo(page, CONTURI.admin);
     await mergiLaTab(page, "Comunicare");
-    await buton(page, "Scrie un anunt").click();
+    await buton(page, "Scrie un anunț").click();
     await page.getByLabel("Titlu").fill("Demo: apa oprita marti");
-    await page.getByLabel("Continut").fill("Marti intre 9 si 14 se opreste apa pe toata scara.");
-    await buton(page, "Publica anuntul").click();
-    await expect(page.getByText(/Anunt publicat la avizier/)).toBeVisible({ timeout: 25000 });
+    await page.getByLabel("Continut").fill("Marti între 9 și 14 se opreste apa pe toată scară.");
+    await buton(page, "Publică anunțul").click();
+    await expect(page.getByText(/Anunț publicat la avizier/)).toBeVisible({ timeout: 25000 });
     await expect(page.getByText("Demo: apa oprita marti")).toBeVisible();
 
-    await page.getByRole("button", { name: "Vot si AG", exact: true }).click();
+    await page.getByRole("button", { name: "Vot și AG", exact: true }).click();
     await ecranSanatos(page, 150);
 
     await page.getByRole("button", { name: "Acte", exact: true }).click();
@@ -301,14 +301,14 @@ test.describe("administratorul duce la capat o luna intreaga, fara server", () =
 
   test("sesizarile se preiau, primesc raspuns si se inchid", async ({ page }) => {
     await intraDemo(page, CONTURI.admin);
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await ecranSanatos(page, 200);
     await page.getByRole("button", { name: /Bec ars/ }).first().click();
-    await page.getByRole("textbox", { name: /raspuns|mesaj/i }).first().fill("Am cumparat becul, il schimbam maine.");
-    await buton(page, "Trimite raspunsul").click();
-    await expect(page.getByText("Am cumparat becul, il schimbam maine.")).toBeVisible({ timeout: 25000 });
-    await buton(page, "Marcheaza rezolvata").click();
-    await expect(page.getByText(/rezolvata/i).first()).toBeVisible({ timeout: 25000 });
+    await page.getByRole("textbox", { name: /răspuns|mesaj/i }).first().fill("Am cumparat becul, îl schimbam maine.");
+    await buton(page, "Trimite răspunsul").click();
+    await expect(page.getByText("Am cumparat becul, îl schimbam maine.")).toBeVisible({ timeout: 25000 });
+    await buton(page, "Marchează rezolvată").click();
+    await expect(page.getByText(/rezolvată/i).first()).toBeVisible({ timeout: 25000 });
     await ecranSanatos(page, 200);
   });
 });

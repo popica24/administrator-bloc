@@ -27,7 +27,7 @@ describe("AdminCitiri, luna curenta", () => {
     await apasa("Citiri de verificat");
     expect(screen.getByText("Termen de citire 25 septembrie 2026")).toBeTruthy();
     expect(inZona("Transmise", "apartamente").getByText("10 din 20")).toBeTruthy();
-    expect(inZona("De verificat", "cu poza atasata").getByText("4")).toBeTruthy();
+    expect(inZona("De verificat", "cu poza atașată").getByText("4")).toBeTruthy();
     expect([...screen.getByLabelText("Luna").options].map((o) => o.value)).toEqual(["2026-09", "2026-08", "2026-07", "2026-06"]);
   });
 
@@ -36,7 +36,7 @@ describe("AdminCitiri, luna curenta", () => {
     const [rece] = (await citiri(sursa, "2026-09", "9")).filter((c) => c.tip === "rece");
     const ap9 = randAp("9");
     expect(ap9.getByText(`Rece: ${rece.indexAnterior.toFixed(1).replace(".", ",")} → ${rece.indexCurent.toFixed(1).replace(".", ",")}, ${rece.consum.toFixed(2).replace(".", ",")} mc`)).toBeTruthy();
-    expect(ap9.getAllByText("Trimis, in verificare")).toHaveLength(2);
+    expect(ap9.getAllByText("Trimis, în verificare")).toHaveLength(2);
     expect(ap9.getAllByText("POZA")).toHaveLength(1);
     const ap6 = randAp("6");
     expect(ap6.getAllByText("Poza este neclara, nu se vad cifrele negre.").length).toBeGreaterThan(0);
@@ -63,9 +63,9 @@ describe("AdminCitiri, luna curenta", () => {
     await apasa(randAp("9").getByRole("button", { name: "Valideaza" }));
     expect(spion).toHaveBeenCalledTimes(1);
     expect(spion).toHaveBeenCalledWith(ap9, "2026-09", true, null);
-    expect(toast().textContent).toBe("Citirea a fost validata");
+    expect(toast().textContent).toBe("Citirea a fost validată");
     expect(randAp("9").getAllByText("Validat")).toHaveLength(2);
-    expect(inZona("De verificat", "cu poza atasata").getByText("3")).toBeTruthy();
+    expect(inZona("De verificat", "cu poza atașată").getByText("3")).toBeTruthy();
   });
 
   it("o eroare la validare arata mesajul si nu schimba nimic", async () => {
@@ -102,12 +102,12 @@ describe("AdminCitiri, luna curenta", () => {
     const camp = f.getByLabelText("Motivul");
     expect(camp.value).toBe("Indexul nu corespunde cu poza.");
     expect(chip("Indexul nu corespunde cu poza.").getAttribute("aria-pressed")).toBe("true");
-    expect(chip("Poza este neclara, nu se vad cifrele.").getAttribute("aria-pressed")).toBe("false");
+    expect(chip("Poza este neclară, nu se văd cifrele.").getAttribute("aria-pressed")).toBe("false");
     await act(async () => { fireEvent.change(camp, { target: { value: "  Se vede alt contor.  " } }); });
     await apasa(f.getByRole("button", { name: "Respinge citirea" }));
     expect(spion).toHaveBeenCalledTimes(1);
     expect(spion).toHaveBeenCalledWith(ap9, "2026-09", false, "Se vede alt contor.");
-    expect(toast().textContent).toBe("Citirea a fost respinsa, locatarul a fost anuntat");
+    expect(toast().textContent).toBe("Citirea a fost respinsă, locatarul a fost anunțat");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(randAp("9").getAllByText("Se vede alt contor.").length).toBeGreaterThan(0);
   });
@@ -119,7 +119,7 @@ describe("AdminCitiri, luna curenta", () => {
     const f = inDialog("Respinge citirea, ap. 12");
     await act(async () => { fireEvent.change(f.getByLabelText("Motivul"), { target: { value: "   " } }); });
     expect(dezactivat(f.getByRole("button", { name: "Respinge citirea" }))).toBe(true);
-    await apasa(f.getByRole("button", { name: "Inchide" }));
+    await apasa(f.getByRole("button", { name: "Închide" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
   });
@@ -129,7 +129,7 @@ describe("AdminCitiri, luna curenta", () => {
     vi.spyOn(sursa, "valideazaCitiriApartament").mockRejectedValue(new Error("Scrie motivul"));
     await apasa(randAp("12").getByRole("button", { name: "Respinge" }));
     const f = inDialog("Respinge citirea, ap. 12");
-    await apasa(f.getByText("Poza nu arata contorul apartamentului."));
+    await apasa(f.getByText("Poza nu arată contorul apartamentului."));
     await apasa(f.getByRole("button", { name: "Respinge citirea" }));
     expect(toast().textContent).toBe("Scrie motivul");
     expect(inDialog("Respinge citirea, ap. 12")).toBeTruthy();
@@ -153,17 +153,17 @@ describe("AdminCitiri, contorul general", () => {
     const { sursa } = await deschideCitiri();
     const spion = vi.spyOn(sursa, "citesteContorGeneral");
     expect(screen.getByText("Apa rece, index anterior 19441,0")).toBeTruthy();
-    expect(screen.getByText("Apa calda, index anterior 7981,0")).toBeTruthy();
+    expect(screen.getByText("Apa caldă, index anterior 7981,0")).toBeTruthy();
     expect(screen.getAllByText("necitit")).toHaveLength(2);
     const [rece, calda] = screen.getAllByLabelText("Index nou");
-    const [salveazaRece, salveazaCalda] = butoane("Salveaza");
+    const [salveazaRece, salveazaCalda] = butoane("Salvează");
     expect(dezactivat(salveazaRece)).toBe(true);
 
     await act(async () => { fireEvent.change(rece, { target: { value: "abc" } }); });
-    expect(screen.getByText("Indexul nu poate fi mai mic decat cel anterior.")).toBeTruthy();
+    expect(screen.getByText("Indexul nu poate fi mai mic decât cel anterior.")).toBeTruthy();
     expect(dezactivat(salveazaRece)).toBe(true);
     await act(async () => { fireEvent.change(rece, { target: { value: "19000" } }); });
-    expect(screen.getByText("Indexul nu poate fi mai mic decat cel anterior.")).toBeTruthy();
+    expect(screen.getByText("Indexul nu poate fi mai mic decât cel anterior.")).toBeTruthy();
     expect(dezactivat(salveazaRece)).toBe(true);
     await act(async () => { fireEvent.change(rece, { target: { value: "19800,5" } }); });
     expect(screen.getByText("Consum 359,50 mc")).toBeTruthy();
@@ -174,7 +174,7 @@ describe("AdminCitiri, contorul general", () => {
     expect(spion).toHaveBeenCalledWith("2026-09", "rece", 19800.5);
     expect(toast().textContent).toBe("Indexul contorului general a fost salvat");
     expect(screen.getByText("19800,5, consum 359,50 mc")).toBeTruthy();
-    expect(screen.getByLabelText("Corecteaza indexul").value).toBe("");
+    expect(screen.getByLabelText("Corectează indexul").value).toBe("");
     /* Campul de apa calda isi pastreaza valoarea */
     expect(screen.getByLabelText("Index nou").value).toBe("8100");
     await apasa(salveazaCalda);
@@ -192,13 +192,13 @@ describe("AdminCitiri, contorul general", () => {
     vi.spyOn(sursa, "citesteContorGeneral").mockImplementation((...a) => new Promise((r) => { elibereaza = () => r(real(...a)); }));
     const [rece, calda] = screen.getAllByLabelText("Index nou");
     await act(async () => { fireEvent.change(rece, { target: { value: "19800" } }); });
-    await apasa(butoane("Salveaza")[0]);
+    await apasa(butoane("Salvează")[0]);
     /* Salvarea apei reci inca merge; administratorul trece la apa calda */
     await act(async () => { fireEvent.change(calda, { target: { value: "8100" } }); });
     await act(async () => { elibereaza(); });
     expect(toast().textContent).toBe("Indexul contorului general a fost salvat");
     expect(screen.getByLabelText("Index nou").value).toBe("8100");
-    expect(dezactivat(butoane("Salveaza")[1])).toBe(false);
+    expect(dezactivat(butoane("Salvează")[1])).toBe(false);
   });
 
   it("salvarea esuata pastreaza indexul scris", async () => {
@@ -206,7 +206,7 @@ describe("AdminCitiri, contorul general", () => {
     vi.spyOn(sursa, "citesteContorGeneral").mockRejectedValue(new Error("Refuzat"));
     const [rece] = screen.getAllByLabelText("Index nou");
     await act(async () => { fireEvent.change(rece, { target: { value: "19500" } }); });
-    await apasa(butoane("Salveaza")[0]);
+    await apasa(butoane("Salvează")[0]);
     expect(toast().textContent).toBe("Refuzat");
     expect(screen.getAllByLabelText("Index nou")[0].value).toBe("19500");
   });
@@ -219,28 +219,28 @@ describe("[K2] AdminCitiri, citirea validata din greseala", () => {
     const { sursa } = await deschideCitiri();
     const spion = vi.spyOn(sursa, "valideazaCitire");
     expect(randAp("1").getAllByText("Validat")).toHaveLength(2);
-    await apasa(randAp("1").getByRole("button", { name: "Respinge citirea validata" }));
+    await apasa(randAp("1").getByRole("button", { name: "Respinge citirea validată" }));
     const foaie = inDialog("Respinge citirea, ap. 1");
-    expect(foaie.getByText(/deja validata/)).toBeTruthy();
-    await act(async () => { fireEvent.change(foaie.getByLabelText("Motivul"), { target: { value: "Indexul pare scris gresit." } }); });
+    expect(foaie.getByText(/deja validată/)).toBeTruthy();
+    await act(async () => { fireEvent.change(foaie.getByLabelText("Motivul"), { target: { value: "Indexul pare scris greșit." } }); });
     await apasa(foaie.getByRole("button", { name: "Respinge citirea" }));
     expect(spion).toHaveBeenCalledTimes(2);
-    for (const [, accepta, motiv] of spion.mock.calls) expect([accepta, motiv]).toEqual([false, "Indexul pare scris gresit."]);
+    for (const [, accepta, motiv] of spion.mock.calls) expect([accepta, motiv]).toEqual([false, "Indexul pare scris greșit."]);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(randAp("1").getAllByText("Respins")).toHaveLength(2);
-    expect(randAp("1").queryByRole("button", { name: "Respinge citirea validata" })).toBeNull();
+    expect(randAp("1").queryByRole("button", { name: "Respinge citirea validată" })).toBeNull();
   });
 
   it("un refuz la prima citire opreste respingerea si lasa foaia deschisa, cu motivul", async () => {
     const { sursa } = await deschideCitiri();
-    const spion = vi.spyOn(sursa, "valideazaCitire").mockRejectedValueOnce(new Error("Lista lunii septembrie 2026 este deja publicata; citirea nu se mai poate verifica."));
-    await apasa(randAp("1").getByRole("button", { name: "Respinge citirea validata" }));
+    const spion = vi.spyOn(sursa, "valideazaCitire").mockRejectedValueOnce(new Error("Lista lunii septembrie 2026 este deja publicată; citirea nu se mai poate verifica."));
+    await apasa(randAp("1").getByRole("button", { name: "Respinge citirea validată" }));
     const foaie = inDialog("Respinge citirea, ap. 1");
-    await act(async () => { fireEvent.change(foaie.getByLabelText("Motivul"), { target: { value: "Indexul pare scris gresit." } }); });
+    await act(async () => { fireEvent.change(foaie.getByLabelText("Motivul"), { target: { value: "Indexul pare scris greșit." } }); });
     await apasa(foaie.getByRole("button", { name: "Respinge citirea" }));
     expect(spion).toHaveBeenCalledTimes(1);
-    expect(toast().textContent).toBe("Lista lunii septembrie 2026 este deja publicata; citirea nu se mai poate verifica.");
-    expect(inDialog("Respinge citirea, ap. 1").getByLabelText("Motivul").value).toBe("Indexul pare scris gresit.");
+    expect(toast().textContent).toBe("Lista lunii septembrie 2026 este deja publicată; citirea nu se mai poate verifica.");
+    expect(inDialog("Respinge citirea, ap. 1").getByLabelText("Motivul").value).toBe("Indexul pare scris greșit.");
     expect(randAp("1").getAllByText("Validat")).toHaveLength(2);
   });
 
@@ -248,7 +248,7 @@ describe("[K2] AdminCitiri, citirea validata din greseala", () => {
     await deschideCitiri();
     await act(async () => { fireEvent.change(screen.getByLabelText("Luna"), { target: { value: "2026-08" } }); });
     expect(randAp("1").getAllByText("Validat")).toHaveLength(2);
-    expect(randAp("1").queryByRole("button", { name: "Respinge citirea validata" })).toBeNull();
+    expect(randAp("1").queryByRole("button", { name: "Respinge citirea validată" })).toBeNull();
   });
 });
 
@@ -258,10 +258,10 @@ describe("AdminCitiri, alta luna si estimari", () => {
     await act(async () => { fireEvent.change(screen.getByLabelText("Luna"), { target: { value: "2026-08" } }); });
     expect(screen.getByText("Termen de citire 25 august 2026")).toBeTruthy();
     expect(inZona("Transmise", "apartamente").getByText("20 din 20")).toBeTruthy();
-    expect(inZona("De verificat", "cu poza atasata").getByText("0")).toBeTruthy();
+    expect(inZona("De verificat", "cu poza atașată").getByText("0")).toBeTruthy();
     expect(screen.queryByText(/nu au transmis indexul/)).toBeNull();
     expect(screen.getByText("19441,0, consum 428,00 mc")).toBeTruthy();
-    expect(screen.getAllByLabelText("Corecteaza indexul")).toHaveLength(2);
+    expect(screen.getAllByLabelText("Corectează indexul")).toHaveLength(2);
   });
 
   it("estimarea cere confirmare si anunta cate citiri au fost estimate", async () => {
@@ -270,12 +270,12 @@ describe("AdminCitiri, alta luna si estimari", () => {
     const spion = vi.spyOn(sursa, "estimeazaCitiri");
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     expect(screen.getByText("10 apartamente nu au transmis indexul")).toBeTruthy();
-    await apasa("Estimeaza citirile lipsa");
-    expect(confirm).toHaveBeenCalledWith("Completezi cu estimare toate citirile netransmise pe aceasta luna?");
+    await apasa("Estimează citirile lipsă");
+    expect(confirm).toHaveBeenCalledWith("Completezi cu estimare toate citirile netransmise pe această lună?");
     expect(spion).not.toHaveBeenCalled();
 
     confirm.mockReturnValue(true);
-    await apasa("Estimeaza citirile lipsa");
+    await apasa("Estimează citirile lipsă");
     expect(spion).toHaveBeenCalledWith("2026-09");
     expect(toast().textContent).toBe("Au fost estimate 20 citiri");
     expect(randAp("3").getAllByText("Estimat")).toHaveLength(2);
@@ -284,15 +284,15 @@ describe("AdminCitiri, alta luna si estimari", () => {
   it("estimarea esuata arata eroarea", async () => {
     const { sursa } = await deschideCitiri();
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    vi.spyOn(sursa, "estimeazaCitiri").mockRejectedValue(new Error("Inca nu a trecut termenul"));
-    await apasa("Estimeaza citirile lipsa");
-    expect(toast().textContent).toBe("Inca nu a trecut termenul");
+    vi.spyOn(sursa, "estimeazaCitiri").mockRejectedValue(new Error("Încă nu a trecut termenul"));
+    await apasa("Estimează citirile lipsă");
+    expect(toast().textContent).toBe("Încă nu a trecut termenul");
   });
 
   it("[A6] estimarea nu se poate face inainte de termenul de citire", async () => {
     const { sursa } = await deschideCitiri();
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    await apasa("Estimeaza citirile lipsa");
+    await apasa("Estimează citirile lipsă");
     const d = await sursa.incarca();
     expect(d.citiri.filter((c) => c.luna === "2026-09" && c.sursa === "estimat")).toHaveLength(0);
   });
@@ -309,6 +309,6 @@ describe("AdminCitiri, alta luna si estimari", () => {
     await mergiLa("Apartamente");
     await apasa(screen.getByText("Citiri contoare"));
     expect(screen.getByLabelText("Luna").value).toBe("2026-09");
-    expect(buton("Estimeaza citirile lipsa")).toBeTruthy();
+    expect(buton("Estimează citirile lipsă")).toBeTruthy();
   });
 });

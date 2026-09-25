@@ -125,7 +125,7 @@ autentificare, modul demonstrativ afiseaza conturile de test.
   [C7], deci ecranul arata toate mandatele omului, nu doar ultimul.
 - **Cine nu poate fi numit:** administratorul asociatiei [C8] (el este cel verificat) si nimeni cu
   data de inceput in viitor [C12]. Asociatia in care intra mandatul o spune ecranul
-  (`p_asociatie_id`), iar `identitate.asociatia_de_administrat()` o verifica — aceeasi asociatie
+  (`p_asociatie_id`), iar `identitate.asociatia_de_administrat()` o verifica, aceeasi asociatie
   pe care o arata `eu()` [C5].
 - **Ce vad:** tot blocul, cu ecranele administratorului (`identitate.eu()` le da rolul, iar
   `private.blocuri_supravegheate()` dreptul de citire). Nu scriu nimic: comenzile cer
@@ -184,7 +184,7 @@ Doua subtaburi: **Lista de plata** si **Platile mele**.
 - **Alegerea lunii** (`AlegeLuna`): butoane cand sunt pana la 4 liste publicate, lista derulanta
   cand sunt mai multe.
 - **Cardul de total**, in trei trepte (`defalcare()`):
-  1. **Cheltuielile lunii**, grupate: Apa (C1, C2); Curent, lift si curatenie (C3–C6, C8);
+  1. **Cheltuielile lunii**, grupate: Apa (C1, C2); Curent, lift si curatenie (C3-C6, C8);
      Administrarea blocului (C7); Alte cheltuieli.
   2. **Fonduri**: contributia la fondul de reparatii.
   3. **Datorii din lunile trecute**, doar pentru lista curenta: intretinerea neplatita (cu zilele
@@ -378,7 +378,7 @@ Ciclul de viata al unei liste lunare: **ciorna → publicata**.
 |---|---|
 | **Anunturi** | Anunt nou: titlu, continut, optiunea urgent (`comunicare.publica_anunt`). Un anunt urgent trimite imediat notificare tuturor locatarilor cu cont. Pe fiecare anunt: "Citit de X din Y locatari cu cont", cu bara. |
 | **Remindere** | Cele 5 remindere (tabelul de mai jos), fiecare cu un comutator si numarul de zile (1, 3, 5, 7, 10, 15 sau 30), prin `seteaza_reminder`. **Trimite acum**: reamintirea de citire, de plata si instiintarea restantierilor (`trimite_reminder`). |
-| **Vot si AG** | Vot nou: titlu, detalii, 2–5 variante, data inchiderii, numararea pe apartament sau ponderata cu cota (`guvernanta.deschide_vot`, care notifica toata asociatia). Pe fiecare vot: rezultatele, prezenta, **lista apartamentelor care nu au votat** (vizibila doar conducerii) si "Reaminteste celor care nu au votat" (`reaminteste_vot`). Convocarea AG: data, ora, locul, ordinea de zi (`convoaca_adunare`, cu notificare). |
+| **Vot si AG** | Vot nou: titlu, detalii, 2-5 variante, data inchiderii, numararea pe apartament sau ponderata cu cota (`guvernanta.deschide_vot`, care notifica toata asociatia). Pe fiecare vot: rezultatele, prezenta, **lista apartamentelor care nu au votat** (vizibila doar conducerii) si "Reaminteste celor care nu au votat" (`reaminteste_vot`). Convocarea AG: data, ora, locul, ordinea de zi (`convoaca_adunare`, cu notificare). |
 | **Acte** | Incarcarea unui document: titlu, tip (lista de plata, raport, proces verbal, contract, regulament, factura, altul), fisier, vizibil locatarilor sau doar administratiei. Lista actelor are badge Public / Doar admin. |
 
 **Reminderele**
@@ -457,7 +457,7 @@ starile `in_asteptare` / `esuata`.
   (implicit azi). Nu poate fi in viitor si nu poate fi mai veche de sase luni.
 - **Penalizarea urmeaza data platii** [B5]: daca intre ziua in care au intrat banii si ziua in care
   administratorul confirma a rulat jobul de penalizari, `financiar.anuleaza_penalizari_dupa_plata`
-  recalculeaza penalizarea cu parametrii ei inghetati, impartind zilele in doua — cele dinainte de
+  recalculeaza penalizarea cu parametrii ei inghetati, impartind zilele in doua, cele dinainte de
   plata, pe restul de atunci, si cele de dupa, pe restul ramas dupa plata. Diferenta intra in
   registru ca `anulare_penalizare`, ca la K7, si se vede pe ecranul locatarului. Doar in jos.
 

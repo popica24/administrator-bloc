@@ -4,7 +4,7 @@
 --   - identitate.membri_asociatie: un mandat de presedinte, cenzor sau
 --     administrator, deschis (activ_pana null), ramanea deschis;
 --   - identitate.administratori: stare ramanea 'aprobat', desi persoana nu
---     mai are nume sau email — un administrator aprobat, fantoma;
+--     mai are nume sau email, un administrator aprobat, fantoma;
 --   - auth.identities: emailul real ramanea in identity_data (coloana
 --     generata `email` a tabelei se calculeaza de acolo, nu din auth.users),
 --     deci persoana putea fi gasita dupa emailul "sters";

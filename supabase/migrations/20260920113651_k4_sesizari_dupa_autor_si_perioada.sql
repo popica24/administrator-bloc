@@ -3,7 +3,7 @@
 -- locatar, marcate in aplicatie "Mesajul tau" pentru oricine e legat azi de
 -- apartament. Politica cere acum, pe langa legatura curenta cu apartamentul
 -- (private.apartamentele_mele()), ca sesizarea sa fi fost creata dupa
--- activ_din al legaturii curente — adica in timp ce locatarul de azi chiar
+-- activ_din al legaturii curente, adica in timp ce locatarul de azi chiar
 -- locuia acolo. Mesajele si pozele mostenesc vizibilitatea prin exists() pe
 -- sesizari, deci se corecteaza fara alta politica.
 

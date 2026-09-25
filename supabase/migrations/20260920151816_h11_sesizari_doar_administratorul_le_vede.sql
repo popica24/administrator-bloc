@@ -2,8 +2,8 @@
 -- private.blocuri_supravegheate() (presedinte/cenzor), si sesizari.sesizari
 -- foloseste blocuri_conduse() pentru citire. Efect: oricine are un mandat de
 -- presedinte sau cenzor (identitate.membri_asociatie.rol) primeste, prin
--- API, toate sesizarile blocului — descrierea, pozele si autorul fiecarei
--- reclamatii — desi identitate.eu() nu stie inca de rolul de presedinte sau
+-- API, toate sesizarile blocului, descrierea, pozele si autorul fiecarei
+-- reclamatii, desi identitate.eu() nu stie inca de rolul de presedinte sau
 -- cenzor (docs/harta-functii.md §9: "eu() nu are rol de presedinte sau
 -- cenzor"), deci aplicatia nu arata acestui cont nimic. Ramane doar o cale
 -- ocolita, prin API direct, spre date personale ale locatarilor, fara nicio
@@ -25,7 +25,7 @@
 -- deci nu sunt afectate aici.
 --
 -- Sesizarile sunt diferite: nicio comanda de scriere (scrie_mesaj,
--- preia_sesizare, rezolva_sesizare) nu verifica blocuri_conduse() — toate
+-- preia_sesizare, rezolva_sesizare) nu verifica blocuri_conduse(), toate
 -- verifica blocuri_administrate(), adica sesizarile sunt deja, peste tot in
 -- afara de aceasta politica de citire, un flux exclusiv al
 -- administratorului (§4.4 din harta functiilor: tabul Sesizari exista doar

@@ -35,13 +35,13 @@ describe("[F3] pozele atasate si variantele de vot se pot sterge", () => {
     let n = 0;
     vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:poza-${++n}`);
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
-    await alegeFisier("Adauga o poza", "una.jpg");
-    await alegeFisier("Inca o poza", "doua.jpg");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
+    await alegeFisier("Adaugă o poză", "una.jpg");
+    await alegeFisier("Încă o poză", "doua.jpg");
     expect(screen.getAllByAltText("Poza sesizare")).toHaveLength(2);
 
-    await apasa("Sterge poza");
+    await apasa("Șterge poza");
     const ramase = screen.getAllByAltText("Poza sesizare");
     expect(ramase).toHaveLength(1);
     expect(ramase[0].getAttribute("src")).toBe("blob:poza-2");
@@ -51,28 +51,28 @@ describe("[F3] pozele atasate si variantele de vot se pot sterge", () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:poza");
     const revoca = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
-    await alegeFisier("Adauga o poza");
-    await apasa("Sterge poza");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
+    await alegeFisier("Adaugă o poză");
+    await apasa("Șterge poza");
     expect(revoca).toHaveBeenCalledWith("blob:poza");
   });
 
   it("administratorul scoate o varianta de vot in plus", async () => {
     await pornesteApp({ email: ADMIN });
     await tab("Comunicare");
-    await apasa("Vot si AG");
+    await apasa("Vot și AG");
     await apasa("Deschide un vot nou");
     /* doua variante: nu se poate cobori sub minimul necesar unui vot */
-    expect(screen.queryAllByRole("button", { name: "Sterge varianta" })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: "Șterge varianta" })).toHaveLength(0);
 
-    await apasa("Adauga o varianta");
+    await apasa("Adaugă o variantă");
     await scrie("Varianta 1", "Da");
     await scrie("Varianta 2", "Nu");
     await scrie("Varianta 3", "Ma abtin");
-    expect(screen.getAllByRole("button", { name: "Sterge varianta" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Șterge varianta" })).toHaveLength(3);
 
-    await apasa("Sterge varianta", 1);
+    await apasa("Șterge varianta", 1);
     expect(screen.getByLabelText("Varianta 1").value).toBe("Da");
     expect(screen.getByLabelText("Varianta 2").value).toBe("Ma abtin");
     expect(screen.queryByLabelText("Varianta 3")).toBeNull();
@@ -84,12 +84,12 @@ describe("[F4] formularul de factura ramane completat", () => {
     const { sursa } = await cuFacturaInCiorna();
     await pornesteApp({ email: ADMIN, sursa });
     await tab("Facturi");
-    await apasa("Adauga factura");
-    await scrie("Ce cheltuiala este", "Dezinsectie");
+    await apasa("Adaugă factură");
+    await scrie("Ce cheltuială este", "Dezinsectie");
     await scrie("Suma facturii", "480");
     /* o comanda din ecranul de dedesubt reincarca datele cat timp panoul e deschis */
-    await apasa("Marcheaza platita");
-    expect(screen.getByLabelText("Ce cheltuiala este").value).toBe("Dezinsectie");
+    await apasa("Marchează plătită");
+    expect(screen.getByLabelText("Ce cheltuială este").value).toBe("Dezinsectie");
     expect(screen.getByLabelText("Suma facturii").value).toBe("480");
   });
 
@@ -102,9 +102,9 @@ describe("[F4] formularul de factura ramane completat", () => {
     vi.spyOn(sursa, "dateMotor").mockImplementation(() => new Promise((r) => { amanate.push(r); }));
 
     await tab("Facturi");
-    await apasa("Adauga factura");
-    await apasa("Inchide");
-    await apasa("Adauga factura");
+    await apasa("Adaugă factură");
+    await apasa("Închide");
+    await apasa("Adaugă factură");
     expect(amanate).toHaveLength(2);
     await act(async () => { amanate[1](proaspete); amanate[0](vechi); });
 
@@ -124,9 +124,9 @@ describe("[F5] campul de data primeste si un timestamp complet", () => {
     });
     await pornesteApp({ email: ADMIN, sursa });
     await tab("Facturi");
-    await apasa("Modifica");
-    expect(screen.getByLabelText("Emisa pe").value).toBe("2026-09-04");
-    expect(screen.getByLabelText("Scadenta furnizor").value).toBe("2026-09-25");
+    await apasa("Modifică");
+    expect(screen.getByLabelText("Emisă pe").value).toBe("2026-09-04");
+    expect(screen.getByLabelText("Scadență furnizor").value).toBe("2026-09-25");
   });
 });
 
@@ -136,7 +136,7 @@ describe("[F6] contoarele generale se tin pe id, nu pe tip", () => {
       email: ADMIN,
       modifica: (d) => {
         const g = d.contoare.find((c) => !c.apartamentId && c.tip === "rece");
-        d.contoare.push({ ...g, id: "con-gen-2", serie: "GEN-RECE-2", amplasare: "subsol, scara B" });
+        d.contoare.push({ ...g, id: "con-gen-2", serie: "GEN-RECE-2", amplasare: "subsol, scară B" });
       },
     });
     await tab("Apartamente");
@@ -155,10 +155,10 @@ describe("[F7] curatenia dupa ecran", () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     const { unmount } = await pornesteApp({ email: ADMIN });
     await tab("Comunicare");
-    await apasa("Scrie un anunt");
+    await apasa("Scrie un anunț");
     await scrie("Titlu", "Anunt");
     await scrie("Continut", "Text");
-    await apasa("Publica anuntul");
+    await apasa("Publică anunțul");
     expect(screen.getByRole("status")).toBeTruthy();
     const opreste = vi.spyOn(globalThis, "clearTimeout");
     unmount();
@@ -171,7 +171,7 @@ describe("[F7] curatenia dupa ecran", () => {
     const revoca = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     await pornesteApp({ email: LOCATAR });
     await tab("Contoare");
-    const input = () => screen.getAllByLabelText(/poza|Fotografiaza/i).find((x) => x.tagName === "INPUT");
+    const input = () => screen.getAllByLabelText(/poză|Fotografiază/i).find((x) => x.tagName === "INPUT");
     await act(async () => { fireEvent.change(input(), { target: { files: [fisier("una.jpg")] } }); });
     await act(async () => { fireEvent.change(input(), { target: { files: [fisier("doua.jpg")] } }); });
     expect(revoca).toHaveBeenCalledWith("blob:contor-1");

@@ -43,15 +43,15 @@ test.describe("corectarea fisei apartamentului", () => {
     const ap = await apartamentulNumarul(12);
     try {
       const fisa = await deschideFisa(page, 12);
-      await buton(page, "Corecteaza datele apartamentului").click();
+      await buton(page, "Corectează datele apartamentului").click();
 
       const nume = `Familia Corectata ${Date.now()}`;
       await page.getByLabel("Proprietar").fill(nume);
       await page.getByLabel("Etaj").fill("2");
-      await page.getByLabel("Suprafata").fill("58,5");
+      await page.getByLabel("Suprafață").fill("58,5");
       await page.getByLabel("Scutit de plata liftului").click();
-      await buton(page, "Salveaza corectia").click();
-      await asteaptaToast(page, "Fisa apartamentului a fost actualizata");
+      await buton(page, "Salvează corecția").click();
+      await asteaptaToast(page, "Fișa apartamentului a fost actualizată");
 
       /* Fisa afisata se reincarca din baza, nu din formular */
       await expect(fisa.getByText(nume).first()).toBeVisible();
@@ -73,10 +73,10 @@ test.describe("corectarea fisei apartamentului", () => {
     const ap = await apartamentulNumarul(13);
     try {
       const fisa = await deschideFisa(page, 13);
-      await buton(page, "Corecteaza datele apartamentului").click();
+      await buton(page, "Corectează datele apartamentului").click();
       await page.getByLabel("Etaj").fill("0");
-      await buton(page, "Salveaza corectia").click();
-      await asteaptaToast(page, "Fisa apartamentului a fost actualizata");
+      await buton(page, "Salvează corecția").click();
+      await asteaptaToast(page, "Fișa apartamentului a fost actualizată");
       await expect(fisa.getByText("Parter")).toBeVisible();
       expect((await apartamentulNumarul(13)).etaj).toBe(0);
     } finally {
@@ -87,27 +87,27 @@ test.describe("corectarea fisei apartamentului", () => {
   test("formularul porneste de la datele apartamentului, nu gol", async ({ page }) => {
     const ap = await apartamentulNumarul(14);
     await deschideFisa(page, 14);
-    await buton(page, "Corecteaza datele apartamentului").click();
+    await buton(page, "Corectează datele apartamentului").click();
     await expect(page.getByLabel("Proprietar")).toHaveValue(ap.proprietar_nume);
     await expect(page.getByLabel("Etaj")).toHaveValue(String(ap.etaj));
-    await expect(page.getByLabel("Cota indiviza")).toHaveValue(Number(ap.cota_indiviza).toFixed(2).replace(".", ","));
+    await expect(page.getByLabel("Cotă indiviză")).toHaveValue(Number(ap.cota_indiviza).toFixed(2).replace(".", ","));
   });
 
   test("proprietarul gol blocheaza salvarea", async ({ page }) => {
     await deschideFisa(page, 14);
-    await buton(page, "Corecteaza datele apartamentului").click();
+    await buton(page, "Corectează datele apartamentului").click();
     await page.getByLabel("Proprietar").fill("   ");
-    await expect(buton(page, "Salveaza corectia")).toBeDisabled();
+    await expect(buton(page, "Salvează corecția")).toBeDisabled();
     await page.getByLabel("Proprietar").fill("Cineva");
-    await expect(buton(page, "Salveaza corectia")).not.toBeDisabled();
+    await expect(buton(page, "Salvează corecția")).not.toBeDisabled();
   });
 
   test("Renunta lasa fisa neatinsa", async ({ page }) => {
     const ap = await apartamentulNumarul(14);
     const fisa = await deschideFisa(page, 14);
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await page.getByLabel("Proprietar").fill("Nu Se Salveaza");
-    await buton(page, "Renunta").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await page.getByLabel("Proprietar").fill("Nu Se Salvează");
+    await buton(page, "Renunță").click();
     await expect(fisa.getByText(ap.proprietar_nume).first()).toBeVisible();
     expect((await apartamentulNumarul(14)).proprietar_nume).toBe(ap.proprietar_nume);
   });
@@ -116,9 +116,9 @@ test.describe("corectarea fisei apartamentului", () => {
     const ap = await apartamentulNumarul(15);
     try {
       await deschideFisa(page, 15);
-      await buton(page, "Corecteaza datele apartamentului").click();
-      await page.getByLabel("Cota indiviza").fill("9,00");
-      await buton(page, "Salveaza corectia").click();
+      await buton(page, "Corectează datele apartamentului").click();
+      await page.getByLabel("Cotă indiviză").fill("9,00");
+      await buton(page, "Salvează corecția").click();
 
       /* [F17] Eroarea ramane pe ecran, nu doar in mesajul zburator de 3,4 s */
       const inPanou = page.getByRole("dialog", { name: "Apartament 15" })
@@ -126,7 +126,7 @@ test.describe("corectarea fisei apartamentului", () => {
       await expect(inPanou).toBeVisible();
       await expect(inPanou).toBeVisible({ timeout: 6000 });
       const text = await textEcran(page);
-      for (const cuvant of CUVINTE_TEHNICE) expect(text, `mesajul contine "${cuvant}"`).not.toContain(cuvant);
+      for (const cuvant of CUVINTE_TEHNICE) expect(text, `mesajul conține "${cuvant}"`).not.toContain(cuvant);
       expect(Number((await apartamentulNumarul(15)).cota_indiviza)).toBe(Number(ap.cota_indiviza));
     } finally {
       await repuneFisa(ap);
@@ -142,9 +142,9 @@ test.describe("corectarea fisei apartamentului", () => {
     const ap = await apartamentulNumarul(15);
     try {
       await deschideFisa(page, 15);
-      await buton(page, "Corecteaza datele apartamentului").click();
-      await page.getByLabel("Cota indiviza").fill("9,00");
-      await buton(page, "Salveaza corectia").click();
+      await buton(page, "Corectează datele apartamentului").click();
+      await page.getByLabel("Cotă indiviză").fill("9,00");
+      await buton(page, "Salvează corecția").click();
       const mesaj = await page.getByRole("dialog", { name: "Apartament 15" })
         .getByText(/Cotele blocului ar ajunge la/).innerText();
       expect(mesaj).toContain("102,98");
@@ -158,11 +158,11 @@ test.describe("corectarea fisei apartamentului", () => {
     const ap = await apartamentulNumarul(16);
     try {
       await deschideFisa(page, 16);
-      await buton(page, "Corecteaza datele apartamentului").click();
+      await buton(page, "Corectează datele apartamentului").click();
       /* 0,01 in plus intra in toleranta cu care blocul a fost activat */
-      await page.getByLabel("Cota indiviza").fill(Number(Number(ap.cota_indiviza) + 0.01).toFixed(2).replace(".", ","));
-      await buton(page, "Salveaza corectia").click();
-      await asteaptaToast(page, "Fisa apartamentului a fost actualizata");
+      await page.getByLabel("Cotă indiviză").fill(Number(Number(ap.cota_indiviza) + 0.01).toFixed(2).replace(".", ","));
+      await buton(page, "Salvează corecția").click();
+      await asteaptaToast(page, "Fișa apartamentului a fost actualizată");
       expect(Number((await apartamentulNumarul(16)).cota_indiviza))
         .toBeCloseTo(Number(ap.cota_indiviza) + 0.01, 4);
     } finally {
@@ -177,11 +177,11 @@ test.describe("corectarea fisei apartamentului", () => {
     const ap = await apartamentulNumarul(7);
     try {
       const fisa = await deschideFisa(page, 7);
-      await expect(fisa.getByText("Plateste")).toBeVisible();
-      await buton(page, "Corecteaza datele apartamentului").click();
+      await expect(fisa.getByText("Plătește")).toBeVisible();
+      await buton(page, "Corectează datele apartamentului").click();
       await page.getByLabel("Scutit de plata liftului").click();
-      await buton(page, "Salveaza corectia").click();
-      await asteaptaToast(page, "Fisa apartamentului a fost actualizata");
+      await buton(page, "Salvează corecția").click();
+      await asteaptaToast(page, "Fișa apartamentului a fost actualizată");
       await expect(fisa.getByText("Scutit")).toBeVisible();
       expect((await apartamentulNumarul(7)).scutit_lift).toBe(true);
     } finally {
@@ -194,8 +194,8 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
   test("editorul porneste de la cotele din baza si arata totalul 100", async ({ page }) => {
     const toate = await apartamente();
     await deschideFisa(page, 4);
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
 
     await expect(page.getByText("Redistribuie cotele blocului")).toBeVisible();
     for (const a of toate) {
@@ -203,23 +203,23 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
         .toHaveValue(Number(a.cota_indiviza).toFixed(2).replace(".", ","));
     }
     await expect(page.getByText("100,00% din 100%")).toBeVisible();
-    await expect(buton(page, "Salveaza cotele blocului")).not.toBeDisabled();
+    await expect(buton(page, "Salvează cotele blocului")).not.toBeDisabled();
   });
 
   test("totalul se recalculeaza la fiecare tasta si blocheaza salvarea sub 100", async ({ page }) => {
     const toate = await apartamente();
     const unu = toate.find((a) => a.numar === "1");
     await deschideFisa(page, 4);
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
 
     await page.getByLabel(`Ap. ${unu.numar}, ${unu.proprietar_nume}`).fill("5,01");
     await expect(page.getByText("101,00% din 100%")).toBeVisible();
-    await expect(buton(page, "Salveaza cotele blocului")).toBeDisabled();
+    await expect(buton(page, "Salvează cotele blocului")).toBeDisabled();
 
     await page.getByLabel(`Ap. ${unu.numar}, ${unu.proprietar_nume}`).fill("3,01");
     await expect(page.getByText("99,00% din 100%")).toBeVisible();
-    await expect(buton(page, "Salveaza cotele blocului")).toBeDisabled();
+    await expect(buton(page, "Salvează cotele blocului")).toBeDisabled();
   });
 
   test("o cota goala sau zero blocheaza salvarea, chiar daca restul insumeaza 100", async ({ page }) => {
@@ -227,8 +227,8 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
     const unu = toate.find((a) => a.numar === "1");
     const doi = toate.find((a) => a.numar === "2");
     await deschideFisa(page, 4);
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
 
     /* Toata cota apartamentului 1 se muta pe 2: suma ramane 100, dar un
        apartament fara cota nu mai plateste nimic din cheltuielile pe cota. */
@@ -236,7 +236,7 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
     await page.getByLabel(`Ap. ${unu.numar}, ${unu.proprietar_nume}`).fill("0");
     await page.getByLabel(`Ap. ${doi.numar}, ${doi.proprietar_nume}`).fill(sumaDoua.toFixed(2).replace(".", ","));
     await expect(page.getByText("100,00% din 100%")).toBeVisible();
-    await expect(buton(page, "Salveaza cotele blocului")).toBeDisabled();
+    await expect(buton(page, "Salvează cotele blocului")).toBeDisabled();
   });
 
   test("redistribuirea muta procente intre doua apartamente si se vede in lista", async ({ page }) => {
@@ -245,15 +245,15 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
     const doi = toate.find((a) => a.numar === "2");
     try {
       await deschideFisa(page, 4);
-      await buton(page, "Corecteaza datele apartamentului").click();
-      await buton(page, "Redistribuie cotele intregului bloc").click();
+      await buton(page, "Corectează datele apartamentului").click();
+      await buton(page, "Redistribuie cotele întregului bloc").click();
 
       const nouUnu = (Number(unu.cota_indiviza) - 0.5).toFixed(2).replace(".", ",");
       const nouDoi = (Number(doi.cota_indiviza) + 0.5).toFixed(2).replace(".", ",");
       await page.getByLabel(`Ap. ${unu.numar}, ${unu.proprietar_nume}`).fill(nouUnu);
       await page.getByLabel(`Ap. ${doi.numar}, ${doi.proprietar_nume}`).fill(nouDoi);
       await expect(page.getByText("100,00% din 100%")).toBeVisible();
-      await buton(page, "Salveaza cotele blocului").click();
+      await buton(page, "Salvează cotele blocului").click();
       await asteaptaToast(page, "Cotele blocului au fost actualizate");
 
       const dupa = await apartamente();
@@ -263,8 +263,8 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
       expect(Math.round(total * 100) / 100).toBe(100);
 
       /* Lista de apartamente arata cota noua, fara reincarcarea paginii */
-      await page.getByRole("dialog", { name: "Apartament 4" }).getByRole("button", { name: "Inchide" }).click();
-      await expect(page.getByRole("button", { name: `Apartament ${doi.numar}`, exact: true })).toContainText(`cota ${nouDoi}%`);
+      await page.getByRole("dialog", { name: "Apartament 4" }).getByRole("button", { name: "Închide" }).click();
+      await expect(page.getByRole("button", { name: `Apartament ${doi.numar}`, exact: true })).toContainText(`cotă ${nouDoi}%`);
     } finally {
       await repuneCotele(toate);
     }
@@ -273,8 +273,8 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
   test("editorul acopera toate apartamentele blocului, in ordinea de pe usa", async ({ page }) => {
     const toate = await apartamente();
     await deschideFisa(page, 4);
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
     /* cate un camp pentru fiecare apartament, in ordinea de pe usa */
     const campuri = page.locator("input[aria-label^='Ap. ']");
     await expect(campuri).toHaveCount(toate.length);
@@ -286,10 +286,10 @@ test.describe("redistribuirea cotelor intregului bloc", () => {
     const toate = await apartamente();
     const unu = toate.find((a) => a.numar === "1");
     await deschideFisa(page, 4);
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
     await page.getByLabel(`Ap. ${unu.numar}, ${unu.proprietar_nume}`).fill("9,99");
-    await buton(page, "Renunta").click();
+    await buton(page, "Renunță").click();
     const dupa = await apartamente();
     expect(Number(dupa.find((a) => a.numar === "1").cota_indiviza)).toBe(Number(unu.cota_indiviza));
   });
@@ -299,29 +299,29 @@ test.describe("cuvintele ecranelor noi", () => {
   test("formularul de corectie si editorul de cote sunt pe romaneste, fara jargon tehnic", async ({ page }) => {
     const englezisme = [" the ", " and ", " not found", " failed", "Unauthorized", "[object", "null"];
     await deschideFisa(page, 6);
-    await buton(page, "Corecteaza datele apartamentului").click();
+    await buton(page, "Corectează datele apartamentului").click();
     let text = await textEcran(page);
     for (const cuvant of [...CUVINTE_TEHNICE, ...englezisme]) {
-      expect(text, `formularul de corectie contine "${cuvant}"`).not.toContain(cuvant);
+      expect(text, `formularul de corecție conține "${cuvant}"`).not.toContain(cuvant);
     }
-    expect(text).toContain("O corectie mica se salveaza direct");
+    expect(text).toContain("O corecție mică se salvează direct");
 
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
     text = await textEcran(page);
     for (const cuvant of [...CUVINTE_TEHNICE, ...englezisme]) {
-      expect(text, `editorul de cote contine "${cuvant}"`).not.toContain(cuvant);
+      expect(text, `editorul de cote conține "${cuvant}"`).not.toContain(cuvant);
     }
-    expect(text).toContain("Cotele tuturor apartamentelor trebuie sa insumeze 100%.");
+    expect(text).toContain("Cotele tuturor apartamentelor trebuie să însumeze 100%.");
   });
 });
 
 test.describe("cine poate corecta fisa", () => {
   test("locatarul nu are niciun buton de corectat fisa sau cotele", async ({ page }) => {
     await intraCa(page, "elena");
-    for (const t of ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"]) {
+    for (const t of ["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"]) {
       await mergiLaTab(page, t);
       const text = await textEcran(page);
-      expect(text).not.toContain("Corecteaza datele apartamentului");
+      expect(text).not.toContain("Corectează datele apartamentului");
       expect(text).not.toContain("Redistribuie cotele");
     }
   });

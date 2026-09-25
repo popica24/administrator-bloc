@@ -1,13 +1,13 @@
 -- J12: reparatia [minor] (20260920151015) a facut ca o corectie negativa
 -- fara datorie de intretinere sora (aceeasi lista_id, acelasi apartament)
 -- sa isi pastreze propriul rest, vizibil, in loc sa dispara tacut din
--- Sigma(rest) — corect pentru reconciliere cu financiar.solduri, dar cu un
+-- Sigma(rest), corect pentru reconciliere cu financiar.solduri, dar cu un
 -- pret: o data creata, o asemenea corectie orfana nu mai poate fi niciodata
 -- inchisa. financiar.aloca_plata sare peste orice rand cu rest negativ (nu
 -- e nimic de "platit" pe el), asa ca ramane deschisa la nesfarsit, cu un
 -- rest fantoma pe care nimeni nu-l poate reduce. Azi singura cale de a crea
--- una e directa, prin service role — nicio comanda din aplicatie n-o
--- produce — dar registrul financiar, append-only, nu ar trebui sa permita
+-- una e directa, prin service role, nicio comanda din aplicatie n-o
+-- produce, dar registrul financiar, append-only, nu ar trebui sa permita
 -- starea asta indiferent de cine incearca sa o scrie (§1.2: banii sunt un
 -- invariant central, nu doar o conventie de aplicatie).
 --
@@ -34,7 +34,7 @@ end;
 $$;
 
 comment on function financiar.verifica_corectie_are_sora() is
-  'J12: o corectie negativa fara datorie de intretinere sora (aceeasi lista, acelasi apartament) ramane deschisa pentru totdeauna — aloca_plata nu ii poate reduce niciodata restul negativ. Registrul nu o mai lasa sa intre, indiferent de cine scrie (inclusiv service role).';
+  'J12: o corectie negativa fara datorie de intretinere sora (aceeasi lista, acelasi apartament) ramane deschisa pentru totdeauna, aloca_plata nu ii poate reduce niciodata restul negativ. Registrul nu o mai lasa sa intre, indiferent de cine scrie (inclusiv service role).';
 
 create trigger datorii_corectie_are_sora
   before insert or update of tip, suma, lista_id, apartament_id on financiar.datorii

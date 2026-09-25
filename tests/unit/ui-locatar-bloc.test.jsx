@@ -52,7 +52,7 @@ describe("Bloc: avizierul", () => {
     ceasDemo();
     const sursa = sursaDemo();
     await sursa.intra(ADMIN, "Bloc-D14-2026");
-    await sursa.publicaAnunt({ titlu: "Curatenie generala sambata", corp: "Va rugam sa eliberati casa scarii.", urgent: false });
+    await sursa.publicaAnunt({ titlu: "Curățenie generală sambata", corp: "Va rugam să eliberati casa scării.", urgent: false });
     await sursa.publicaAnunt({ titlu: "Schimbarea yalei de la subsol", corp: "Cheile noi se ridica de la administrator.", urgent: false });
     await pornesteApp({ email: ELENA, sursa });
     /* trei anunturi necitite */
@@ -71,55 +71,55 @@ describe("Bloc: avizierul", () => {
 
 describe("Bloc: votul", () => {
   it("alege o varianta, confirma si vede rezultatele cu votul propriu", async () => {
-    const { sursa } = await laBloc({ email: ELENA }, "Vot si adunare");
+    const { sursa } = await laBloc({ email: ELENA }, "Vot și adunare");
     const spion = vi.spyOn(sursa, "voteaza");
     const d = await sursa.incarca();
     const vot = d.voturi[0];
-    const card = zonaCu(["Inlocuirea usii de la intrare", "Vot deschis", "Votul se inregistreaza pe apartament"]);
+    const card = zonaCu(["Inlocuirea usii de la intrare", "Vot deschis", "Votul se înregistrează pe apartament"]);
     expect(within(card).getByText("Vot deschis")).toBeTruthy();
-    expect(within(card).getByText("Se inchide pe 3 oct 2026")).toBeTruthy();
+    expect(within(card).getByText("Se închide pe 3 oct 2026")).toBeTruthy();
     expect(text(card)).toContain("Doua oferte pentru usa cu interfon si inchidere automata.");
-    expect(text(card)).toContain("Votul se inregistreaza pe apartament, o singura data");
+    expect(text(card)).toContain("Votul se înregistrează pe apartament, o singură dată");
 
     /* Inapoi inchide confirmarea fara vot */
     await apasa(screen.getByRole("button", { name: OFERTA_B }));
-    expect(text(screen.getByRole("dialog", { name: "Confirma votul" }))).toContain(`Votezi pentru:${OFERTA_B}Votul nu se mai poate schimba dupa ce il trimiti.`);
-    await apasaButon("Inapoi");
+    expect(text(screen.getByRole("dialog", { name: "Confirmă votul" }))).toContain(`Votezi pentru:${OFERTA_B}Votul nu se mai poate schimba după ce îl trimiți.`);
+    await apasaButon("Înapoi");
     expect(screen.queryByRole("dialog")).toBeNull();
 
     await apasa(screen.getByRole("button", { name: OFERTA_A }));
     await apasaButon("Da, trimite votul");
     expect(spion).toHaveBeenCalledWith(vot.id, vot.optiuni[0].id, d.eu.apartamentId);
-    expect(screen.getByRole("status").textContent).toBe("Votul a fost inregistrat");
+    expect(screen.getByRole("status").textContent).toBe("Votul a fost înregistrat");
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("Apartamentul tau a votat. Rezultatele se actualizeaza pe masura ce voteaza si ceilalti.")).toBeTruthy();
+    expect(screen.getByText("Apartamentul tău a votat. Rezultatele se actualizează pe măsură ce votează și ceilalți.")).toBeTruthy();
     /* 15 voturi: A 8, B 5, C 2 */
-    expect(randVarianta("Oferta A")).toBe(`${OFERTA_A} · votul tau53%8 voturi`);
+    expect(randVarianta("Oferta A")).toBe(`${OFERTA_A} · votul tău53%8 voturi`);
     expect(randVarianta("Oferta B")).toBe(`${OFERTA_B}33%5 voturi`);
     expect(randVarianta("Amanam")).toBe(`${AMANAM}13%2 voturi`);
-    expect(ecran()).toContain("Au votat 15 din 20 apartamente. Votul se numara pe apartament.");
+    expect(ecran()).toContain("Au votat 15 din 20 apartamente. Votul se numără pe apartament.");
     expect(screen.queryByText("Alege o varianta")).toBeNull();
   });
 
   it("un vot refuzat lasa confirmarea deschisa; X o inchide", async () => {
-    const { sursa } = await laBloc({ email: ELENA }, "Vot si adunare");
+    const { sursa } = await laBloc({ email: ELENA }, "Vot și adunare");
     vi.spyOn(sursa, "voteaza").mockRejectedValue(new Error("Votul s-a inchis."));
     await apasa(screen.getByRole("button", { name: AMANAM }));
     await apasaButon("Da, trimite votul");
     expect(screen.getByRole("status").textContent).toBe("Votul s-a inchis.");
-    const dialog = screen.getByRole("dialog", { name: "Confirma votul" });
-    await apasa(within(dialog).getByRole("button", { name: "Inchide" }));
+    const dialog = screen.getByRole("dialog", { name: "Confirmă votul" });
+    await apasa(within(dialog).getByRole("button", { name: "Închide" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("votul inchis arata rezultatele; fara voturi deschise nu se poate alege", async () => {
-    await laBloc({ email: ELENA, zi: new Date("2026-10-04T09:00:00") }, "Vot si adunare");
-    expect(screen.getByText("Inchis pe 3 oct 2026")).toBeTruthy();
+    await laBloc({ email: ELENA, zi: new Date("2026-10-04T09:00:00") }, "Vot și adunare");
+    expect(screen.getByText("Închis pe 3 oct 2026")).toBeTruthy();
     expect(screen.queryByText("Vot deschis")).toBeNull();
     expect(randVarianta("Oferta A")).toBe(`${OFERTA_A}50%7 voturi`);
     expect(ecran()).toContain("Au votat 14 din 20 apartamente.");
     /* adunarea trecuta nu mai apare */
-    expect(screen.queryByText(/Adunarea generala din/)).toBeNull();
+    expect(screen.queryByText(/Adunarea generală din/)).toBeNull();
   });
 
   it("numararea pe cota: procentul din cote si textul despre ponderare; un singur vot", async () => {
@@ -132,9 +132,9 @@ describe("Bloc: votul", () => {
         v.optiuni[2].voturi = 1;
         v.optiuni[2].cote = 4.63;
       },
-    }, "Vot si adunare");
+    }, "Vot și adunare");
     expect(randVarianta("Amanam")).toMatch(/^Amanam decizia pentru anul viitor\d+%1 vot, 4,63% din cote$/);
-    expect(ecran()).toContain("Votul se numara pe apartament, ponderat cu cota indiviza.");
+    expect(ecran()).toContain("Votul se numără pe apartament, ponderat cu cotă indiviză.");
   });
 
   it("fara niciun vot exprimat procentele sunt zero", async () => {
@@ -142,7 +142,7 @@ describe("Bloc: votul", () => {
       email: ELENA,
       zi: new Date("2026-10-04T09:00:00"),
       modifica: (d) => { d.voturi[0].optiuni.forEach((o) => { o.voturi = 0; }); d.voturi[0].votanti = 0; },
-    }, "Vot si adunare");
+    }, "Vot și adunare");
     expect(randVarianta("Oferta A")).toBe(`${OFERTA_A}0%0 voturi`);
   });
 
@@ -157,34 +157,34 @@ describe("Bloc: votul", () => {
         v.optiuni[1].voturi = 1; v.optiuni[1].cote = 30;
         v.optiuni[2].voturi = 0; v.optiuni[2].cote = 0;
       },
-    }, "Vot si adunare");
+    }, "Vot și adunare");
     /* 30 din 38 de cote = 79% */
     expect(randVarianta("Oferta B")).toMatch(/^Oferta B.*79%/);
   });
 
   it("un vot deschis la care apartamentul a votat deja arata direct rezultatele", async () => {
-    await laBloc({ email: ELENA, modifica: (d) => { d.voturi[0].votulMeu = d.voturi[0].optiuni[1].id; } }, "Vot si adunare");
-    expect(randVarianta("Oferta B")).toContain("· votul tau");
+    await laBloc({ email: ELENA, modifica: (d) => { d.voturi[0].votulMeu = d.voturi[0].optiuni[1].id; } }, "Vot și adunare");
+    expect(randVarianta("Oferta B")).toContain("· votul tău");
     expect(screen.queryByRole("button", { name: OFERTA_A })).toBeNull();
   });
 
   it("fara voturi arata Niciun vot, dar adunarea ramane", async () => {
-    await laBloc({ email: ELENA, modifica: (d) => { d.voturi = []; } }, "Vot si adunare");
+    await laBloc({ email: ELENA, modifica: (d) => { d.voturi = []; } }, "Vot și adunare");
     expect(screen.getByText("Niciun vot")).toBeTruthy();
-    expect(screen.getByText("Adunarea generala din 3 octombrie 2026")).toBeTruthy();
+    expect(screen.getByText("Adunarea generală din 3 octombrie 2026")).toBeTruthy();
   });
 
   it("cu un vot inchis nu apare Niciun vot", async () => {
-    await laBloc({ email: ELENA, modifica: (d) => { d.voturi[0].inchideLa = "2026-09-18T18:00:00+03:00"; } }, "Vot si adunare");
+    await laBloc({ email: ELENA, modifica: (d) => { d.voturi[0].inchideLa = "2026-09-18T18:00:00+03:00"; } }, "Vot și adunare");
     expect(screen.queryByText("Niciun vot")).toBeNull();
-    expect(screen.getByText("Inchis pe 18 sep 2026")).toBeTruthy();
+    expect(screen.getByText("Închis pe 18 sep 2026")).toBeTruthy();
   });
 
   /* [P1] Doar proprietarul poate vota (Legea 196/2018, migratia k3). Un
      chirias sau un membru al familiei nu trebuie sa mai ajunga la refuz:
      formularul de vot ii explica direct de ce nu poate alege o varianta. */
   it("[P1] chirias: fara Alege o varianta, cu explicatia legii, si voteaza() nu se cheama", async () => {
-    const { sursa } = await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "chirias"; } }, "Vot si adunare");
+    const { sursa } = await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "chirias"; } }, "Vot și adunare");
     const spion = vi.spyOn(sursa, "voteaza");
     expect(screen.queryByText("Alege o varianta")).toBeNull();
     expect(screen.queryByRole("button", { name: OFERTA_A })).toBeNull();
@@ -193,32 +193,32 @@ describe("Bloc: votul", () => {
   });
 
   it("[P1] membru al familiei: la fel ca un chirias, nu poate vota", async () => {
-    await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "membru_familie"; } }, "Vot si adunare");
+    await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "membru_familie"; } }, "Vot și adunare");
     expect(screen.queryByText("Alege o varianta")).toBeNull();
     expect(screen.getByText(/Doar proprietarul apartamentului poate vota/)).toBeTruthy();
   });
 
   it("[P1] proprietarul (calitate explicita) voteaza normal", async () => {
-    await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "proprietar"; } }, "Vot si adunare");
+    await laBloc({ email: ELENA, modifica: (d) => { d.eu.calitate = "proprietar"; } }, "Vot și adunare");
     expect(screen.getByText("Alege o varianta")).toBeTruthy();
   });
 });
 
-describe("Bloc: adunarea generala", () => {
+describe("Bloc: adunarea generală", () => {
   it("arata convocarea si confirma prezenta", async () => {
-    const { sursa } = await laBloc({ email: ELENA }, "Vot si adunare");
+    const { sursa } = await laBloc({ email: ELENA }, "Vot și adunare");
     const spion = vi.spyOn(sursa, "confirmaPrezenta");
     const d = await sursa.incarca();
-    const card = zonaCu(["Adunarea generala din 3 octombrie 2026", "Au confirmat"]);
-    expect(text(card)).toContain("Convocare trimisa pe 18 septembrie 2026");
+    const card = zonaCu(["Adunarea generală din 3 octombrie 2026", "Au confirmat"]);
+    expect(text(card)).toContain("Convocare trimisă pe 18 septembrie 2026");
     expect(text(card)).toContain("Ora 18:30, La parter, langa boxe. Ordinea de zi: Executia bugetului pe primul semestru");
     expect(text(card)).toContain("Au confirmat 3 din 20 apartamente.");
-    await apasaButon("Confirm ca particip");
+    await apasaButon("Confirm că particip");
     expect(spion).toHaveBeenCalledWith(d.adunari[0].id, d.eu.apartamentId);
-    expect(screen.getByRole("status").textContent).toBe("Prezenta a fost confirmata");
-    expect(screen.getByText("Ai confirmat ca participi")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Prezența a fost confirmată");
+    expect(screen.getByText("Ai confirmat că participi")).toBeTruthy();
     expect(screen.getByText("Au confirmat 4 din 20 apartamente.")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Confirm ca particip" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm că particip" })).toBeNull();
   });
 
   /* [K8] sursa trimite adunarile descrescator dupa data; lista trebuie
@@ -230,9 +230,9 @@ describe("Bloc: adunarea generala", () => {
         const a = d.adunari[0];
         d.adunari = [{ ...a, id: "adu-departe", dataOra: "2026-11-20T18:00:00+02:00" }, a];
       },
-    }, "Vot si adunare");
-    const titluri = screen.getAllByText(/^Adunarea generala din/).map((el) => el.textContent);
-    expect(titluri).toEqual(["Adunarea generala din 3 octombrie 2026", "Adunarea generala din 20 noiembrie 2026"]);
+    }, "Vot și adunare");
+    const titluri = screen.getAllByText(/^Adunarea generală din/).map((el) => el.textContent);
+    expect(titluri).toEqual(["Adunarea generală din 3 octombrie 2026", "Adunarea generală din 20 noiembrie 2026"]);
   });
 });
 
@@ -243,7 +243,7 @@ describe("Bloc: acte", () => {
     const { sursa } = await laBloc({ email: ELENA }, "Acte");
     const spion = vi.spyOn(sursa, "deschideDocument");
     const d = await sursa.incarca();
-    expect(screen.getByText(/Documentele asociatiei, disponibile oricand/)).toBeTruthy();
+    expect(screen.getByText(/Documentele asociației, disponibile oricând/)).toBeTruthy();
     const pv = screen.getByRole("button", { name: "Deschide Proces verbal adunare generala, 12 martie 2026" });
     expect(text(pv)).toContain("PDFProces verbal adunare generala, 12 martie 2026Proces verbal · 14 mar 2026›");
     expect(screen.getAllByRole("button", { name: /^Deschide / })).toHaveLength(d.documente.length);
@@ -261,13 +261,13 @@ describe("Bloc: fonduri", () => {
     const spion = vi.spyOn(sursa, "deschideDocument");
     const d = await sursa.incarca();
     const t = ecran();
-    expect(t).toContain("Fond de reparatii19.228,60LEIsold la 19 sep 2026");
+    expect(t).toContain("Fond de reparații19.228,60LEIsold la 19 sep 2026");
     expect(t).toContain("Fond de rulment9.600,00LEI480,00 lei pe apartament");
-    expect(t).toContain("Fond de reparatii, fiecare intrare si iesire");
+    expect(t).toContain("Fond de reparatii, fiecare intrare și ieșire");
     expect(t).toContain("Reparatie pompa hidrofor18 iul 2026Vezi documentul-2.240,00LEI");
-    expect(t).toContain(`Apartamente fara restanta${d.situatieBloc.faraRestanta} din 20`);
+    expect(t).toContain(`Apartamente fără restanță${d.situatieBloc.faraRestanta} din 20`);
     expect(d.situatieBloc.restanteTotal).toBe(7013.65);
-    expect(t).toContain("Restantele blocului sunt 7.013,65 lei.");
+    expect(t).toContain("Restanțele blocului sunt 7.013,65 lei.");
     /* iesirile sunt cu rosu, intrarile cu verde */
     expect(screen.getByText("-2.240,00").parentElement.style.color)
       .not.toBe(screen.getByText("20.468,60").parentElement.style.color);
@@ -285,7 +285,7 @@ describe("Bloc: fonduri", () => {
     }, "Fonduri");
     expect(screen.queryByText("Fond de reparatii")).toBeNull();
     expect(screen.queryByText("Unde s-au dus banii")).toBeNull();
-    expect(ecran()).toContain("Apartamente fara restanta0 din 0");
+    expect(ecran()).toContain("Apartamente fără restanță0 din 0");
   });
 
   it("fondul de rulment fara suma pe apartament", async () => {

@@ -19,11 +19,11 @@ const cifra = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 4 });
 const lei = (n) => `${bani.format(n)} lei`;
 
 const METODE = {
-  consum: "pe consum, dupa contoare",
+  consum: "pe consum, după contoare",
   persoane: "pe persoane",
-  persoane_fara_lift: "pe persoane, fara apartamentele scutite de lift",
-  apartamente: "in parti egale, pe apartament",
-  cota: "pe cota indiviza",
+  persoane_fara_lift: "pe persoane, fără apartamentele scutite de lift",
+  apartamente: "în părți egale, pe apartament",
+  cota: "pe cotă indiviză",
 };
 
 /* Ordinea de pe foaia de la avizier: C1, C2, ... C10, nu C1, C10, C2 */
@@ -47,12 +47,12 @@ export function Socoteala({ c, ap, r }) {
   const d = r.detaliu;
   return (
     <>
-      <p className="calcul-titlu">{factura}: {lei(c.suma)}, impartita {METODE[c.metoda]}.</p>
+      <p className="calcul-titlu">{factura}: {lei(c.suma)}, împărțită {METODE[c.metoda]}.</p>
       {c.metoda === "consum" ? (
         <ol className="calcul-pasi">
-          <li>Contorul general al blocului a aratat {cifra.format(d.contorGeneral)} mc, deci apa costa {cifra.format(d.pretMc)} lei pe mc.</li>
-          <li>Contoarele apartamentelor insumeaza {cifra.format(d.sumaContoare)} mc. Diferenta de {cifra.format(d.diferenta)} mc se pierde pe coloana si se imparte pe persoane: apartamentul are {d.persoane} din {d.totalPersoane}, adica {cifra.format(d.cotaDiferenta)} mc.</li>
-          <li>Apartamentul {ap.numar}: {cifra.format(d.consumPropriu)} mc pe contoarele lui si {cifra.format(d.cotaDiferenta)} mc din diferenta, in total {cifra.format(r.baza.valoare)} mc.</li>
+          <li>Contorul general al blocului a arătat {cifra.format(d.contorGeneral)} mc, deci apa costă {cifra.format(d.pretMc)} lei pe mc.</li>
+          <li>Contoarele apartamentelor însumează {cifra.format(d.sumaContoare)} mc. Diferența de {cifra.format(d.diferenta)} mc se pierde pe coloană și se împarte pe persoane: apartamentul are {d.persoane} din {d.totalPersoane}, adică {cifra.format(d.cotaDiferenta)} mc.</li>
+          <li>Apartamentul {ap.numar}: {cifra.format(d.consumPropriu)} mc pe contoarele lui și {cifra.format(d.cotaDiferenta)} mc din diferența, în total {cifra.format(r.baza.valoare)} mc.</li>
           <li className="calcul-rezultat">{cifra.format(r.baza.valoare)} mc × {cifra.format(d.pretMc)} lei = {lei(r.suma)}</li>
         </ol>
       ) : (
@@ -62,7 +62,7 @@ export function Socoteala({ c, ap, r }) {
         </ol>
       )}
       {r.rotunjire !== 0 && (
-        <p className="calcul-nota">Suma contine o rotunjire la ban de {lei(r.rotunjire)}: ce ramane dupa impartire se aseaza la apartamentul cu partea cea mai mare, ca totalul sa iasa exact.</p>
+        <p className="calcul-nota">Suma conține o rotunjire la ban de {lei(r.rotunjire)}: ce rămâne după împărțire se așează la apartamentul cu partea cea mai mare, ca totalul să iasă exact.</p>
       )}
     </>
   );
@@ -74,7 +74,7 @@ function ListaDinDeschidere({ date }) {
   const cAles = cheltuieli.find((c) => c.cod === ales.cod);
   const apAles = apartamente.find((a) => a.numar === ales.numar);
   const totalFacturi = cheltuieli.reduce((s, c) => s + c.suma, 0);
-  const titlu = `Lista de intretinere pe ${numeLuna(lista.luna)}, ${bloc.denumire}`;
+  const titlu = `Lista de întreținere pe ${numeLuna(lista.luna)}, ${bloc.denumire}`;
   return (
     <div className="avizier">
       <div className="foaie">
@@ -119,7 +119,7 @@ function ListaDinDeschidere({ date }) {
           </table>
         </div>
         <p className="verificare">
-          {`Facturile lunii: ${lei(totalFacturi)}. Impartit pe apartamente: ${lei(lista.totalRepartizat)}. Nealocat: ${lei(totalFacturi - lista.totalRepartizat)}.`}
+          {`Facturile lunii: ${lei(totalFacturi)}. Împărțit pe apartamente: ${lei(lista.totalRepartizat)}. Nealocat: ${lei(totalFacturi - lista.totalRepartizat)}.`}
         </p>
         <section className="adnotare" aria-label="Socoteala sumei alese" aria-live="polite">
           <Socoteala c={cAles} ap={apAles} r={repartizari.get(`${cAles.id}|${apAles.id}`)} />
@@ -135,12 +135,12 @@ function ListaDinDeschidere({ date }) {
 }
 
 const PASI = [
-  "Administratorul incepe lista lunii si adauga facturile. Pentru fiecare alege cum se imparte, pe persoane, pe apartament, pe cota sau pe consum, si vede pe loc cat revine fiecarui apartament.",
-  "Locatarii trimit indexul la apa, cu o poza a contorului, pana la termenul din luna.",
-  "Administratorul verifica fiecare index. Unul respins se retrimite; unul lipsa se estimeaza din media ultimelor trei luni.",
-  "Administratorul publica lista. Abia acum se calculeaza sumele, o singura data, iar locatarii sunt anuntati.",
-  "Locatarii platesc in numerar la administrator sau prin transfer bancar; ecranul le spune unde si cum. Banii acopera intai datoria cea mai veche, iar chitanta, numerotata fara goluri, se descarca pe loc.",
-  "Dupa scadenta si zilele de gratie se calculeaza penalizari, cu formula la vedere. Nu cresc peste datorie si nu se calculeaza penalizari la penalizari.",
+  "Administratorul începe lista lunii și adaugă facturile. Pentru fiecare alege cum se împarte, pe persoane, pe apartament, pe cotă sau pe consum, și vede pe loc cât revine fiecărui apartament.",
+  "Locatarii trimit indexul la apă, cu o poză a contorului, până la termenul din luna.",
+  "Administratorul verifică fiecare index. Unul respins se retrimite; unul lipsă se estimează din media ultimelor trei luni.",
+  "Administratorul publică lista. Abia acum se calculează sumele, o singură dată, iar locatarii sunt anunțați.",
+  "Locatarii plătesc în numerar la administrator sau prin transfer bancar; ecranul le spune unde și cum. Banii acoperă întâi datoria cea mai veche, iar chitanța, numerotată fără goluri, se descarcă pe loc.",
+  "După scadență și zilele de grație se calculează penalizări, cu formula la vedere. Nu cresc peste datorie și nu se calculează penalizări la penalizări.",
 ];
 
 function Rol({ id, titlu, sectiuni }) {
@@ -173,51 +173,51 @@ export default function PaginaPublica() {
       <header className="perete">
         <div className="perete-text">
           <p className="marca">AdminBloc</p>
-          <h1>Lista de intretinere, cu socoteala la vedere</h1>
+          <h1>Lista de întreținere, cu socoteala la vedere</h1>
           <p className="intro">
-            AdminBloc este o aplicatie pentru administrarea unui bloc de locuinte. Face un lucru altfel decat foaia de la
-            avizier: orice suma de pe lista se deschide in calculul, factura si documentul din spatele ei. Atinge o suma din
+            AdminBloc este o aplicație pentru administrarea unui bloc de locuințe. Face un lucru altfel decât foaia de la
+            avizier: orice sumă de pe lista se deschide în calculul, factura și documentul din spatele ei. Atinge o sumă din
             lista de mai jos.
           </p>
         </div>
-        {date ? <ListaDinDeschidere date={date} /> : <p className="se-calculeaza">Se calculeaza lista...</p>}
+        {date ? <ListaDinDeschidere date={date} /> : <p className="se-calculeaza">Se calculează lista...</p>}
         <p className="despre-lista">
-          Blocul demonstrativ D14, cu 20 de apartamente. Cifrele se calculeaza chiar acum, in pagina, de acelasi motor care
-          calculeaza listele reale.
+          Blocul demonstrativ D14, cu 20 de apartamente. Cifrele se calculează chiar acum, în pagina, de același motor care
+          calculează listele reale.
         </p>
       </header>
 
       <main className="document">
         <section aria-labelledby="azi">
-          <h2 id="azi">Ce se intampla azi</h2>
+          <h2 id="azi">Ce se întâmplă azi</h2>
           <p>
-            In cele mai multe blocuri, lista de intretinere e o foaie lipita la avizier: un tabel cu sume, fara nicio
-            explicatie. Cine vrea sa inteleaga de unde vine suma lui il intreaba pe administrator, iar raspunsul depinde de
-            cine intreaba si cand. Cand lista locatarului si raportul administratorului nu dau aceleasi cifre, nimeni nu
-            poate spune care e gresita.
+            În cele mai multe blocuri, lista de întreținere e o foaie lipită la avizier: un tabel cu sume, fără nicio
+            explicație. Cine vrea să înțeleagă de unde vine suma lui îl întreabă pe administrator, iar răspunsul depinde de
+            cine întreabă și când. Când lista locatarului și raportul administratorului nu dau aceleași cifre, nimeni nu
+            poate spune care e greșită.
           </p>
         </section>
 
         <section aria-labelledby="principiu">
-          <h2 id="principiu">Cum lucreaza AdminBloc</h2>
+          <h2 id="principiu">Cum lucrează AdminBloc</h2>
           <p>{GHID_INTRO}</p>
           <p>
-            Fiecare suma isi pastreaza baza: factura, contorul, numarul de persoane sau cota. Din ele se reface calculul,
-            pas cu pas, pe ecranul fiecaruia, ca in lista de mai sus. Banii se tin intr-un registru in care doar se adauga:
-            soldul nu se scrie niciodata de mana, se calculeaza din datorii si plati.
+            Fiecare sumă își păstrează baza: factura, contorul, numărul de persoane sau cota. Din ele se reface calculul,
+            pas cu pas, pe ecranul fiecăruia, ca în lista de mai sus. Banii se țin într-un registru în care doar se adaugă:
+            soldul nu se scrie niciodată de mână, se calculează din datorii și plăți.
           </p>
         </section>
 
         <section aria-labelledby="luna">
-          <h2 id="luna">O luna, de la factura la chitanta</h2>
-          <ol className="pasi" aria-label="O luna, de la factura la chitanta">
+          <h2 id="luna">O lună, de la factură la chitanță</h2>
+          <ol className="pasi" aria-label="O lună, de la factură la chitanță">
             {PASI.map((p) => <li key={p}>{p}</li>)}
           </ol>
         </section>
 
         <section aria-labelledby="functii">
-          <h2 id="functii">Ce face fiecare parte a aplicatiei</h2>
-          <p>Fiecare om vede aplicatia rolului lui: locatarul, apartamentul sau; administratorul, tot blocul.</p>
+          <h2 id="functii">Ce face fiecare parte a aplicației</h2>
+          <p>Fiecare om vede aplicația rolului lui: locatarul, apartamentul său; administratorul, tot blocul.</p>
           <Rol id="rol-locatar" titlu="Ce vede locatarul" sectiuni={GHID.locatar} />
           <Rol id="rol-administrator" titlu="Ce vede administratorul" sectiuni={GHID.administrator} />
         </section>
@@ -225,21 +225,21 @@ export default function PaginaPublica() {
         <section aria-labelledby="date">
           <h2 id="date">Datele oamenilor</h2>
           <ul>
-            <li>Fiecare locatar vede doar apartamentul lui. Regula nu e in ecran, ci in baza de date: o cerere pentru datele vecinului nu intoarce nimic.</li>
-            <li>Lista pentru avizier se tipareste fara nume si fara restante. Situatia incasarilor arata cate apartamente au datorii, nu care.</li>
-            <li>Sesizarile vecinilor apar fara autor si fara apartament.</li>
+            <li>Fiecare locatar vede doar apartamentul lui. Regula nu e în ecran, ci în baza de date: o cerere pentru datele vecinului nu întoarce nimic.</li>
+            <li>Lista pentru avizier se tipărește fără nume și fără restanțe. Situația încasărilor arată câte apartamente au datorii, nu care.</li>
+            <li>Sesizările vecinilor apar fără autor și fără apartament.</li>
           </ul>
         </section>
 
         <section aria-labelledby="stadiu">
           <h2 id="stadiu">Stadiul proiectului</h2>
           <p>
-            AdminBloc este un prototip functional: aplicatia e publicata, cu baza de date si serverul ei, iar blocul
-            demonstrativ are 20 de apartamente si patru luni de liste, citiri si plati.
+            AdminBloc este un prototip funcțional: aplicația e publicată, cu baza de date și serverul ei, iar blocul
+            demonstrativ are 20 de apartamente și patru luni de liste, citiri și plăți.
           </p>
           <p>
-            Banii se incaseaza in numerar, in mana administratorului, sau prin transfer in contul asociatiei;
-            administratorul confirma incasarea in aplicatie, care emite chitanta pe loc.
+            Banii se încasează în numerar, în mâna administratorului, sau prin transfer în contul asociației;
+            administratorul confirmă încasarea în aplicație, care emite chitanța pe loc.
           </p>
           <p>
             Fiecare regula are teste care o verifica: peste 1.000 de teste ale aplicatiei, cu tot codul acoperit, peste
@@ -249,7 +249,7 @@ export default function PaginaPublica() {
         </section>
 
         <p className="deschide">
-          <a href="../">Deschide aplicatia</a>
+          <a href="../">Deschide aplicația</a>
         </p>
       </main>
     </>

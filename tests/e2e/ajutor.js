@@ -118,7 +118,7 @@ export async function apartamente() {
 export async function apartamentulNumarul(numar) {
   const toate = await apartamente();
   const ap = toate.find((a) => a.numar === String(numar));
-  if (!ap) throw new Error(`Apartamentul ${numar} nu exista in D14`);
+  if (!ap) throw new Error(`Apartamentul ${numar} nu există în D14`);
   return ap;
 }
 
@@ -214,22 +214,22 @@ export async function deschide(page) {
 
 export async function intra(page, telefon, parola = PAROLA) {
   await page.goto("/");
-  await page.getByRole("heading", { name: "Intra in cont" }).or(page.getByText("Intra in cont").first()).first().waitFor();
+  await page.getByRole("heading", { name: "Intră în cont" }).or(page.getByText("Intră în cont").first()).first().waitFor();
   /* Testele de aici verifica aplicatia peste stack-ul local. Daca ea a pornit
      fara adresa serverului, merge pe date din memorie: ecranele arata la fel,
      dar nimic nu ajunge in baza, iar sute de teste pica fara sa spuna de ce.
      Asa a fost pe CI pana la 21 septembrie. Mai bine un singur mesaj limpede. */
-  if (await page.getByText("Mod demonstrativ, fara server").isVisible()) {
+  if (await page.getByText("Mod demonstrativ, fără server").isVisible()) {
     throw new Error("Aplicatia a pornit in modul demonstrativ: lipsesc VITE_SUPABASE_URL si VITE_SUPABASE_ANON_KEY (vezi webServer.env in playwright.config.js).");
   }
-  await page.getByLabel("Numarul tau de telefon").fill(telefon);
+  await page.getByLabel("Numărul tău de telefon").fill(telefon);
   await page.getByLabel("Parola").fill(parola);
-  await page.getByRole("button", { name: "Intra", exact: true }).click();
+  await page.getByRole("button", { name: "Intră", exact: true }).click();
 }
 
 export async function intraCa(page, cheie) {
   await intra(page, CONTURI[cheie]);
-  await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("button", { name: "Ieși", exact: true })).toBeVisible({ timeout: 20000 });
 }
 
 /* Numele accesibil al unui tab include badge-ul: "Sesizari 2" */

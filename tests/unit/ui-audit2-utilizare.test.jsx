@@ -17,8 +17,8 @@ describe("[F21] pluralul romanesc peste nouasprezece cere de", () => {
     const { container } = await pornesteApp({ email: ADMIN });
     await tab("Comunicare");
     await apasa("Remindere");
-    expect(ecran(container)).toContain("La 30 de zile de la scadenta");
-    expect(ecran(container)).toContain("Cu 5 zile inainte de termenul de citire");
+    expect(ecran(container)).toContain("La 30 de zile de la scadență");
+    expect(ecran(container)).toContain("Cu 5 zile înainte de termenul de citire");
     expect(screen.getAllByRole("button", { name: "30 de zile" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "15 zile" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "1 zi" }).length).toBeGreaterThan(0);
@@ -27,8 +27,8 @@ describe("[F21] pluralul romanesc peste nouasprezece cere de", () => {
   it("numarul de destinatari dintr-un reminder", async () => {
     const { sursa } = await pornesteApp({ email: ADMIN });
     vi.spyOn(sursa, "trimiteReminder").mockResolvedValue({ destinatari: 21, apartamente: 3 });
-    await apasa("Trimite reminder de plata");
-    expect(toast().textContent).toBe("Reminder trimis catre 21 de locatari, din 3 apartamente cu sold");
+    await apasa("Trimite reminder de plată");
+    expect(toast().textContent).toBe("Reminder trimis către 21 de locatari, din 3 apartamente cu sold");
   });
 
   it("zilele de intarziere de pe fisa restantierului", async () => {
@@ -36,7 +36,7 @@ describe("[F21] pluralul romanesc peste nouasprezece cere de", () => {
       email: ADMIN,
       modifica: (d) => { d.datorii.filter((x) => x.rest > 0).forEach((x) => { x.scadenta = "2026-08-10"; }); },
     });
-    expect(ecran(container)).toContain("40 de zile intarziere");
+    expect(ecran(container)).toContain("40 de zile întârziere");
   });
 });
 
@@ -45,8 +45,8 @@ describe("[F22] cuvintele de pe hartie, explicate acolo unde apar", () => {
     const { container } = await pornesteApp({ email: LOCATAR });
     await tab("Plata");
     const text = ecran(container);
-    expect(text).toContain("Repartizat inseamna impartit pe apartamente");
-    expect(text).toContain("Cota indiviza este partea ta din proprietatea comuna a blocului");
+    expect(text).toContain("Repartizat înseamnă împărțit pe apartamente");
+    expect(text).toContain("Cota indiviză este partea ta din proprietatea comună a blocului");
   });
 
   it("fondul de rulment si fondul de reparatii, pe ecranul blocului", async () => {
@@ -54,16 +54,16 @@ describe("[F22] cuvintele de pe hartie, explicate acolo unde apar", () => {
     await tab("Bloc");
     await apasa("Fonduri");
     const text = ecran(container);
-    expect(text).toContain("Fondul de rulment este suma pusa deoparte de fiecare apartament");
-    expect(text).toContain("Fondul de reparatii strange bani pentru lucrarile mari ale blocului");
+    expect(text).toContain("Fondul de rulment este suma pusă deoparte de fiecare apartament");
+    expect(text).toContain("Fondul de reparații strânge bani pentru lucrările mari ale blocului");
   });
 });
 
 describe("[F23] Acasa are o singura intrare spre plata", () => {
   it("cardul de sus duce la plata, lista De facut nu repeta actiunea", async () => {
     await pornesteApp({ email: LOCATAR });
-    expect(screen.getByRole("button", { name: "Cum platesc" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Plateste intretinerea" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cum plătesc" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Plătește întreținerea" })).toBeNull();
   });
 });
 
@@ -79,7 +79,7 @@ describe("[F25] anularea platii catre furnizor se confirma", () => {
     const { sursa } = await laFacturiPublicate();
     const marcheaza = vi.spyOn(sursa, "marcheazaFacturaPlatita");
     const intreaba = vi.spyOn(window, "confirm").mockReturnValue(false);
-    await apasa("Anuleaza plata furnizor");
+    await apasa("Anulează plata furnizor");
     expect(intreaba).toHaveBeenCalled();
     expect(marcheaza).not.toHaveBeenCalled();
   });
@@ -88,7 +88,7 @@ describe("[F25] anularea platii catre furnizor se confirma", () => {
     const { sursa } = await laFacturiPublicate();
     const marcheaza = vi.spyOn(sursa, "marcheazaFacturaPlatita");
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    await apasa("Anuleaza plata furnizor");
+    await apasa("Anulează plata furnizor");
     expect(marcheaza).toHaveBeenCalledTimes(1);
     expect(marcheaza.mock.calls[0][1]).toBe(false);
   });
@@ -108,7 +108,7 @@ describe("[R5] platile se ordoneaza dupa momentul lor, nu dupa sirul ISO", () =>
       },
     });
     await tab("Plata");
-    await apasa("Platile mele");
+    await apasa("Plățile mele");
     const text = ecran(container);
     expect(text.indexOf("222,00")).toBeLessThan(text.indexOf("111,00"));
   });
@@ -140,7 +140,7 @@ describe("[R7] citirea estimata se vede ca estimare", () => {
     expect(text).not.toContain("a fost verificat de administrator");
     expect(text).toContain("a fost completat cu o estimare");
     expect(screen.getAllByText("Estimat").length).toBeGreaterThan(0);
-    expect(text).toContain("Estimarea se regleaza la prima citire reala");
+    expect(text).toContain("Estimarea se reglează la prima citire reală");
   });
 });
 

@@ -11,7 +11,7 @@
 -- acelasi tabel identitate.incercari_invitatii (randurile ei sunt oricum
 -- doar incercari gresite, cate una pe rand, indiferent de cont). Peste
 -- plafon, orice cont este oprit, chiar daca incearca pentru prima oara si
--- chiar daca codul lui e bun — altfel plafonul global s-ar ocoli creand inca
+-- chiar daca codul lui e bun, altfel plafonul global s-ar ocoli creand inca
 -- un cont curat. Sub plafon, un cont curat cu un cod bun trece neatins:
 -- calea omului cinstit nu se schimba.
 --

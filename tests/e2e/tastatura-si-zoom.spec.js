@@ -44,19 +44,19 @@ test.describe("treburile principale, numai din tastatura", () => {
 
   test("intrarea in cont se face fara maus", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByLabel("Numarul tau de telefon")).toBeVisible();
-    await scrieCuTastatura(page, page.getByLabel("Numarul tau de telefon"), CONTURI.elena);
+    await expect(page.getByLabel("Numărul tău de telefon")).toBeVisible();
+    await scrieCuTastatura(page, page.getByLabel("Numărul tău de telefon"), CONTURI.elena);
     await scrieCuTastatura(page, page.getByLabel("Parola"), PAROLA);
-    await apasaCuTastatura(page, buton(page, "Intra"));
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 25000 });
+    await apasaCuTastatura(page, buton(page, "Intră"));
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 25000 });
   });
 
   test("sesizarea se scrie si se trimite fara maus", async ({ page }) => {
     const TITLU = "E2E sesizare din tastatura";
     await intraCa(page, "elena");
-    await apasaCuTastatura(page, page.getByRole("tab", { name: /^Sesizari( \d+)?$/ }));
-    await expect(buton(page, "Sesizare noua")).toBeVisible();
-    await apasaCuTastatura(page, buton(page, "Sesizare noua"));
+    await apasaCuTastatura(page, page.getByRole("tab", { name: /^Sesizări( \d+)?$/ }));
+    await expect(buton(page, "Sesizare nouă")).toBeVisible();
+    await apasaCuTastatura(page, buton(page, "Sesizare nouă"));
     await scrieCuTastatura(page, page.getByLabel("Sau scrie pe scurt problema"), TITLU);
     await apasaCuTastatura(page, buton(page, "Trimite sesizarea"));
     await asteaptaToast(page, "Sesizarea a ajuns la administrator");
@@ -73,11 +73,11 @@ test.describe("treburile principale, numai din tastatura", () => {
     const ap = await apartamentulNumarul(17);
     await intraCa(page, "elena");
     await apasaCuTastatura(page, page.getByRole("tab", { name: /^Bloc( \d+)?$/ }));
-    await apasaCuTastatura(page, page.getByRole("button", { name: "Vot si adunare" }));
+    await apasaCuTastatura(page, page.getByRole("button", { name: "Vot și adunare" }));
     await page.waitForTimeout(600);
 
     const varianta = page.getByRole("button", { name: /^Oferta A/ }).first();
-    if (!(await varianta.count())) test.skip(true, "nu exista vot deschis pe datele curente");
+    if (!(await varianta.count())) test.skip(true, "nu există vot deschis pe datele curente");
     await apasaCuTastatura(page, varianta);
     const confirma = page.getByRole("button", { name: "Da, trimite votul", exact: true });
     await expect(confirma).toBeVisible({ timeout: 20000 });
@@ -101,7 +101,7 @@ test.describe("treburile principale, numai din tastatura", () => {
     await scrieCuTastatura(page, camp, String(valoare).replace(".", ","));
     /* Butonul de poza trebuie sa fie de atins cu Tab, chiar daca fisierul
        insusi nu se poate alege din tastatura intr-un test */
-    const pasi = await tabPanaLa(page, page.getByRole("button", { name: /Fotografiaza|poza/i }).first());
+    const pasi = await tabPanaLa(page, page.getByRole("button", { name: /Fotografiază|poza/i }).first());
     expect(pasi, "butonul de poza nu se poate atinge cu Tab").toBeGreaterThanOrEqual(0);
   });
 });
@@ -111,7 +111,7 @@ test.describe("browserul marit la 200%", () => {
      latimea in pixeli CSS: la 200% ecranul de telefon are ~206 px de scris. */
   test.use({ viewport: { width: 206, height: 460 } });
 
-  const ecraneLocatar = ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"];
+  const ecraneLocatar = ["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"];
 
   test("niciun ecran al locatarului nu se poate trage pe orizontala", async ({ page }) => {
     await intraCa(page, "elena");
@@ -152,18 +152,18 @@ test.describe("browserul marit la 200%", () => {
             .map((t) => t.innerText.replace(/\n/g, " ")),
         };
       });
-      expect(masura.depasire, `bara de taburi a lui ${cine} este mai lata decat ecranul`).toBeLessThanOrEqual(1);
+      expect(masura.depasire, `bara de taburi a lui ${cine} este mai lata decât ecranul`).toBeLessThanOrEqual(1);
       expect(masura.iesite, `taburi iesite din ecran la ${cine}`).toEqual([]);
-      expect(masura.gresite, `taburi care raspund pentru altul la ${cine}`).toEqual([]);
-      await buton(page, "Iesi").click();
+      expect(masura.gresite, `taburi care răspund pentru altul la ${cine}`).toEqual([]);
+      await buton(page, "Ieși").click();
     }
   });
 
   test("suma de plata si butonul principal raman citibile la 200%", async ({ page }) => {
     await intraCa(page, "elena");
     const text = await page.locator(".ab-shell > .ab-scroll").innerText();
-    expect(text).toMatch(/DE PLATA ACUM|ACHITAT/);
-    const principal = page.getByRole("button", { name: /Cum platesc|Descarca ultima chitanta/ }).first();
+    expect(text).toMatch(/DE PLATĂ ACUM|ACHITAT/);
+    const principal = page.getByRole("button", { name: /Cum plătesc|Descarcă ultima chitanță/ }).first();
     await expect(principal).toBeVisible();
     const cutie = await principal.boundingBox();
     expect(cutie.width, "butonul principal iese din ecran").toBeLessThanOrEqual(206);
@@ -174,7 +174,7 @@ test.describe("browserul marit la 200%", () => {
     await intraCa(page, "admin");
     /* "Sumar" este deja deschis; nu se apasa, pentru ca la 200% tabul lui este
        acoperit de "Apartamente" (vezi [R3]) */
-    for (const t of ["Apartamente", "Facturi", "Sesizari", "Comunicare"]) {
+    for (const t of ["Apartamente", "Facturi", "Sesizări", "Comunicare"]) {
       await mergiLaTab(page, t);
       await page.waitForTimeout(500);
       const lat = await page.evaluate(() => {
@@ -204,9 +204,9 @@ test.describe("fiecare refuz spune ce are omul de facut", () => {
 
     /* 1. Numar sau parola gresite, pe ecranul de intrare */
     await page.goto("/");
-    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
+    await page.getByLabel("Numărul tău de telefon").fill(CONTURI.elena);
     await page.getByLabel("Parola").fill("parola-gresita-1234");
-    await buton(page, "Intra").click();
+    await buton(page, "Intră").click();
     await page.waitForTimeout(1200);
     const t = await page.locator(".ab-shell").innerText();
     mesaje.parolaGresita = (t.match(/Numarul de telefon[^\n]*/) || [""])[0];
@@ -214,19 +214,19 @@ test.describe("fiecare refuz spune ce are omul de facut", () => {
     /* 2. Comanda fara server */
     await intraCa(page, "admin");
     await mergiLaTab(page, "Comunicare");
-    await buton(page, "Scrie un anunt").click();
-    const panou = page.getByRole("dialog", { name: "Anunt nou" });
+    await buton(page, "Scrie un anunț").click();
+    const panou = page.getByRole("dialog", { name: "Anunț nou" });
     await panou.getByLabel("Titlu").fill("E2E refuz");
     await panou.getByLabel("Continut").fill("Text.");
     await page.route("**/rest/v1/rpc/publica_anunt", (r) => r.abort());
-    mesaje.faraServer = await mesajulDeRefuz(page, async (p) => buton(p, "Publica anuntul").click());
+    mesaje.faraServer = await mesajulDeRefuz(page, async (p) => buton(p, "Publică anunțul").click());
     await page.unroute("**/rest/v1/rpc/publica_anunt");
     expect(Object.keys(mesaje).length, "niciun refuz nu a fost adunat").toBeGreaterThan(0);
 
     for (const [unde, mesaj] of Object.entries(mesaje)) {
       expect(mesaj, `refuzul "${unde}" nu spune nimic`).toBeTruthy();
       for (const cuvant of CUVINTE_TEHNICE) expect(mesaj, `refuzul "${unde}"`).not.toContain(cuvant);
-      expect(mesaj, `refuzul "${unde}" nu spune ce are omul de facut: "${mesaj}"`).toMatch(INDEMNURI);
+      expect(mesaj, `refuzul "${unde}" nu spune ce are omul de făcut: "${mesaj}"`).toMatch(INDEMNURI);
     }
   });
 });
@@ -238,9 +238,9 @@ test.describe("fiecare refuz spune ce are omul de facut", () => {
 test.describe("refuzul de la intrarea in cont", () => {
   test("[R4] parola gresita spune si ce are omul de facut", async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
+    await page.getByLabel("Numărul tău de telefon").fill(CONTURI.elena);
     await page.getByLabel("Parola").fill("Parola-Gresita-1");
-    await buton(page, "Intra").click();
+    await buton(page, "Intră").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
     const mesaj = await page.locator(".ab-toast").innerText();
     expect(mesaj).toMatch(/incearc|verific|cere|scrie/i);

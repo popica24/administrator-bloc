@@ -23,38 +23,38 @@ async function fisa(numar, modifica) {
 
 describe("numarDin: suma scrisa de om in formularul de incasare", () => {
   async function incaseaza(text) {
-    await apasa("Inregistreaza incasare cash");
-    await scrie("Suma primita", text);
+    await apasa("Înregistrează încasare cash");
+    await scrie("Suma primită", text);
   }
 
   it("citeste formatul romanesc si cel cu punct zecimal; refuza ce nu e numar", async () => {
     const { sursa } = await fisa("11");
     const numerar = vi.spyOn(sursa, "inregistreazaIncasare").mockResolvedValue({ plataId: null });
-    await apasa("Inregistreaza incasare cash");
+    await apasa("Înregistrează încasare cash");
     /* campul pleaca de la sold, scris romaneste, si se citeste inapoi exact */
-    expect(screen.getByLabelText("Suma primita").value).toBe("3.939,38");
+    expect(screen.getByLabelText("Suma primită").value).toBe("3.939,38");
     /* [F8] nu exista nicio cale de a anula o chitanta emisa; ecranul o spune inainte de emitere */
-    expect(screen.getByText("Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat; daca ai gresit, o poti anula din aceasta fisa cat timp suntem in aceeasi luna.")).toBeTruthy();
+    expect(screen.getByText("Banii se alocă automat pe cea mai veche datorie. Chitanța se emite imediat; dacă ai greșit, o poți anula din această fișă cât timp suntem în aceeași lună.")).toBeTruthy();
     expect(within(screen.getByRole("dialog")).getByText("lei")).toBeTruthy();
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(numerar).toHaveBeenLastCalledWith("apa-23", 3939.38, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
 
     for (const gol of ["   ", "abc", "0", "-5"]) {
       await incaseaza(gol);
-      expect(dezactivat("Emite chitanta")).toBe(true);
-      await apasa("Renunta");
+      expect(dezactivat("Emite chitanța")).toBe(true);
+      await apasa("Renunță");
     }
 
     await incaseaza("1.234,5");
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
 
     await incaseaza(" 1234.5 ");
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(numerar).toHaveBeenLastCalledWith("apa-23", 1234.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
 
     await incaseaza("12 50");
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(numerar).toHaveBeenLastCalledWith("apa-23", 1250, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
     expect(numerar).toHaveBeenCalledTimes(4);
   });
@@ -63,7 +63,7 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     const { sursa } = await fisa("11");
     const numerar = vi.spyOn(sursa, "inregistreazaIncasare");
     await incaseaza("");
-    const b = buton("Emite chitanta");
+    const b = buton("Emite chitanța");
     expect(b.getAttribute("tabindex")).toBe("-1");
     fireEvent.keyDown(b, { key: "Enter" });
     fireEvent.click(b);
@@ -75,7 +75,7 @@ describe("numarDin: suma scrisa de om in formularul de incasare", () => {
     const { sursa } = await fisa("11");
     const numerar = vi.spyOn(sursa, "inregistreazaIncasare").mockResolvedValue({ plataId: null });
     await incaseaza("1.500");
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(numerar).toHaveBeenLastCalledWith("apa-23", 1500, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
   });
 });
@@ -90,8 +90,8 @@ describe("helperii de luni si plural", () => {
       },
     });
     await tab("Facturi");
-    expect(ecran(container)).toContain("Lista pe ianuarie 2027 nu este inceputa");
-    expect(buton("Incepe lista pe ianuarie 2027")).toBeTruthy();
+    expect(ecran(container)).toContain("Lista pe ianuarie 2027 nu este începută");
+    expect(buton("Începe lista pe ianuarie 2027")).toBeTruthy();
   });
 
   it("plural: 1 cheltuiala, 2 cheltuieli", async () => {
@@ -102,7 +102,7 @@ describe("helperii de luni si plural", () => {
         d.cheltuieli.push({ ...d.cheltuieli.find((x) => x.listaId === c.id), id: "che-doi", cod: "C3" });
       },
     });
-    expect(ecran(container)).toContain("Lista pe septembrie 2026 este in lucru2 cheltuieli adaugate.");
+    expect(ecran(container)).toContain("Lista pe septembrie 2026 este în lucru2 cheltuieli adăugate.");
   });
 });
 
@@ -112,8 +112,8 @@ describe("etichetele: valorile necunoscute raman asa cum sunt", () => {
       email: LOCATAR,
       modifica: (d) => { d.sesizari.find((s) => s.aMea && s.stare === "rezolvata").categorie = "ascensor_vechi"; },
     });
-    await tab("Sesizari");
-    expect(ecran(container)).toContain("Iluminat si electrice · 9 sep 2026");
+    await tab("Sesizări");
+    expect(ecran(container)).toContain("Iluminat și electrice · 9 sep 2026");
     expect(ecran(container)).toContain("ascensor_vechi · 21 aug 2026");
   });
 
@@ -131,7 +131,7 @@ describe("etichetele: valorile necunoscute raman asa cum sunt", () => {
       ap.locatari.push({ ...ap.locatari[0], id: "loc-x", nume: "Andrei Marinescu", calitate: "nepot", telefon: null });
     });
     expect(dialog.textContent).toContain("Elena MarinescuProprietar · din 1 iun 2026 · 0733 410 217");
-    expect(dialog.textContent).toContain("Andrei Marinescunepot · din 1 iun 2026Parola nouaInchide");
+    expect(dialog.textContent).toContain("Andrei Marinescunepot · din 1 iun 2026Parola nouăÎnchide");
   });
 });
 
@@ -140,7 +140,7 @@ describe("derivari la margine", () => {
     const { dialog } = await fisa("17", (d) => {
       d.citiri = d.citiri.filter((c) => !(c.apartamentId === AP && c.luna === "2026-08" && c.tip === "rece"));
     });
-    expect(dialog.textContent).toContain("august 2026rece - · calda 9,02 mc");
+    expect(dialog.textContent).toContain("august 2026rece - · caldă 9,02 mc");
   });
 
   it("codurile cu acelasi numar se ordoneaza alfabetic in PDF", async () => {
@@ -152,7 +152,7 @@ describe("derivari la margine", () => {
       },
     });
     const pdf = prindePdf();
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     const { text } = await pdf.ultimul();
     expect(text).toContain("Pers.\nC01\nC1\nC2");
   });
@@ -160,7 +160,7 @@ describe("derivari la margine", () => {
   it("un apartament fara datorie pe lista curenta: de plata este totalul lunii", async () => {
     await pornesteApp({ email: ADMIN, modifica: (d) => { d.datorii = d.datorii.filter((x) => x.id !== "dat-1021"); } });
     const pdf = prindePdf();
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     const { text } = await pdf.ultimul();
     expect(text).toContain("74,08\n718,09\n\n\n718,09\n18\nNicolae Serban");
   });
@@ -200,7 +200,7 @@ describe("BareLunare", () => {
       },
     });
     await tab("Contoare");
-    await apasa("Apa calda");
+    await apasa("Apa caldă");
     /* luna fara valoare are liniuta in loc de cifra, iar cea estimata este
        marcata ca atare si in graficul de sus, si in lista de dedesubt */
     const grafic = zonaCu(["Cum a evoluat consumul", "aug 26"]);
@@ -215,7 +215,7 @@ describe("BareLunare", () => {
       modifica: (d) => { d.citiri.filter((c) => c.apartamentId === AP && c.tip === "calda").forEach((c) => { c.consum = 0; }); },
     });
     await tab("Contoare");
-    await apasa("Apa calda");
+    await apasa("Apa caldă");
     const grafic = zonaCu(["Cum a evoluat consumul", "aug 26"]);
     expect(grafic.textContent).toContain("0,0iun 260,0iul 260,0aug 26");
   });
@@ -224,15 +224,15 @@ describe("BareLunare", () => {
 describe("Sheet, Field, Picker si pozele alese", () => {
   it("se inchide din scrim sau din X, dar nu la apasarea in interior", async () => {
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
     const dialog = screen.getByRole("dialog");
     fireEvent.click(dialog);
     expect(screen.getByRole("dialog")).toBeTruthy();
     await act(async () => { fireEvent.click(dialog.parentElement); });
     expect(screen.queryByRole("dialog")).toBeNull();
-    await apasa("Sesizare noua");
-    await apasa("Inchide");
+    await apasa("Sesizare nouă");
+    await apasa("Închide");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -241,20 +241,20 @@ describe("Sheet, Field, Picker si pozele alese", () => {
      ecranului din spate, ascuns dupa scrim. */
   it("[C18] la inchidere, focusul revine la elementul care a deschis sheet-ul", async () => {
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    const declansator = buton("Sesizare noua");
+    await tab("Sesizări");
+    const declansator = buton("Sesizare nouă");
     declansator.focus();
-    await apasa("Sesizare noua");
+    await apasa("Sesizare nouă");
     expect(screen.getByRole("dialog")).toBeTruthy();
-    await apasa("Inchide");
+    await apasa("Închide");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(declansator);
   });
 
   it("[C18] Tab si Shift+Tab nu ies din sheet, se rotesc la celalalt capat", async () => {
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
     const dialog = screen.getByRole("dialog");
     const focalizabile = [...dialog.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]):not([type="file"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -285,8 +285,8 @@ describe("Sheet, Field, Picker si pozele alese", () => {
        element focalizabil: capcana trebuie sa recunoasca si acest caz, nu
        doar "activeElement === prim". */
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
     const dialog = screen.getByRole("dialog");
     expect(document.activeElement).toBe(dialog);
     const focalizabile = [...dialog.querySelectorAll(
@@ -301,18 +301,18 @@ describe("Sheet, Field, Picker si pozele alese", () => {
   it("campul pe mai multe randuri, lista de categorii si poza aleasa", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:sesizare");
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
-    const desc = screen.getByLabelText("Unde este si de cand (optional)");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
+    const desc = screen.getByLabelText("Unde este și de când (opțional)");
     expect(desc.tagName).toBe("TEXTAREA");
-    await scrie("Unde este si de cand (optional)", "Etajul 2");
+    await scrie("Unde este și de când (opțional)", "Etajul 2");
     expect(desc.value).toBe("Etajul 2");
     const cat = screen.getByLabelText("Categorie");
-    expect([...cat.options].map((o) => o.textContent)).toEqual(["Instalatii, apa, canalizare", "Iluminat si electrice", "Usa, interfon, lift", "Curatenie si gunoi", "Altele"]);
+    expect([...cat.options].map((o) => o.textContent)).toEqual(["Instalații, apă, canalizare", "Iluminat și electrice", "Ușa, interfon, lift", "Curățenie și gunoi", "Altele"]);
     await act(async () => { fireEvent.change(cat, { target: { value: "acces" } }); });
     expect(cat.value).toBe("acces");
 
-    const input = within(screen.getByRole("dialog")).getAllByLabelText(/poza/i).find((x) => x.tagName === "INPUT");
+    const input = within(screen.getByRole("dialog")).getAllByLabelText(/poză/i).find((x) => x.tagName === "INPUT");
     await act(async () => { fireEvent.change(input, { target: { files: [new File(["x"], "bec")] } }); });
     const img = await screen.findByAltText("Poza sesizare");
     expect(img.getAttribute("src")).toBe("blob:sesizare");
@@ -324,12 +324,12 @@ describe("Sheet, Field, Picker si pozele alese", () => {
     const revoca = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     const { sursa } = await pornesteApp({ email: LOCATAR });
     vi.spyOn(sursa, "adaugaSesizare").mockResolvedValue(undefined);
-    await tab("Sesizari");
-    await apasa("Sesizare noua");
-    const input = within(screen.getByRole("dialog")).getAllByLabelText("Adauga o poza").find((x) => x.tagName === "INPUT");
+    await tab("Sesizări");
+    await apasa("Sesizare nouă");
+    const input = within(screen.getByRole("dialog")).getAllByLabelText("Adaugă o poză").find((x) => x.tagName === "INPUT");
     await act(async () => { fireEvent.change(input, { target: { files: [new File(["x"], "bec")] } }); });
     await screen.findByAltText("Poza sesizare");
-    await apasa("Bec ars pe scara");
+    await apasa("Bec ars pe scară");
     await apasa("Trimite sesizarea");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(revoca).toHaveBeenCalledWith("blob:sesizare");
@@ -337,19 +337,19 @@ describe("Sheet, Field, Picker si pozele alese", () => {
 
   it("campul fara eticheta foloseste textul de ajutor ca nume", async () => {
     await pornesteApp({ email: LOCATAR });
-    await tab("Sesizari");
-    const f = screen.getByLabelText("Adauga un mesaj pentru administrator");
+    await tab("Sesizări");
+    const f = screen.getByLabelText("Adaugă un mesaj pentru administrator");
     expect(f.tagName).toBe("INPUT");
   });
 
   it("un camp cu eroare arata mesajul in locul indicatiei", async () => {
     await pornesteApp({ email: ADMIN });
     await tab("Facturi");
-    await apasa("Adauga factura");
+    await apasa("Adaugă factură");
     await scrie("Cod pe lista", "C9");
     const camp = screen.getByLabelText("Cod pe lista");
     expect(camp.getAttribute("aria-invalid")).toBe("true");
-    expect(ajutorulCampului("Cod pe lista")).toBe("Codul exista deja");
+    expect(ajutorulCampului("Cod pe lista")).toBe("Codul există deja");
   });
 });
 
@@ -362,15 +362,15 @@ describe("Switch si textele reminderelor", () => {
     const seteaza = vi.spyOn(sursa, "seteazaReminder");
     await tab("Comunicare");
     await apasa("Remindere");
-    expect(screen.getByText("In ziua publicarii listei")).toBeTruthy();
-    expect(screen.getByText("Cu 5 zile inainte de termenul de citire")).toBeTruthy();
-    expect(screen.getByText("Cu o zi inainte de scadenta")).toBeTruthy();
-    expect(screen.getByText("La 30 de zile de la scadenta")).toBeTruthy();
-    expect(screen.getByText("Cu 10 zile inainte de data adunarii")).toBeTruthy();
+    expect(screen.getByText("În ziua publicării listei")).toBeTruthy();
+    expect(screen.getByText("Cu 5 zile înainte de termenul de citire")).toBeTruthy();
+    expect(screen.getByText("Cu o zi înainte de scadență")).toBeTruthy();
+    expect(screen.getByText("La 30 de zile de la scadență")).toBeTruthy();
+    expect(screen.getByText("Cu 10 zile înainte de data adunării")).toBeTruthy();
 
     const comutator = (nume) => screen.getAllByRole("button", { name: nume }).find((b) => b.hasAttribute("aria-pressed"));
-    const plata = comutator("Reamintire de plata");
-    const ag = comutator("Convocare adunare generala");
+    const plata = comutator("Reamintire de plată");
+    const ag = comutator("Convocare adunare generală");
     expect(plata.getAttribute("aria-pressed")).toBe("true");
     expect(ag.getAttribute("aria-pressed")).toBe("false");
     await act(async () => { fireEvent.click(plata); });
@@ -395,8 +395,8 @@ describe("PozaStocata", () => {
     });
     const url = vi.spyOn(sursa, "urlFisier").mockImplementation(async (c) => (c === "poze/bun.jpg" ? "blob:bun" : null));
     const open = vi.spyOn(window, "open").mockReturnValue(null);
-    await tab("Sesizari");
-    const img = await screen.findByAltText("Poza atasata");
+    await tab("Sesizări");
+    const img = await screen.findByAltText("Poza atașată");
     expect(img.getAttribute("src")).toBe("blob:bun");
     expect(url.mock.calls.map((c) => c[0])).toEqual(["poze/bun.jpg", "poze/lipsa.jpg"]);
     expect(screen.getAllByText("POZA")).toHaveLength(3);
@@ -411,11 +411,11 @@ describe("PozaStocata", () => {
       modifica: (d) => { d.sesizari.find((s) => s.aMea && s.stare === "in_lucru").poze = [{ id: "p2", cale: "poze/bun.jpg" }]; },
     });
     vi.spyOn(sursa, "urlFisier").mockImplementation(() => new Promise((r) => { raspunde = r; }));
-    await tab("Sesizari");
+    await tab("Sesizări");
     expect(screen.getByText("POZA")).toBeTruthy();
     await tab("Plata");
     await act(async () => { raspunde("blob:tarziu"); });
-    expect(screen.queryByAltText("Poza atasata")).toBeNull();
+    expect(screen.queryByAltText("Poza atașată")).toBeNull();
   });
 });
 
@@ -423,7 +423,7 @@ describe("deschideUrl, descarcaPdf, confirma si documentul din RandLista", () =>
   it("Suna deschide aplicatia de telefon, fara fereastra noua", async () => {
     const open = vi.spyOn(window, "open");
     await pornesteApp({ email: LOCATAR });
-    await apasa("Suna 0745 210 118");
+    await apasa("Sună 0745 210 118");
     /* window.location nu se poate spiona in jsdom; tel: nu schimba pagina */
     expect(open).not.toHaveBeenCalled();
     expect(screen.getByText("Pe cine suni")).toBeTruthy();
@@ -434,7 +434,7 @@ describe("deschideUrl, descarcaPdf, confirma si documentul din RandLista", () =>
     const pdf = prindePdf();
     const revoca = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     expect(pdf.descarcate).toHaveLength(1);
     expect(document.querySelector("a[download]")).toBeNull();
     /* Un export dintr-un test anterior si-a lasat in urma un setTimeout
@@ -453,12 +453,12 @@ describe("deschideUrl, descarcaPdf, confirma si documentul din RandLista", () =>
     const { sursa } = await fisa("17");
     const inchide = vi.spyOn(sursa, "inchideAcces");
     const intreaba = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
-    await apasa("Inchide accesul");
-    expect(intreaba).toHaveBeenCalledWith("Inchizi accesul lui Elena Marinescu la apartamentul 17? Istoricul ramane.");
+    await apasa("Închide accesul");
+    expect(intreaba).toHaveBeenCalledWith("Închizi accesul lui Elena Marinescu la apartamentul 17? Istoricul rămâne.");
     expect(inchide).not.toHaveBeenCalled();
-    await apasa("Inchide accesul");
+    await apasa("Închide accesul");
     expect(inchide).toHaveBeenCalledTimes(1);
-    expect(toast().textContent).toBe("Accesul a fost inchis");
+    expect(toast().textContent).toBe("Accesul a fost închis");
   });
 
   it("Vezi documentul din randul listei deschide factura", async () => {

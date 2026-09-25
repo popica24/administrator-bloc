@@ -18,10 +18,10 @@ describe("incarcarea", () => {
     s.sesiuneCurenta = () => new Promise((r) => { raspunde = r; });
     globalThis.sursaTest = s;
     render(<AdminBloc />);
-    expect(screen.getByText("Se incarca...")).toBeTruthy();
+    expect(screen.getByText("Se încarcă...")).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     await act(async () => { raspunde(null); });
-    expect(screen.getByText("Intra in cont")).toBeTruthy();
+    expect(screen.getByText("Intră în cont")).toBeTruthy();
   });
 
   it("o sesiune care raspunde dupa inchiderea aplicatiei nu mai schimba nimic", async () => {
@@ -47,10 +47,10 @@ describe("incarcarea", () => {
     globalThis.sursaTest = s;
     render(<AdminBloc />);
     await act(async () => {});
-    expect(screen.getByText("Se incarca...")).toBeTruthy();
+    expect(screen.getByText("Se încarcă...")).toBeTruthy();
     await act(async () => { gata(); });
-    await screen.findByText("Iesi");
-    expect(screen.queryByText("Se incarca...")).toBeNull();
+    await screen.findByText("Ieși");
+    expect(screen.queryByText("Se încarcă...")).toBeNull();
   });
 
   it("daca prima incarcare cade, spune de ce", async () => {
@@ -69,8 +69,8 @@ describe("incarcarea", () => {
     const { sursa } = await pornesteApp({ email: LOCATAR });
     vi.spyOn(sursa, "incarca").mockResolvedValue(null);
     await apasa("Am citit");
-    expect(screen.getByText("Intra in cont")).toBeTruthy();
-    expect(screen.queryByText("Se incarca...")).toBeNull();
+    expect(screen.getByText("Intră în cont")).toBeTruthy();
+    expect(screen.queryByText("Se încarcă...")).toBeNull();
   });
 
   /* Audit S3: dupa o prima incarcare esuata nu exista buton de iesire sau de reincercare */
@@ -80,7 +80,7 @@ describe("incarcarea", () => {
     s.incarca = () => Promise.reject(new Error("Blocul este arhivat."));
     await pornesteApp({ sursa: s });
     await act(async () => {});
-    expect(screen.getAllByRole("button").some((b) => /Iesi|Incearca din nou/.test(b.textContent))).toBe(true);
+    expect(screen.getAllByRole("button").some((b) => /Ieși|Încearcă din nou/.test(b.textContent))).toBe(true);
   });
 
   /* [P3] O sesiune moarta chiar la prima incarcare (dupa un repornit al
@@ -93,7 +93,7 @@ describe("incarcarea", () => {
     s.incarca = () => Promise.reject(new Error("Sesiunea a expirat. Intra din nou in cont."));
     await pornesteApp({ sursa: s });
     await act(async () => {});
-    expect(screen.getByText("Intra in cont")).toBeTruthy();
+    expect(screen.getByText("Intră în cont")).toBeTruthy();
     expect(screen.queryByText("Nu am putut deschide contul")).toBeNull();
     expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
   });
@@ -103,7 +103,7 @@ describe("TabBar si BaraSus", () => {
   it("administratorul: cinci taburi, insigne pentru citiri trimise si sesizari noi", async () => {
     await pornesteApp({ email: ADMIN });
     expect(taburi()).toEqual([
-      ["Sumar", "true"], ["Apartamente8", "false"], ["Facturi", "false"], ["Sesizari1", "false"], ["Comunicare", "false"],
+      ["Sumar", "true"], ["Apartamente8", "false"], ["Facturi", "false"], ["Sesizări1", "false"], ["Comunicare", "false"],
     ]);
     expect(screen.getByText("Mihai Dobre")).toBeTruthy();
     expect(screen.getByText("Administrator, Bloc D14, scara A")).toBeTruthy();
@@ -113,7 +113,7 @@ describe("TabBar si BaraSus", () => {
   it("locatarul: insigne pentru sesizarile lui deschise, anunturi si notificari necitite", async () => {
     await pornesteApp({ email: LOCATAR });
     expect(taburi()).toEqual([
-      ["Acasa1", "true"], ["Plata", "false"], ["Contoare", "false"], ["Sesizari1", "false"], ["Bloc1", "false"],
+      ["Acasă1", "true"], ["Plata", "false"], ["Contoare", "false"], ["Sesizări1", "false"], ["Bloc1", "false"],
     ]);
     expect(screen.getByText("Apartament 17, Bloc D14, scara A")).toBeTruthy();
     expect(screen.getByText("D14")).toBeTruthy();
@@ -134,8 +134,8 @@ describe("TabBar si BaraSus", () => {
       },
     });
     const spion = vi.spyOn(sursa, "incarca");
-    expect(screen.getByText("Apartament 17, Bloc D14, scara A · Schimba")).toBeTruthy();
-    await apasa(screen.getByRole("button", { name: "Schimba apartamentul" }));
+    expect(screen.getByText("Apartament 17, Bloc D14, scara A · Schimbă")).toBeTruthy();
+    await apasa(screen.getByRole("button", { name: "Schimbă apartamentul" }));
     const dialog = screen.getByRole("dialog", { name: "Alege apartamentul" });
     expect(within(dialog).getByRole("button", { name: "Apartament 17" })).toBeTruthy();
     expect(within(within(dialog).getByRole("button", { name: "Apartament 17" })).getByText("Activ")).toBeTruthy();
@@ -146,7 +146,7 @@ describe("TabBar si BaraSus", () => {
 
   it("un singur apartament: bara de sus nu ofera nimic de schimbat", async () => {
     await pornesteApp({ email: LOCATAR });
-    expect(screen.queryByRole("button", { name: "Schimba apartamentul" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Schimbă apartamentul" })).toBeNull();
   });
 
   it("[P5] alegerea apartamentului se poate inchide fara sa schimbe nimic", async () => {
@@ -161,8 +161,8 @@ describe("TabBar si BaraSus", () => {
       },
     });
     const spion = vi.spyOn(sursa, "incarca");
-    await apasa(screen.getByRole("button", { name: "Schimba apartamentul" }));
-    await apasa(within(screen.getByRole("dialog", { name: "Alege apartamentul" })).getByRole("button", { name: "Inchide" }));
+    await apasa(screen.getByRole("button", { name: "Schimbă apartamentul" }));
+    await apasa(within(screen.getByRole("dialog", { name: "Alege apartamentul" })).getByRole("button", { name: "Închide" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
   });
@@ -177,14 +177,14 @@ describe("TabBar si BaraSus", () => {
         d.bloc.denumire = "bloc   m3 turnul";
       },
     });
-    expect(taburi().map((t) => t[0])).toEqual(["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"]);
+    expect(taburi().map((t) => t[0])).toEqual(["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"]);
     expect(screen.getByText("M3")).toBeTruthy();
   });
 
   it("apasarea pe tab schimba ecranul; tastatura merge la fel", async () => {
     await pornesteApp({ email: ADMIN });
     await tab("Facturi");
-    expect(screen.getByText("Facturi si liste")).toBeTruthy();
+    expect(screen.getByText("Facturi și liste")).toBeTruthy();
     expect(taburi()[2]).toEqual(["Facturi", "true"]);
     const sumar = screen.getAllByRole("tab")[0];
     await act(async () => { fireEvent.keyDown(sumar, { key: "Enter" }); });
@@ -207,8 +207,8 @@ describe("TabBar si BaraSus", () => {
   it("[E3] Inapoi in browser revine la tabul anterior, in loc sa iasa din aplicatie", async () => {
     await pornesteApp({ email: ADMIN });
     await tab("Facturi");
-    await tab("Sesizari");
-    expect(taburi()[3]).toEqual(["Sesizari1", "true"]);
+    await tab("Sesizări");
+    expect(taburi()[3]).toEqual(["Sesizări1", "true"]);
     await inapoiInBrowser();
     expect(taburi()[2]).toEqual(["Facturi", "true"]);
     await inapoiInBrowser();
@@ -238,9 +238,9 @@ describe("TabBar si BaraSus", () => {
 
   it("go() cu parametri: indicatorul Restante duce la apartamentele cu restanta", async () => {
     await pornesteApp({ email: ADMIN });
-    await apasa("Restante");
+    await apasa("Restanțe");
     expect(taburi()[1]).toEqual(["Apartamente8", "true"]);
-    const filtru = screen.getAllByRole("button").find((b) => b.textContent === "Restante 5");
+    const filtru = screen.getAllByRole("button").find((b) => b.textContent === "Restanțe 5");
     expect(filtru.getAttribute("aria-pressed")).toBe("true");
   });
 
@@ -248,15 +248,15 @@ describe("TabBar si BaraSus", () => {
     const { sursa } = await pornesteApp({ email: ADMIN });
     const iesi = vi.spyOn(sursa, "iesi");
     await tab("Comunicare");
-    await apasa("Iesi");
+    await apasa("Ieși");
     expect(iesi).toHaveBeenCalled();
-    expect(screen.getByText("Intra in cont")).toBeTruthy();
+    expect(screen.getByText("Intră în cont")).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryByText("Mihai Dobre")).toBeNull();
-    await scrie("Numarul tau de telefon", LOCATAR);
+    await scrie("Numărul tău de telefon", LOCATAR);
     await scrie("Parola", PAROLA);
-    await apasa("Intra");
-    await screen.findByText("Iesi");
-    expect(taburi()[0]).toEqual(["Acasa1", "true"]);
+    await apasa("Intră");
+    await screen.findByText("Ieși");
+    expect(taburi()[0]).toEqual(["Acasă1", "true"]);
   });
 });
