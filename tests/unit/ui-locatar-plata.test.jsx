@@ -7,6 +7,7 @@ import { pornesteApp, zonaCu, textEcran } from "./ajutor.jsx";
 import {
   ELENA, ILIE, VOICU, apasa, apasaButon, alegeSegment, deschideTab, prindeDescarcari, prindeFerestre, text,
 } from "./ui-locatar-ajutor.jsx";
+import { prindePdf } from "./ui-baza-ajutor.jsx";
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 
@@ -299,6 +300,32 @@ describe("Plata: Platile mele", () => {
     expect(butoane).toHaveLength(2);
     await apasa(butoane[0]);
     expect(descarcari).toEqual([`chitanta-${plati[0].chitanta.numar}.pdf`]);
+  });
+
+  /* [T1] Administratorul a stornat o incasare scrisa gresit. Plata nu dispare
+     din istoric: omul are chitanta in mana si trebuie sa inteleaga de ce suma
+     nu se mai scade din ce are de platit. */
+  it("[T1] incasarea stornata ramane in istoric, taiata, cu motivul ei", async () => {
+    await laPlata({
+      email: ELENA,
+      modifica: (d) => {
+        /* cea mai noua plata, adica prima din lista de pe ecran */
+        const p = d.plati.slice().sort((a, b) => (a.confirmataLa < b.confirmataLa ? 1 : -1))[0];
+        p.stare = "rambursata";
+        p.motivStornare = "Suma a fost scrisa gresit";
+        p.stornataLa = "2026-09-18T10:00:00+03:00";
+      },
+    });
+    await alegeSegment("Platile mele");
+    const t = ecran();
+    expect(t).toContain("Anulata");
+    expect(t).toContain("Anulata de administrator: Suma a fost scrisa gresit");
+    /* chitanta ramane, cu numarul ei, si se vede de pe ea ca a fost anulata */
+    const butoane = screen.getAllByRole("button", { name: "Descarca chitanta" });
+    expect(butoane.length).toBeGreaterThan(0);
+    const pdf = prindePdf();
+    await apasa(butoane[0]);
+    expect((await pdf.ultimul()).text).toContain("ANULATA pe 18 septembrie 2026: Suma a fost scrisa gresit");
   });
 
   it("numerar, transfer si o plata fara chitanta", async () => {

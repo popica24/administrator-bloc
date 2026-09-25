@@ -109,7 +109,11 @@ const restDatorie = (db, d) => {
   if (d.tip === "anulare_penalizare") return 0;
   const propriu = round2(d.suma - alocatDatorie(db, d.id));
   if (d.tip === "penalizare") {
-    return round2(propriu + db.datorii.filter((x) => x.anuleazaDatorieId === d.id).reduce((s, x) => s + x.suma, 0));
+    /* [T1, paritate financiar.plati_stornate] anularea provocata de o plata
+       stornata nu se mai socoteste */
+    const stornate = new Set(db.plati.filter((p) => p.stare === "rambursata").map((p) => p.id));
+    const anulari = db.datorii.filter((x) => x.anuleazaDatorieId === d.id && !stornate.has(x.provocataDePlataId));
+    return round2(propriu + anulari.reduce((s, x) => s + x.suma, 0));
   }
   const inPachet = d.listaId && (d.tip === "intretinere" || (d.tip === "corectie" && d.suma > 0));
   if (!inPachet) return propriu;
@@ -156,6 +160,12 @@ function alocaPlata(db, plata) {
   });
 }
 
+/* Chitanta unei plati, scrisa ca in notificari: "AP118 nr. 000464" */
+const chitantaPlatii = (db, plataId) => {
+  const ch = db.chitante.find((c) => c.plataId === plataId);
+  return `${ch.serie} nr. ${String(ch.numar).padStart(6, "0")}`;
+};
+
 /* Banii platiti in avans se aloca pe datoriile aparute ulterior */
 function alocaAvansuri(db, apartamentId) {
   db.plati
@@ -200,6 +210,7 @@ function anuleazaPenalizariDupaPlata(db, plata) {
       apartamentId: plata.apartamentId, blocId: plata.blocId, tip: "anulare_penalizare",
       luna: datoria.luna, listaId: null, suma: round2(tinta - acum), scadenta: aziIso(),
       descriere: "Penalizare anulata: banii intrasera deja in cont", anuleazaDatorieId: p.datorieId,
+      provocataDePlataId: plata.id,
     });
   });
   if (alese.length) alocaAvansuri(db, plata.apartamentId);
@@ -211,7 +222,9 @@ function inregistreazaPlata(db, { apartamentId, suma, metoda, la, platitaDe = nu
   const ap = db.apartamente.find((a) => a.id === apartamentId);
   const plata = db.adauga("plati", {
     apartamentId, blocId: ap.blocId, suma: round2(suma), metoda, stare: "confirmata",
-    platitaDe, inregistrataDe, confirmataLa: la, creatLa: la, cheieClient,
+    /* [T1] creatLa este ziua in care s-a scris plata, confirmataLa ziua in care
+       au intrat banii: stornarea se uita la prima */
+    platitaDe, inregistrataDe, confirmataLa: la, creatLa: acum(), cheieClient,
   });
   alocaPlata(db, plata);
   /* [B5] inainte de chitanta, ca documentul sa ingheata starea finala */
@@ -777,6 +790,9 @@ function proiecteaza(db, profilId, apartamentAles) {
     return {
       id: p.id, apartamentId: p.apartamentId, suma: p.suma, metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmataLa,
       inregistrataDe: inreg.nume,
+      /* [T1] o incasare stornata ramane in istoric, taiata, cu motivul ei;
+         creatLa este ziua scrierii, dupa care se vede daca mai poate fi stornata */
+      creatLa: p.creatLa, motivStornare: p.motivStornare || null, stornataLa: p.stornataLa || null,
       /* fiecare plata din sursa demonstrativa primeste chitanta la inregistrare */
       chitanta: { serie: ch.serie, numar: ch.numar, emisaLa: ch.emisaLa, randuri: ch.randuri, emisPentru: ch.emisPentru },
       alocari: db.alocari.filter((a) => a.plataId === p.id)
@@ -1189,6 +1205,33 @@ export function creeazaSursaMock() {
         inregistrataDe: eu().id, cheieClient: cheieCerere,
       });
       return { plataId: p.id };
+    },
+
+    /* [T1, paritate financiar.storneaza_incasare] Incasarea scrisa gresit se
+       anuleaza: ramane in istoric, cu motivul ei, dar nu se mai socoteste
+       nicaieri. Doar incasarile scrise in luna curenta, dupa ziua scrierii. */
+    async storneazaIncasare(plataId, motiv) {
+      const { bloc } = cerAdmin();
+      const p = db.plati.find((x) => x.id === plataId && x.blocId === bloc.id)
+        || eroare("Incasarea nu exista sau nu este in blocul tau.");
+      const text = String(motiv || "").trim();
+      if (!text) eroare("Scrie de ce stornezi incasarea.");
+      if (p.stare !== "confirmata") eroare("Incasarea a fost deja stornata.");
+      if (p.creatLa.slice(0, 7) !== aziIso().slice(0, 7)) {
+        eroare("Se storneaza doar incasarile inregistrate in luna aceasta.");
+      }
+      db.alocari = db.alocari.filter((a) => a.plataId !== p.id);
+      p.stare = "rambursata";
+      p.stornataLa = acum();
+      p.stornataDe = eu().id;
+      p.motivStornare = text;
+      alocaAvansuri(db, p.apartamentId);
+      locatariActivi(db, p.apartamentId).forEach((l) => notifica(db, {
+        profilId: l.profilId, asociatieId: bloc.asociatieId, tip: "plata",
+        titlu: "O incasare a fost anulata",
+        corp: `Incasarea de ${numarRo(p.suma)} lei, cu chitanta ${chitantaPlatii(db, p.id)}, a fost anulata de administrator: ${text}. Suma a intrat la loc in ce ai de plata.`,
+        referinta: { plataId: p.id },
+      }));
     },
 
     async trimiteInstiintare(apartamentId) {

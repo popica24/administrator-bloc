@@ -201,7 +201,8 @@ export function creeazaSursaSupabase(url, cheie) {
       ok(cont.rpc("consum_mediu_bloc", { p_bloc_id: bloc })),
       toate(() => alMeu(fin.from("datorii_rest").select("*").eq("bloc_id", bloc))),
       toate(() => prin(fin.from("penalizari").select("*, d:datorii!penalizari_datorie_id_fkey!inner(bloc_id, apartament_id)"), "d")),
-      toate(() => alMeu(fin.from("plati").select("*").eq("bloc_id", bloc).eq("stare", "confirmata"))),
+      /* [T1] si incasarile stornate: raman in istoric, taiate, cu motivul lor */
+      toate(() => alMeu(fin.from("plati").select("*").eq("bloc_id", bloc).in("stare", ["confirmata", "rambursata"]))),
       toate(() => prin(fin.from("alocari_plati").select("*, p:plati!inner(bloc_id, apartament_id)"), "p")),
       toate(() => prin(fin.from("chitante").select("*, p:plati!inner(bloc_id, apartament_id)"), "p")),
       ok(fin.rpc("situatie_bloc", { p_bloc_id: bloc })),
@@ -349,6 +350,9 @@ export function creeazaSursaSupabase(url, cheie) {
         return {
           id: p.id, apartamentId: p.apartament_id, suma: nr(p.suma), metoda: p.metoda, stare: p.stare, confirmataLa: p.confirmata_la,
           inregistrataDe: p.inregistrata_de ? numeProfil(p.inregistrata_de) : null,
+          /* [T1] incasarea stornata: de ce si cand; creatLa este ziua scrierii,
+             dupa care se vede daca mai poate fi stornata */
+          creatLa: p.creat_la, motivStornare: p.motiv_stornare, stornataLa: p.stornata_la,
           /* [B6] randurile inghetate la emitere: documentul nu se mai schimba */
           chitanta: ch ? {
             serie: ch.serie, numar: ch.numar, emisaLa: ch.emisa_la,
@@ -626,6 +630,10 @@ export function creeazaSursaSupabase(url, cheie) {
       }));
       return { plataId };
     },
+
+    /* [T1] Incasarea scrisa gresit se anuleaza: nu se mai socoteste nicaieri,
+       dar ramane in istoric, cu motivul ei. */
+    storneazaIncasare: (plataId, motiv) => ok(fin.rpc("storneaza_incasare", { p_plata_id: plataId, p_motiv: motiv })),
 
     trimiteInstiintare: (apartamentId) => ok(com.rpc("trimite_instiintare", { p_apartament_id: apartamentId })),
 

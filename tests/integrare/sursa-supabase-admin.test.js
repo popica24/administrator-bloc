@@ -377,6 +377,34 @@ describe("bani si oameni", () => {
     expect(alta.plataId).not.toBe(intai.plataId);
   });
 
+  /* [T1] Incasarea scrisa gresit se anuleaza: iese din socoteala, dar ramane in
+     istoric, cu motivul ei, iar chitanta isi pastreaza numarul. */
+  it("[T1] storneazaIncasare(): incasarea iese din socoteala si ramane in istoric", async () => {
+    const inainte = (await adm.incarca()).situatieBloc.restanteTotal;
+    const { plataId } = await adm.inregistreazaIncasare(f.ap["1"], 40, "numerar");
+    const cuPlata = await adm.incarca();
+    expect(cuPlata.plati.find((p) => p.id === plataId)).toMatchObject({ stare: "confirmata", motivStornare: null });
+
+    await adm.storneazaIncasare(plataId, "  Suma a fost scrisa gresit  ");
+    const dupa = await adm.incarca();
+    const p = dupa.plati.find((x) => x.id === plataId);
+    expect(p).toMatchObject({ stare: "rambursata", motivStornare: "Suma a fost scrisa gresit" });
+    expect(p.chitanta.numar).toBeGreaterThan(0);
+    expect(dupa.situatieBloc.restanteTotal).toBeCloseTo(inainte, 2);
+
+    await expect(adm.storneazaIncasare(plataId, "Inca o data"))
+      .rejects.toThrow("Incasarea a fost deja stornata.");
+    await expect(adm.storneazaIncasare(plataId, "   "))
+      .rejects.toThrow("Scrie de ce stornezi incasarea.");
+  });
+
+  it("[T1] storneazaIncasare(): locatarul nu storneaza incasari", async () => {
+    const { plataId } = await adm.inregistreazaIncasare(f.ap["1"], 25, "numerar");
+    const { s: alLocatarului } = await intraCa(f.conturi.loc.telefon);
+    await expect(alLocatarului.storneazaIncasare(plataId, "Vreau banii inapoi"))
+      .rejects.toThrow("Doar administratorul blocului storneaza incasari.");
+  });
+
   it("trimiteInstiintare(): notificarea de restanta ajunge la locatarul apartamentului", async () => {
     expect(await adm.trimiteInstiintare(f.ap["1"])).toEqual({ destinatari: 1 });
     const n = await ok(db("comunicare").from("notificari").select("*").eq("profil_id", f.conturi.loc.id).eq("tip", "restanta"));

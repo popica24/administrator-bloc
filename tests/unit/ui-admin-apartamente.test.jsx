@@ -272,6 +272,78 @@ describe("FisaApartament, incasare cash", () => {
     expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.any(String), "2026-09-11");
   });
 
+  /* [T1] Greseala de casierie se repara din aceeasi fisa: incasarile scrise
+     luna aceasta se pot storna, cu motiv scris. */
+  describe("[T1] stornarea unei incasari", () => {
+    it("incasarea din luna curenta se storneaza, cu motiv", async () => {
+      const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+      const spion = vi.spyOn(sursa, "storneazaIncasare");
+      const ap = await apDupaNumar(sursa, "3");
+      await deschideFisa("3");
+      await apasa("Inregistreaza incasare cash");
+      await act(async () => { scrie("Suma primita", "100"); });
+      await apasa("Emite chitanta");
+
+      const f = inDialog("Apartament 3");
+      await apasa(f.getByRole("button", { name: "Storneaza incasarea" }));
+      /* fara motiv nu se poate storna */
+      expect(dezactivat(buton("Storneaza"))).toBe(true);
+      await act(async () => { scrie("De ce o anulezi", "Suma a fost scrisa gresit"); });
+      await apasa("Storneaza");
+      expect(spion).toHaveBeenCalledWith(expect.any(String), "Suma a fost scrisa gresit");
+      expect(toast().textContent).toBe("Incasarea a fost anulata");
+      void ap;
+    });
+
+    it("stornarea refuzata de server lasa formularul deschis, cu motivul scris", async () => {
+      const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+      vi.spyOn(sursa, "storneazaIncasare")
+        .mockRejectedValue(new Error("Se storneaza doar incasarile inregistrate in luna aceasta."));
+      await deschideFisa("3");
+      await apasa("Inregistreaza incasare cash");
+      await act(async () => { scrie("Suma primita", "100"); });
+      await apasa("Emite chitanta");
+      const f = inDialog("Apartament 3");
+      await apasa(f.getByRole("button", { name: "Storneaza incasarea" }));
+      await act(async () => { scrie("De ce o anulezi", "Suma gresita"); });
+      await apasa("Storneaza");
+      expect(toast().textContent).toBe("Se storneaza doar incasarile inregistrate in luna aceasta.");
+      expect(screen.getByLabelText("De ce o anulezi").value).toBe("Suma gresita");
+    });
+
+    it("renunta inchide formularul fara sa stornezi nimic", async () => {
+      const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
+      const spion = vi.spyOn(sursa, "storneazaIncasare");
+      await deschideFisa("3");
+      await apasa("Inregistreaza incasare cash");
+      await act(async () => { scrie("Suma primita", "100"); });
+      await apasa("Emite chitanta");
+      const f = inDialog("Apartament 3");
+      await apasa(f.getByRole("button", { name: "Storneaza incasarea" }));
+      await apasa("Renunta");
+      expect(screen.queryByLabelText("De ce o anulezi")).toBeNull();
+      expect(spion).not.toHaveBeenCalled();
+    });
+
+    it("incasarile din lunile trecute nu au buton de stornare", async () => {
+      await pornesteAdmin({
+        tab: "Apartamente",
+        modifica: (d) => {
+          const ap = d.apartamente.find((a) => a.numar === "3");
+          d.plati.push({
+            id: "pla-veche-t1", apartamentId: ap.id, suma: 100, metoda: "numerar", stare: "confirmata",
+            confirmataLa: "2026-07-10T10:00:00+03:00", creatLa: "2026-07-10T10:00:00+03:00",
+            inregistrataDe: "Mihai Dobre", motivStornare: null, stornataLa: null,
+            chitanta: { serie: "AP118", numar: 999, emisaLa: "2026-07-10T10:00:00+03:00", randuri: [], emisPentru: {} },
+            alocari: [],
+          });
+        },
+      });
+      await deschideFisa("3");
+      expect(butoane("Storneaza incasarea").length).toBe(0);
+    });
+  });
+
   it("renunta inchide formularul fara incasare", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");

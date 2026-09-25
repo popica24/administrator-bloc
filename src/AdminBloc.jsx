@@ -608,6 +608,12 @@ function descriereAlocari(date, plata) {
 
 const numarChitanta = (ch) => `${ch.serie} nr. ${String(ch.numar).padStart(6, "0")}`;
 
+/* [T1] Incasarea stornata: ramane in registru si in istoric, dar nu se mai
+   socoteste nicaieri. */
+const esteStornata = (plata) => plata.stare === "rambursata";
+/* Se storneaza doar ce a fost scris in luna curenta, dupa ziua scrierii. */
+const lunaScrierii = (plata) => (plata.creatLa || "").slice(0, 7);
+
 /* Chitanta ca PDF, pentru "isi descarca chitanta" */
 function chitantaPdf(date, plata) {
   const a = date.asociatie;
@@ -638,6 +644,11 @@ function chitantaPdf(date, plata) {
       { tip: "text", text: `Modalitate: ${plata.metoda === "numerar" ? `numerar${plata.inregistrataDe ? `, incasat de ${plata.inregistrataDe}` : ""}` : `transfer bancar${plata.inregistrataDe ? `, confirmat de ${plata.inregistrataDe}` : ""}`}`, marime: 10 },
       { tip: "spatiu", h: 30 },
       { tip: "linie" },
+      /* [T1] O chitanta stornata ramane in carnet, dar se vede de pe ea ca nu
+         mai e buna de nimic. */
+      ...(esteStornata(plata)
+        ? [{ tip: "text", text: `ANULATA pe ${dataLunga(plata.stornataLa)}: ${plata.motivStornare}`, marime: 11, bold: true }]
+        : []),
       { tip: "text", text: "Document emis electronic prin AdminBloc. Nu necesita semnatura si stampila.", gri: true, marime: 8 },
     ],
   });
@@ -1946,7 +1957,9 @@ function LocatarPlata({ parametri }) {
   const { cheltuieli, fonduri, datorii } = def.trepte;
   const istoric = istoricLunar(date, ap.id);
   const fraza = frazaComparatie(istoric);
-  const plati = date.plati.filter((p) => p.apartamentId === ap.id && p.stare === "confirmata").sort(dupaConfirmare);
+  /* [T1] si incasarile stornate: omul are chitanta in mana, deci plata ramane
+     in istoric, marcata anulata, cu motivul ei. */
+  const plati = date.plati.filter((p) => p.apartamentId === ap.id).sort(dupaConfirmare);
 
   return (
     <Box gap={S.lg}>
@@ -2117,12 +2130,22 @@ function LocatarPlata({ parametri }) {
             <Card key={p.id} pad={S.md} gap={S.sm}>
               <Box row style={{ alignItems: "flex-start", gap: S.md }}>
                 <Box flex={1} gap={2}>
-                  <Txt size={13.5} weight={600}>{descriereAlocari(date, p).join(", ")}</Txt>
+                  <Txt size={13.5} weight={600} color={esteStornata(p) ? C.muted : C.ink}>{descriereAlocari(date, p).join(", ")}</Txt>
                   <Txt size={11.5} color={C.muted}>{dataLunga(p.confirmataLa)}, {p.metoda === "numerar" ? "numerar" : "transfer"}</Txt>
                   {p.chitanta && <Txt size={11.5} color={C.muted}>Chitanta {numarChitanta(p.chitanta)}</Txt>}
                 </Box>
-                <Lei value={p.suma} size={14} />
+                <Box gap={4} style={{ alignItems: "flex-end" }}>
+                  <Lei value={p.suma} size={14} color={esteStornata(p) ? C.muted : C.ink} />
+                  {esteStornata(p) && <Badge label="Anulata" tone="danger" />}
+                </Box>
               </Box>
+              {/* [T1] plata nu se mai scade din ce are de platit: omul trebuie
+                  sa afle de ce, langa chitanta pe care o are in mana. */}
+              {esteStornata(p) && (
+                <Txt size={12} color={C.danger}>
+                  Anulata de administrator: {p.motivStornare}. Suma a intrat la loc in ce ai de plata.
+                </Txt>
+              )}
               {p.chitanta && <Btn label="Descarca chitanta" variant="secondary" size="sm" onPress={() => descarcaPdf(chitantaPdf(date, p), `chitanta-${p.chitanta.numar}.pdf`)} />}
             </Card>
           ))}
@@ -3122,7 +3145,7 @@ function ListaApartamente({ filtruInitial }) {
 /* Fisa apartamentului: tot ce stie asociatia despre el, cu actiunile lui */
 function FisaApartament({ apId, onClose }) {
   const {
-    date, inregistreazaIncasare, trimiteInstiintare, schimbaPersoane, adaugaLocatar, parolaNoua, inchideAcces,
+    date, inregistreazaIncasare, storneazaIncasare, trimiteInstiintare, schimbaPersoane, adaugaLocatar, parolaNoua, inchideAcces,
     schimbaFisaApartament, schimbaCoteleBlocului, toastMsg,
   } = useApp();
   const verifica = doarVerifica(date);
@@ -3134,6 +3157,9 @@ function FisaApartament({ apId, onClose }) {
   /* [B5] Ziua in care au intrat banii: pentru un transfer, ea poate fi mai
      veche decat ziua in care administratorul vede extrasul si confirma. */
   const [dataIncasarii, setDataIncasarii] = useState("");
+  /* [T1] Incasarea scrisa gresit, cu motivul pe care il vede si locatarul */
+  const [deStornat, setDeStornat] = useState(null);
+  const [motivStornare, setMotivStornare] = useState("");
   const [persoane, setPersoane] = useState("");
   const [dinLuna, setDinLuna] = useState("");
   const [motiv, setMotiv] = useState("");
@@ -3163,7 +3189,7 @@ function FisaApartament({ apId, onClose }) {
 
   const ap = apId ? apartamentDupaId(date, apId) : null;
   const inchide = () => {
-    setActiune(null); setPlataNoua(null); setContNou(null); setNumeNou(""); setTelefonNou(""); setSumaIncasata(""); setMetodaIncasare("numerar"); setDataIncasarii(""); setPersoane(""); setMotiv(""); setEroare(null);
+    setActiune(null); setPlataNoua(null); setContNou(null); setNumeNou(""); setTelefonNou(""); setSumaIncasata(""); setMetodaIncasare("numerar"); setDataIncasarii(""); setDeStornat(null); setMotivStornare(""); setPersoane(""); setMotiv(""); setEroare(null);
     setProprietarEd(""); setEtajEd(""); setMpEd(""); setCotaEd(""); setScutitLiftEd(false); setCoteBloc({});
     onClose();
   };
@@ -3172,6 +3198,10 @@ function FisaApartament({ apId, onClose }) {
   const lista = listaCurenta(date);
   const s = sold(date, ap.id);
   const deschise = datoriiDeschise(date, ap.id);
+  /* [T1] Incasarile scrise luna aceasta: numai ele se mai pot storna */
+  const incasariDeLuna = date.plati
+    .filter((p) => p.apartamentId === ap.id && lunaScrierii(p) === date.azi.slice(0, 7))
+    .sort(dupaConfirmare);
   const linii = lista ? liniiLista(date, lista.id, ap.id) : [];
   const apOrdine = date.apartamente.slice().sort(ordineNumar);
   const totalCote = round2(apOrdine.reduce((sm, a) => sm + (numarDin(coteBloc[a.id]) || 0), 0));
@@ -3244,7 +3274,7 @@ function FisaApartament({ apId, onClose }) {
              aplicatie, nici in registrul financiar): cel mai onest lucru pe
              care il poate face ecranul e sa spuna asta inainte de emitere,
              nu sa lase administratorul sa creada ca poate reveni. */}
-          <Field label="Suma primita" value={sumaIncasata} onChange={setSumaIncasata} placeholder={lei(Math.max(0, s), false)} suffix="lei" inputMode="decimal" hint="Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat si nu poate fi anulata din aplicatie; verifica suma inainte de a continua." />
+          <Field label="Suma primita" value={sumaIncasata} onChange={setSumaIncasata} placeholder={lei(Math.max(0, s), false)} suffix="lei" inputMode="decimal" hint="Banii se aloca automat pe cea mai veche datorie. Chitanta se emite imediat; daca ai gresit, o poti anula din aceasta fisa cat timp suntem in aceeasi luna." />
           {/* [B5] Extrasul se verifica peste cateva zile, dar banii au intrat
               atunci: data lor merge pe chitanta si in registru. */}
           {metodaIncasare === "transfer" && (
@@ -3277,6 +3307,30 @@ function FisaApartament({ apId, onClose }) {
               } else setEroare(r.mesaj);
             }} />
             <Btn label="Renunta" variant="secondary" onPress={() => setActiune(null)} />
+          </Box>
+        </Card>
+      ) : actiune === "stornare" ? (
+        <Card gap={S.md}>
+          <Txt size={14} weight={700}>Anuleaza incasarea</Txt>
+          <Txt size={12.5} color={C.inkSoft}>
+            Suma intra la loc in ce are de platit apartamentul, iar chitanta ramane cu numarul ei, marcata anulata.
+            Locatarul primeste instiintare cu motivul scris de tine.
+          </Txt>
+          <Field
+            label="De ce o anulezi"
+            value={motivStornare}
+            onChange={setMotivStornare}
+            placeholder="Suma a fost scrisa gresit"
+            hint="Il vede si locatarul, langa plata anulata."
+          />
+          <Eroare mesaj={eroare} />
+          <Box row gap={S.sm}>
+            <Btn label="Storneaza" disabled={!motivStornare.trim()} onPress={async () => {
+              setEroare(null);
+              const r = await storneazaIncasare(deStornat, motivStornare.trim());
+              if (r.ok) { setActiune(null); setDeStornat(null); setMotivStornare(""); } else setEroare(r.mesaj);
+            }} />
+            <Btn label="Renunta" variant="secondary" onPress={() => { setActiune(null); setDeStornat(null); }} />
           </Box>
         </Card>
       ) : actiune === "persoane" ? (
@@ -3412,6 +3466,35 @@ function FisaApartament({ apId, onClose }) {
         </Card>
       ) : verifica ? null : (
         <Box gap={S.sm}>
+          {/* [T1] Greseala de casierie se repara aici: incasarile scrise luna
+              aceasta se pot anula, cu motiv scris. Cele mai vechi nu: lunile
+              inchise nu se mai clintesc. */}
+          {incasariDeLuna.length > 0 && (
+            <Card pad={0}>
+              <Box style={{ padding: S.md }} gap={2}>
+                <Eyebrow>Incasari scrise luna aceasta</Eyebrow>
+              </Box>
+              {incasariDeLuna.map((p, i) => (
+                <Box key={p.id}>
+                  {i > 0 && <Line />}
+                  <Box style={{ padding: S.md }} gap={S.sm}>
+                    <Box row style={{ justifyContent: "space-between", alignItems: "center", gap: S.sm }}>
+                      <Box gap={2} flex={1}>
+                        <Txt size={13} weight={600}>{lei(p.suma)}, {p.metoda === "numerar" ? "numerar" : "transfer"}</Txt>
+                        <Txt size={11.5} color={C.muted}>
+                          {dataRo(p.confirmataLa)}{p.chitanta ? ` · chitanta ${numarChitanta(p.chitanta)}` : ""}
+                        </Txt>
+                      </Box>
+                      {esteStornata(p)
+                        ? <Badge label="Anulata" tone="danger" />
+                        : <Btn label="Storneaza incasarea" size="sm" variant="secondary" onPress={() => { setDeStornat(p.id); setMotivStornare(""); setEroare(null); setActiune("stornare"); }} />}
+                    </Box>
+                    {esteStornata(p) && <Txt size={12} color={C.muted}>{p.motivStornare}</Txt>}
+                  </Box>
+                </Box>
+              ))}
+            </Card>
+          )}
           <Btn label="Inregistreaza incasare cash" full onPress={() => { setSumaIncasata(s > 0 ? lei(s, false) : ""); setActiune("incasare"); }} />
           <Btn label="Trimite instiintare de plata" variant="secondary" full disabled={restanta(date, ap.id) <= 0} onPress={async () => {
             const r = await trimiteInstiintare(ap.id);
@@ -4915,6 +4998,7 @@ export default function AdminBloc() {
       publicaLista: cmd((id) => sursa.publicaLista(id), "Lista a fost publicata. Locatarii o vad acum."),
       marcheazaFacturaPlatita: cmd((id, p) => sursa.marcheazaFacturaPlatita(id, p), (r, id, p) => (p ? "Factura marcata ca platita furnizorului" : "Plata catre furnizor a fost anulata")),
       inregistreazaIncasare: cmd((ap, s, m, cheie, data) => sursa.inregistreazaIncasare(ap, s, m, cheie, data), "Incasare inregistrata, chitanta emisa"),
+      storneazaIncasare: cmd((id, motiv) => sursa.storneazaIncasare(id, motiv), "Incasarea a fost anulata"),
       trimiteInstiintare: cmd((ap) => sursa.trimiteInstiintare(ap)),
       schimbaPersoane: cmd((ap, n, l, m) => sursa.schimbaPersoane(ap, n, l, m), (r, ap, n, l) => `Din ${monthLabel(l)} se calculeaza ${n} persoane`),
       adaugaLocatar: cmd((ap, x) => sursa.adaugaLocatar(ap, x), "Contul a fost creat"),
