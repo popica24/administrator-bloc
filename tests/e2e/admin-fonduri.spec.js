@@ -99,10 +99,10 @@ test.describe("Fonduri: ce se vede", () => {
 
   test("KPI-ul Fond de reparatii de pe Sumar duce direct in tabul Fonduri", async ({ page }) => {
     await intraCa(page, "admin");
-    await page.getByRole("button", { name: /^Fond de reparatii/ }).first().click();
+    await page.getByRole("button", { name: /^Fond de reparații/ }).first().click();
     await expect(page.getByRole("tab", { name: /^Apartamente/ })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("button", { name: "Fonduri", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(buton(page, "Inregistreaza o iesire").first()).toBeVisible();
+    await expect(buton(page, "Înregistrează o ieșire").first()).toBeVisible();
   });
 });
 
@@ -113,15 +113,15 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
     const descriere = `${MARCAJ} schimbat teava ${Date.now()}`;
 
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
-    const panou = page.getByRole("dialog", { name: "Iesire din fond" });
-    await expect(panou.getByText("Scrie suma ca numar pozitiv; ea se scade din fond.")).toBeVisible();
+    await buton(page, "Înregistrează o ieșire").first().click();
+    const panou = page.getByRole("dialog", { name: "Ieșire din fond" });
+    await expect(panou.getByText("Scrie suma ca număr pozitiv; ea se scade din fond.")).toBeVisible();
 
-    await page.getByLabel("Suma iesita").fill("430,50");
+    await page.getByLabel("Suma ieșită").fill("430,50");
     await page.getByLabel("Pentru ce").fill(descriere);
     await page.setInputFiles("input[type=file]", fisierPoza("factura-teava.jpg"));
-    await buton(page, "Inregistreaza iesirea").click();
-    await asteaptaToast(page, "Iesirea din fond a fost inregistrata");
+    await buton(page, "Înregistrează ieșirea").click();
+    await asteaptaToast(page, "Ieșirea din fond a fost înregistrată");
 
     const ale = (await miscari(reparatii.id)).filter((m) => m.descriere === descriere);
     expect(ale).toHaveLength(1);
@@ -137,14 +137,14 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
 
   test("fara document salvarea ramane blocata", async ({ page }) => {
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
-    await page.getByLabel("Suma iesita").fill("100");
-    await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
-    await page.getByLabel("Pentru ce").fill(`${MARCAJ} fara document`);
-    await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await expect(buton(page, "Înregistrează ieșirea")).toBeDisabled();
+    await page.getByLabel("Suma ieșită").fill("100");
+    await expect(buton(page, "Înregistrează ieșirea")).toBeDisabled();
+    await page.getByLabel("Pentru ce").fill(`${MARCAJ} fără document`);
+    await expect(buton(page, "Înregistrează ieșirea")).toBeDisabled();
     await page.setInputFiles("input[type=file]", fisierPoza("document.jpg"));
-    await expect(buton(page, "Inregistreaza iesirea")).not.toBeDisabled();
+    await expect(buton(page, "Înregistrează ieșirea")).not.toBeDisabled();
   });
 
   test("o iesire mai mare decat soldul este refuzata, pe romaneste", async ({ page }) => {
@@ -153,16 +153,16 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
     const descriere = `${MARCAJ} peste sold ${Date.now()}`;
 
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await page.getByLabel("Suma iesita").fill(String(Math.ceil(inainte) + 1000));
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await page.getByLabel("Suma ieșită").fill(String(Math.ceil(inainte) + 1000));
     await page.getByLabel("Pentru ce").fill(descriere);
     await page.setInputFiles("input[type=file]", fisierPoza("prea-mult.jpg"));
-    await buton(page, "Inregistreaza iesirea").click();
+    await buton(page, "Înregistrează ieșirea").click();
 
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
     const mesaj = await page.locator(".ab-toast").innerText();
     expect(mesaj).toMatch(/fond|sold/i);
-    for (const cuvant of CUVINTE_TEHNICE) expect(mesaj, `mesajul contine "${cuvant}"`).not.toContain(cuvant);
+    for (const cuvant of CUVINTE_TEHNICE) expect(mesaj, `mesajul conține "${cuvant}"`).not.toContain(cuvant);
 
     expect(await sold(reparatii.id)).toBe(inainte);
   });
@@ -180,20 +180,20 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
     const descriere = `${MARCAJ} orfan ${Date.now()}`;
 
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await page.getByLabel("Suma iesita").fill(String(Math.ceil(inainte) + 1000));
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await page.getByLabel("Suma ieșită").fill(String(Math.ceil(inainte) + 1000));
     await page.getByLabel("Pentru ce").fill(descriere);
     await page.setInputFiles("input[type=file]", fisierPoza("prea-mult.jpg"));
-    await buton(page, "Inregistreaza iesirea").click();
+    await buton(page, "Înregistrează ieșirea").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
 
     const { data: docuri } = await serviciu().schema("comunicare").from("documente")
       .select("id, vizibil_locatarilor").eq("titlu", descriere);
-    expect(docuri, "documentul unei iesiri refuzate ramane in baza").toHaveLength(0);
+    expect(docuri, "documentul unei iesiri refuzate rămâne în baza").toHaveLength(0);
 
     /* panoul ramane deschis, cu motivul refuzului; se inchide inainte de iesire */
-    await page.getByRole("button", { name: "Inchide" }).click();
-    await buton(page, "Iesi").click();
+    await page.getByRole("button", { name: "Închide" }).click();
+    await buton(page, "Ieși").click();
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");
     await page.getByRole("button", { name: "Acte", exact: true }).click();
@@ -202,16 +202,16 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
 
   test("suma zero si data din viitor sunt oprite inainte de server", async ({ page }) => {
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await page.getByLabel("Suma iesita").fill("0");
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await page.getByLabel("Suma ieșită").fill("0");
     await page.getByLabel("Pentru ce").fill(`${MARCAJ} zero`);
     await page.setInputFiles("input[type=file]", fisierPoza("zero.jpg"));
-    await expect(buton(page, "Inregistreaza iesirea")).toBeDisabled();
+    await expect(buton(page, "Înregistrează ieșirea")).toBeDisabled();
 
-    await page.getByLabel("Suma iesita").fill("50");
+    await page.getByLabel("Suma ieșită").fill("50");
     const maine = ziRo(1);
     await page.getByLabel("Data").fill(maine);
-    await buton(page, "Inregistreaza iesirea").click();
+    await buton(page, "Înregistrează ieșirea").click();
     await asteaptaToast(page, "Data iesirii din fond nu poate fi in viitor");
     const { data: docuri } = await serviciu().schema("comunicare").from("documente")
       .select("id").like("titlu", `${MARCAJ}%`);
@@ -220,25 +220,25 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
 
   test("panoul pornit nu se inchide la atingerea fundalului", async ({ page }) => {
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
+    await buton(page, "Înregistrează o ieșire").first().click();
     await page.getByLabel("Pentru ce").fill(`${MARCAJ} text scris`);
     const cutie = await page.locator(".ab-shell").boundingBox();
     await page.mouse.click(cutie.x + cutie.width / 2, cutie.y + 20);
-    await expect(page.getByRole("dialog", { name: "Iesire din fond" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Ieșire din fond" })).toBeVisible();
     await expect(page.getByLabel("Pentru ce")).toHaveValue(`${MARCAJ} text scris`);
   });
 
   test("iesirea inregistrata de administrator se vede si la locatar, cu documentul ei", async ({ page }) => {
     const descriere = `${MARCAJ} vazut de locatar ${Date.now()}`;
     await deschideFonduri(page);
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await page.getByLabel("Suma iesita").fill("120");
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await page.getByLabel("Suma ieșită").fill("120");
     await page.getByLabel("Pentru ce").fill(descriere);
     await page.setInputFiles("input[type=file]", fisierPoza("chitanta.jpg"));
-    await buton(page, "Inregistreaza iesirea").click();
-    await asteaptaToast(page, "Iesirea din fond a fost inregistrata");
+    await buton(page, "Înregistrează ieșirea").click();
+    await asteaptaToast(page, "Ieșirea din fond a fost înregistrată");
 
-    await buton(page, "Iesi").click();
+    await buton(page, "Ieși").click();
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");
     await page.getByRole("button", { name: "Fonduri", exact: true }).click();
@@ -253,8 +253,8 @@ test.describe("Fonduri: cine ajunge la ele", () => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");
     await page.getByRole("button", { name: "Fonduri", exact: true }).click();
-    await expect(page.getByText("Fond de reparatii").first()).toBeVisible();
+    await expect(page.getByText("Fond de reparații").first()).toBeVisible();
     const text = await textEcran(page);
-    expect(text).not.toContain("Inregistreaza o iesire");
+    expect(text).not.toContain("Înregistrează o ieșire");
   });
 });

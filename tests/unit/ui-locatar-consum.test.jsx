@@ -11,7 +11,7 @@ import {
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 
 const RECE = "Apa rece, index anterior 244,5";
-const CALDA = "Apa calda, index anterior 133,7";
+const CALDA = "Apa caldă, index anterior 133,7";
 const ecran = () => textEcran();
 /* Indiciul sau eroarea campului, luate din legatura aria-describedby */
 const campul = (eticheta) => ({ textContent: ajutorulCampului(eticheta) });
@@ -36,11 +36,11 @@ const citireSept = (d, tip, extra) => {
 describe("[R5] Contoare: apartament fara niciun contor", () => {
   it("arata plain ca apartamentul nu are contoare, nu formularul gol", async () => {
     await laContoare({ email: ELENA, modifica: (d) => { d.contoare = d.contoare.filter((c) => c.apartamentId !== d.eu.apartamentId); } });
-    expect(screen.getByText("Apartamentul tau nu are niciun contor de apa")).toBeTruthy();
+    expect(screen.getByText("Apartamentul tău nu are niciun contor de apă")).toBeTruthy();
     expect(screen.queryByText("Citirea pentru septembrie")).toBeNull();
     expect(screen.queryByRole("button", { name: "Trimite indexul" })).toBeNull();
     expect(screen.queryByText(/Termen/)).toBeNull();
-    expect(screen.queryByText("Fotografiaza contoarele")).toBeNull();
+    expect(screen.queryByText("Fotografiază contoarele")).toBeNull();
   });
 });
 
@@ -53,27 +53,27 @@ describe("Contoare: formularul de citire", () => {
     expect(text(campul(CALDA))).toContain("Contor C-D14-17, baie");
     expect(screen.getByLabelText(RECE).getAttribute("placeholder")).toBe("244,5");
     expect(screen.getByRole("button", { name: "Trimite indexul" }).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.queryByText("Mai adauga poza contoarelor, apoi poti trimite.")).toBeNull();
+    expect(screen.queryByText("Mai adaugă poza contoarelor, apoi poți trimite.")).toBeNull();
   });
 
   it("valideaza indexul: mai mic decat anteriorul, consum foarte mare, consum normal", async () => {
     await laContoare({ email: ELENA });
     scrie(RECE, "200");
-    expect(text(campul(RECE))).toContain("Indexul nou nu poate fi mai mic decat cel anterior. Verifica cifrele.");
+    expect(text(campul(RECE))).toContain("Indexul nou nu poate fi mai mic decât cel anterior. Verifică cifrele.");
     scrie(RECE, "320");
-    expect(text(campul(RECE))).toContain("Consumul pare foarte mare. Verifica inca o data cifrele.");
+    expect(text(campul(RECE))).toContain("Consumul pare foarte mare. Verifică încă o dată cifrele.");
     scrie(RECE, "250");
     expect(text(campul(RECE))).toContain("Consum calculat: 5,50 mc");
     scrie(CALDA, "140,2");
     expect(text(campul(CALDA))).toContain("Consum calculat: 6,48 mc");
     /* fara poza nu se poate trimite */
-    expect(screen.getByText("Mai adauga poza contoarelor, apoi poti trimite.")).toBeTruthy();
+    expect(screen.getByText("Mai adaugă poza contoarelor, apoi poți trimite.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Trimite indexul" }).getAttribute("aria-disabled")).toBe("true");
   });
 
   it("un text care nu e numar nu permite trimiterea", async () => {
     await laContoare({ email: ELENA });
-    await alegeFisier("Fotografiaza contoarele");
+    await alegeFisier("Fotografiază contoarele");
     scrie(RECE, "abc");
     scrie(CALDA, "140");
     expect(screen.getByRole("button", { name: "Trimite indexul" }).getAttribute("aria-disabled")).toBe("true");
@@ -91,10 +91,10 @@ describe("Contoare: formularul de citire", () => {
     const d = await sursa.incarca();
     scrie(RECE, "250");
     scrie(CALDA, "140");
-    await alegeFisier("Fotografiaza contoarele", fisierPoza("prima.jpg"));
+    await alegeFisier("Fotografiază contoarele", fisierPoza("prima.jpg"));
     expect(screen.getByAltText("Poza contoarelor").getAttribute("src")).toMatch(/^blob:test-/);
-    await alegeFisier("Alta poza", fisierPoza("a-doua.jpg"));
-    expect(screen.queryByText("Mai adauga poza contoarelor, apoi poti trimite.")).toBeNull();
+    await alegeFisier("Altă poză", fisierPoza("a-doua.jpg"));
+    expect(screen.queryByText("Mai adaugă poza contoarelor, apoi poți trimite.")).toBeNull();
     await apasaButon("Trimite indexul");
     const rece = d.contoare.find((c) => c.tip === "rece");
     const calda = d.contoare.find((c) => c.tip === "calda");
@@ -107,35 +107,35 @@ describe("Contoare: formularul de citire", () => {
     expect(screen.getByText("Trimis")).toBeTruthy();
     expect(screen.getByText("Indexul pe septembrie a ajuns la administrator")).toBeTruthy();
     expect(ecran()).toContain("Apa rece250,0, consum 5,50 mc");
-    expect(ecran()).toContain("Apa calda140,0, consum 6,28 mc");
-    expect(ecran()).toContain("Il poti corecta pana pe 25 septembrie 2026. Dupa validare intra in lista de plata pe septembrie.");
+    expect(ecran()).toContain("Apa caldă140,0, consum 6,28 mc");
+    expect(ecran()).toContain("Îl poți corecta până pe 25 septembrie 2026. După validare intră în lista de plată pe septembrie.");
     expect(screen.queryByText("Citirea pentru septembrie")).toBeNull();
 
     /* corectarea: formularul revine gol, cu "Renunta" */
-    await apasaButon("Corecteaza indexul");
+    await apasaButon("Corectează indexul");
     expect(screen.getByText("Citirea pentru septembrie")).toBeTruthy();
     expect(screen.getByLabelText(RECE).value).toBe("");
-    await apasaButon("Renunta la corectare");
+    await apasaButon("Renunță la corectare");
     expect(screen.queryByText("Citirea pentru septembrie")).toBeNull();
 
-    await apasaButon("Corecteaza indexul");
+    await apasaButon("Corectează indexul");
     scrie(RECE, "251");
     scrie(CALDA, "141");
-    await alegeFisier("Fotografiaza contoarele");
+    await alegeFisier("Fotografiază contoarele");
     await apasaButon("Trimite indexul");
     expect(spion).toHaveBeenCalledTimes(2);
     expect(ecran()).toContain("Apa rece251,0, consum 6,50 mc");
-    expect(screen.queryByRole("button", { name: "Renunta la corectare" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Renunță la corectare" })).toBeNull();
   });
 
   it("o trimitere refuzata pastreaza cifrele si poza", async () => {
     const { sursa } = await laContoare({ email: ELENA });
-    vi.spyOn(sursa, "transmiteCitire").mockRejectedValue(new Error("Doar luna curenta"));
+    vi.spyOn(sursa, "transmiteCitire").mockRejectedValue(new Error("Doar luna curentă"));
     scrie(RECE, "250");
     scrie(CALDA, "140");
-    await alegeFisier("Fotografiaza contoarele");
+    await alegeFisier("Fotografiază contoarele");
     await apasaButon("Trimite indexul");
-    expect(screen.getByRole("status").textContent).toBe("Doar luna curenta");
+    expect(screen.getByRole("status").textContent).toBe("Doar luna curentă");
     expect(screen.getByLabelText(RECE).value).toBe("250");
     expect(screen.getByAltText("Poza contoarelor")).toBeTruthy();
   });
@@ -146,7 +146,7 @@ describe("Contoare: formularul de citire", () => {
     vi.spyOn(sursa, "transmiteCitire").mockImplementation(() => a.promisiune);
     scrie(RECE, "250");
     scrie(CALDA, "140");
-    await alegeFisier("Fotografiaza contoarele");
+    await alegeFisier("Fotografiază contoarele");
     await apasaButon("Trimite indexul");
     expect(screen.getByRole("button", { name: "Se trimite..." }).getAttribute("aria-disabled")).toBe("true");
     await act(async () => { a.rezolva(); });
@@ -155,7 +155,7 @@ describe("Contoare: formularul de citire", () => {
 
   it("dupa termen formularul spune Termen depasit", async () => {
     await laContoare({ email: ELENA, zi: new Date("2026-09-26T09:00:00") });
-    expect(screen.getByText("Termen depasit")).toBeTruthy();
+    expect(screen.getByText("Termen depășit")).toBeTruthy();
   });
 
   it("contoarele apar mereu cu apa rece prima, iar un contor fara amplasare arata doar seria", async () => {
@@ -185,7 +185,7 @@ describe("Contoare: starile citirii pe luna curenta", () => {
     const card = zonaCu(["Indexul pe septembrie a fost verificat de administrator", "Validat"]);
     expect(within(card).getByText("Validat")).toBeTruthy();
     expect(text(card)).toContain("Apa rece192,6, consum 8,72 mc");
-    expect(screen.queryByRole("button", { name: "Corecteaza indexul" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Corectează indexul" })).toBeNull();
     expect(screen.queryByText("Citirea pentru septembrie")).toBeNull();
   });
 
@@ -196,7 +196,7 @@ describe("Contoare: starile citirii pe luna curenta", () => {
       modifica: (d) => { d.citiri.push(citireSept(d, "rece", { stare: "trimisa" }), citireSept(d, "calda", { stare: "trimisa" })); },
     });
     expect(screen.getByText("Indexul pe septembrie a ajuns la administrator")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Corecteaza indexul" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Corectează indexul" })).toBeNull();
   });
 
   it("citirea respinsa: formularul arata motivul administratorului", async () => {
@@ -206,7 +206,7 @@ describe("Contoare: starile citirii pe luna curenta", () => {
         d.citiri.push(citireSept(d, "rece", { stare: "respinsa", motivRespingere: "Poza este neclara, nu se vad cifrele negre." }), citireSept(d, "calda", { stare: "trimisa" }));
       },
     });
-    const card = zonaCu(["Citirea trimisa a fost respinsa", "Poza este neclara"]);
+    const card = zonaCu(["Citirea trimisă a fost respinsă", "Poza este neclara"]);
     expect(text(card)).toContain("Poza este neclara, nu se vad cifrele negre.");
     expect(screen.getByText("Citirea pentru septembrie")).toBeTruthy();
     expect(screen.queryByText("Trimis")).toBeNull();
@@ -222,7 +222,7 @@ describe("Contoare: starile citirii pe luna curenta", () => {
         );
       },
     });
-    expect(text(zonaCu(["Citirea trimisa a fost respinsa", "Motivul"]))).toContain("Motivul nou");
+    expect(text(zonaCu(["Citirea trimisă a fost respinsă", "Motivul"]))).toContain("Motivul nou");
   });
 
   it("[A12] o citire de pornire din luna curenta nu blocheaza transmiterea indexului", async () => {
@@ -247,15 +247,15 @@ describe("Contoare: starile citirii pe luna curenta", () => {
     const da = await sursa.incarca();
     const cit = da.citiri.filter((c) => c.apartamentId === d.eu.apartamentId && c.luna === "2026-09");
     await sursa.valideazaCitire(cit.find((c) => c.tip === "rece").id, true);
-    await sursa.valideazaCitire(cit.find((c) => c.tip === "calda").id, false, "Poza neclara");
+    await sursa.valideazaCitire(cit.find((c) => c.tip === "calda").id, false, "Poza neclară");
 
     await laContoare({ email: ELENA, sursa });
-    expect(text(zonaCu(["Citirea trimisa a fost respinsa", "Poza neclara"]))).toContain("Poza neclara");
+    expect(text(zonaCu(["Citirea trimisă a fost respinsă", "Poza neclară"]))).toContain("Poza neclară");
     /* apa rece e deja validata: formularul cere doar apa calda */
     expect(screen.queryByLabelText("Apa rece, index anterior 244,5")).toBeNull();
     const trimite = vi.spyOn(sursa, "transmiteCitire");
     scrie(CALDA, "141");
-    await alegeFisier("Fotografiaza contoarele");
+    await alegeFisier("Fotografiază contoarele");
     await apasaButon("Trimite indexul");
     expect(screen.getByRole("status").textContent).toBe("Indexul a fost trimis administratorului");
     expect(trimite.mock.calls[0][0].indexuri).toEqual([{ contorId: calda.id, index: 141 }]);
@@ -265,14 +265,14 @@ describe("Contoare: starile citirii pe luna curenta", () => {
 describe("Contoare: indexul cu punct zecimal [R1]", () => {
   /* Regula de mii de la sume ("1.500" = 1500 lei) nu are voie sa ajunga la
      indexul contorului: acolo punctul este separator zecimal. */
-  it("192.620 inseamna 192,62 mc, nu 192620", async () => {
+  it("192.620 înseamnă 192,62 mc, nu 192620", async () => {
     const { sursa } = await laContoare({ email: ELENA });
     const trimite = vi.spyOn(sursa, "transmiteCitire");
     scrie(RECE, "250.5");
     expect(text(campul(RECE))).toContain("Consum calculat: 6,00 mc");
     scrie(CALDA, "133.900");
     expect(text(campul(CALDA))).toContain("Consum calculat: 0,18 mc");
-    await alegeFisier("Fotografiaza contoarele");
+    await alegeFisier("Fotografiază contoarele");
     await apasaButon("Trimite indexul");
     expect(trimite.mock.calls[0][0].indexuri).toEqual([
       { contorId: expect.any(String), index: 250.5 },
@@ -294,9 +294,9 @@ describe("Contoare: indexul real dupa o estimare [A2]", () => {
   it("accepta un index sub estimare, dar nu sub ultima citire reala", async () => {
     await laContoare({ email: ELENA, modifica: (d) => { estimareAugust(d); } });
     scrie(RECE_ESTIMAT, "250");
-    expect(text(campul(RECE_ESTIMAT))).toContain("Indexul este sub estimarea din luna trecuta (260,0). Pe luna aceasta nu se calculeaza consum la acest contor.");
+    expect(text(campul(RECE_ESTIMAT))).toContain("Indexul este sub estimarea din luna trecută (260,0). Pe luna aceasta nu se calculează consum la acest contor.");
     scrie(RECE_ESTIMAT, "100");
-    expect(text(campul(RECE_ESTIMAT))).toContain("Indexul nou nu poate fi mai mic decat cel anterior. Verifica cifrele.");
+    expect(text(campul(RECE_ESTIMAT))).toContain("Indexul nou nu poate fi mai mic decât cel anterior. Verifică cifrele.");
   });
 
   it("fara nicio citire reala inainte, orice index pozitiv sub estimare este acceptat", async () => {
@@ -308,7 +308,7 @@ describe("Contoare: indexul real dupa o estimare [A2]", () => {
       },
     });
     scrie(RECE_ESTIMAT, "5");
-    expect(text(campul(RECE_ESTIMAT))).toContain("Indexul este sub estimarea din luna trecuta");
+    expect(text(campul(RECE_ESTIMAT))).toContain("Indexul este sub estimarea din luna trecută");
   });
 });
 
@@ -318,7 +318,7 @@ describe("Contoare: graficul de consum", () => {
     const card = zonaCu(["Cum a evoluat consumul", "aug 26"]);
     expect(text(card)).toContain("aug 2614,68 mc · 4,89 pe pers., bloc 4,79");
     expect(text(card)).toContain("14,7aug 26");
-    await alegeSegment("Apa calda");
+    await alegeSegment("Apa caldă");
     expect(text(card)).toContain("aug 269,02 mc · 3,01 pe pers., bloc 2,70");
   });
 
@@ -356,7 +356,7 @@ describe("Contoare: graficul de consum", () => {
     const card = zonaCu(["Cum a evoluat consumul", "aug 26"]);
     expect(text(card)).toContain("aug 26 (estimat)14,68 mc");
     expect(text(card)).toMatch(/iun 26[\d,]+ mc(?! ·)/);
-    await alegeSegment("Apa calda");
+    await alegeSegment("Apa caldă");
     expect(text(card)).toContain("iul 26-");
   });
 
@@ -380,7 +380,7 @@ describe("Contoare: graficul de consum", () => {
     await laContoare({ email: ELENA, modifica: (d) => { Object.values(d.consumMediu).forEach((m) => { m.calda = null; }); } });
     const card = zonaCu(["Cum a evoluat consumul", "aug 26"]);
     expect(text(card)).toContain("pe pers.");
-    await alegeSegment("Apa calda");
+    await alegeSegment("Apa caldă");
     expect(text(card)).not.toContain("pe pers.");
   });
 
@@ -393,17 +393,17 @@ describe("Contoare: graficul de consum", () => {
       },
     });
     expect(screen.queryByText("Cum a evoluat consumul")).toBeNull();
-    expect(screen.queryByText("De ce plateste blocul mai multa apa decat arata contoarele")).toBeNull();
+    expect(screen.queryByText("De ce plătește blocul mai multă apă decât arată contoarele")).toBeNull();
   });
 });
 
 describe("Contoare: istoricul si diferenta de apa", () => {
   it("istoricul pe luni, cu indexul de pornire si citirile validate", async () => {
     await laContoare({ email: ELENA });
-    const luna = (eticheta) => text(zonaCu([eticheta, "Apa calda"], 3));
+    const luna = (eticheta) => text(zonaCu([eticheta, "Apa caldă"], 3));
     expect(screen.getAllByText(/^(mai|iunie|iulie|august|septembrie) 2026$/)).toHaveLength(4);
-    expect(luna("august 2026")).toContain("august 2026Apa rece229,8 → 244,514,68 mc consumatiValidatApa calda124,7 → 133,79,02 mc consumatiValidat");
-    expect(luna("mai 2026")).toMatch(/^mai 2026Apa rece[\d,]+Index de pornireApa calda[\d,]+Index de pornire$/);
+    expect(luna("august 2026")).toContain("august 2026Apa rece229,8 → 244,514,68 mc consumațiValidatApa caldă124,7 → 133,79,02 mc consumațiValidat");
+    expect(luna("mai 2026")).toMatch(/^mai 2026Apa rece[\d,]+Index de pornireApa caldă[\d,]+Index de pornire$/);
   });
 
   it("istoricul arata Netransmis, Estimat, Respins si Trimis", async () => {
@@ -415,15 +415,15 @@ describe("Contoare: istoricul si diferenta de apa", () => {
         d.citiri.push(citireSept(d, "rece", { stare: "respinsa" }), citireSept(d, "calda", { stare: "trimisa" }));
       },
     });
-    const luna = (eticheta) => text(zonaCu([eticheta, "Apa calda"], 3));
-    expect(luna("septembrie 2026")).toContain("septembrie 2026Apa rece244,5 → 250,05,50 mc consumatiRespinsApa calda133,7 → 140,06,28 mc consumatiTrimis, in verificare");
-    expect(luna("iulie 2026")).toMatch(/^iulie 2026Apa rece.*EstimatApa calda-Netransmis$/);
+    const luna = (eticheta) => text(zonaCu([eticheta, "Apa caldă"], 3));
+    expect(luna("septembrie 2026")).toContain("septembrie 2026Apa rece244,5 → 250,05,50 mc consumațiRespinsApa caldă133,7 → 140,06,28 mc consumațiTrimis, în verificare");
+    expect(luna("iulie 2026")).toMatch(/^iulie 2026Apa rece.*EstimatApa caldă-Netransmis$/);
   });
 
   it("explica diferenta dintre contorul general si suma contoarelor pe ultima luna", async () => {
     await laContoare({ email: ELENA, modifica: (d) => { d.repartizari.reverse(); } });
-    const t = text(zonaCu(["De ce plateste blocul mai multa apa decat arata contoarele", "tie iti revin"]));
-    expect(t).toMatch(/In august contorul general de la subsol a inregistrat 428,0 mc, iar contoarele din apartamente au insumat [\d,]+ mc\. Diferenta de [\d,]+ mc vine din pierderi/);
-    expect(t).toMatch(/tie iti revin [\d,]+ mc\.$/);
+    const t = text(zonaCu(["De ce plătește blocul mai multă apă decât arată contoarele", "ție îți revin"]));
+    expect(t).toMatch(/În august contorul general de la subsol a înregistrat 428,0 mc, iar contoarele din apartamente au însumat [\d,]+ mc\. Diferența de [\d,]+ mc vine din pierderi/);
+    expect(t).toMatch(/ție îți revin [\d,]+ mc\.$/);
   });
 });

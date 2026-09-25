@@ -102,7 +102,12 @@ One Postgres schema per bounded context: `organizare`, `identitate`, `intretiner
 pseudo-selectors, px only; screens use only section-5 primitives; web-only CSS lives in
 `BASE_CSS`. Only `react`, `react-dom` and `@supabase/supabase-js` (which also runs on RN).
 
-**Language:** identifiers, comments, UI strings and SQL are Romanian without diacritics.
+**Language:** everything is Romanian. **UI strings are written with diacritics** (`src/AdminBloc.jsx`,
+`src/ghid.js`, `src/pagina-publica.jsx`); identifiers, comments, test names, demo data
+(`src/date-demo.js`), source-layer messages (`src/sursa-*.js`) and SQL stay without diacritics for
+now, and the PDF transliterates anyway (`src/pdf.js`, WinAnsi). A screen string that is compared
+against a message from the source layer (e.g. `MESAJ_SESIUNE_EXPIRATA`) stays ASCII until those
+messages move too. No em dashes or en dashes in text.
 
 **Users are 50+ and non-technical:** large touch targets, plain wording, one primary action per
 screen, derivations behind the expandable row.

@@ -12,7 +12,7 @@ const randuri = () => butoane(/^Apartament /).map((b) => b.getAttribute("aria-la
 
 /* [K9] Fisa arata "Sold la zi" din resturi; un avans (bani platiti si inca
    nealocati pe nicio datorie) nu aparea nicaieri. */
-describe("[K9] fisa apartamentului, avansul", () => {
+describe("[K9] fișa apartamentului, avansul", () => {
   it("arata avansul nealocat, cand exista", async () => {
     await pornesteAdmin({
       tab: "Apartamente",
@@ -26,7 +26,7 @@ describe("[K9] fisa apartamentului, avansul", () => {
     });
     await deschideFisa("1");
     const f = inDialog("Apartament 1");
-    expect(f.getByText("Avans nealocat: 250,00 lei. Se scade din urmatoarea lista.")).toBeTruthy();
+    expect(f.getByText("Avans nealocat: 250,00 lei. Se scade din următoarea listă.")).toBeTruthy();
   });
 });
 
@@ -43,18 +43,18 @@ describe("[B4] restanta apartamentului, aceeasi cifra peste tot", () => {
         const ap = d.apartamente.find((a) => a.numar === "1");
         d.datorii.push({
           id: "dat-b4-plus", apartamentId: ap.id, tip: "corectie", luna: "2026-08", listaId: null,
-          suma: 400, rest: 400, scadenta: "2026-09-01", descriere: "Corectie in plus", documentId: null,
+          suma: 400, rest: 400, scadenta: "2026-09-01", descriere: "Corecție în plus", documentId: null,
           creatLa: "2026-09-01T10:00:00Z",
         });
         d.datorii.push({
           id: "dat-b4-minus", apartamentId: ap.id, tip: "corectie", luna: "2026-08", listaId: null,
-          suma: -400, rest: -400, scadenta: "2026-09-01", descriere: "Corectie in minus", documentId: null,
+          suma: -400, rest: -400, scadenta: "2026-09-01", descriere: "Corecție în minus", documentId: null,
           creatLa: "2026-09-02T10:00:00Z",
         });
       },
     });
     const ap1 = within(buton("Apartament 1"));
-    expect(ap1.queryByText(/^Restanta /)).toBeNull();
+    expect(ap1.queryByText(/^Restanță /)).toBeNull();
   });
 });
 
@@ -64,13 +64,13 @@ describe("ListaApartamente", () => {
     expect(screen.getByText("20 apartamente, 49 persoane declarate")).toBeTruthy();
     expect(randuri()).toEqual(Array.from({ length: 20 }, (_, i) => String(i + 1)));
     const ap1 = within(buton("Apartament 1"));
-    expect(ap1.getByText("Etaj parter · 2 pers. · cota 4,01%")).toBeTruthy();
+    expect(ap1.getByText("Etaj parter · 2 pers. · cotă 4,01%")).toBeTruthy();
     expect(ap1.getByText("Achitat")).toBeTruthy();
     const ap17 = within(buton("Apartament 17"));
-    expect(ap17.getByText("Etaj 4 · 3 pers. · cota 4,63%")).toBeTruthy();
-    expect(ap17.getByText("In termen")).toBeTruthy();
+    expect(ap17.getByText("Etaj 4 · 3 pers. · cotă 4,63%")).toBeTruthy();
+    expect(ap17.getByText("În termen")).toBeTruthy();
     const ap11 = within(buton("Apartament 11"));
-    expect(ap11.getByText("Restanta 2.917,41")).toBeTruthy();
+    expect(ap11.getByText("Restanță 2.917,41")).toBeTruthy();
   });
 
   it("totalul lunii pe fiecare rand vine din lista publicata", async () => {
@@ -86,7 +86,7 @@ describe("ListaApartamente", () => {
     await pornesteAdmin({ tab: "Apartamente" });
     await apasa(screen.getByText("Cu sold 6"));
     expect(randuri()).toEqual(["3", "6", "11", "15", "17", "19"]);
-    await apasa(screen.getByText("Restante 5"));
+    await apasa(screen.getByText("Restanțe 5"));
     expect(randuri()).toEqual(["3", "6", "11", "15", "19"]);
     await apasa(screen.getByText("Toate 20"));
     expect(randuri()).toHaveLength(20);
@@ -94,19 +94,19 @@ describe("ListaApartamente", () => {
 
   it("cautarea dupa nume sau dupa numarul exact", async () => {
     await pornesteAdmin({ tab: "Apartamente" });
-    await act(async () => { scrie("Cauta dupa nume sau numar", "  FAMILIA "); });
+    await act(async () => { scrie("Caută după nume sau număr", "  FAMILIA "); });
     expect(randuri()).toEqual(["3", "8", "11", "15", "19"]);
-    await act(async () => { scrie("Cauta dupa nume sau numar", "1"); });
+    await act(async () => { scrie("Caută după nume sau număr", "1"); });
     expect(randuri()).toEqual(["1"]);
-    await act(async () => { scrie("Cauta dupa nume sau numar", "nimeni"); });
+    await act(async () => { scrie("Caută după nume sau număr", "nimeni"); });
     expect(screen.getByText("Niciun rezultat")).toBeTruthy();
     expect(randuri()).toHaveLength(0);
   });
 
   it("cautarea se combina cu filtrul", async () => {
     await pornesteAdmin({ tab: "Apartamente" });
-    await apasa(screen.getByText("Restante 5"));
-    await act(async () => { scrie("Cauta dupa nume sau numar", "familia"); });
+    await apasa(screen.getByText("Restanțe 5"));
+    await act(async () => { scrie("Caută după nume sau număr", "familia"); });
     expect(randuri()).toEqual(["3", "11", "15", "19"]);
   });
 
@@ -123,7 +123,7 @@ describe("ListaApartamente", () => {
     await pornesteAdmin({ tab: "Apartamente", modifica: (d) => { d.liste = d.liste.filter((l) => l.stare !== "publicata"); } });
     expect(within(buton("Apartament 1")).getByText("0,00")).toBeTruthy();
     await deschideFisa("1");
-    expect(screen.queryByText(/Defalcarea intretinerii/)).toBeNull();
+    expect(screen.queryByText(/Defalcarea întreținerii/)).toBeNull();
   });
 });
 
@@ -136,8 +136,8 @@ describe("FisaApartament, date si sold", () => {
     expect(f.getByText("Parter")).toBeTruthy();
     expect(f.getByText("42,5 mp")).toBeTruthy();
     expect(f.getByText("Scutit")).toBeTruthy();
-    expect(f.getByText("Nu are nimic de plata.")).toBeTruthy();
-    await apasa(f.getByRole("button", { name: "Inchide" }));
+    expect(f.getByText("Nu are nimic de plată.")).toBeTruthy();
+    await apasa(f.getByRole("button", { name: "Închide" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -145,11 +145,11 @@ describe("FisaApartament, date si sold", () => {
     await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("15");
     const f = inDialog("Apartament 15");
-    expect(f.getByText("Plateste")).toBeTruthy();
-    expect(f.getByText("Intretinere iunie 2026, scadenta 25 iul 2026 (rest)")).toBeTruthy();
-    expect(f.getByText("Intretinere august 2026, scadenta 25 sep 2026")).toBeTruthy();
-    expect(f.getByText("Penalizare septembrie 2026, scadenta 1 sep 2026")).toBeTruthy();
-    expect(f.getByText("Defalcarea intretinerii, august 2026")).toBeTruthy();
+    expect(f.getByText("Plătește")).toBeTruthy();
+    expect(f.getByText("Întreținere iunie 2026, scadență 25 iul 2026 (rest)")).toBeTruthy();
+    expect(f.getByText("Întreținere august 2026, scadență 25 sep 2026")).toBeTruthy();
+    expect(f.getByText("Penalizare septembrie 2026, scadență 1 sep 2026")).toBeTruthy();
+    expect(f.getByText("Defalcarea întreținerii, august 2026")).toBeTruthy();
     expect(f.getByText("Total august")).toBeTruthy();
     expect(f.getAllByText("870,74").length).toBeGreaterThan(0);
   });
@@ -164,14 +164,14 @@ describe("FisaApartament, date si sold", () => {
     });
     await deschideFisa("11");
     const f = inDialog("Apartament 11");
-    expect(f.getByText("Restanta preluata mai 2026, scadenta 25 mai 2026")).toBeTruthy();
-    expect(f.getByText("taxa_speciala, scadenta 1 dec 2026")).toBeTruthy();
+    expect(f.getByText("Restanță preluată mai 2026, scadență 25 mai 2026")).toBeTruthy();
+    expect(f.getByText("taxa_speciala, scadență 1 dec 2026")).toBeTruthy();
   });
 
   it("fara suprafata declarata apare liniuta", async () => {
     await pornesteAdmin({ tab: "Apartamente", modifica: (d) => { d.apartamente.find((a) => a.numar === "2").mp = null; } });
     await deschideFisa("2");
-    expect(zonaCu(["Suprafata", "-"], 1).textContent).toBe("Suprafata-");
+    expect(zonaCu(["Suprafață", "-"], 1).textContent).toBe("Suprafață-");
   });
 });
 
@@ -181,22 +181,22 @@ describe("FisaApartament, incasare cash", () => {
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     const ap = await apDupaNumar(sursa, "3");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    const camp = screen.getByLabelText("Suma primita");
+    await apasa("Înregistrează încasare cash");
+    const camp = screen.getByLabelText("Suma primită");
     expect(camp.value).toBe("2.319,36");
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
-    expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
+    expect(toast().textContent).toBe("Încasare înregistrată, chitanța emisă");
     const f = inDialog("Apartament 3");
-    expect(f.getByText("Incasare inregistrata: 2.319,36 lei")).toBeTruthy();
-    expect(f.getByText("Chitanta AP118 nr. 000464. Locatarul o vede si in aplicatie.")).toBeTruthy();
-    expect(f.getByText("Nu are nimic de plata.")).toBeTruthy();
-    expect(screen.queryByLabelText("Suma primita")).toBeNull();
+    expect(f.getByText("Încasare înregistrată: 2.319,36 lei")).toBeTruthy();
+    expect(f.getByText("Chitanța AP118 nr. 000464. Locatarul o vede și în aplicație.")).toBeTruthy();
+    expect(f.getByText("Nu are nimic de plată.")).toBeTruthy();
+    expect(screen.queryByLabelText("Suma primită")).toBeNull();
 
     const nume = [];
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function () { nume.push(this.download); });
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
-    await apasa("Descarca chitanta");
+    await apasa("Descarcă chitanța");
     expect(nume).toEqual(["chitanta-464.pdf"]);
   });
 
@@ -204,20 +204,20 @@ describe("FisaApartament, incasare cash", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("1");
-    await apasa("Inregistreaza incasare cash");
-    const camp = screen.getByLabelText("Suma primita");
+    await apasa("Înregistrează încasare cash");
+    const camp = screen.getByLabelText("Suma primită");
     expect(camp.value).toBe("");
     expect(camp.getAttribute("placeholder")).toBe("0,00");
-    expect(dezactivat(buton("Emite chitanta"))).toBe(true);
-    await apasa("Emite chitanta");
+    expect(dezactivat(buton("Emite chitanța"))).toBe(true);
+    await apasa("Emite chitanța");
     expect(spion).not.toHaveBeenCalled();
-    await act(async () => { scrie("Suma primita", "abc"); });
-    expect(dezactivat(buton("Emite chitanta"))).toBe(true);
-    await act(async () => { scrie("Suma primita", "150,5"); });
-    expect(dezactivat(buton("Emite chitanta"))).toBe(false);
-    await apasa("Emite chitanta");
+    await act(async () => { scrie("Suma primită", "abc"); });
+    expect(dezactivat(buton("Emite chitanța"))).toBe(true);
+    await act(async () => { scrie("Suma primită", "150,5"); });
+    expect(dezactivat(buton("Emite chitanța"))).toBe(false);
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 150.5, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
-    expect(inDialog("Apartament 1").getByText("Incasare inregistrata: 150,50 lei")).toBeTruthy();
+    expect(inDialog("Apartament 1").getByText("Încasare înregistrată: 150,50 lei")).toBeTruthy();
   });
 
   it("banii veniti prin banca se confirma ca transfer", async () => {
@@ -225,11 +225,11 @@ describe("FisaApartament, incasare cash", () => {
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     const ap = await apDupaNumar(sursa, "3");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
+    await apasa("Înregistrează încasare cash");
     await apasa(buton("Prin transfer bancar"));
-    await apasa("Emite chitanta");
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), "2026-09-19");
-    expect(toast().textContent).toBe("Incasare inregistrata, chitanta emisa");
+    expect(toast().textContent).toBe("Încasare înregistrată, chitanța emisă");
   });
 
   /* [B7] A doua incasare din aceeasi fisa pornea cu "Prin transfer bancar"
@@ -241,15 +241,15 @@ describe("FisaApartament, incasare cash", () => {
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     const ap = await apDupaNumar(sursa, "3");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
+    await apasa("Înregistrează încasare cash");
     await apasa(buton("Prin transfer bancar"));
-    await act(async () => { scrie("Suma primita", "100"); });
-    await apasa("Emite chitanta");
+    await act(async () => { scrie("Suma primită", "100"); });
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenLastCalledWith(ap.id, 100, "transfer", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), "2026-09-19");
 
-    await apasa("Inregistreaza incasare cash");
-    await act(async () => { scrie("Suma primita", "50"); });
-    await apasa("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    await act(async () => { scrie("Suma primită", "50"); });
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenLastCalledWith(ap.id, 50, "numerar", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4/), null);
   });
 
@@ -261,14 +261,14 @@ describe("FisaApartament, incasare cash", () => {
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     const ap = await apDupaNumar(sursa, "3");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
+    await apasa("Înregistrează încasare cash");
     /* pentru numerar nu se cere nicio data: banii se dau in mana, azi */
-    expect(screen.queryByLabelText("Data in care au intrat banii")).toBeNull();
+    expect(screen.queryByLabelText("Data în care au intrat banii")).toBeNull();
     await apasa(buton("Prin transfer bancar"));
-    const camp = screen.getByLabelText("Data in care au intrat banii");
+    const camp = screen.getByLabelText("Data în care au intrat banii");
     expect(camp.value).toBe("2026-09-19");
-    await act(async () => { scrie("Data in care au intrat banii", "2026-09-11"); });
-    await apasa("Emite chitanta");
+    await act(async () => { scrie("Data în care au intrat banii", "2026-09-11"); });
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenCalledWith(ap.id, 2319.36, "transfer", expect.any(String), "2026-09-11");
   });
 
@@ -280,18 +280,18 @@ describe("FisaApartament, incasare cash", () => {
       const spion = vi.spyOn(sursa, "storneazaIncasare");
       const ap = await apDupaNumar(sursa, "3");
       await deschideFisa("3");
-      await apasa("Inregistreaza incasare cash");
-      await act(async () => { scrie("Suma primita", "100"); });
-      await apasa("Emite chitanta");
+      await apasa("Înregistrează încasare cash");
+      await act(async () => { scrie("Suma primită", "100"); });
+      await apasa("Emite chitanța");
 
       const f = inDialog("Apartament 3");
-      await apasa(f.getByRole("button", { name: "Storneaza incasarea" }));
+      await apasa(f.getByRole("button", { name: "Stornează încasarea" }));
       /* fara motiv nu se poate storna */
-      expect(dezactivat(buton("Storneaza"))).toBe(true);
-      await act(async () => { scrie("De ce o anulezi", "Suma a fost scrisa gresit"); });
-      await apasa("Storneaza");
-      expect(spion).toHaveBeenCalledWith(expect.any(String), "Suma a fost scrisa gresit");
-      expect(toast().textContent).toBe("Incasarea a fost anulata");
+      expect(dezactivat(buton("Stornează"))).toBe(true);
+      await act(async () => { scrie("De ce o anulezi", "Suma a fost scrisă greșit"); });
+      await apasa("Stornează");
+      expect(spion).toHaveBeenCalledWith(expect.any(String), "Suma a fost scrisă greșit");
+      expect(toast().textContent).toBe("Încasarea a fost anulată");
       void ap;
     });
 
@@ -300,13 +300,13 @@ describe("FisaApartament, incasare cash", () => {
       vi.spyOn(sursa, "storneazaIncasare")
         .mockRejectedValue(new Error("Se storneaza doar incasarile inregistrate in luna aceasta."));
       await deschideFisa("3");
-      await apasa("Inregistreaza incasare cash");
-      await act(async () => { scrie("Suma primita", "100"); });
-      await apasa("Emite chitanta");
+      await apasa("Înregistrează încasare cash");
+      await act(async () => { scrie("Suma primită", "100"); });
+      await apasa("Emite chitanța");
       const f = inDialog("Apartament 3");
-      await apasa(f.getByRole("button", { name: "Storneaza incasarea" }));
+      await apasa(f.getByRole("button", { name: "Stornează încasarea" }));
       await act(async () => { scrie("De ce o anulezi", "Suma gresita"); });
-      await apasa("Storneaza");
+      await apasa("Stornează");
       expect(toast().textContent).toBe("Se storneaza doar incasarile inregistrate in luna aceasta.");
       expect(screen.getByLabelText("De ce o anulezi").value).toBe("Suma gresita");
     });
@@ -315,12 +315,12 @@ describe("FisaApartament, incasare cash", () => {
       const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
       const spion = vi.spyOn(sursa, "storneazaIncasare");
       await deschideFisa("3");
-      await apasa("Inregistreaza incasare cash");
-      await act(async () => { scrie("Suma primita", "100"); });
-      await apasa("Emite chitanta");
+      await apasa("Înregistrează încasare cash");
+      await act(async () => { scrie("Suma primită", "100"); });
+      await apasa("Emite chitanța");
       const f = inDialog("Apartament 3");
-      await apasa(f.getByRole("button", { name: "Storneaza incasarea" }));
-      await apasa("Renunta");
+      await apasa(f.getByRole("button", { name: "Stornează încasarea" }));
+      await apasa("Renunță");
       expect(screen.queryByLabelText("De ce o anulezi")).toBeNull();
       expect(spion).not.toHaveBeenCalled();
     });
@@ -340,7 +340,7 @@ describe("FisaApartament, incasare cash", () => {
         },
       });
       await deschideFisa("3");
-      expect(butoane("Storneaza incasarea").length).toBe(0);
+      expect(butoane("Stornează încasarea").length).toBe(0);
     });
   });
 
@@ -348,9 +348,9 @@ describe("FisaApartament, incasare cash", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    await apasa("Renunta");
-    expect(screen.queryByLabelText("Suma primita")).toBeNull();
+    await apasa("Înregistrează încasare cash");
+    await apasa("Renunță");
+    expect(screen.queryByLabelText("Suma primită")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
   });
 
@@ -360,12 +360,12 @@ describe("FisaApartament, incasare cash", () => {
   it("[B2] reincercarea dupa o eroare trimite aceeasi cheie a cererii", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare")
-      .mockRejectedValueOnce(new Error("Serverul nu raspunde. Incearca din nou."));
+      .mockRejectedValueOnce(new Error("Serverul nu raspunde. Încearcă din nou."));
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    await apasa("Emite chitanta");
-    expect(toast().textContent).toBe("Serverul nu raspunde. Incearca din nou.");
-    await apasa("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    await apasa("Emite chitanța");
+    expect(toast().textContent).toBe("Serverul nu raspunde. Încearcă din nou.");
+    await apasa("Emite chitanța");
     expect(spion).toHaveBeenCalledTimes(2);
     expect(spion.mock.calls[1][3]).toBe(spion.mock.calls[0][3]);
   });
@@ -374,10 +374,10 @@ describe("FisaApartament, incasare cash", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     vi.spyOn(sursa, "inregistreazaIncasare").mockRejectedValue(new Error("Suma trebuie sa fie mai mare decat zero."));
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    await apasa("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    await apasa("Emite chitanța");
     expect(toast().textContent).toBe("Suma trebuie sa fie mai mare decat zero.");
-    expect(screen.getByLabelText("Suma primita").value).toBe("2.319,36");
+    expect(screen.getByLabelText("Suma primită").value).toBe("2.319,36");
   });
 
   it("o plata fara chitanta nu afiseaza cardul de chitanta", async () => {
@@ -388,19 +388,19 @@ describe("FisaApartament, incasare cash", () => {
     });
     faraChitanta = true;
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    await apasa("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    await apasa("Emite chitanța");
     expect(sursa).toBeTruthy();
-    expect(screen.queryByText(/Incasare inregistrata:/)).toBeNull();
-    expect(buton("Inregistreaza incasare cash")).toBeTruthy();
+    expect(screen.queryByText(/Încasare înregistrată:/)).toBeNull();
+    expect(buton("Înregistrează încasare cash")).toBeTruthy();
   });
 
   it("[F3] dublu apasat pe 'Emite chitanta' inregistreaza o singura plata", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    const b = buton("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    const b = buton("Emite chitanța");
     await act(async () => { fireEvent.click(b); fireEvent.click(b); });
     expect(spion).toHaveBeenCalledTimes(1);
   });
@@ -409,9 +409,9 @@ describe("FisaApartament, incasare cash", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "inregistreazaIncasare");
     await deschideFisa("3");
-    await apasa("Inregistreaza incasare cash");
-    await act(async () => { scrie("Suma primita", "1.500"); });
-    await apasa("Emite chitanta");
+    await apasa("Înregistrează încasare cash");
+    await act(async () => { scrie("Suma primită", "1.500"); });
+    await apasa("Emite chitanța");
     expect(spion.mock.calls[0][1]).toBe(1500);
   });
 });
@@ -421,25 +421,25 @@ describe("FisaApartament, instiintare", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "trimiteInstiintare");
     await deschideFisa("3");
-    await apasa("Trimite instiintare de plata");
+    await apasa("Trimite înștiințare de plată");
     expect(spion).toHaveBeenLastCalledWith((await apDupaNumar(sursa, "3")).id);
-    expect(toast().textContent).toBe("Instiintarea a fost trimisa in aplicatie");
-    await apasa(inDialog("Apartament 3").getByRole("button", { name: "Inchide" }));
+    expect(toast().textContent).toBe("Înștiințarea a fost trimisă în aplicație");
+    await apasa(inDialog("Apartament 3").getByRole("button", { name: "Închide" }));
 
     await deschideFisa("11");
-    await apasa("Trimite instiintare de plata");
-    expect(toast().textContent).toBe("Apartamentul nu are cont in aplicatie. Instiintarea se da pe hartie.");
-    await apasa(inDialog("Apartament 11").getByRole("button", { name: "Inchide" }));
+    await apasa("Trimite înștiințare de plată");
+    expect(toast().textContent).toBe("Apartamentul nu are cont în aplicație. Înștiințarea se dă pe hârtie.");
+    await apasa(inDialog("Apartament 11").getByRole("button", { name: "Închide" }));
 
     await deschideFisa("17");
-    expect(dezactivat(buton("Trimite instiintare de plata"))).toBe(true);
+    expect(dezactivat(buton("Trimite înștiințare de plată"))).toBe(true);
   });
 
   it("o instiintare esuata arata doar eroarea", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     vi.spyOn(sursa, "trimiteInstiintare").mockRejectedValue(new Error("Nu merge"));
     await deschideFisa("3");
-    await apasa("Trimite instiintare de plata");
+    await apasa("Trimite înștiințare de plată");
     expect(toast().textContent).toBe("Nu merge");
   });
 });
@@ -450,45 +450,45 @@ describe("FisaApartament, numarul de persoane", () => {
     const spion = vi.spyOn(sursa, "schimbaPersoane");
     const ap = await apDupaNumar(sursa, "1");
     await deschideFisa("1");
-    await apasa("Modifica numarul de persoane");
-    const luna = screen.getByLabelText("Incepand cu luna");
+    await apasa("Modifică numărul de persoane");
+    const luna = screen.getByLabelText("Începând cu luna");
     expect([...luna.options].map((o) => o.value)).toEqual(["2026-09", "2026-10", "2026-11"]);
     expect(luna.value).toBe("2026-09");
-    expect(dezactivat(buton("Salveaza"))).toBe(true);
-    await act(async () => { scrie("Numar nou de persoane", "doi"); });
-    expect(dezactivat(buton("Salveaza"))).toBe(true);
+    expect(dezactivat(buton("Salvează"))).toBe(true);
+    await act(async () => { scrie("Număr nou de persoane", "doi"); });
+    expect(dezactivat(buton("Salvează"))).toBe(true);
     await act(async () => {
-      scrie("Numar nou de persoane", "3");
+      scrie("Număr nou de persoane", "3");
       fireEvent.change(luna, { target: { value: "2026-10" } });
-      scrie("Motivul", "  Declaratie noua  ");
+      scrie("Motivul", "  Declarație nouă  ");
     });
-    await apasa("Salveaza");
-    expect(spion).toHaveBeenCalledWith(ap.id, 3, "2026-10", "Declaratie noua");
-    expect(toast().textContent).toBe("Din octombrie 2026 se calculeaza 3 persoane");
+    await apasa("Salvează");
+    expect(spion).toHaveBeenCalledWith(ap.id, 3, "2026-10", "Declarație nouă");
+    expect(toast().textContent).toBe("Din octombrie 2026 se calculează 3 persoane");
     const f = inDialog("Apartament 1");
-    expect(f.getByText("Din octombrie 2026, declaratie noua")).toBeTruthy();
+    expect(f.getByText("Din octombrie 2026, declarație nouă")).toBeTruthy();
     expect(f.getByText("3 pers.")).toBeTruthy();
-    expect(screen.queryByLabelText("Numar nou de persoane")).toBeNull();
+    expect(screen.queryByLabelText("Număr nou de persoane")).toBeNull();
 
     /* Luna folosita nu mai poate fi aleasa a doua oara */
-    await apasa("Modifica numarul de persoane");
-    expect([...screen.getByLabelText("Incepand cu luna").options].map((o) => o.value)).toEqual(["2026-09", "2026-11"]);
-    await apasa("Renunta");
-    expect(screen.queryByLabelText("Numar nou de persoane")).toBeNull();
+    await apasa("Modifică numărul de persoane");
+    expect([...screen.getByLabelText("Începând cu luna").options].map((o) => o.value)).toEqual(["2026-09", "2026-11"]);
+    await apasa("Renunță");
+    expect(screen.queryByLabelText("Număr nou de persoane")).toBeNull();
   });
 
   it("fara luna aleasa se foloseste prima luna libera", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "schimbaPersoane");
     await deschideFisa("1");
-    await apasa("Modifica numarul de persoane");
-    const luna = screen.getByLabelText("Incepand cu luna");
+    await apasa("Modifică numărul de persoane");
+    const luna = screen.getByLabelText("Începând cu luna");
     /* Selectul fara nicio optiune aleasa trimite "" */
     await act(async () => {
       fireEvent.change(luna, { target: { value: "" } });
-      scrie("Numar nou de persoane", "0");
+      scrie("Număr nou de persoane", "0");
     });
-    await apasa("Salveaza");
+    await apasa("Salvează");
     expect(spion).toHaveBeenCalledWith((await apDupaNumar(sursa, "1")).id, 0, "2026-09", "");
     expect(inDialog("Apartament 1").getByText("Din septembrie 2026")).toBeTruthy();
   });
@@ -502,11 +502,11 @@ describe("FisaApartament, numarul de persoane", () => {
       },
     });
     await deschideFisa("1");
-    await apasa("Modifica numarul de persoane");
-    const luna = screen.getByLabelText("Incepand cu luna");
+    await apasa("Modifică numărul de persoane");
+    const luna = screen.getByLabelText("Începând cu luna");
     expect(luna.options).toHaveLength(0);
-    await act(async () => { scrie("Numar nou de persoane", "3"); });
-    expect(dezactivat(buton("Salveaza"))).toBe(true);
+    await act(async () => { scrie("Număr nou de persoane", "3"); });
+    expect(dezactivat(buton("Salvează"))).toBe(true);
     expect(inDialog("Apartament 1").getByText("Din noiembrie 2026")).toBeTruthy();
   });
 
@@ -514,11 +514,11 @@ describe("FisaApartament, numarul de persoane", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     vi.spyOn(sursa, "schimbaPersoane").mockRejectedValue(new Error("Exista deja o modificare pentru luna aceasta. Istoricul nu se rescrie."));
     await deschideFisa("1");
-    await apasa("Modifica numarul de persoane");
-    await act(async () => { scrie("Numar nou de persoane", "3"); });
-    await apasa("Salveaza");
+    await apasa("Modifică numărul de persoane");
+    await act(async () => { scrie("Număr nou de persoane", "3"); });
+    await apasa("Salvează");
     expect(toast().textContent).toMatch(/Exista deja o modificare/);
-    expect(screen.getByLabelText("Numar nou de persoane").value).toBe("3");
+    expect(screen.getByLabelText("Număr nou de persoane").value).toBe("3");
   });
 });
 
@@ -528,16 +528,16 @@ describe("FisaApartament, contul locatarului si accesul", () => {
     const spion = vi.spyOn(sursa, "adaugaLocatar");
     const ap = await apDupaNumar(sursa, "2");
     await deschideFisa("2");
-    expect(inDialog("Apartament 2").getByText("Nimeni din apartament nu are inca cont.")).toBeTruthy();
-    await apasa("Adauga un locatar in aplicatie");
+    expect(inDialog("Apartament 2").getByText("Nimeni din apartament nu are încă cont.")).toBeTruthy();
+    await apasa("Adaugă un locatar în aplicație");
     scrie("Numele locatarului", " Ana Pop ");
-    scrie("Numarul lui de telefon", "0722 000 041");
+    scrie("Numărul lui de telefon", "0722 000 041");
     await act(async () => { fireEvent.change(screen.getByLabelText("Ce este pentru apartament"), { target: { value: "chirias" } }); });
-    await apasa("Fa contul");
+    await apasa("Fă contul");
     expect(spion).toHaveBeenCalledWith(ap.id, { nume: "Ana Pop", telefon: "0722 000 041", calitate: "chirias" });
     const { parola } = await spion.mock.results[0].value;
     const f = inDialog("Apartament 2");
-    expect(f.getByText("Intra cu numarul 0722 000 041")).toBeTruthy();
+    expect(f.getByText("Intră cu numărul 0722 000 041")).toBeTruthy();
     expect(f.getByText(parola)).toBeTruthy();
     await apasa("Gata");
     expect(inDialog("Apartament 2").getByText("Ana Pop")).toBeTruthy();
@@ -547,20 +547,20 @@ describe("FisaApartament, contul locatarului si accesul", () => {
   it("butonul asteapta un nume si un numar intreg, iar refuzul ramane pe ecran", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("2");
-    await apasa("Adauga un locatar in aplicatie");
-    expect(dezactivat(buton("Fa contul"))).toBe(true);
+    await apasa("Adaugă un locatar în aplicație");
+    expect(dezactivat(buton("Fă contul"))).toBe(true);
     scrie("Numele locatarului", "Ana");
-    scrie("Numarul lui de telefon", "0722");
+    scrie("Numărul lui de telefon", "0722");
     await act(async () => {});
-    expect(dezactivat(buton("Fa contul"))).toBe(true);
-    scrie("Numarul lui de telefon", "0722 000 042");
+    expect(dezactivat(buton("Fă contul"))).toBe(true);
+    scrie("Numărul lui de telefon", "0722 000 042");
     await act(async () => {});
-    expect(dezactivat(buton("Fa contul"))).toBe(false);
+    expect(dezactivat(buton("Fă contul"))).toBe(false);
 
-    vi.spyOn(sursa, "adaugaLocatar").mockRejectedValue(new Error("Exista deja un cont cu acest numar de telefon."));
-    await apasa("Fa contul");
-    expect(inDialog("Apartament 2").getByText("Exista deja un cont cu acest numar de telefon.")).toBeTruthy();
-    await apasa("Renunta");
+    vi.spyOn(sursa, "adaugaLocatar").mockRejectedValue(new Error("Există deja un cont cu acest număr de telefon."));
+    await apasa("Fă contul");
+    expect(inDialog("Apartament 2").getByText("Există deja un cont cu acest număr de telefon.")).toBeTruthy();
+    await apasa("Renunță");
     expect(screen.queryByLabelText("Numele locatarului")).toBeNull();
   });
 
@@ -569,13 +569,13 @@ describe("FisaApartament, contul locatarului si accesul", () => {
   it("numarul care are deja cont se leaga de apartament, fara parola noua", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("2");
-    await apasa("Adauga un locatar in aplicatie");
+    await apasa("Adaugă un locatar în aplicație");
     scrie("Numele locatarului", "Elena Marinescu");
-    scrie("Numarul lui de telefon", "0733 410 217");
-    await apasa("Fa contul");
+    scrie("Numărul lui de telefon", "0733 410 217");
+    await apasa("Fă contul");
     const f = inDialog("Apartament 2");
-    expect(f.getByText(/Omul avea deja cont pe acest numar/)).toBeTruthy();
-    expect(f.getByText("Intra cu numarul 0733 410 217")).toBeTruthy();
+    expect(f.getByText(/Omul avea deja cont pe acest număr/)).toBeTruthy();
+    expect(f.getByText("Intră cu numărul 0733 410 217")).toBeTruthy();
     await apasa("Gata");
     expect(inDialog("Apartament 2").getAllByText("Elena Marinescu").length).toBeGreaterThan(0);
     const ap = await apDupaNumar(sursa, "2");
@@ -586,9 +586,9 @@ describe("FisaApartament, contul locatarului si accesul", () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     vi.spyOn(sursa, "parolaNoua").mockRejectedValue(new Error("Nu merge acum."));
     await deschideFisa("17");
-    await apasa("Parola noua");
+    await apasa("Parola nouă");
     expect(toast().textContent).toBe("Nu merge acum.");
-    expect(screen.queryByText(/Intra cu numarul/)).toBeNull();
+    expect(screen.queryByText(/Intră cu numărul/)).toBeNull();
   });
 
   it("parola noua se genereaza pentru un locatar care si-a uitat-o", async () => {
@@ -596,7 +596,7 @@ describe("FisaApartament, contul locatarului si accesul", () => {
     const spion = vi.spyOn(sursa, "parolaNoua");
     const ap = await apDupaNumar(sursa, "17");
     await deschideFisa("17");
-    await apasa("Parola noua");
+    await apasa("Parola nouă");
     const { parola } = await spion.mock.results[0].value;
     expect(spion).toHaveBeenCalledWith(ap.id, ap.locatari[0].id);
     const f = inDialog("Apartament 17");
@@ -613,16 +613,16 @@ describe("FisaApartament, contul locatarului si accesul", () => {
     await deschideFisa("1");
     const f = inDialog("Apartament 1");
     expect(f.getByText("Proprietar · din 1 iun 2026 · 0741 002 101")).toBeTruthy();
-    await apasa("Inchide accesul");
-    expect(confirm).toHaveBeenCalledWith("Inchizi accesul lui Gheorghe Voicu la apartamentul 1? Istoricul ramane.");
+    await apasa("Închide accesul");
+    expect(confirm).toHaveBeenCalledWith("Închizi accesul lui Gheorghe Voicu la apartamentul 1? Istoricul rămâne.");
     expect(spion).not.toHaveBeenCalled();
 
     confirm.mockReturnValue(true);
-    await apasa("Inchide accesul");
+    await apasa("Închide accesul");
     expect(spion).toHaveBeenCalledWith(ap.locatari[0].id);
-    expect(toast().textContent).toBe("Accesul a fost inchis");
-    expect(f.getByText("Gheorghe Voicu, acces inchis pe 19 sep 2026")).toBeTruthy();
-    expect(f.getByText("Nimeni din apartament nu are inca cont.")).toBeTruthy();
+    expect(toast().textContent).toBe("Accesul a fost închis");
+    expect(f.getByText("Gheorghe Voicu, acces închis pe 19 sep 2026")).toBeTruthy();
+    expect(f.getByText("Nimeni din apartament nu are încă cont.")).toBeTruthy();
   });
 
   it("locatar fara telefon", async () => {
@@ -641,7 +641,7 @@ describe("FisaApartament, consum si istoric", () => {
     await deschideFisa("1");
     const f = inDialog("Apartament 1");
     for (const luna of ["2026-09", "2026-08", "2026-07"]) {
-      const txt = `rece ${c(luna, "rece").consum.toFixed(2).replace(".", ",")} · calda ${c(luna, "calda").consum.toFixed(2).replace(".", ",")} mc`;
+      const txt = `rece ${c(luna, "rece").consum.toFixed(2).replace(".", ",")} · caldă ${c(luna, "calda").consum.toFixed(2).replace(".", ",")} mc`;
       expect(f.getByText(txt)).toBeTruthy();
     }
     expect(f.queryByText(/iunie 2026/)).toBeNull();
@@ -662,8 +662,8 @@ describe("FisaApartament, consum si istoric", () => {
     });
     await deschideFisa("1");
     const f = inDialog("Apartament 1");
-    expect(f.getByText(/^rece - · calda/)).toBeTruthy();
-    expect(f.getByText(/· calda - mc$/)).toBeTruthy();
+    expect(f.getByText(/^rece - · caldă/)).toBeTruthy();
+    expect(f.getByText(/· caldă - mc$/)).toBeTruthy();
     expect(f.getByText("iulie 2026 (estimat)")).toBeTruthy();
     expect(f.getByText("netransmis")).toBeTruthy();
     expect(f.getByText("Din mai 2026")).toBeTruthy();
@@ -676,20 +676,20 @@ describe("FisaApartament, corectarea fisei (C3/E4)", () => {
     const spion = vi.spyOn(sursa, "schimbaFisaApartament");
     const ap = await apDupaNumar(sursa, "1");
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
+    await apasa("Corectează datele apartamentului");
     expect(screen.getByLabelText("Proprietar").value).toBe("Gheorghe Voicu");
     expect(screen.getByLabelText("Etaj").value).toBe("0");
-    expect(screen.getByLabelText("Suprafata").value).toBe("42,5");
-    expect(screen.getByLabelText("Cota indiviza").value).toBe("4,01");
+    expect(screen.getByLabelText("Suprafață").value).toBe("42,5");
+    expect(screen.getByLabelText("Cotă indiviză").value).toBe("4,01");
     expect(screen.getByRole("button", { name: "Scutit de plata liftului" }).getAttribute("aria-pressed")).toBe("true");
 
     await act(async () => {
       scrie("Proprietar", "Ion Constantinescu");
-      scrie("Suprafata", "45");
+      scrie("Suprafață", "45");
     });
-    await apasa("Salveaza corectia");
+    await apasa("Salvează corecția");
     expect(spion).toHaveBeenCalledWith(ap.id, { proprietar: "Ion Constantinescu", cota: 4.01, mp: 45, scutitLift: true, etaj: 0 });
-    expect(toast().textContent).toBe("Fisa apartamentului a fost actualizata");
+    expect(toast().textContent).toBe("Fișa apartamentului a fost actualizată");
     const f = inDialog("Apartament 1");
     expect(f.getByText("Ion Constantinescu")).toBeTruthy();
     expect(f.getByText("45,0 mp")).toBeTruthy();
@@ -710,20 +710,20 @@ describe("FisaApartament, corectarea fisei (C3/E4)", () => {
     const spion = vi.spyOn(sursa, "schimbaFisaApartament");
     const ap = await apDupaNumar(sursa, "1");
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    expect(screen.getByLabelText("Cota indiviza").value).toBe("4,0067");
+    await apasa("Corectează datele apartamentului");
+    expect(screen.getByLabelText("Cotă indiviză").value).toBe("4,0067");
 
     /* Corectarea doar a numelui nu are voie sa retrimita o cota rotunjita */
     await act(async () => { scrie("Proprietar", "Ion Constantinescu"); });
-    await apasa("Salveaza corectia");
+    await apasa("Salvează corecția");
     expect(spion).toHaveBeenCalledWith(ap.id, expect.objectContaining({ cota: 4.0067 }));
   });
 
   it("un apartament fara suprafata declarata precompleteaza campul gol", async () => {
     await pornesteAdmin({ tab: "Apartamente", modifica: (d) => { d.apartamente.find((a) => a.numar === "2").mp = null; } });
     await deschideFisa("2");
-    await apasa("Corecteaza datele apartamentului");
-    expect(screen.getByLabelText("Suprafata").value).toBe("");
+    await apasa("Corectează datele apartamentului");
+    expect(screen.getByLabelText("Suprafață").value).toBe("");
   });
 
   it("dezactiveaza scutirea de lift si trimite suprafata goala ca null", async () => {
@@ -731,45 +731,45 @@ describe("FisaApartament, corectarea fisei (C3/E4)", () => {
     const spion = vi.spyOn(sursa, "schimbaFisaApartament");
     const ap = await apDupaNumar(sursa, "1");
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await act(async () => { scrie("Suprafata", ""); });
+    await apasa("Corectează datele apartamentului");
+    await act(async () => { scrie("Suprafață", ""); });
     await apasa(screen.getByRole("button", { name: "Scutit de plata liftului" }));
-    await apasa("Salveaza corectia");
+    await apasa("Salvează corecția");
     expect(spion).toHaveBeenCalledWith(ap.id, { proprietar: "Gheorghe Voicu", cota: 4.01, mp: null, scutitLift: false, etaj: 0 });
   });
 
   it("butonul Salveaza este dezactivat fara proprietar sau cu cota invalida", async () => {
     await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
+    await apasa("Corectează datele apartamentului");
     await act(async () => { scrie("Proprietar", "   "); });
-    expect(dezactivat(buton("Salveaza corectia"))).toBe(true);
-    await act(async () => { scrie("Proprietar", "Cineva"); scrie("Cota indiviza", "0"); });
-    expect(dezactivat(buton("Salveaza corectia"))).toBe(true);
-    await act(async () => { scrie("Cota indiviza", "4,01"); scrie("Etaj", ""); });
-    expect(dezactivat(buton("Salveaza corectia"))).toBe(true);
+    expect(dezactivat(buton("Salvează corecția"))).toBe(true);
+    await act(async () => { scrie("Proprietar", "Cineva"); scrie("Cotă indiviză", "0"); });
+    expect(dezactivat(buton("Salvează corecția"))).toBe(true);
+    await act(async () => { scrie("Cotă indiviză", "4,01"); scrie("Etaj", ""); });
+    expect(dezactivat(buton("Salvează corecția"))).toBe(true);
   });
 
   it("o corectie refuzata de sursa lasa formularul deschis, cu mesajul ei", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     vi.spyOn(sursa, "schimbaFisaApartament").mockRejectedValue(new Error(
-      "Cotele blocului ar ajunge la 105.0000 din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.",
+      "Cotele blocului ar ajunge la 105.0000 din 100. Schimbă și celelalte apartamente, altfel lista nu se mai împarte corect.",
     ));
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await act(async () => { scrie("Cota indiviza", "10"); });
-    await apasa("Salveaza corectia");
-    expect(toast().textContent).toBe("Cotele blocului ar ajunge la 105.0000 din 100. Schimba si celelalte apartamente, altfel lista nu se mai imparte corect.");
-    expect(screen.getByLabelText("Cota indiviza").value).toBe("10");
+    await apasa("Corectează datele apartamentului");
+    await act(async () => { scrie("Cotă indiviză", "10"); });
+    await apasa("Salvează corecția");
+    expect(toast().textContent).toBe("Cotele blocului ar ajunge la 105.0000 din 100. Schimbă și celelalte apartamente, altfel lista nu se mai împarte corect.");
+    expect(screen.getByLabelText("Cotă indiviză").value).toBe("10");
   });
 
   it("renunta inchide formularul fara sa salveze", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "schimbaFisaApartament");
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
+    await apasa("Corectează datele apartamentului");
     await act(async () => { scrie("Proprietar", "Altcineva"); });
-    await apasa("Renunta");
+    await apasa("Renunță");
     expect(screen.queryByLabelText("Proprietar")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
   });
@@ -781,23 +781,23 @@ describe("FisaApartament, redistribuirea cotelor blocului (C3/E4)", () => {
     const spion = vi.spyOn(sursa, "schimbaCoteleBlocului");
     const date = await sursa.incarca();
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await apasa("Redistribuie cotele intregului bloc");
+    await apasa("Corectează datele apartamentului");
+    await apasa("Redistribuie cotele întregului bloc");
 
     expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu").value).toBe("4,01");
     expect(screen.getByLabelText("Ap. 2, Ana Petrescu").value).toBe("4,63");
     expect(screen.getByText("100,00% din 100%")).toBeTruthy();
-    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(false);
+    expect(dezactivat(buton("Salvează cotele blocului"))).toBe(false);
 
     await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
     expect(screen.getByText("105,99% din 100%")).toBeTruthy();
-    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(true);
+    expect(dezactivat(buton("Salvează cotele blocului"))).toBe(true);
 
     await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "5,01"); scrie("Ap. 2, Ana Petrescu", "3,63"); });
     expect(screen.getByText("100,00% din 100%")).toBeTruthy();
-    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(false);
+    expect(dezactivat(buton("Salvează cotele blocului"))).toBe(false);
 
-    await apasa("Salveaza cotele blocului");
+    await apasa("Salvează cotele blocului");
     expect(spion).toHaveBeenCalledTimes(1);
     const trimise = spion.mock.calls[0][0];
     expect(trimise).toHaveLength(date.apartamente.length);
@@ -820,35 +820,35 @@ describe("FisaApartament, redistribuirea cotelor blocului (C3/E4)", () => {
       },
     });
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await apasa("Redistribuie cotele intregului bloc");
+    await apasa("Corectează datele apartamentului");
+    await apasa("Redistribuie cotele întregului bloc");
 
     expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu").value).toBe("4,0067");
     expect(screen.getByLabelText("Ap. 2, Ana Petrescu").value).toBe("4,6333");
     expect(screen.getByText("100,00% din 100%")).toBeTruthy();
-    expect(dezactivat(buton("Salveaza cotele blocului"))).toBe(false);
+    expect(dezactivat(buton("Salvează cotele blocului"))).toBe(false);
   });
 
   it("renunta inchide editorul de cote fara sa salveze", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
     const spion = vi.spyOn(sursa, "schimbaCoteleBlocului");
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await apasa("Redistribuie cotele intregului bloc");
+    await apasa("Corectează datele apartamentului");
+    await apasa("Redistribuie cotele întregului bloc");
     await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
-    await apasa("Renunta");
+    await apasa("Renunță");
     expect(screen.queryByLabelText("Ap. 1, Gheorghe Voicu")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
   });
 
   it("o redistribuire refuzata de sursa lasa editorul deschis, cu mesajul ei", async () => {
     const { sursa } = await pornesteAdmin({ tab: "Apartamente" });
-    vi.spyOn(sursa, "schimbaCoteleBlocului").mockRejectedValue(new Error("Cotele trimise insumeaza 100.5000, nu 100. Corecteaza-le pe toate inainte de a le salva."));
+    vi.spyOn(sursa, "schimbaCoteleBlocului").mockRejectedValue(new Error("Cotele trimise însumează 100.5000, nu 100. Corectează-le pe toate înainte de a le salva."));
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await apasa("Redistribuie cotele intregului bloc");
-    await apasa("Salveaza cotele blocului");
-    expect(toast().textContent).toBe("Cotele trimise insumeaza 100.5000, nu 100. Corecteaza-le pe toate inainte de a le salva.");
+    await apasa("Corectează datele apartamentului");
+    await apasa("Redistribuie cotele întregului bloc");
+    await apasa("Salvează cotele blocului");
+    expect(toast().textContent).toBe("Cotele trimise însumează 100.5000, nu 100. Corectează-le pe toate înainte de a le salva.");
     expect(screen.getByLabelText("Ap. 1, Gheorghe Voicu")).toBeTruthy();
   });
 });
@@ -857,8 +857,8 @@ describe("FisaApartament, panoul e pazit cand are ceva scris (G6)", () => {
   it("o atingere pe fundal nu arunca la gunoi editorul de cote", async () => {
     await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await apasa("Redistribuie cotele intregului bloc");
+    await apasa("Corectează datele apartamentului");
+    await apasa("Redistribuie cotele întregului bloc");
     await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
 
     const panou = dialog("Apartament 1");
@@ -869,8 +869,8 @@ describe("FisaApartament, panoul e pazit cand are ceva scris (G6)", () => {
   it("tasta Escape nu arunca la gunoi editorul de cote", async () => {
     await pornesteAdmin({ tab: "Apartamente" });
     await deschideFisa("1");
-    await apasa("Corecteaza datele apartamentului");
-    await apasa("Redistribuie cotele intregului bloc");
+    await apasa("Corectează datele apartamentului");
+    await apasa("Redistribuie cotele întregului bloc");
     await act(async () => { scrie("Ap. 1, Gheorghe Voicu", "10"); });
 
     const panou = dialog("Apartament 1");
@@ -889,7 +889,7 @@ describe("FisaApartament, fisa goala", () => {
     await deschideFisa("3");
     expect(dialog("Apartament 3")).toBeTruthy();
     ascunde = true;
-    await apasa("Trimite instiintare de plata");
+    await apasa("Trimite înștiințare de plată");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

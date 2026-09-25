@@ -12,7 +12,7 @@ beforeEach(() => ceasDemo());
 
 async function deschide() {
   render(<PaginaPublica />);
-  return screen.findByRole("table", { name: /Lista de intretinere pe august 2026/ });
+  return screen.findByRole("table", { name: /Lista de întreținere pe august 2026/ });
 }
 
 /* Ce a calculat motorul pentru lista din august, direct din sursa demo */
@@ -68,7 +68,7 @@ describe("pagina publica, lista din deschidere", () => {
   it("o suma cu rotunjire la ban spune cat si de ce", async () => {
     await deschide();
     await act(async () => { screen.getByRole("button", { name: /^Ap\. 1, Energie electrica parti comune: / }).click(); });
-    expect(textSocoteala()).toContain("Suma contine o rotunjire la ban de -0,05 lei");
+    expect(textSocoteala()).toContain("Suma conține o rotunjire la ban de -0,05 lei");
   });
 
   it("o factura fara serie nu lasa un spatiu gol in socoteala", () => {
@@ -77,7 +77,7 @@ describe("pagina publica, lista din deschidere", () => {
       ap={{ numar: "3" }}
       r={{ suma: 5, rotunjire: 0, detaliu: null, baza: { valoare: 1, total: 20, unitate: "apartamente" } }}
     />);
-    expect(screen.getByText("Curatenie, factura Curat SRL: 100,00 lei, impartita in parti egale, pe apartament.")).toBeTruthy();
+    expect(screen.getByText("Curatenie, factura Curat SRL: 100,00 lei, împărțită în părți egale, pe apartament.")).toBeTruthy();
   });
 
   it("o cheltuiala fara furnizor, de exemplu un fond, isi spune doar numele", () => {
@@ -86,23 +86,23 @@ describe("pagina publica, lista din deschidere", () => {
       ap={{ numar: "5" }}
       r={{ suma: 20, rotunjire: 0, detaliu: null, baza: { valoare: 5, total: 100, unitate: "%" } }}
     />);
-    expect(screen.getByText("Fond de rulment: 400,00 lei, impartita pe cota indiviza.")).toBeTruthy();
+    expect(screen.getByText("Fond de rulment: 400,00 lei, împărțită pe cotă indiviză.")).toBeTruthy();
   });
 
   it("verificarea de sub lista: totalul facturilor este egal cu totalul impartit", async () => {
     await deschide();
     const { lista } = await repartizareaDin("C1", "17");
     expect(lista.totalRepartizat).toBe(12154.95);
-    expect(screen.getByText("Facturile lunii: 12.154,95 lei. Impartit pe apartamente: 12.154,95 lei. Nealocat: 0,00 lei.")).toBeTruthy();
+    expect(screen.getByText("Facturile lunii: 12.154,95 lei. Împărțit pe apartamente: 12.154,95 lei. Nealocat: 0,00 lei.")).toBeTruthy();
   });
 });
 
 describe("pagina publica, continutul", () => {
   it("o luna, de la factura la chitanta, are pasii in ordine", async () => {
     await deschide();
-    const pasi = within(screen.getByRole("list", { name: "O luna, de la factura la chitanta" })).getAllByRole("listitem");
+    const pasi = within(screen.getByRole("list", { name: "O lună, de la factură la chitanță" })).getAllByRole("listitem");
     expect(pasi).toHaveLength(6);
-    expect(pasi[3].textContent).toMatch(/publica lista/);
+    expect(pasi[3].textContent).toMatch(/publică lista/);
   });
 
   it("fiecare functie a fiecarui rol apare, din src/ghid.js", async () => {
@@ -118,8 +118,8 @@ describe("pagina publica, continutul", () => {
 
   it("duce la aplicatie, fara sa ceara cont pentru a citi pagina", async () => {
     await deschide();
-    const link = screen.getByRole("link", { name: "Deschide aplicatia" });
+    const link = screen.getByRole("link", { name: "Deschide aplicația" });
     expect(link.getAttribute("href")).toBe("../");
-    expect(screen.queryByText("Intra in cont")).toBeNull();
+    expect(screen.queryByText("Intră în cont")).toBeNull();
   });
 });

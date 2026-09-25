@@ -85,10 +85,10 @@ async function creeazaBloc({ eticheta, cui, apartamente, contoareGenerale }) {
       cont = await ok(db.schema("contorizare").from("contoare").select("id").eq("apartament_id", apId), "contor implicit");
       if (cont.length === 0) await new Promise((r) => { setTimeout(r, 500); });
     }
-    if (cont.length === 0) throw new Error("contorul implicit al apartamentului n-a aparut in 20 de secunde");
+    if (cont.length === 0) throw new Error("contorul implicit al apartamentului n-a apărut în 20 de secunde");
     for (const c of cont) {
       await db.schema("contorizare").from("citiri").delete().eq("contor_id", c.id);
-      await ok(db.schema("contorizare").from("contoare").delete().eq("id", c.id), "sterge contor");
+      await ok(db.schema("contorizare").from("contoare").delete().eq("id", c.id), "șterge contor");
     }
   }
 
@@ -141,7 +141,7 @@ test.describe("ecrane pe date neobisnuite", () => {
     });
     GOL = await creeazaBloc({
       eticheta: "gol", cui: cuiNou(),
-      apartamente: [{ numar: "1", proprietar: "Fara Contoare", persoane: 1, cota: 100, faraContoare: true }],
+      apartamente: [{ numar: "1", proprietar: "Fără Contoare", persoane: 1, cota: 100, faraContoare: true }],
     });
     await locatarNou(LOCATAR_UNUL, "Locatar Unul", UNUL.apartamente[0].id, UNUL.bloc_id);
     await locatarNou(LOCATAR_GOL, "Locatar Gol", GOL.apartamente[0].id, GOL.bloc_id);
@@ -149,18 +149,18 @@ test.describe("ecrane pe date neobisnuite", () => {
 
   test("1. locatarul fara datorii si fara citiri vede ecrane pline de text, nu goluri", async ({ page }) => {
     await intra(page, LOCATAR_GOL);
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
 
-    for (const t of ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"]) {
+    for (const t of ["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"]) {
       await mergiLaTab(page, t);
       await page.waitForTimeout(400);
       const text = await page.locator(".ab-shell > .ab-scroll").innerText();
-      expect(text.trim().length, `tabul ${t} nu are ce arata`).toBeGreaterThan(30);
+      expect(text.trim().length, `tabul ${t} nu are ce arată`).toBeGreaterThan(30);
       for (const cuvant of CUVINTE_TEHNICE) expect(text, `tabul ${t}`).not.toContain(cuvant);
     }
 
     /* Nicio datorie: soldul este zero si nu i se cere nimic */
-    await mergiLaTab(page, "Acasa");
+    await mergiLaTab(page, "Acasă");
     const acasa = await page.locator(".ab-shell > .ab-scroll").innerText();
     expect(acasa).toMatch(/ACHITAT|0,00/);
   });
@@ -172,7 +172,7 @@ test.describe("ecrane pe date neobisnuite", () => {
      "Scrie cel putin un index", desi nu are unde sa-l scrie. */
   test("[R5] apartamentul fara contoare nu primeste un formular pe care nu-l poate completa", async ({ page }) => {
     await intra(page, LOCATAR_GOL);
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Contoare");
     const contoare = (await page.locator(".ab-shell > .ab-scroll").innerText()).replace(/\s+/g, " ");
     await expect(buton(page, "Trimite indexul")).toHaveCount(0);
@@ -182,7 +182,7 @@ test.describe("ecrane pe date neobisnuite", () => {
 
   test("2. administratorul unui apartament fara contoare nu ramane cu ecranul de citiri gol", async ({ page }) => {
     await intra(page, GOL.telefon);
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
     await page.waitForTimeout(500);
@@ -203,7 +203,7 @@ test.describe("ecrane pe date neobisnuite", () => {
     const facturi = [];
     for (let i = 0; i < 20; i += 1) {
       facturi.push({
-        lista_id: listaId, tip: "factura", cod: `C${10 + i}`, categorie: `E2E cheltuiala ${i + 1}`,
+        lista_id: listaId, tip: "factura", cod: `C${10 + i}`, categorie: `E2E cheltuială ${i + 1}`,
         furnizor_id: furnizor.id, suma: 10 + i, metoda: ["apartamente", "persoane", "cota"][i % 3],
         serie_numar: `E2E-${i + 1}`,
       });
@@ -212,17 +212,17 @@ test.describe("ecrane pe date neobisnuite", () => {
     const totalFacturi = facturi.reduce((s, f) => s + f.suma, 0);
 
     await intra(page, UNUL.telefon);
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Facturi");
     await page.waitForTimeout(800);
     const inainte = await page.locator(".ab-shell > .ab-scroll").innerText();
     for (const cuvant of CUVINTE_TEHNICE) expect(inainte).not.toContain(cuvant);
-    expect(inainte).toContain("E2E cheltuiala 20");
+    expect(inainte).toContain("E2E cheltuială 20");
 
-    await buton(page, "Publica lista").click();
-    await expect(page.getByRole("dialog", { name: "Publica lista" })).toBeVisible();
-    await buton(page, "Da, publica lista").click();
-    await asteaptaToast(page, "Lista a fost publicata");
+    await buton(page, "Publică lista").click();
+    await expect(page.getByRole("dialog", { name: "Publică lista" })).toBeVisible();
+    await buton(page, "Da, publică lista").click();
+    await asteaptaToast(page, "Lista a fost publicată");
 
     const { data: rep } = await db.schema("intretinere").from("repartizari").select("suma").eq("lista_id", listaId);
     expect(rep.length, "un rand pe fiecare cheltuiala").toBeGreaterThanOrEqual(20);
@@ -233,7 +233,7 @@ test.describe("ecrane pe date neobisnuite", () => {
     expect(totalCuFond).toBeGreaterThanOrEqual(totalFacturi);
 
     /* PDF-ul de avizier cu douazeci de coloane */
-    const pdf = await descarca(page, () => buton(page, "Exporta PDF pentru avizier").click());
+    const pdf = await descarca(page, () => buton(page, "Exportă PDF pentru avizier").click());
     const text = textPdf(pdf.octeti);
     expect(text).toContain("C29");
     expect(text).toContain("C10");
@@ -259,15 +259,15 @@ test.describe("ecrane pe date neobisnuite", () => {
 
     const { data: dupa } = await db.schema("intretinere").from("liste_lunare")
       .select("scadenta").eq("id", lista.id).single();
-    expect(dupa.scadenta, "scadenta listei publicate ramane cea anuntata").toBe(scadentaInainte);
+    expect(dupa.scadenta, "scadență listei publicate rămâne cea anuntata").toBe(scadentaInainte);
     const { data: datoriiDupa } = await db.schema("financiar").from("datorii")
       .select("scadenta, suma").eq("bloc_id", UNUL.bloc_id).eq("tip", "intretinere");
-    expect(datoriiDupa[0].scadenta, "scadenta datoriei ramane cea anuntata").toBe(datorii[0].scadenta);
+    expect(datoriiDupa[0].scadenta, "scadență datoriei rămâne cea anuntata").toBe(datorii[0].scadenta);
     expect(Number(datoriiDupa[0].suma)).toBe(Number(datorii[0].suma));
 
     /* Iar locatarul vede acelasi termen pe ecran ca inainte de schimbare */
     await intra(page, LOCATAR_UNUL);
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
     const acasa = await page.locator(".ab-shell > .ab-scroll").innerText();
     for (const cuvant of CUVINTE_TEHNICE) expect(acasa).not.toContain(cuvant);
     const zi = Number(scadentaInainte.slice(8, 10));

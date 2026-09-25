@@ -55,9 +55,9 @@ test.describe("Doar proprietarul voteaza [K3]", () => {
     expect(await voturiAle(ap.id)).toHaveLength(0);
 
     await intra(page, "0798146858");
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare" }).click();
+    await page.getByRole("button", { name: "Vot și adunare" }).click();
     await expect(page.getByText(VOT)).toBeVisible();
 
     /* [P1] Inainte, chiriasul vedea variantele si era refuzat abia la final.
@@ -70,9 +70,9 @@ test.describe("Doar proprietarul voteaza [K3]", () => {
 
   test("[P1] Acasa nu ii cere chiriasului o sarcina pe care nu o poate duce", async ({ page }) => {
     await intra(page, "0798146858");
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText("Ce ai de facut in perioada urmatoare")).toBeVisible();
-    await expect(page.getByText(`Voteaza: ${VOT}`)).toHaveCount(0);
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Ce ai de făcut în perioada următoare")).toBeVisible();
+    await expect(page.getByText(`Votează: ${VOT}`)).toHaveCount(0);
   });
 });
 
@@ -83,8 +83,8 @@ test.describe("Sesizarile se vad dupa perioada de locuire [K4]", () => {
     await leaga("0798839599", "Mutat Azi", 17, "chirias", azi);
 
     await intra(page, "0798839599");
-    await expect(buton(page, "Iesi")).toBeVisible({ timeout: 20000 });
-    await mergiLaTab(page, "Sesizari");
+    await expect(buton(page, "Ieși")).toBeVisible({ timeout: 20000 });
+    await mergiLaTab(page, "Sesizări");
     await expect(page.getByText("Nu ai trimis nicio sesizare")).toBeVisible();
 
     const t = await textEcran(page);
@@ -99,7 +99,7 @@ test.describe("Sesizarile se vad dupa perioada de locuire [K4]", () => {
 
   test("proprietarul de dinainte isi vede mai departe sesizarile", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await expect(page.getByText("Bec ars pe palier la etajul 4")).toBeVisible();
   });
 });
@@ -111,7 +111,7 @@ test.describe("Vederea anonima a blocului [K10, K14]", () => {
     expect(alta.descriere).not.toBe(alta.titlu);
 
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await page.getByRole("button", { name: "Din tot blocul" }).click();
     await expect(page.getByText(alta.titlu)).toBeVisible();
     const t = await textEcran(page);
@@ -124,9 +124,9 @@ test.describe("Vederea anonima a blocului [K10, K14]", () => {
   /* [P2] Vezi raportul: textul din formular a ramas de dinainte de K10. */
   test("[P2] formularul nu mai promite ca ceilalti vad descrierea", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
-    const panou = page.getByRole("dialog", { name: "Sesizare noua" });
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
+    const panou = page.getByRole("dialog", { name: "Sesizare nouă" });
     await expect(panou).toBeVisible();
     await expect(panou.getByText(/vad titlul si descrierea/)).toHaveCount(0);
   });
@@ -137,7 +137,7 @@ test.describe("Vederea anonima a blocului [K10, K14]", () => {
       .select("id, titlu, rezolvata_la").eq("titlu", "Gunoi depozitat pe casa scarii").single();
 
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await page.getByRole("button", { name: "Din tot blocul" }).click();
     await expect(page.getByText(s.titlu)).toBeVisible();
 
@@ -146,7 +146,7 @@ test.describe("Vederea anonima a blocului [K10, K14]", () => {
     await sb.schema("sesizari").from("sesizari").update({ rezolvata_la: vechi }).eq("id", s.id);
     try {
       await page.reload();
-      await mergiLaTab(page, "Sesizari");
+      await mergiLaTab(page, "Sesizări");
       await page.getByRole("button", { name: "Din tot blocul" }).click();
       await expect(page.getByText("Scurgere la coloana de la subsol")).toBeVisible();
       await expect(page.getByText(s.titlu)).toHaveCount(0);
@@ -164,7 +164,7 @@ test.describe("Reminderul de plata [K5]", () => {
     const inainte = new Date().toISOString();
 
     await intraCa(page, "admin");
-    await buton(page, "Trimite reminder de plata").click();
+    await buton(page, "Trimite reminder de plată").click();
     await asteaptaToast(page, "locatari");
 
     const ultima = async (profilId) => {
@@ -185,7 +185,7 @@ test.describe("Reminderul de plata [K5]", () => {
     expect(laElena.corp).toContain("Se apropie termenul");
 
     /* Restantierul vede mesajul rosu pe Acasa */
-    await buton(page, "Iesi").click();
+    await buton(page, "Ieși").click();
     await intraCa(page, "ilie");
     await expect(page.getByText("Instiintare de plata").first()).toBeVisible();
 
@@ -218,15 +218,15 @@ test.describe("Convocarea adunarii ajunge cu ora [K6]", () => {
 
     await intraCa(page, "admin");
     await mergiLaTab(page, "Comunicare");
-    await page.getByRole("button", { name: "Vot si AG" }).click();
-    await buton(page, "Convoaca adunarea").click();
-    const panou = page.getByRole("dialog", { name: "Convoaca adunarea generala" });
+    await page.getByRole("button", { name: "Vot și AG" }).click();
+    await buton(page, "Convoacă adunarea").click();
+    const panou = page.getByRole("dialog", { name: "Convoacă adunarea generală" });
     await panou.getByLabel("Data").fill(zi);
     await panou.getByLabel("Ora").fill("19:30");
     await panou.getByLabel("Locul").fill(LOC);
     await panou.getByLabel("Ordinea de zi").fill("E2E punct unic pe ordinea de zi");
     await buton(page, "Trimite convocarea").click();
-    await asteaptaToast(page, "Convocarea a fost trimisa");
+    await asteaptaToast(page, "Convocarea a fost trimisă");
 
     /* Notificarile pleaca prin coada de evenimente, deci nu sunt gata imediat */
     await expect.poll(async () => {
@@ -240,10 +240,10 @@ test.describe("Convocarea adunarii ajunge cu ora [K6]", () => {
       .select("titlu").eq("profil_id", elena.id).eq("tip", "adunare_generala").like("corp", `%${LOC}%`);
     expect(notificari[0].titlu).toBe("Convocare la adunarea generala");
 
-    await buton(page, "Iesi").click();
+    await buton(page, "Ieși").click();
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare" }).click();
+    await page.getByRole("button", { name: "Vot și adunare" }).click();
     await expect(page.getByText(new RegExp(`Ora 19:30, ${LOC}`))).toBeVisible();
   });
 });

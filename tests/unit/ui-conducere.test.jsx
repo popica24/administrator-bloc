@@ -24,33 +24,33 @@ const ecran = () => textEcran();
 describe("presedintele si cenzorul vad blocul intreg", () => {
   it("presedintele are taburile administratorului si cifrele lui", async () => {
     await intraCa(PRESEDINTE);
-    expect(screen.getByText("Presedinte, Bloc D14, scara A")).toBeTruthy();
+    expect(screen.getByText("Președinte, Bloc D14, scara A")).toBeTruthy();
     expect(screen.getByText("Panou administrator")).toBeTruthy();
-    for (const t of ["Sumar", "Apartamente", "Facturi", "Sesizari", "Comunicare"]) {
+    for (const t of ["Sumar", "Apartamente", "Facturi", "Sesizări", "Comunicare"]) {
       expect(screen.getByRole("tab", { name: new RegExp(`^${t}( \\d+)?$`) })).toBeTruthy();
     }
     const t = ecran();
-    expect(t).toContain("Lista de plata august 2026");
-    expect(t).toContain("Restante");
-    expect(t).toContain("Fond de reparatii");
+    expect(t).toContain("Lista de plată august 2026");
+    expect(t).toContain("Restanțe");
+    expect(t).toContain("Fond de reparații");
   });
 
   it("cenzorul, care nu are apartament in bloc, vede aceleasi ecrane", async () => {
     await intraCa(CENZOR);
     expect(screen.getByText("Cenzor, Bloc D14, scara A")).toBeTruthy();
     expect(screen.queryByText("Contul nu este legat de un apartament")).toBeNull();
-    expect(ecran()).toContain("Lista de plata august 2026");
+    expect(ecran()).toContain("Lista de plată august 2026");
   });
 });
 
 describe("conducerea nu poate schimba nimic", () => {
   it("Sumar: fara reminder, fara instiintare si fara actiuni rapide", async () => {
     await intraCa(PRESEDINTE);
-    expect(screen.queryByRole("button", { name: "Trimite reminder de plata" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Instiintare" })).toBeNull();
-    expect(screen.queryByText("Actiuni rapide")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Trimite reminder de plată" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Înștiințare" })).toBeNull();
+    expect(screen.queryByText("Acțiuni rapide")).toBeNull();
     /* citirea ramane: PDF-ul de uz intern este exact ce verifica cenzorul */
-    expect(screen.getByRole("button", { name: "Exporta lista PDF" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Exportă lista PDF" })).toBeTruthy();
   });
 
   it("Apartamente: fisa se deschide, dar fara butoane care schimba ceva", async () => {
@@ -59,9 +59,9 @@ describe("conducerea nu poate schimba nimic", () => {
     await apasa(buton("Apartament 17"));
     const f = inDialog("Apartament 17");
     expect(f.getByText("Sold la zi")).toBeTruthy();
-    expect(f.getByText("Defalcarea intretinerii, august 2026")).toBeTruthy();
-    for (const nume of ["Inregistreaza incasare cash", "Trimite instiintare de plata", "Modifica numarul de persoane",
-      "Adauga un locatar in aplicatie", "Corecteaza datele apartamentului", "Parola noua", "Inchide accesul"]) {
+    expect(f.getByText("Defalcarea întreținerii, august 2026")).toBeTruthy();
+    for (const nume of ["Înregistrează încasare cash", "Trimite înștiințare de plată", "Modifică numărul de persoane",
+      "Adaugă un locatar în aplicație", "Corectează datele apartamentului", "Parola nouă", "Închide accesul"]) {
       expect(butoane(nume).length, nume).toBe(0);
     }
   });
@@ -74,7 +74,7 @@ describe("conducerea nu poate schimba nimic", () => {
     expect(screen.queryByText("Contorul general al blocului")).toBeNull();
     expect(butoane("Valideaza").length).toBe(0);
     expect(butoane("Respinge").length).toBe(0);
-    expect(butoane("Estimeaza citirile lipsa").length).toBe(0);
+    expect(butoane("Estimează citirile lipsă").length).toBe(0);
   });
 
   it("Fonduri: soldul si miscarile se vad, iesirea nu se poate inregistra", async () => {
@@ -82,19 +82,19 @@ describe("conducerea nu poate schimba nimic", () => {
     await mergiLa("Apartamente");
     await apasa(screen.getByText("Fonduri"));
     expect(ecran()).toContain("Fond de reparatii");
-    expect(butoane("Inregistreaza o iesire").length).toBe(0);
+    expect(butoane("Înregistrează o ieșire").length).toBe(0);
   });
 
   it("Facturi: lista si defalcarea se vad, publicarea si stergerea nu", async () => {
     await intraCa(PRESEDINTE);
     await mergiLa("Facturi");
-    expect(ecran().toLowerCase()).toContain("septembrie 2026 · in lucru");
-    for (const nume of ["Adauga factura", "Publica lista", "Sterge", "Modifica", "Marcheaza platita"]) {
+    expect(ecran().toLowerCase()).toContain("septembrie 2026 · în lucru");
+    for (const nume of ["Adaugă factură", "Publică lista", "Șterge", "Modifică", "Marchează plătită"]) {
       expect(butoane(nume).length, nume).toBe(0);
     }
     /* [C9] previzualizarea trece prin aceeasi functie care pazeste publicarea
        (date_pentru_motor), deci butonul nu facea decat sa dea un mesaj tehnic */
-    expect(butoane("Calculeaza lista pe apartamente").length).toBe(0);
+    expect(butoane("Calculează lista pe apartamente").length).toBe(0);
   });
 
   /* [C1] Sesizarile raman intre locatar si administrator (H11). Ecranul nu
@@ -102,39 +102,39 @@ describe("conducerea nu poate schimba nimic", () => {
      spuna de ce: conducerea vede ce s-a reclamat si in ce stadiu este. */
   it("Sesizari: le vede anonim, fara apartament, text sau poze", async () => {
     await intraCa(PRESEDINTE);
-    await mergiLa("Sesizari");
+    await mergiLa("Sesizări");
     const t = ecran();
-    expect(t).toContain("Le vezi fara nume");
+    expect(t).toContain("Le vezi fără nume");
     expect(t).toMatch(/Usa de la intrare nu se inchide singura/);
     expect(t).not.toMatch(/Ap\. \d/);
     await apasa(butoane(/Usa de la intrare/)[0]);
-    expect(ecran()).toContain("Textul sesizarii il vede doar administratorul.");
-    expect(screen.queryByLabelText("Raspuns pentru proprietar")).toBeNull();
-    expect(butoane("Marcheaza rezolvata").length).toBe(0);
+    expect(ecran()).toContain("Textul sesizării îl vede doar administratorul.");
+    expect(screen.queryByLabelText("Răspuns pentru proprietar")).toBeNull();
+    expect(butoane("Marchează rezolvată").length).toBe(0);
     expect(butoane("Preiau sesizarea").length).toBe(0);
   });
 
   it("Comunicare: anunturile, voturile si mandatele se vad, fara butoane de scris", async () => {
     await intraCa(PRESEDINTE);
     await mergiLa("Comunicare");
-    expect(butoane("Scrie un anunt").length).toBe(0);
-    await apasa(buton("Vot si AG"));
+    expect(butoane("Scrie un anunț").length).toBe(0);
+    await apasa(buton("Vot și AG"));
     expect(butoane("Deschide un vot nou").length).toBe(0);
-    expect(butoane("Convoaca adunarea").length).toBe(0);
-    expect(butoane("Reaminteste celor care nu au votat").length).toBe(0);
+    expect(butoane("Convoacă adunarea").length).toBe(0);
+    expect(butoane("Reamintește celor care nu au votat").length).toBe(0);
     await apasa(buton("Conducere"));
     expect(ecran()).toContain("Rodica Anton");
-    expect(butoane("Numeste un presedinte sau un cenzor").length).toBe(0);
-    expect(butoane("Incheie mandatul").length).toBe(0);
+    expect(butoane("Numește un președinte sau un cenzor").length).toBe(0);
+    expect(butoane("Încheie mandatul").length).toBe(0);
     await apasa(buton("Acte"));
-    expect(butoane("Incarca un document").length).toBe(0);
+    expect(butoane("Încarcă un document").length).toBe(0);
   });
 
   it("Remindere: se vad setarile, dar comutatoarele lipsesc", async () => {
     await intraCa(PRESEDINTE);
     await mergiLa("Comunicare");
     await apasa(buton("Remindere"));
-    expect(ecran()).toContain("Reminderele pleaca automat");
+    expect(ecran()).toContain("Reminderele pleacă automat");
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
     /* [C9] nici butoanele de trimis acum: comanda cere blocul administrat */
     expect(ecran()).not.toContain("Trimite acum");
@@ -153,7 +153,7 @@ describe("administratorul trece mandatele in aplicatie", () => {
     await laConducere();
     const t = ecran();
     expect(t).toContain("Rodica Anton");
-    expect(t).toContain("Presedinte · din 1 iun 2026");
+    expect(t).toContain("Președinte · din 1 iun 2026");
     expect(t).toContain("Sorin Tudose");
     expect(t).toContain("Cenzor · din 1 iun 2026");
   });
@@ -161,28 +161,28 @@ describe("administratorul trece mandatele in aplicatie", () => {
   it("numeste un locatar al blocului, ales din lista", async () => {
     const { sursa } = await laConducere();
     const spion = vi.spyOn(sursa, "numesteInConducere");
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
+    await apasa(buton("Numește un președinte sau un cenzor"));
     const d = await sursa.incarca();
     const elena = d.apartamente.flatMap((a) => a.locatari).find((l) => l.nume === "Elena Marinescu");
     await apasa(screen.getByLabelText("Mandatul"));
     scrie("Mandatul", "cenzor");
     scrie("Cine", elena.profilId);
-    await apasa(buton("Numeste"));
+    await apasa(buton("Numește"));
     expect(spion).toHaveBeenCalledWith(elena.profilId, "cenzor");
-    expect(toast().textContent).toBe("Mandatul a fost inregistrat");
+    expect(toast().textContent).toBe("Mandatul a fost înregistrat");
     expect(ecran()).toContain("Elena Marinescu");
   });
 
   it("numeste un cenzor din afara blocului, cu cont nou si parola aratata o data", async () => {
     const { sursa } = await laConducere();
     const spion = vi.spyOn(sursa, "adaugaInConducere");
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
+    await apasa(buton("Numește un președinte sau un cenzor"));
     scrie("Numele lui", " Vasile Contabil ");
-    scrie("Numarul lui de telefon", "0799 400 300");
-    await apasa(buton("Numeste"));
+    scrie("Numărul lui de telefon", "0799 400 300");
+    await apasa(buton("Numește"));
     expect(spion).toHaveBeenCalledWith("Vasile Contabil", "0799 400 300", "presedinte");
     const t = ecran();
-    expect(t).toContain("Intra cu numarul 0799 400 300");
+    expect(t).toContain("Intră cu numărul 0799 400 300");
     expect(t).toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
     expect(t).toContain("Vasile Contabil");
   });
@@ -191,25 +191,25 @@ describe("administratorul trece mandatele in aplicatie", () => {
     const { sursa } = await laConducere();
     const spion = vi.spyOn(sursa, "incheieMandat");
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    await apasa(butoane("Incheie mandatul")[0]);
+    await apasa(butoane("Încheie mandatul")[0]);
     expect(spion).not.toHaveBeenCalled();
 
     window.confirm.mockReturnValue(true);
-    await apasa(butoane("Incheie mandatul")[0]);
+    await apasa(butoane("Încheie mandatul")[0]);
     expect(spion).toHaveBeenCalled();
-    expect(toast().textContent).toBe("Mandatul a fost incheiat");
-    expect(ecran()).toContain("Incheiat");
+    expect(toast().textContent).toBe("Mandatul a fost încheiat");
+    expect(ecran()).toContain("Încheiat");
   });
 
   it("cineva care are deja cont primeste doar mandatul, fara parola noua", async () => {
     const { sursa } = await laConducere();
     /* numarul lui Gheorghe Voicu, locatar cu cont in demonstratie */
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
+    await apasa(buton("Numește un președinte sau un cenzor"));
     scrie("Numele lui", "Gheorghe Voicu");
-    scrie("Numarul lui de telefon", "0741 002 101");
-    await apasa(buton("Numeste"));
+    scrie("Numărul lui de telefon", "0741 002 101");
+    await apasa(buton("Numește"));
     const t = ecran();
-    expect(t).toContain("Persoana avea deja cont pe numarul 0741 002 101");
+    expect(t).toContain("Persoana avea deja cont pe numărul 0741 002 101");
     expect(t).not.toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
     const d = await sursa.incarca();
     expect(d.conducere.some((m) => m.nume === "Gheorghe Voicu" && !m.activPana)).toBe(true);
@@ -226,10 +226,10 @@ describe("administratorul trece mandatele in aplicatie", () => {
 
   it("dupa Gata, parola nu se mai vede pe ecran", async () => {
     await laConducere();
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
+    await apasa(buton("Numește un președinte sau un cenzor"));
     scrie("Numele lui", "Vasile Contabil");
-    scrie("Numarul lui de telefon", "0799 400 301");
-    await apasa(buton("Numeste"));
+    scrie("Numărul lui de telefon", "0799 400 301");
+    await apasa(buton("Numește"));
     expect(ecran()).toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
     await apasa(buton("Gata"));
     expect(ecran()).not.toMatch(/[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}/);
@@ -237,11 +237,11 @@ describe("administratorul trece mandatele in aplicatie", () => {
 
   it("panoul se inchide si formularul se goleste dupa o numire din lista", async () => {
     const { sursa } = await laConducere();
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
+    await apasa(buton("Numește un președinte sau un cenzor"));
     const d = await sursa.incarca();
     const ilie = d.apartamente.flatMap((a) => a.locatari).find((l) => l.nume === "Dan Ilie");
     scrie("Cine", ilie.profilId);
-    await apasa(buton("Numeste"));
+    await apasa(buton("Numește"));
     expect(screen.queryByLabelText("Mandatul")).toBeNull();
     expect(ecran()).toContain("Dan Ilie");
   });
@@ -249,10 +249,10 @@ describe("administratorul trece mandatele in aplicatie", () => {
   it("un refuz lasa panoul deschis, cu mesajul pe ecran", async () => {
     const { sursa } = await laConducere();
     vi.spyOn(sursa, "adaugaInConducere").mockRejectedValue(new Error("Persoana are deja acest mandat, in curs."));
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
+    await apasa(buton("Numește un președinte sau un cenzor"));
     scrie("Numele lui", "Cineva");
-    scrie("Numarul lui de telefon", "0799 400 302");
-    await apasa(buton("Numeste"));
+    scrie("Numărul lui de telefon", "0799 400 302");
+    await apasa(buton("Numește"));
     expect(toast().textContent).toBe("Persoana are deja acest mandat, in curs.");
     expect(screen.getByLabelText("Mandatul")).toBeTruthy();
   });
@@ -260,22 +260,22 @@ describe("administratorul trece mandatele in aplicatie", () => {
   it("un mandat fara numar de telefon nu arata un separator gol", async () => {
     await laConducere({ modifica: (d) => { d.conducere = d.conducere.map((m) => ({ ...m, telefon: null })); } });
     const t = ecran();
-    expect(t).toContain("Presedinte · din 1 iun 2026");
+    expect(t).toContain("Președinte · din 1 iun 2026");
     expect(t).not.toContain("din 1 iun 2026 · ");
   });
 
   it("panoul de numire se poate inchide fara sa numeasca pe nimeni", async () => {
     const { sursa } = await laConducere();
     const spion = vi.spyOn(sursa, "numesteInConducere");
-    await apasa(buton("Numeste un presedinte sau un cenzor"));
-    await apasa(screen.getByRole("button", { name: "Inchide" }));
+    await apasa(buton("Numește un președinte sau un cenzor"));
+    await apasa(screen.getByRole("button", { name: "Închide" }));
     expect(screen.queryByLabelText("Mandatul")).toBeNull();
     expect(spion).not.toHaveBeenCalled();
   });
 
   it("fara niciun mandat, spune asta in loc sa lase un gol", async () => {
     await laConducere({ modifica: (d) => { d.conducere = []; } });
-    expect(ecran()).toContain("Nimeni nu are inca mandat de presedinte sau de cenzor.");
+    expect(ecran()).toContain("Nimeni nu are încă mandat de președinte sau de cenzor.");
   });
 });
 
@@ -298,7 +298,7 @@ describe("presedintele care locuieste in bloc", () => {
 
   it("porneste in apartamentul lui, cu ecranele de locatar", async () => {
     await elenaPresedinte();
-    for (const t of ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"]) {
+    for (const t of ["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"]) {
       expect(screen.getByRole("tab", { name: new RegExp(`^${t}( \\d+)?$`) })).toBeTruthy();
     }
     expect(screen.queryByText("Panou administrator")).toBeNull();
@@ -308,21 +308,21 @@ describe("presedintele care locuieste in bloc", () => {
     await elenaPresedinte();
     await mergiLa("Contoare");
     expect(butoane("Trimite indexul").length).toBe(1);
-    await mergiLa("Sesizari");
-    expect(butoane("Sesizare noua").length).toBe(1);
+    await mergiLa("Sesizări");
+    expect(butoane("Sesizare nouă").length).toBe(1);
   });
 
   it("deschide verificarea blocului din tabul Bloc si se intoarce de unde a plecat", async () => {
     await elenaPresedinte();
     await mergiLa("Bloc");
-    expect(ecran()).toContain("Esti presedinte al asociatiei");
-    await apasa(buton("Verifica blocul"));
+    expect(ecran()).toContain("Ești președinte al asociației");
+    await apasa(buton("Verifică blocul"));
     await screen.findByText("Panou administrator");
-    expect(screen.getByText("Presedinte, Bloc D14, scara A")).toBeTruthy();
+    expect(screen.getByText("Președinte, Bloc D14, scara A")).toBeTruthy();
     /* si acolo tot nu scrie nimic */
-    expect(butoane("Trimite reminder de plata").length).toBe(0);
-    await apasa(buton("Inapoi la apartamentul meu"));
+    expect(butoane("Trimite reminder de plată").length).toBe(0);
+    await apasa(buton("Înapoi la apartamentul meu"));
     await screen.findByText("Apartament 17, Bloc D14, scara A");
-    expect(screen.getByRole("tab", { name: /^Acasa/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^Acasă/ })).toBeTruthy();
   });
 });

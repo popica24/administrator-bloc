@@ -33,7 +33,7 @@ async function faraDerulareOrizontala(page) {
   expect(masura.doc, `pagina se trage pe orizontala: ${masura.doc} > ${masura.ecran}`)
     .toBeLessThanOrEqual(masura.ecran + 1);
   if (masura.shell) {
-    expect(masura.shell.sw, "coloana aplicatiei se trage pe orizontala")
+    expect(masura.shell.sw, "coloană aplicației se trage pe orizontala")
       .toBeLessThanOrEqual(masura.shell.cw + 1);
   }
 }
@@ -53,21 +53,21 @@ test.describe("ecran de 320 px cu tastatura deschisa", () => {
 
   test("intrarea in cont se poate duce la capat cu tastatura pe ecran", async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
+    await page.getByLabel("Numărul tău de telefon").fill(CONTURI.elena);
     await page.getByLabel("Parola").fill(PAROLA);
     await faraDerulareOrizontala(page);
-    const intraBtn = page.getByRole("button", { name: "Intra", exact: true });
+    const intraBtn = page.getByRole("button", { name: "Intră", exact: true });
     await ajungeLa(intraBtn);
     await intraBtn.click();
-    await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
+    await expect(page.getByRole("button", { name: "Ieși", exact: true })).toBeVisible({ timeout: 25000 });
   });
 
   test("formularul de index se completeaza si se trimite pe ecran scurt", async ({ page }) => {
     await intra(page, CONTURI.voicu);
-    await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
+    await expect(page.getByRole("button", { name: "Ieși", exact: true })).toBeVisible({ timeout: 25000 });
     await mergiLaTab(page, "Contoare");
     await faraDerulareOrizontala(page);
-    const campuri = page.getByLabel(/^Apa (rece|calda), index anterior /);
+    const campuri = page.getByLabel(/^Apa (rece|caldă), index anterior /);
     const cate = await campuri.count();
     test.skip(cate === 0, "apartamentul are deja indexul validat pe luna aceasta");
     for (let i = 0; i < cate; i += 1) {
@@ -82,11 +82,11 @@ test.describe("ecran de 320 px cu tastatura deschisa", () => {
 
   test("toate ecranele administratorului incap si pe 300 px inaltime", async ({ page }) => {
     await intraCa(page, "admin");
-    for (const tabul of ["Sumar", "Apartamente", "Facturi", "Sesizari", "Comunicare"]) {
+    for (const tabul of ["Sumar", "Apartamente", "Facturi", "Sesizări", "Comunicare"]) {
       await mergiLaTab(page, tabul);
       await faraDerulareOrizontala(page);
       const t = await textEcran(page);
-      for (const cuvant of CUVINTE_TEHNICE) expect(t, `${tabul} contine "${cuvant}"`).not.toContain(cuvant);
+      for (const cuvant of CUVINTE_TEHNICE) expect(t, `${tabul} conține "${cuvant}"`).not.toContain(cuvant);
     }
     /* Bara de taburi ramane atinsa, nu iese din ecran */
     for (const tabul of ["Sumar", "Comunicare"]) {
@@ -137,8 +137,8 @@ test.describe("un nume romanesc lung de proprietar", () => {
     await faraDerulareOrizontala(page);
 
     /* Editorul de cote pune numele in eticheta fiecarui camp */
-    await buton(page, "Corecteaza datele apartamentului").click();
-    await buton(page, "Redistribuie cotele intregului bloc").click();
+    await buton(page, "Corectează datele apartamentului").click();
+    await buton(page, "Redistribuie cotele întregului bloc").click();
     await expect(fisa.getByLabel(`Ap. ${ap.numar}, ${NUME_LUNG}`)).toBeVisible();
     await faraDerulareOrizontala(page);
   });
@@ -153,16 +153,16 @@ test.describe("un nume romanesc lung de proprietar", () => {
     await page.getByRole("button", { name: "aug 26" }).click();
     await expect(page.getByText(/august 2026/i).first()).toBeVisible();
 
-    const intern = await descarca(page, () => buton(page, "Exporta lista interna (uz administrativ)").click());
+    const intern = await descarca(page, () => buton(page, "Exportă lista internă (uz administrativ)").click());
     const textul = textPdf(intern.octeti);
     expect(textul).toContain("Document intern");
     /* Numele intreg nu incape pe 110 pt: se scurteaza, dar ramane recognoscibil
        si nu se taie in mijlocul unui cuvant fara semn. */
     const randNume = textul.split("\n").find((r) => r.startsWith("Constantin"));
-    expect(randNume, `numele lung nu apare deloc in PDF:\n${textul.slice(0, 400)}`).toBeTruthy();
+    expect(randNume, `numele lung nu apare deloc în PDF:\n${textul.slice(0, 400)}`).toBeTruthy();
     expect(randNume.length).toBeLessThanOrEqual(NUME_LUNG.length);
     if (randNume.length < NUME_LUNG.length) {
-      expect(randNume.endsWith("."), `numele taiat fara semn: "${randNume}"`).toBe(true);
+      expect(randNume.endsWith("."), `numele taiat fără semn: "${randNume}"`).toBe(true);
     }
     expect(textul).not.toMatch(/undefined|NaN/);
   });
@@ -172,7 +172,7 @@ test.describe("un nume romanesc lung de proprietar", () => {
     void ap;
     await intraCa(page, "elena");
     await faraDerulareOrizontala(page);
-    const iesi = await buton(page, "Iesi").boundingBox();
+    const iesi = await buton(page, "Ieși").boundingBox();
     expect(iesi).not.toBeNull();
     expect(iesi.x + iesi.width).toBeLessThanOrEqual(INGUST.width + 1);
   });
@@ -192,9 +192,9 @@ test.describe("poza facuta cu telefonul tinut vertical", () => {
 
     try {
       await intra(page, CONTURI.voicu);
-      await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
+      await expect(page.getByRole("button", { name: "Ieși", exact: true })).toBeVisible({ timeout: 25000 });
       await mergiLaTab(page, "Contoare");
-      for (const eticheta of [/^Apa rece, index anterior /, /^Apa calda, index anterior /]) {
+      for (const eticheta of [/^Apa rece, index anterior /, /^Apa caldă, index anterior /]) {
         const camp = page.getByLabel(eticheta);
         const anterior = Number((await camp.getAttribute("placeholder")).replace(",", "."));
         await camp.fill(String(anterior + 7));
@@ -215,13 +215,13 @@ test.describe("poza facuta cu telefonul tinut vertical", () => {
       /* Bucket-ul `poze` accepta doar JPEG/WebP si cel mult 1 MB: poza din
          portret trebuie sa fi trecut prin micsorare, nu sa fi fost respinsa */
       const { data: fisier, error } = await sb.storage.from("poze").download(cale.poza_cale);
-      if (error) throw new Error(`poza nu se poate descarca: ${error.message}`);
+      if (error) throw new Error(`poza nu se poate descarcă: ${error.message}`);
       const octeti = Buffer.from(await fisier.arrayBuffer());
       expect(octeti.length).toBeLessThan(1024 * 1024);
       expect(octeti.slice(0, 2).toString("hex"), "poza salvata nu este JPEG").toBe("ffd8");
 
       /* Si administratorul o vede, nu un patrat gol */
-      await buton(page, "Iesi").click();
+      await buton(page, "Ieși").click();
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Citiri contoare" }).click();
@@ -243,16 +243,16 @@ test.describe("plimbatul intre taburi cu formularul pe jumatate scris", () => {
        atingere gresita. Testul o fixeaza, ca sa se vada ca [S6] este o gaura
        in aceeasi regula, nu o regula care lipseste. */
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     const camp = page.getByLabel("Sau scrie pe scurt problema");
     await camp.fill("Curge apa la calorifer, camera mare");
 
     const cutie = await page.locator(".ab-shell").boundingBox();
     await page.mouse.click(cutie.x + cutie.width / 2, cutie.y + 8);
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toBeVisible();
     await expect(camp).toHaveValue("Curge apa la calorifer, camera mare");
 
     const t = await textEcran(page);
@@ -268,32 +268,32 @@ test.describe("plimbatul intre taburi cu formularul pe jumatate scris", () => {
        (src/AdminBloc.jsx:2354-2357) si titlul, descrierea si pozele alese se
        pierd fara nicio intrebare. "Inainte" nu le aduce inapoi. Acelasi lucru
        la formularul de factura al administratorului si la fisa apartamentului.
-       Masurat: dupa goBack tabul activ este "Acasa", panoul are 0 instante, iar
+       Masurat: dupa goBack tabul activ este "Acasă", panoul are 0 instante, iar
        dupa goForward campul este gol.
        Asteptat: ori gestul inapoi inchide doar panoul (si intreaba, ca peste
        tot), ori ce a scris omul este acolo cand se intoarce. */
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.getByLabel("Sau scrie pe scurt problema").fill("Curge apa la calorifer, camera mare");
-    await page.getByLabel("Unde este si de cand (optional)").fill("De doua zile, din ce in ce mai tare.");
+    await page.getByLabel("Unde este și de când (opțional)").fill("De două zile, din ce în ce mai tare.");
 
     await page.goBack();
     await page.goForward();
-    await buton(page, "Sesizare noua").click();
+    await buton(page, "Sesizare nouă").click();
     await expect(page.getByLabel("Sau scrie pe scurt problema")).toHaveValue("Curge apa la calorifer, camera mare");
-    await expect(page.getByLabel("Unde este si de cand (optional)")).toHaveValue("De doua zile, din ce in ce mai tare.");
+    await expect(page.getByLabel("Unde este și de când (opțional)")).toHaveValue("De două zile, din ce în ce mai tare.");
   });
 
   test("dupa plimbare prin taburi, ecranele raman intregi si pe romaneste", async ({ page }) => {
     await intraCa(page, "elena");
-    for (const drum of [["Plata", "Contoare", "Acasa"], ["Bloc", "Sesizari", "Plata"]]) {
+    for (const drum of [["Plata", "Contoare", "Acasă"], ["Bloc", "Sesizări", "Plata"]]) {
       for (const tabul of drum) {
         await mergiLaTab(page, tabul);
         await faraDerulareOrizontala(page);
         const t = await textEcran(page);
         expect(t.length, `tabul ${tabul} a ramas gol`).toBeGreaterThan(80);
-        for (const cuvant of CUVINTE_TEHNICE) expect(t, `${tabul} contine "${cuvant}"`).not.toContain(cuvant);
+        for (const cuvant of CUVINTE_TEHNICE) expect(t, `${tabul} conține "${cuvant}"`).not.toContain(cuvant);
       }
     }
     void (await blocD14());

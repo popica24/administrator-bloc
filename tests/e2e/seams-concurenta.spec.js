@@ -21,7 +21,7 @@ const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+
    -------------------------------------------------------------------------- */
 
 test.describe("offline pe toata durata unei treburi, apoi inapoi online", () => {
-  const TITLU = "E2E sesizare fara internet";
+  const TITLU = "E2E sesizare fără internet";
 
   test.afterEach(async () => {
     const sb = serviciu();
@@ -36,8 +36,8 @@ test.describe("offline pe toata durata unei treburi, apoi inapoi online", () => 
   test("sesizarea scrisa fara internet se trimite dupa ce internetul revine, o singura data", async ({ page, context }) => {
     const sb = serviciu();
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
 
     /* Internetul cade inainte de prima apasare si ramane cazut */
     await context.setOffline(true);
@@ -51,7 +51,7 @@ test.describe("offline pe toata durata unei treburi, apoi inapoi online", () => 
 
     const { count: inTimpulCaderii } = await sb.schema("sesizari").from("sesizari")
       .select("id", { count: "exact", head: true }).eq("titlu", TITLU);
-    expect(inTimpulCaderii, "nimic nu s-a scris cat timp nu era internet").toBe(0);
+    expect(inTimpulCaderii, "nimic nu s-a scris cât timp nu era internet").toBe(0);
 
     /* Ce a scris omul ramane pe ecran: a doua apasare, cu internetul la loc */
     await expect(page.getByLabel("Sau scrie pe scurt problema")).toHaveValue(TITLU);
@@ -61,7 +61,7 @@ test.describe("offline pe toata durata unei treburi, apoi inapoi online", () => 
 
     const { count: dupa } = await sb.schema("sesizari").from("sesizari")
       .select("id", { count: "exact", head: true }).eq("titlu", TITLU);
-    expect(dupa, "exact o sesizare, nu doua").toBe(1);
+    expect(dupa, "exact o sesizare, nu două").toBe(1);
   });
 
   test("aplicatia reincarcata fara internet spune ce se intampla, nu ramane alba", async ({ page, context }) => {
@@ -75,7 +75,7 @@ test.describe("offline pe toata durata unei treburi, apoi inapoi online", () => 
     await page.unroute("**/rest/v1/**");
     await page.unroute("**/auth/v1/**");
     expect(text.trim().length, "ecranul alb nu spune nimic").toBeGreaterThan(20);
-    expect(text, "ecranul nu spune ce se intampla").toMatch(/internet|serverul|sesiun|incearc|din nou/i);
+    expect(text, "ecranul nu spune ce se întâmplă").toMatch(/internet|serverul|sesiun|incearc|din nou/i);
     for (const cuvant of CUVINTE_TEHNICE) expect(text).not.toContain(cuvant);
     void context;
   });
@@ -114,13 +114,13 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
   });
 
   async function adaugaFactura(page, { categorie, cod, suma = "100" }) {
-    await buton(page, "Adauga factura").click();
-    const panou = page.getByRole("dialog", { name: "Factura noua" });
+    await buton(page, "Adaugă factură").click();
+    const panou = page.getByRole("dialog", { name: "Factură nouă" });
     await expect(panou).toBeVisible({ timeout: 20000 });
     await panou.getByLabel("Sau scrie un furnizor nou").fill(`E2E seam ${categorie}`);
-    await panou.getByLabel("Ce cheltuiala este").fill(categorie);
+    await panou.getByLabel("Ce cheltuială este").fill(categorie);
     await panou.getByLabel("Suma facturii").fill(suma);
-    await panou.getByLabel("Cum se imparte").selectOption("apartamente");
+    await panou.getByLabel("Cum se împarte").selectOption("apartamente");
     if (cod) await panou.getByLabel("Cod pe lista").fill(cod);
     return panou;
   }
@@ -148,7 +148,7 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
     try {
       await intraCa(a, "admin");
       await intra(b, EMAIL_2);
-      await expect(buton(b, "Iesi")).toBeVisible({ timeout: 25000 });
+      await expect(buton(b, "Ieși")).toBeVisible({ timeout: 25000 });
       await mergiLaTab(a, "Facturi");
       await mergiLaTab(b, "Facturi");
 
@@ -160,8 +160,8 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
       await expect(b.locator(".ab-toast")).toHaveCount(0, { timeout: 15000 });
 
       await Promise.all([
-        buton(a, "Salveaza factura").click(),
-        buton(b, "Salveaza factura").click(),
+        buton(a, "Salvează factura").click(),
+        buton(b, "Salvează factura").click(),
       ]);
       await expect(a.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
       await expect(b.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
@@ -176,7 +176,7 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
       for (const f of furnizori || []) {
         const { count } = await sb.schema("intretinere").from("cheltuieli")
           .select("id", { count: "exact", head: true }).eq("furnizor_id", f.id);
-        expect(count, `furnizorul "${f.denumire}" a ramas fara nicio factura`).toBeGreaterThan(0);
+        expect(count, `furnizorul "${f.denumire}" a ramas fără nicio factura`).toBeGreaterThan(0);
       }
     } finally {
       await ctxA.close();
@@ -199,38 +199,38 @@ test.describe("doi administratori lucreaza deodata pe aceeasi lista", () => {
       await intraCa(a, "admin");
       await mergiLaTab(a, "Facturi");
       await adaugaFactura(a, { categorie: "E2E seam de sters", cod: COD });
-      await buton(a, "Salveaza factura").click();
+      await buton(a, "Salvează factura").click();
       await expect(a.getByText("E2E seam de sters", { exact: true })).toBeVisible({ timeout: 25000 });
 
       /* Primul deschide randul ca sa-l modifice */
-      await expect(buton(a, "Modifica")).toHaveCount(1);
-      await buton(a, "Modifica").click();
-      const panou = a.getByRole("dialog", { name: "Modifica factura" });
+      await expect(buton(a, "Modifică")).toHaveCount(1);
+      await buton(a, "Modifică").click();
+      const panou = a.getByRole("dialog", { name: "Modifică factura" });
       await expect(panou).toBeVisible({ timeout: 20000 });
       await panou.getByLabel("Suma facturii").fill("222");
 
       /* Intre timp, al doilea administrator il sterge */
       await intra(b, EMAIL_2);
-      await expect(buton(b, "Iesi")).toBeVisible({ timeout: 25000 });
+      await expect(buton(b, "Ieși")).toBeVisible({ timeout: 25000 });
       await mergiLaTab(b, "Facturi");
       await expect(b.getByText("E2E seam de sters", { exact: true })).toBeVisible({ timeout: 25000 });
       b.once("dialog", (d) => d.accept());
-      await buton(b, "Sterge").first().click();
-      await asteaptaToast(b, "stearsa");
+      await buton(b, "Șterge").first().click();
+      await asteaptaToast(b, "ștearsă");
 
       /* Primul salveaza peste un rand care nu mai exista. Toastul de la
          salvarea dinainte trebuie sa apuce sa dispara, altfel testul citeste
          mesajul vechi in locul celui nou. */
       await expect(a.locator(".ab-toast")).toHaveCount(0, { timeout: 15000 });
-      await buton(a, "Salveaza factura").click();
+      await buton(a, "Salvează factura").click();
       await expect(a.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
       const mesaj = await a.locator(".ab-toast").innerText();
       for (const cuvant of CUVINTE_TEHNICE) expect(mesaj, `mesajul "${mesaj}"`).not.toContain(cuvant);
-      expect(mesaj, "mesajul spune ca randul nu mai exista").toMatch(/nu mai exista|a fost stear|reincarca/i);
+      expect(mesaj, "mesajul spune ca rândul nu mai există").toMatch(/nu mai exista|a fost stear|reincarca/i);
 
       const { data: ramase } = await sb.schema("intretinere").from("cheltuieli")
         .select("id, suma").eq("lista_id", LISTA.id).eq("cod", COD);
-      expect(ramase, "randul sters nu invie la salvarea celuilalt").toHaveLength(0);
+      expect(ramase, "rândul sters nu invie la salvarea celuilalt").toHaveLength(0);
     } finally {
       await ctxA.close();
       await ctxB.close();
@@ -248,9 +248,9 @@ test.describe("doua incasari cash in aceeasi clipa, pe aceeasi datorie", () => {
   test("amandoua se inregistreaza, chitantele raman numerotate, soldul nu trece pe minus", async ({ browser }) => {
     const sb = serviciu();
     const ap = await apartamentulNumarul(19);
-    const pid = await creeazaCont(TELEFON, "Platitor In Acelasi Timp");
+    const pid = await creeazaCont(TELEFON, "Platitor În Același Timp");
     await legaDeApartament(pid, ap.id);
-    await datorieDeTest(ap.id, 40, "E2E datorie pe doua cai");
+    await datorieDeTest(ap.id, 40, "E2E datorie pe două cai");
     const sold = await soldApartament(ap.id);
     expect(sold).toBeGreaterThan(0);
 
@@ -263,20 +263,20 @@ test.describe("doua incasari cash in aceeasi clipa, pe aceeasi datorie", () => {
       await intraCa(t, "admin");
       await mergiLaTab(t, "Apartamente");
       await t.getByRole("button", { name: "Apartament 19" }).click();
-      await buton(t, "Inregistreaza incasare cash").click();
-      await t.getByLabel("Suma primita").fill(lei(sold / 2));
+      await buton(t, "Înregistrează încasare cash").click();
+      await t.getByLabel("Suma primită").fill(lei(sold / 2));
 
       await intraCa(a, "admin");
       await mergiLaTab(a, "Apartamente");
       await a.getByRole("button", { name: "Apartament 19" }).click();
-      await buton(a, "Inregistreaza incasare cash").click();
+      await buton(a, "Înregistrează încasare cash").click();
 
       const { data: inainte } = await sb.schema("financiar").from("chitante").select("numar, serie");
       const numereInainte = (inainte || []).map((c) => `${c.serie}-${c.numar}`);
 
       await Promise.all([
-        buton(t, "Emite chitanta").click(),
-        buton(a, "Emite chitanta").click(),
+        buton(t, "Emite chitanța").click(),
+        buton(a, "Emite chitanța").click(),
       ]);
 
       await expect(t.locator(".ab-toast")).toBeVisible({ timeout: 40000 });
@@ -287,14 +287,14 @@ test.describe("doua incasari cash in aceeasi clipa, pe aceeasi datorie", () => {
       /* Chitantele: doua noi, fiecare cu numarul ei, niciunul repetat */
       const { data: dupa } = await sb.schema("financiar").from("chitante").select("numar, serie");
       const numereDupa = (dupa || []).map((c) => `${c.serie}-${c.numar}`);
-      expect(new Set(numereDupa).size, "numere de chitanta repetate").toBe(numereDupa.length);
+      expect(new Set(numereDupa).size, "numere de chitanța repetate").toBe(numereDupa.length);
       expect(numereDupa.length - numereInainte.length).toBe(2);
 
       /* Soldul: nimic pe minus, iar ce a prisosit este avans */
       const { data: rest } = await sb.schema("financiar").from("datorii_rest")
         .select("rest").eq("apartament_id", ap.id);
-      for (const r of rest || []) expect(Number(r.rest), "rest negativ in registru").toBeGreaterThanOrEqual(0);
-      expect(await soldApartament(ap.id), "soldul dupa doua plati").toBe(0);
+      for (const r of rest || []) expect(Number(r.rest), "rest negativ în registru").toBeGreaterThanOrEqual(0);
+      expect(await soldApartament(ap.id), "soldul după două plăți").toBe(0);
 
       /* Si ce vede omul: nicio suma pe minus pe ecran */
       await t.reload();
@@ -326,8 +326,8 @@ test.describe("webhook-ul si cron-ul se bat pe acelasi eveniment", () => {
     const elena = await profilDupaTelefon(CONTURI.elena);
 
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.getByLabel("Sau scrie pe scurt problema").fill(TITLU);
     await buton(page, "Trimite sesizarea").click();
     await asteaptaToast(page, "Sesizarea a ajuns la administrator");
@@ -336,11 +336,11 @@ test.describe("webhook-ul si cron-ul se bat pe acelasi eveniment", () => {
     expect(sesizari).toHaveLength(1);
     const sesizareId = sesizari[0].id;
 
-    await buton(page, "Iesi").click();
+    await buton(page, "Ieși").click();
     await intraCa(page, "admin");
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await page.getByText(TITLU, { exact: true }).first().click();
-    await buton(page, "Marcheaza rezolvata").click();
+    await buton(page, "Marchează rezolvată").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 25000 });
 
     /* Cron-ul, de cinci ori deodata, peste acelasi eveniment */
@@ -350,16 +350,16 @@ test.describe("webhook-ul si cron-ul se bat pe acelasi eveniment", () => {
 
     const { data: notificari } = await sb.schema("comunicare").from("notificari")
       .select("id, titlu").eq("profil_id", elena.id).eq("referinta->>sesizare_id", sesizareId);
-    expect(notificari.length, "aceeasi sesizare rezolvata anuntata de mai multe ori").toBe(1);
+    expect(notificari.length, "aceeași sesizare rezolvată anuntata de mai multe ori").toBe(1);
 
     /* Si ce vede locatarul: o singura instiintare pentru sesizarea lui, nu un
        teanc. Se numara titlul sesizarii, care este unic, nu textul "Sesizare
        rezolvata": acela apare si pentru sesizarile lasate de alte teste. */
-    await buton(page, "Iesi").click();
+    await buton(page, "Ieși").click();
     await intraCa(page, "elena");
     const acasa = await page.locator(".ab-shell > .ab-scroll").innerText();
     const aparitii = acasa.split(TITLU).length - 1;
-    expect(aparitii, "instiintarea apare de mai multe ori pe Acasa").toBe(1);
+    expect(aparitii, "înștiințarea apare de mai multe ori pe Acasa").toBe(1);
     for (const cuvant of CUVINTE_TEHNICE) expect(acasa).not.toContain(cuvant);
 
     await sb.schema("comunicare").from("notificari").delete().eq("referinta->>sesizare_id", sesizareId);

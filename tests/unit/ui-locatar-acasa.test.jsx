@@ -14,13 +14,13 @@ const sarcina = (eticheta) => screen.getByRole("button", { name: eticheta });
 describe("Acasa: soldul si badge-ul de termen", () => {
   it("arata suma de plata, termenul si textul despre penalizari", async () => {
     await pornesteApp({ email: ELENA });
-    expect(screen.getByText("Buna, Elena")).toBeTruthy();
+    expect(screen.getByText("Bună, Elena")).toBeTruthy();
     expect(screen.getByText("Bloc D14, scara A, ap. 17")).toBeTruthy();
-    expect(screen.getByText("De plata acum")).toBeTruthy();
+    expect(screen.getByText("De plată acum")).toBeTruthy();
     expect(screen.getAllByText("718,09").length).toBeGreaterThan(0);
     expect(screen.getByText("Mai ai 6 zile")).toBeTruthy();
-    expect(ecran()).toContain("Lista pe august 2026, termen de plata 25 septembrie 2026. Dupa 30 de zile de la scadenta se calculeaza penalizari de 0,02% pe zi.");
-    expect(screen.getByRole("button", { name: "Cum platesc" })).toBeTruthy();
+    expect(ecran()).toContain("Lista pe august 2026, termen de plată 25 septembrie 2026. După 30 de zile de la scadență se calculează penalizări de 0,02% pe zi.");
+    expect(screen.getByRole("button", { name: "Cum plătesc" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "De unde vine suma" })).toBeTruthy();
   });
 
@@ -42,9 +42,9 @@ describe("Acasa: soldul si badge-ul de termen", () => {
 
   it("dupa scadenta arata Termen depasit, iar sarcinile nu mai numara zile", async () => {
     await pornesteApp({ email: ELENA, zi: zi("2026-09-26") });
-    expect(screen.getByText("Termen depasit")).toBeTruthy();
-    expect(within(sarcina("Transmite indexul la apa")).getByText("Termen 25 septembrie 2026")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Cum platesc" })).toBeTruthy();
+    expect(screen.getByText("Termen depășit")).toBeTruthy();
+    expect(within(sarcina("Transmite indexul la apă")).getByText("Termen 25 septembrie 2026")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cum plătesc" })).toBeTruthy();
   });
 
   /* [K24] Ziua de azi e a Romaniei: la 22:00 in New York, pe 25 septembrie,
@@ -54,7 +54,7 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     process.env.TZ = "America/New_York";
     try {
       await pornesteApp({ email: ELENA, zi: new Date("2026-09-26T02:00:00Z") });
-      expect(screen.getByText("Termen depasit")).toBeTruthy();
+      expect(screen.getByText("Termen depășit")).toBeTruthy();
     } finally {
       process.env.TZ = fus;
     }
@@ -62,11 +62,11 @@ describe("Acasa: soldul si badge-ul de termen", () => {
 
   it("fara lista publicata, dar cu datorii, nu arata termenul listei", async () => {
     await pornesteApp({ email: ILIE, modifica: (d) => { d.liste = []; } });
-    expect(screen.getByText("Termen depasit")).toBeTruthy();
-    expect(ecran()).not.toContain("termen de plata");
-    expect(ecran()).toContain("De plata acum2.319,36");
+    expect(screen.getByText("Termen depășit")).toBeTruthy();
+    expect(ecran()).not.toContain("termen de plată");
+    expect(ecran()).toContain("De plată acum2.319,36");
     /* fara doua liste nu exista fraza de comparatie */
-    expect(ecran()).not.toContain("deci luna aceasta platesti");
+    expect(ecran()).not.toContain("deci luna aceasta plătești");
   });
 
   /* [E2] Cel mai vechi datornic vedea "Mai ai N zile" pentru ca badge-ul se
@@ -79,12 +79,12 @@ describe("Acasa: soldul si badge-ul de termen", () => {
         const ap = d.apartamente.find((a) => a.id === d.eu.apartamentId);
         d.datorii.push({
           id: "datorie-veche-test", apartamentId: ap.id, tip: "intretinere", luna: "2026-07",
-          listaId: null, suma: 50, scadenta: "2026-08-25", descriere: "Restanta veche",
+          listaId: null, suma: 50, scadenta: "2026-08-25", descriere: "Restanță veche",
           rest: 50, documentId: null, creatLa: "2026-08-01T00:00:00Z",
         });
       },
     });
-    expect(screen.getByText("Termen depasit")).toBeTruthy();
+    expect(screen.getByText("Termen depășit")).toBeTruthy();
     expect(screen.queryByText("Mai ai 6 zile")).toBeNull();
   });
 
@@ -102,21 +102,21 @@ describe("Acasa: soldul si badge-ul de termen", () => {
       },
     });
     expect(screen.getByText("Achitat")).toBeTruthy();
-    expect(screen.getByText("Ai platit in avans 250,00 lei. Se scad din urmatoarea lista.")).toBeTruthy();
+    expect(screen.getByText("Ai plătit în avans 250,00 lei. Se scad din următoarea listă.")).toBeTruthy();
   });
 
   it("[K9] fara bani platiti in plus, nu spune nimic despre avans", async () => {
     await pornesteApp({ email: VOICU });
-    expect(screen.queryByText(/in avans/)).toBeNull();
+    expect(screen.queryByText(/în avans/)).toBeNull();
   });
 
   it("cand totul e platit arata Achitat si descarca ultima chitanta", async () => {
     const descarcari = prindeDescarcari();
     await pornesteApp({ email: VOICU });
-    expect(screen.getByText("Totul este platit")).toBeTruthy();
+    expect(screen.getByText("Totul este plătit")).toBeTruthy();
     expect(screen.getByText("Achitat")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Cum platesc" })).toBeNull();
-    await apasaButon("Descarca ultima chitanta");
+    expect(screen.queryByRole("button", { name: "Cum plătesc" })).toBeNull();
+    await apasaButon("Descarcă ultima chitanță");
     expect(descarcari).toHaveLength(1);
     expect(descarcari[0]).toMatch(/^chitanta-\d+\.pdf$/);
   });
@@ -126,62 +126,62 @@ describe("Acasa: soldul si badge-ul de termen", () => {
     const { sursa } = await pornesteApp({ email: VOICU, modifica: (d) => { d.plati.reverse(); } });
     const d = await sursa.incarca();
     const numere = d.plati.map((p) => p.chitanta.numar);
-    await apasaButon("Descarca ultima chitanta");
+    await apasaButon("Descarcă ultima chitanță");
     expect(descarcari).toEqual([`chitanta-${Math.max(...numere)}.pdf`]);
   });
 
   it("achitat, dar ultima plata fara chitanta: nu apare butonul de descarcare", async () => {
     await pornesteApp({ email: VOICU, modifica: (d) => { d.plati.forEach((p) => { p.chitanta = null; }); } });
-    expect(screen.getByText("Totul este platit")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Descarca ultima chitanta" })).toBeNull();
+    expect(screen.getByText("Totul este plătit")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Descarcă ultima chitanță" })).toBeNull();
   });
 
   it("achitat si fara nicio plata: nu apare butonul de descarcare", async () => {
     await pornesteApp({ email: VOICU, modifica: (d) => { d.plati = []; } });
-    expect(screen.queryByRole("button", { name: "Descarca ultima chitanta" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Descarcă ultima chitanță" })).toBeNull();
   });
 });
 
 describe("Acasa: navigarea spre celelalte ecrane", () => {
   it("Cum platesc deschide Plata, cu instructiunile de plata", async () => {
     await pornesteApp({ email: ELENA });
-    await apasaButon("Cum platesc");
-    expect(screen.getByText("Lista de plata")).toBeTruthy();
-    expect(screen.getByText("Cum platesti")).toBeTruthy();
+    await apasaButon("Cum plătesc");
+    expect(screen.getByText("Lista de plată")).toBeTruthy();
+    expect(screen.getByText("Cum plătești")).toBeTruthy();
   });
 
   it("De unde vine suma deschide lista de plata fara formular", async () => {
     await pornesteApp({ email: ELENA });
     await apasaButon("De unde vine suma");
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("Verificarea repartitiei")).toBeTruthy();
+    expect(screen.getByText("Verificarea repartiției")).toBeTruthy();
   });
 
   it("fraza de comparatie compara ultimele doua liste si duce la Platile mele", async () => {
     await pornesteApp({ email: ELENA });
-    const fraza = screen.getByText("Intretinerea pe august este 718,09 lei. Pe iulie a fost 631,39 lei, deci luna aceasta platesti cu 86,70 lei mai mult.");
+    const fraza = screen.getByText("Întreținerea pe august este 718,09 lei. Pe iulie a fost 631,39 lei, deci luna aceasta plătești cu 86,70 lei mai mult.");
     await apasa(fraza);
-    expect(screen.getByText("Cat ai avut de plata")).toBeTruthy();
+    expect(screen.getByText("Cât ai avut de plată")).toBeTruthy();
   });
 
   it("sarcina de plata duce la instructiunile de plata", async () => {
     await pornesteApp({ email: ELENA });
-    await apasa(screen.getByRole("button", { name: "Cum platesc" }));
-    expect(screen.getByText("In numerar, la administrator")).toBeTruthy();
+    await apasa(screen.getByRole("button", { name: "Cum plătesc" }));
+    expect(screen.getByText("În numerar, la administrator")).toBeTruthy();
   });
 
   it("sarcina de citire duce la Contoare", async () => {
     await pornesteApp({ email: ELENA });
-    expect(within(sarcina("Transmite indexul la apa")).getByText("Termen 25 septembrie 2026, mai sunt 6 zile")).toBeTruthy();
-    await apasa(sarcina("Transmite indexul la apa"));
+    expect(within(sarcina("Transmite indexul la apă")).getByText("Termen 25 septembrie 2026, mai sunt 6 zile")).toBeTruthy();
+    await apasa(sarcina("Transmite indexul la apă"));
     expect(screen.getByText("Citirea pentru septembrie")).toBeTruthy();
   });
 
   it("sarcinile de vot si de adunare duc la tabul Vot si adunare", async () => {
     await pornesteApp({ email: ELENA });
-    expect(within(sarcina("Voteaza: Inlocuirea usii de la intrare")).getByText("Votul se inchide pe 3 octombrie 2026")).toBeTruthy();
-    expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
-    await apasa(sarcina("Voteaza: Inlocuirea usii de la intrare"));
+    expect(within(sarcina("Votează: Inlocuirea usii de la intrare")).getByText("Votul se închide pe 3 octombrie 2026")).toBeTruthy();
+    expect(within(sarcina("Confirmă prezența la adunarea generală")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
+    await apasa(sarcina("Votează: Inlocuirea usii de la intrare"));
     expect(screen.getByText("Alege o varianta")).toBeTruthy();
   });
 
@@ -192,7 +192,7 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
     process.env.TZ = "America/New_York";
     try {
       await pornesteApp({ email: ELENA });
-      expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
+      expect(within(sarcina("Confirmă prezența la adunarea generală")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
     } finally {
       process.env.TZ = fus;
     }
@@ -200,8 +200,8 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
 
   it("sarcina de adunare deschide tot tabul de vot", async () => {
     await pornesteApp({ email: ELENA });
-    await apasa(sarcina("Confirma prezenta la adunarea generala"));
-    expect(screen.getByRole("button", { name: "Confirm ca particip" })).toBeTruthy();
+    await apasa(sarcina("Confirmă prezența la adunarea generală"));
+    expect(screen.getByRole("button", { name: "Confirm că particip" })).toBeTruthy();
   });
 
   /* [P1] Un chirias nu poate vota (Legea 196/2018): sarcina "Voteaza" nu
@@ -209,8 +209,8 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
      ramane, ca oricine poate confirma prezenta. */
   it("[P1] chirias: fara sarcina de vot pe Acasa, dar cu cea de adunare", async () => {
     await pornesteApp({ email: ELENA, modifica: (d) => { d.eu.calitate = "chirias"; } });
-    expect(screen.queryByText(/^Voteaza:/)).toBeNull();
-    expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
+    expect(screen.queryByText(/^Votează:/)).toBeNull();
+    expect(within(sarcina("Confirmă prezența la adunarea generală")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
   });
 
   it("anunturile de la avizier: Urgent, Nou si legatura spre Bloc", async () => {
@@ -230,20 +230,20 @@ describe("Acasa: navigarea spre celelalte ecrane", () => {
 
   it("Toate anunturile duce la Bloc", async () => {
     await pornesteApp({ email: ELENA });
-    await apasa(screen.getByText("Toate anunturile"));
+    await apasa(screen.getByText("Toate anunțurile"));
     expect(screen.getByRole("button", { name: "Avizier" })).toBeTruthy();
   });
 
   it("sesizarea proprie arata ultimul raspuns si duce la Sesizari", async () => {
     await pornesteApp({ email: ELENA });
-    expect(screen.getByText("Sesizarile tale")).toBeTruthy();
+    expect(screen.getByText("Sesizările tale")).toBeTruthy();
     const card = screen.getByText("Bec ars pe palier la etajul 4").closest("[role=button]");
-    expect(within(card).getByText("In lucru")).toBeTruthy();
-    expect(text(card)).toContain("Raspuns: Am cumparat becul, se monteaza joi.");
+    expect(within(card).getByText("În lucru")).toBeTruthy();
+    expect(text(card)).toContain("Răspuns: Am cumparat becul, se monteaza joi.");
     /* sesizarea rezolvata nu apare */
     expect(screen.queryByText("Interfon defect")).toBeNull();
     await apasa(card);
-    expect(screen.getByRole("button", { name: "Sesizare noua" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sesizare nouă" })).toBeTruthy();
   });
 });
 
@@ -279,21 +279,21 @@ describe("Acasa: mesajele noi", () => {
   });
 });
 
-describe("Acasa: De facut", () => {
+describe("Acasa: De făcut", () => {
   it("citirea respinsa cere retrimiterea, cu ton de pericol", async () => {
     await pornesteApp({
       email: ELENA,
       modifica: (d) => {
         const c = d.contoare[0];
-        d.citiri.push({ id: "cit-r", contorId: c.id, apartamentId: c.apartamentId, tip: c.tip, luna: "2026-09", indexAnterior: 244.5, indexCurent: 250, consum: 5.5, sursa: "locatar", stare: "respinsa", motivRespingere: "Poza neclara" });
+        d.citiri.push({ id: "cit-r", contorId: c.id, apartamentId: c.apartamentId, tip: c.tip, luna: "2026-09", indexAnterior: 244.5, indexCurent: 250, consum: 5.5, sursa: "locatar", stare: "respinsa", motivRespingere: "Poza neclară" });
       },
     });
-    expect(within(sarcina("Trimite din nou indexul la apa")).getByText("Administratorul a respins citirea trimisa. Vezi de ce.")).toBeTruthy();
+    expect(within(sarcina("Trimite din nou indexul la apă")).getByText("Administratorul a respins citirea trimisă. Vezi de ce.")).toBeTruthy();
   });
 
   it("un apartament fara contoare primeste tot sarcina de citire", async () => {
     await pornesteApp({ email: VOICU, modifica: (d) => { d.contoare = []; } });
-    expect(sarcina("Transmite indexul la apa")).toBeTruthy();
+    expect(sarcina("Transmite indexul la apă")).toBeTruthy();
   });
 
   it("cu totul facut arata Nimic de facut acum", async () => {
@@ -304,15 +304,15 @@ describe("Acasa: De facut", () => {
         d.adunari.forEach((a) => { a.prezentaMea = true; });
       },
     });
-    expect(screen.getByText("Nimic de facut acum")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Voteaza/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Confirma prezenta la adunarea generala" })).toBeNull();
+    expect(screen.getByText("Nimic de făcut acum")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Votează/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirmă prezența la adunarea generală" })).toBeNull();
   });
 
   it("un vot inchis si o adunare trecuta nu mai sunt sarcini", async () => {
     await pornesteApp({ email: VOICU, zi: new Date("2026-10-04T09:00:00") });
-    expect(screen.queryByRole("button", { name: /Voteaza/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Confirma prezenta la adunarea generala" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Votează/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirmă prezența la adunarea generală" })).toBeNull();
   });
 
   it("[K8] sarcina Confirma prezenta arata cea mai apropiata adunare, nu cea mai indepartata", async () => {
@@ -324,25 +324,25 @@ describe("Acasa: De facut", () => {
         d.adunari = [{ ...a, id: "adu-departe", dataOra: "2026-11-20T18:00:00+02:00" }, a];
       },
     });
-    expect(within(sarcina("Confirma prezenta la adunarea generala")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
+    expect(within(sarcina("Confirmă prezența la adunarea generală")).getByText("3 octombrie 2026, ora 18:30")).toBeTruthy();
   });
 });
 
 describe("Acasa: consumul fata de bloc", () => {
   it("consum mai mare decat media pe persoana", async () => {
     await pornesteApp({ email: ELENA });
-    const card = zonaCu(["Consumul tau fata de bloc", "Apartamentul tau"]);
-    expect(text(card)).toContain("Apa rece pe persoana, august 2026");
+    const card = zonaCu(["Consumul tău față de bloc", "Apartamentul tău"]);
+    expect(text(card)).toContain("Apa rece pe persoană, august 2026");
     /* 14,68 mc / 3 persoane = 4,89 mc; media blocului 4,79 */
-    expect(text(card)).toContain("Apartamentul tau4,89 mc");
+    expect(text(card)).toContain("Apartamentul tău4,89 mc");
     expect(text(card)).toContain("Media blocului4,79 mc");
-    expect(text(card)).toContain("Consumi cu 0,10 mc mai mult decat media pe persoana.");
+    expect(text(card)).toContain("Consumi cu 0,10 mc mai mult decât media pe persoană.");
   });
 
   it("consum mai mic decat media pe persoana", async () => {
     await pornesteApp({ email: VOICU });
     /* septembrie: 8,72 mc / 2 persoane = 4,36 mc; media 5,02 */
-    expect(screen.getByText("Consumi cu 0,66 mc mai putin decat media pe persoana.")).toBeTruthy();
+    expect(screen.getByText("Consumi cu 0,66 mc mai puțin decât media pe persoană.")).toBeTruthy();
   });
 
   it("cu consum si medie zero barele stau goale", async () => {
@@ -353,12 +353,12 @@ describe("Acasa: consumul fata de bloc", () => {
         d.consumMediu["2026-09"].rece = 0;
       },
     });
-    expect(screen.getByText("Consumi cu 0,00 mc mai putin decat media pe persoana.")).toBeTruthy();
+    expect(screen.getByText("Consumi cu 0,00 mc mai puțin decât media pe persoană.")).toBeTruthy();
   });
 
   it("fara media blocului pe luna nu apare comparatia", async () => {
     await pornesteApp({ email: ELENA, modifica: (d) => { d.consumMediu = {}; } });
-    expect(screen.queryByText("Consumul tau fata de bloc")).toBeNull();
+    expect(screen.queryByText("Consumul tău față de bloc")).toBeNull();
   });
 
   it("fara persoane declarate nu apare comparatia", async () => {
@@ -371,12 +371,12 @@ describe("Acasa: consumul fata de bloc", () => {
         if (ap.istoricPersoane[0]) ap.istoricPersoane[0].numar = 0;
       },
     });
-    expect(screen.queryByText("Consumul tau fata de bloc")).toBeNull();
+    expect(screen.queryByText("Consumul tău față de bloc")).toBeNull();
   });
 
   it("fara niciun consum validat nu apare comparatia", async () => {
     await pornesteApp({ email: ELENA, modifica: (d) => { d.citiri = d.citiri.filter((c) => c.sursa === "pornire"); } });
-    expect(screen.queryByText("Consumul tau fata de bloc")).toBeNull();
+    expect(screen.queryByText("Consumul tău față de bloc")).toBeNull();
   });
 
   it("[A9] consumul pe persoana imparte la persoanele din luna citirii, nu la cele de azi", async () => {
@@ -389,7 +389,7 @@ describe("Acasa: consumul fata de bloc", () => {
       },
     });
     /* in august erau 3 persoane: 14,68 / 3 = 4,89 mc */
-    expect(screen.getByText("Consumi cu 0,10 mc mai mult decat media pe persoana.")).toBeTruthy();
+    expect(screen.getByText("Consumi cu 0,10 mc mai mult decât media pe persoană.")).toBeTruthy();
   });
 });
 
@@ -397,7 +397,7 @@ describe("Acasa: sesizari, anunturi si contacte", () => {
   it("fara anunturi si fara sesizari deschise sectiunile lipsesc", async () => {
     await pornesteApp({ email: ILIE, modifica: (d) => { d.anunturi = []; } });
     expect(screen.queryByText("De la avizier")).toBeNull();
-    expect(screen.queryByText("Sesizarile tale")).toBeNull();
+    expect(screen.queryByText("Sesizările tale")).toBeNull();
   });
 
   it("o sesizare fara raspuns nu are randul Raspuns, iar o stare necunoscuta apare ca atare", async () => {
@@ -412,7 +412,7 @@ describe("Acasa: sesizari, anunturi si contacte", () => {
     });
     const card = screen.getByText("Bec ars pe palier la etajul 4").closest("[role=button]");
     expect(text(card)).not.toContain("Raspuns:");
-    expect(within(screen.getByText("Balustrada slabita").closest("[role=button]")).getByText("Noua")).toBeTruthy();
+    expect(within(screen.getByText("Balustrada slabita").closest("[role=button]")).getByText("Nouă")).toBeTruthy();
     expect(within(screen.getByText("Cutia postala").closest("[role=button]")).getByText("suspendata")).toBeTruthy();
   });
 
@@ -423,16 +423,16 @@ describe("Acasa: sesizari, anunturi si contacte", () => {
         d.contacte.push({ id: "con-x", rol: "instalator", nume: "Ion Popa", telefon: "0700 000 001", program: null, apartamentNumar: null });
       },
     });
-    const card = zonaCu(["Pe cine suni", "Presedinte"]);
+    const card = zonaCu(["Pe cine suni", "Președinte"]);
     const t = text(card);
     expect(t).toContain("AdministratorMihai DobreMarti si joi, 17:00 - 19:00");
-    expect(t).toContain("PresedinteIoana StancuApartament 12");
-    expect(t).toContain("Urgente liftElmas Lift ServiceUrgente lift, non stop");
+    expect(t).toContain("PreședinteIoana StancuApartament 12");
+    expect(t).toContain("Urgențe liftElmas Lift ServiceUrgente lift, non stop");
     /* rol necunoscut: apare codul rolului; fara program si fara apartament: fara detaliu */
-    expect(t).toContain("instalatorIon PopaSuna 0700 000 001");
+    expect(t).toContain("instalatorIon PopaSună 0700 000 001");
     const eroare = vi.spyOn(console, "error").mockImplementation(() => {});
-    await apasaButon("Suna 0745 210 118");
+    await apasaButon("Sună 0745 210 118");
     eroare.mockRestore();
-    expect(screen.getByText("Buna, Elena")).toBeTruthy();
+    expect(screen.getByText("Bună, Elena")).toBeTruthy();
   });
 });

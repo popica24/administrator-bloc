@@ -67,16 +67,16 @@ test.describe("Citiri contoare", () => {
        este garantata (`toate()` cere randurile ordonate dupa id, iar id-ul e
        un uuid aleatoriu), deci randul de apa rece poate fi al doilea. Testul
        cauta randul dupa eticheta lui, nu dupa pozitie. */
-    const randuri = page.getByText(/^Apa (rece|calda), index anterior /);
+    const randuri = page.getByText(/^Apa (rece|caldă), index anterior /);
     await expect(randuri).toHaveCount(2);
     const texte = await randuri.allInnerTexts();
     const i = texte.findIndex((x) => x.startsWith("Apa rece"));
-    expect(i, "randul contorului general de apa rece").toBeGreaterThanOrEqual(0);
+    expect(i, "rândul contorului general de apă rece").toBeGreaterThanOrEqual(0);
     const anterior = Number(texte[i].match(/([\d.]+,\d+)/)[1].replace(/\./g, "").replace(",", "."));
 
-    await page.getByPlaceholder(/Index nou|Corecteaza indexul/).nth(i).fill(String(anterior + 250));
+    await page.getByPlaceholder(/Index nou|Corectează indexul/).nth(i).fill(String(anterior + 250));
     await expect(page.getByText("Consum 250,00 mc")).toBeVisible();
-    await buton(page, "Salveaza").nth(i).click();
+    await buton(page, "Salvează").nth(i).click();
     await asteaptaToast(page, "Indexul contorului general a fost salvat");
 
     const { data } = await serviciu().schema("contorizare").from("citiri")
@@ -103,11 +103,11 @@ test.describe("Citiri contoare", () => {
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
 
-    const generale = await page.getByText(/^Apa (rece|calda), index anterior /).allInnerTexts();
+    const generale = await page.getByText(/^Apa (rece|caldă), index anterior /).allInnerTexts();
     expect(generale[0].startsWith("Apa rece"), `ordinea contoarelor generale: ${generale.join(" | ")}`).toBe(true);
 
     /* Si in fiecare apartament, Rece inaintea Caldei */
-    const randuri = await page.getByText(/^(Rece|Calda)(:|$)/).allInnerTexts();
+    const randuri = await page.getByText(/^(Rece|Caldă)(:|$)/).allInnerTexts();
     for (let i = 0; i < randuri.length; i += 2) {
       expect(randuri[i].startsWith("Rece"), `apartamentul ${i / 2 + 1}: ${randuri[i]} inaintea ${randuri[i + 1]}`).toBe(true);
     }
@@ -117,9 +117,9 @@ test.describe("Citiri contoare", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
-    await page.getByPlaceholder(/Index nou|Corecteaza indexul/).first().fill("1");
-    await expect(page.getByText("Indexul nu poate fi mai mic decat cel anterior.").first()).toBeVisible();
-    await expect(buton(page, "Salveaza").first()).toHaveAttribute("aria-disabled", "true");
+    await page.getByPlaceholder(/Index nou|Corectează indexul/).first().fill("1");
+    await expect(page.getByText("Indexul nu poate fi mai mic decât cel anterior.").first()).toBeVisible();
+    await expect(buton(page, "Salvează").first()).toHaveAttribute("aria-disabled", "true");
   });
 
   test("validarea trece ambele contoare ale apartamentului", async ({ page }) => {
@@ -131,7 +131,7 @@ test.describe("Citiri contoare", () => {
     await page.getByRole("button", { name: "Citiri contoare" }).click();
     const card = page.getByText("Ap. 9 · Mircea Olaru").locator("xpath=../..");
     await card.getByRole("button", { name: "Valideaza" }).click();
-    await asteaptaToast(page, "Citirea a fost validata");
+    await asteaptaToast(page, "Citirea a fost validată");
 
     await expect.poll(async () => (await citiri(ap.id)).every((c) => c.stare === "validata"), { timeout: 20000 }).toBe(true);
     await readuLaTrimisa(ap.id);
@@ -149,13 +149,13 @@ test.describe("Citiri contoare", () => {
     const dialog = page.getByRole("dialog", { name: "Respinge citirea, ap. 12" });
     await expect(dialog).toBeVisible();
     await expect(buton(page, "Respinge citirea")).toHaveAttribute("aria-disabled", "true");
-    await dialog.getByRole("button", { name: "Poza este neclara, nu se vad cifrele." }).click();
+    await dialog.getByRole("button", { name: "Poza este neclară, nu se văd cifrele." }).click();
     await buton(page, "Respinge citirea").click();
-    await asteaptaToast(page, "Citirea a fost respinsa, locatarul a fost anuntat");
+    await asteaptaToast(page, "Citirea a fost respinsă, locatarul a fost anunțat");
 
     await expect.poll(async () => {
       const c = await citiri(ap.id);
-      return c.every((x) => x.stare === "respinsa" && x.motiv_respingere === "Poza este neclara, nu se vad cifrele.");
+      return c.every((x) => x.stare === "respinsa" && x.motiv_respingere === "Poza este neclară, nu se văd cifrele.");
     }, { timeout: 20000 }).toBe(true);
     await readuLaTrimisa(ap.id);
   });
@@ -170,7 +170,7 @@ test.describe("Citiri contoare", () => {
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Citiri contoare" }).click();
     /* Pozele se deschid prin URL semnat pe bucket-ul privat "poze" */
-    const poza = page.locator('img[alt="Poza atasata"]').first();
+    const poza = page.locator('img[alt="Poza atașată"]').first();
     await expect(poza).toBeVisible({ timeout: 20000 });
     const src = await poza.getAttribute("src");
     expect(src).toContain("/storage/v1/object/sign/poze/");
@@ -210,7 +210,7 @@ test.describe("Citiri contoare", () => {
       await page.getByRole("button", { name: "Citiri contoare" }).click();
       await expect(page.getByText(/\d+ apartamente nu au transmis indexul/)).toBeVisible();
       page.once("dialog", (d) => d.accept());
-      await buton(page, "Estimeaza citirile lipsa").click();
+      await buton(page, "Estimează citirile lipsă").click();
       await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
       const mesaj = await page.locator(".ab-toast").innerText();
       expect(mesaj).toMatch(/abia dupa ziua/i);
@@ -228,7 +228,7 @@ test.describe("Citiri contoare", () => {
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Citiri contoare" }).click();
       page.once("dialog", (d) => d.accept());
-      await buton(page, "Estimeaza citirile lipsa").click();
+      await buton(page, "Estimează citirile lipsă").click();
       await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
       const mesaj = await page.locator(".ab-toast").innerText();
       expect(mesaj).not.toMatch(/\d{4}-\d{2}-\d{2}/);
@@ -237,7 +237,7 @@ test.describe("Citiri contoare", () => {
   });
 });
 
-test.describe("Facturi: lista in lucru", () => {
+test.describe("Facturi: lista în lucru", () => {
   test.afterEach(async () => {
     const sb = serviciu();
     await sb.schema("intretinere").from("cheltuieli")
@@ -254,38 +254,38 @@ test.describe("Facturi: lista in lucru", () => {
   test("ciorna spune ca locatarii nu o vad si arata starea citirilor", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await expect(page.getByText("SEPTEMBRIE 2026 · IN LUCRU")).toBeVisible();
-    await expect(page.getByText("Lista in lucru, locatarii nu o vad inca")).toBeVisible();
+    await expect(page.getByText("SEPTEMBRIE 2026 · ÎN LUCRU")).toBeVisible();
+    await expect(page.getByText("Lista în lucru, locatarii nu o văd încă")).toBeVisible();
     await expect(page.getByText("Fond de reparatii")).toBeVisible();
     await expect(page.getByText("Fond", { exact: true })).toBeVisible();
     /* Randul fondului nu se modifica si nu se sterge din formularul de factura */
-    await expect(buton(page, "Modifica")).toHaveCount(0);
-    await expect(buton(page, "Sterge")).toHaveCount(0);
+    await expect(buton(page, "Modifică")).toHaveCount(0);
+    await expect(buton(page, "Șterge")).toHaveCount(0);
   });
 
   test("o factura noua se previzualizeaza si se salveaza in ciorna", async ({ page }) => {
     const categorie = `E2E salubritate ${Date.now()}`;
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Adauga factura").click();
-    const dialog = page.getByRole("dialog", { name: "Factura noua" });
+    await buton(page, "Adaugă factură").click();
+    const dialog = page.getByRole("dialog", { name: "Factură nouă" });
     await dialog.getByLabel("Sau scrie un furnizor nou").fill(`E2E Salubritate ${Date.now()}`);
-    await dialog.getByLabel("Ce cheltuiala este").fill(categorie);
+    await dialog.getByLabel("Ce cheltuială este").fill(categorie);
     await dialog.getByLabel("Suma facturii").fill("2.000");
-    await dialog.getByLabel("Cum se imparte").selectOption("apartamente");
-    await dialog.getByLabel("Serie si numar factura").fill("E2E-1");
+    await dialog.getByLabel("Cum se împarte").selectOption("apartamente");
+    await dialog.getByLabel("Serie și număr factură").fill("E2E-1");
 
     /* Previzualizarea ruleaza motorul in browser: 2000 / 20 = 100 lei */
     await expect(dialog.getByText("Cum cade suma pe apartamente")).toBeVisible();
     await expect(dialog.getByText("Ap. 1, 1 apartament")).toBeVisible();
-    await expect(dialog.getByText("Total impartit")).toBeVisible();
+    await expect(dialog.getByText("Total împărțit")).toBeVisible();
     await expect(dialog.getByText("2.000,00 lei").first()).toBeVisible();
-    await expect(dialog.getByText("Nimic nu se salveaza si locatarii nu vad nimic pana la publicarea listei.")).toBeVisible();
+    await expect(dialog.getByText("Nimic nu se salvează și locatarii nu văd nimic până la publicarea listei.")).toBeVisible();
 
     await dialog.locator('input[type="file"]').setInputFiles(fisierPdf());
-    await buton(page, "Salveaza factura").click();
+    await buton(page, "Salvează factura").click();
     await expect(page.locator(".ab-toast")).toBeVisible({ timeout: 20000 });
-    expect(await page.locator(".ab-toast").innerText()).toBe("Factura a fost adaugata in lista in lucru");
+    expect(await page.locator(".ab-toast").innerText()).toBe("Factura a fost adăugată în lista în lucru");
 
     const { data } = await serviciu().schema("intretinere").from("cheltuieli")
       .select("cod, suma, metoda, serie_numar, document_id").eq("lista_id", LISTA_CIORNA).eq("categorie", categorie).single();
@@ -299,41 +299,41 @@ test.describe("Facturi: lista in lucru", () => {
   test("codul dublat este refuzat inainte de salvare", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Adauga factura").click();
-    const dialog = page.getByRole("dialog", { name: "Factura noua" });
+    await buton(page, "Adaugă factură").click();
+    const dialog = page.getByRole("dialog", { name: "Factură nouă" });
     await dialog.getByLabel("Sau scrie un furnizor nou").fill(`E2E Dublura ${Date.now()}`);
-    await dialog.getByLabel("Ce cheltuiala este").fill("E2E dublura");
+    await dialog.getByLabel("Ce cheltuială este").fill("E2E dublura");
     await dialog.getByLabel("Suma facturii").fill("100");
     await dialog.getByLabel("Cod pe lista").fill("C9");
-    await expect(dialog.getByText("Codul exista deja")).toBeVisible();
-    await expect(buton(page, "Salveaza factura")).toHaveAttribute("aria-disabled", "true");
+    await expect(dialog.getByText("Codul există deja")).toBeVisible();
+    await expect(buton(page, "Salvează factura")).toHaveAttribute("aria-disabled", "true");
   });
 
   test("o factura din ciorna se modifica si se sterge", async ({ page }) => {
     const categorie = `E2E de sters ${Date.now()}`;
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Adauga factura").click();
-    let dialog = page.getByRole("dialog", { name: "Factura noua" });
+    await buton(page, "Adaugă factură").click();
+    let dialog = page.getByRole("dialog", { name: "Factură nouă" });
     await dialog.getByLabel("Sau scrie un furnizor nou").fill(`E2E Furnizor ${Date.now()}`);
-    await dialog.getByLabel("Ce cheltuiala este").fill(categorie);
+    await dialog.getByLabel("Ce cheltuială este").fill(categorie);
     await dialog.getByLabel("Suma facturii").fill("300");
-    await buton(page, "Salveaza factura").click();
-    await asteaptaToast(page, "Factura a fost adaugata");
+    await buton(page, "Salvează factura").click();
+    await asteaptaToast(page, "Factura a fost adăugată");
 
-    await buton(page, "Modifica").click();
-    dialog = page.getByRole("dialog", { name: "Modifica factura" });
-    await expect(dialog.getByLabel("Ce cheltuiala este")).toHaveValue(categorie);
+    await buton(page, "Modifică").click();
+    dialog = page.getByRole("dialog", { name: "Modifică factura" });
+    await expect(dialog.getByLabel("Ce cheltuială este")).toHaveValue(categorie);
     await dialog.getByLabel("Suma facturii").fill("350");
-    await buton(page, "Salveaza factura").click();
-    await asteaptaToast(page, "Factura a fost modificata");
+    await buton(page, "Salvează factura").click();
+    await asteaptaToast(page, "Factura a fost modificată");
     const { data } = await serviciu().schema("intretinere").from("cheltuieli")
       .select("suma").eq("lista_id", LISTA_CIORNA).eq("categorie", categorie).single();
     expect(Number(data.suma)).toBe(350);
 
     page.once("dialog", (d) => d.accept());
-    await buton(page, "Sterge").click();
-    await asteaptaToast(page, "Cheltuiala a fost stearsa");
+    await buton(page, "Șterge").click();
+    await asteaptaToast(page, "Cheltuiala a fost ștearsă");
     await expect(page.getByText(categorie)).toHaveCount(0);
     const { count } = await serviciu().schema("intretinere").from("cheltuieli")
       .select("id", { count: "exact", head: true }).eq("lista_id", LISTA_CIORNA).eq("categorie", categorie);
@@ -343,7 +343,7 @@ test.describe("Facturi: lista in lucru", () => {
   test("previzualizarea listei calculeaza totalul pe apartamente", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Calculeaza lista pe apartamente").click();
+    await buton(page, "Calculează lista pe apartamente").click();
     await expect(page.getByText("Total repartizat")).toBeVisible({ timeout: 20000 });
     await expect(page.getByText("Total facturi")).toBeVisible();
     const t = await textEcran(page);
@@ -354,12 +354,12 @@ test.describe("Facturi: lista in lucru", () => {
   test("confirmarea publicarii spune termenul si se poate anula", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Publica lista").click();
-    const dialog = page.getByRole("dialog", { name: "Publica lista" });
+    await buton(page, "Publică lista").click();
+    const dialog = page.getByRole("dialog", { name: "Publică lista" });
     await expect(dialog).toContainText("Publici lista pe septembrie 2026");
-    await expect(dialog).toContainText("Termenul de plata va fi 25 octombrie 2026");
-    await expect(dialog).toContainText("Dupa publicare, facturile listei nu se mai pot modifica.");
-    await buton(page, "Inapoi").click();
+    await expect(dialog).toContainText("Termenul de plată va fi 25 octombrie 2026");
+    await expect(dialog).toContainText("După publicare, facturile listei nu se mai pot modifica.");
+    await buton(page, "Înapoi").click();
     await expect(dialog).toHaveCount(0);
 
     /* Lista ramane ciorna: testul nu publica nimic */
@@ -374,14 +374,14 @@ test.describe("Facturi: lista publicata", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
     await page.getByRole("button", { name: "aug 26" }).click();
-    await expect(page.getByText("AUGUST 2026 · PUBLICATA")).toBeVisible();
-    await expect(page.getByText("Total facturi si fonduri")).toBeVisible();
+    await expect(page.getByText("AUGUST 2026 · PUBLICATĂ")).toBeVisible();
+    await expect(page.getByText("Total facturi și fonduri")).toBeVisible();
     await expect(page.getByText("Nealocat")).toBeVisible();
     const t = await textEcran(page);
     expect(t).toMatch(/Nealocat\s*0,00 lei/);
-    await expect(buton(page, "Adauga factura")).toHaveCount(0);
-    await expect(buton(page, "Sterge")).toHaveCount(0);
-    await expect(buton(page, "Modifica")).toHaveCount(0);
+    await expect(buton(page, "Adaugă factură")).toHaveCount(0);
+    await expect(buton(page, "Șterge")).toHaveCount(0);
+    await expect(buton(page, "Modifică")).toHaveCount(0);
   });
 
   test("plata catre furnizor se marcheaza si se anuleaza", async ({ page }) => {
@@ -395,17 +395,17 @@ test.describe("Facturi: lista publicata", () => {
     await mergiLaTab(page, "Facturi");
     await page.getByRole("button", { name: "aug 26" }).click();
     const rand = page.getByText("Deratizare si dezinsectie").locator("xpath=../../../..");
-    await rand.getByRole("button", { name: "Marcheaza platita" }).click();
-    await asteaptaToast(page, "Factura marcata ca platita furnizorului");
-    await expect(rand.getByText(/^Platita furnizorului /)).toBeVisible();
+    await rand.getByRole("button", { name: "Marchează plătită" }).click();
+    await asteaptaToast(page, "Factura marcată ca plătită furnizorului");
+    await expect(rand.getByText(/^Plătită furnizorului /)).toBeVisible();
 
     const { data: dupa } = await serviciu().schema("intretinere").from("cheltuieli")
       .select("achitata_furnizor_la").eq("id", inainte.id).single();
     expect(dupa.achitata_furnizor_la).not.toBeNull();
 
     page.once("dialog", (d) => d.accept());
-    await rand.getByRole("button", { name: "Anuleaza plata furnizor" }).click();
-    await asteaptaToast(page, "Plata catre furnizor a fost anulata");
+    await rand.getByRole("button", { name: "Anulează plata furnizor" }).click();
+    await asteaptaToast(page, "Plata către furnizor a fost anulată");
     const { data: final } = await serviciu().schema("intretinere").from("cheltuieli")
       .select("achitata_furnizor_la").eq("id", inainte.id).single();
     expect(final.achitata_furnizor_la).toBeNull();
@@ -416,7 +416,7 @@ test.describe("Facturi: lista publicata", () => {
     await mergiLaTab(page, "Facturi");
     await page.getByRole("button", { name: "aug 26" }).click();
     const descarcare = page.waitForEvent("download");
-    await buton(page, "Exporta PDF pentru avizier").click();
+    await buton(page, "Exportă PDF pentru avizier").click();
     const f = await descarcare;
     expect(f.suggestedFilename()).toBe("lista-plata-2026-08.pdf");
     const flux = await f.createReadStream();
