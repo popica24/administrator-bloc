@@ -112,7 +112,7 @@ describe("AdminFonduri, inregistrarea unei iesiri (C3/E5)", () => {
     });
     await apasa("Inregistreaza iesirea");
     /* Mesajul trebuie sa ramana in panou (nu doar in toast-ul care dispare
-       singur dupa 3,4 secunde) — ca la orice alta comanda de bani. */
+       singur dupa 3,4 secunde), ca la orice alta comanda de bani. */
     expect(inDialog("Iesire din fond").getByText("Fondul are 19.228,60 lei; o iesire de 50.000,00 lei l-ar duce pe minus.")).toBeTruthy();
   });
 

@@ -169,8 +169,8 @@ test.describe("Fonduri: inregistrarea unei iesiri", () => {
 
   test("[F3] refuzul pe sold nu lasa documentul orfan la avizierul de Acte", async ({ page }) => {
     /* [F3] Reparatia C6 verifica ieftin suma, descrierea si data inainte de a
-       incarca documentul, dar verificarea care conteaza — soldul fondului nu
-       poate trece sub zero — este in RPC, dupa upload. Cand RPC-ul refuza,
+       incarca documentul, dar verificarea care conteaza, soldul fondului nu
+       poate trece sub zero, este in RPC, dupa upload. Cand RPC-ul refuza,
        documentul ramane in comunicare.documente cu vizibil_locatarilor = true
        (implicitul lui `document()`, src/sursa-supabase.js:325 si :528), deci
        factura unei plati care nu s-a facut niciodata apare la toti locatarii,

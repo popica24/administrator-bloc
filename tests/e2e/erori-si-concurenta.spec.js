@@ -167,7 +167,7 @@ test.describe("sesiunea expira cu formularul deschis", () => {
   /* [R1] Reparatia P3 (`AdminBloc.jsx:4673`) scoate omul la ecranul de
      autentificare de indata ce o comanda loveste sesiunea moarta:
      `setSesiune(null)` demonteaza tot ecranul, cu panoul deschis cu tot, deci
-     anuntul scris se pierde. Cele doua reparatii se bat cap in cap — mesajul
+     anuntul scris se pierde. Cele doua reparatii se bat cap in cap, mesajul
      pe romaneste a ramas, ce scrisese omul nu. Testul a fost verificat de 8
      ori la rand: cade de fiecare data. */
   test("[R1] sesiunea inchisa nu pierde ce s-a scris in formular", async ({ page }) => {
@@ -250,7 +250,7 @@ test.describe("aplicatia deschisa in doua locuri deodata", () => {
   /* [P4] Vezi raportul: factura scanata se inregistreaza ca document vizibil
      locatarilor inainte ca randul de cheltuiala sa fie salvat. Daca salvarea
      cade (randul sters intre timp, lista publicata in alt tab), documentul
-     ramane la "Acte", in fata locatarilor, fara nicio cheltuiala in spate —
+     ramane la "Acte", in fata locatarilor, fara nicio cheltuiala in spate -
      acelasi tipar reparat la iesirea din fond (F3). */
   test("[P4] o salvare cazuta nu lasa factura scanata la Acte", async ({ page }) => {
     const sb = serviciu();

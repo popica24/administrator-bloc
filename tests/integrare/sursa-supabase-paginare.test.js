@@ -120,7 +120,7 @@ describe("P4: citirile pleaca filtrate pe blocul de pe ecran", () => {
 describe("G13: toate() nu se opreste la o pagina scurta, ca sa nu para sfarsitul", () => {
   /* PAGINA (1000) e egal cu max_rows-ul implicit al PostgREST din
      supabase/config.toml. toate() se oprea cand o pagina venea mai scurta
-     decat PAGINA — corect cat timp server-ul intoarce mereu exact ce i se
+     decat PAGINA, corect cat timp server-ul intoarce mereu exact ce i se
      cere, dar gresit daca max_rows scade sub PAGINA: server-ul ar limita
      fiecare cerere la mai putin, iar prima pagina "scurta" ar parea sfarsitul,
      desi mai sunt randuri. Aici simulam exact acel server, printr-un

@@ -1,8 +1,8 @@
 /* Modul demonstrativ ca produs, nu ca oglinda a bazei.
 
    `z-demo-paritate` compara cifrele celor doua surse. Aici intrebarea e alta:
-   cineva deschide aplicatia fara niciun server — un administrator care o
-   incearca seara, acasa — si trebuie sa poata duce la capat tot ce duce la
+   cineva deschide aplicatia fara niciun server, un administrator care o
+   incearca seara, acasa, si trebuie sa poata duce la capat tot ce duce la
    capat in aplicatia adevarata, fara sa dea peste un ecran gol, un buton care
    nu face nimic sau un cuvant de programator.
 

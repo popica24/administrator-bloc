@@ -89,7 +89,7 @@ test.describe("exportul intern al administratorului", () => {
   test("[F4] exportul intern de pe Sumar nu se cheama la fel ca cel de avizier", async ({ page }) => {
     /* [F4] Butonul "Exporta lista PDF" de pe Sumar descarca varianta interna
        (AdminBloc.jsx:2652 foloseste listaPdfIntern), dar sub numele
-       `lista-plata-2026-08.pdf` — exact numele fisierului de avizier de la
+       `lista-plata-2026-08.pdf`, exact numele fisierului de avizier de la
        Facturi. In folderul Descarcari cele doua ajung "lista-plata-2026-08.pdf"
        si "lista-plata-2026-08 (1).pdf", iar la avizier se lipeste cel care
        vine primul la mana. Reparatia X01 a separat continutul, dar nu si

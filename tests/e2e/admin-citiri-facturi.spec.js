@@ -93,7 +93,7 @@ test.describe("Citiri contoare", () => {
        ia `date.contoare` asa cum vin (src/AdminBloc.jsx:3400 si 3402), iar
        `toate()` cere randurile ordonate dupa id, adica dupa un uuid aleatoriu
        (src/sursa-supabase.js:121). Pe ecran, cele doua contoare generale si
-       perechea Rece/Calda a fiecarui apartament apar in ordine intamplatoare —
+       perechea Rece/Calda a fiecarui apartament apar in ordine intamplatoare -
        si diferita de la un apartament la altul, in aceeasi pagina. Doua campuri
        "Index nou" fara eticheta proprie, care isi schimba locul, sunt exact
        felul in care un administrator scrie indexul de la apa rece in randul

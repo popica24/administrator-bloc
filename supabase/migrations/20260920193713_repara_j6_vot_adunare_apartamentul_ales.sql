@@ -2,7 +2,7 @@
 -- "votulMeu"/"prezentaMea" cu
 -- `... apartament_id in (select private.apartamentele_mele()) limit 1`,
 -- adica orice apartament al chemarii curente, in ordinea arbitrara a
--- scanarii — nu apartamentul pe care omul l-a ales ca activ ([P5] in
+-- scanarii, nu apartamentul pe care omul l-a ales ca activ ([P5] in
 -- src/sursa-supabase.js, deja folosit corect de sursa demonstrativa). Un
 -- locatar cu doua apartamente in acelasi bloc (proprietar la unul, chirias
 -- sau coproprietar la celalalt) nu putea niciodata sa vada sau sa foloseasca
@@ -13,7 +13,7 @@
 -- Cand e dat si chiar apartine chemarii curente
 -- (private.apartamentele_mele()), votulMeu/prezentaMea se calculeaza strict
 -- pentru el. Fara el, sau daca nu e al meu, comportamentul vechi ramane
--- neschimbat (orice apartament al meu, primul gasit) — compatibil cu
+-- neschimbat (orice apartament al meu, primul gasit), compatibil cu
 -- apelurile fara alegere explicita.
 
 -- Semnatura noua (al doilea parametru, optional) ar coexista cu cea veche

@@ -40,7 +40,7 @@ const FORMAT_BUCURESTI = new Intl.DateTimeFormat("en-CA", {
 });
 export const azi = () => FORMAT_BUCURESTI.format(new Date());
 
-/* [J9] Ora serii (20:00) a unei zile date, ca ora a Romaniei — indiferent
+/* [J9] Ora serii (20:00) a unei zile date, ca ora a Romaniei, indiferent
    de fusul masinii care ruleaza testul. Acelasi procedeu ca in
    src/sursa-supabase.js (deschideVot) si src/sursa-mock.js
    (offsetRomania/oraSeriiRomania): testele care verifica ora de inchidere a

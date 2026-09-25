@@ -261,7 +261,7 @@ test.describe("plimbatul intre taburi cu formularul pe jumatate scris", () => {
 
   test.fixme("[S6] gestul inapoi nu arunca in tacere sesizarea inceputa", async ({ page }) => {
     /* [S6] Panoul isi apara textul de o atingere gresita pe fundal (`pazit`,
-       src/AdminBloc.jsx:2481) si de Escape — testul de mai sus o dovedeste.
+       src/AdminBloc.jsx:2481) si de Escape, testul de mai sus o dovedeste.
        Gestul "inapoi" de pe telefon, cel mai folosit gest de pe Android, nu
        trece insa prin `onClose`: el schimba tabul prin istoricul browserului,
        `LocatarSesizari` se demonteaza cu tot cu starea lui

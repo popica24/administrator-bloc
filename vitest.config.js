@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 /* Fusul orar al testelor, ca in playwright.config.js. Aplicatia e pentru blocuri
    din Romania: ecranele arata ore si date romanesti, iar testele le verifica asa
    cum le vede omul. Fara linia asta fusul e al masinii care ruleaza, deci sapte
-   teste treceau pe un laptop din Romania si picau pe CI, care sta pe UTC — o
+   teste treceau pe un laptop din Romania si picau pe CI, care sta pe UTC, o
    diferenta de trei ore vara, si o zi intreaga la datele de langa miezul noptii.
    Se pune inainte de orice import care atinge Date. */
 process.env.TZ = "Europe/Bucharest";

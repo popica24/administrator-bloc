@@ -1,6 +1,6 @@
 -- H5: comunicare.protejeaza_documentul() paza cale si vizibil_locatarilor,
 -- dar nu si bloc_id/asociatie_id. RLS pe update verifica doar ca
--- asociatie_id noua e printre asociatiile administrate — nu ca bloc_id
+-- asociatie_id noua e printre asociatiile administrate, nu ca bloc_id
 -- ramane acelasi bloc, si nici ca asociatie_id ramane aceeasi asociatie
 -- cand administratorul conduce mai multe. Un singur update putea muta un
 -- document deja vazut de locatari (vizibil_locatarilor ramas true) in alt

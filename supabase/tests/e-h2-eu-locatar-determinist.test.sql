@@ -1,7 +1,7 @@
 -- H2: identitate.eu() alegea apartamentul locatarului cu
 -- `order by l.activ_din limit 1`, fara tiebreaker: un locatar cu doua
 -- legaturi active (doua apartamente) primea intre reincarcari cand un
--- apartament, cand celalalt, in functie de ordinea fizica a randurilor —
+-- apartament, cand celalalt, in functie de ordinea fizica a randurilor -
 -- exact defectul deja reparat pe ramura administratorului (S12).
 --
 -- Reparatie: adauga apartament_id ca tiebreaker, ca alegerea sa fie
@@ -10,7 +10,7 @@
 -- Testul insereaza intai legatura cu apartamentul cu id-ul mai mare, apoi
 -- cea cu id-ul mai mic, ambele cu acelasi activ_din. Fara tiebreaker,
 -- scanarea secventiala a unui tabel proaspat intoarce randurile in ordinea
--- inserarii, deci "limit 1" ar alege apartamentul mai mare — asta arata
+-- inserarii, deci "limit 1" ar alege apartamentul mai mare, asta arata
 -- rosu inainte de reparatie. Cu tiebreaker, alegerea e mereu apartamentul
 -- cu id-ul mai mic, indiferent de ordinea de inserare.
 begin;

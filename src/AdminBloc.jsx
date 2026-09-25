@@ -4972,7 +4972,7 @@ export default function AdminBloc() {
 
       /* [P5] Schimba apartamentul activ, pentru un locatar legat de mai
          multe apartamente ale aceluiasi bloc: doar alegerea se schimba, nu
-         se pierde nimic — alMeu() aduce deja datele tuturor apartamentelor
+         se pierde nimic, alMeu() aduce deja datele tuturor apartamentelor
          lui la fiecare incarca(). */
       aleseApartament: cmd(async (apartamentId) => { setApartamentAles(apartamentId); return reincarca(apartamentId); }, null, false),
 

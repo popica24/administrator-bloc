@@ -5,7 +5,7 @@
 -- putea estima citirile lipsa ale unei luni a carei lista fusese deja
 -- publicata: apartamentul primea o citire noua "Estimat" dupa ce banii
 -- lunii fusesera deja calculati si inghetati, iar indexul anterior al lunii
--- urmatoare s-ar fi recalculat pe baza acelei estimari tarzii — ecranul
+-- urmatoare s-ar fi recalculat pe baza acelei estimari tarzii, ecranul
 -- Contoare si lista publicata ar fi ajuns sa nu se mai potriveasca.
 
 create or replace function contorizare.estimeaza_citiri(p_bloc_id uuid, p_luna date)

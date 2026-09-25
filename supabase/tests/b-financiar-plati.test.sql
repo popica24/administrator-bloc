@@ -224,7 +224,7 @@ select throws_like($$insert into financiar.datorii (apartament_id, bloc_id, tip,
   '%datorii_suma_check%', 'datorii: o corectie nu este zero');
 -- J12: o corectie negativa are nevoie de o datorie de intretinere sora,
 -- aceeasi lista_id (nu doar amandoua fara ea: null = null nu se potriveste
--- niciodata) si acelasi apartament — o lista dedicata, ca sa nu interfereze
+-- niciodata) si acelasi apartament, o lista dedicata, ca sa nu interfereze
 -- cu lista pe luna(-4) folosita mai jos pentru testul de unicitate.
 insert into intretinere.liste_lunare (bloc_id, luna, stare, scadenta, publicata_la, total_repartizat)
 values (pg_temp.fx('bloc2'), pg_temp.luna(-6), 'publicata', current_date, now(), 5);

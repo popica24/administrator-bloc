@@ -167,7 +167,7 @@ test.describe("ecrane pe date neobisnuite", () => {
 
   /* [R5] Apartamentul nu are niciun contor, dar ecranul Contoare ii arata
      formularul intreg: "Citirea pentru septembrie", badge-ul "TERMEN DEPASIT",
-     cererea de poza si butonul "Trimite indexul" — fara niciun camp de index,
+     cererea de poza si butonul "Trimite indexul", fara niciun camp de index,
      pentru ca nu exista contor. Cine incarca poza si apasa butonul primeste
      "Scrie cel putin un index", desi nu are unde sa-l scrie. */
   test("[R5] apartamentul fara contoare nu primeste un formular pe care nu-l poate completa", async ({ page }) => {

@@ -10,7 +10,7 @@
 -- general nu primise nimic.
 --
 -- Reparatie: plafonul devine indexul CHIAR INREGISTRAT (index_curent) al
--- lunii urmatoare — singurul motiv pentru care un plafon exista deloc este
+-- lunii urmatoare, singurul motiv pentru care un plafon exista deloc este
 -- ca un contor nu poate merge inapoi, si asta se verifica fata de o citire
 -- reala, nu fata de un index_anterior care poate fi el insusi stale. Dupa
 -- ce noul index e acceptat, contorizare.recalculeaza_viitorul() propaga
@@ -50,7 +50,7 @@ begin
     raise exception 'Indexul nou nu poate fi mai mic decat cel anterior (%).', v_anterior;
   end if;
   -- J7: plafonul e indexul chiar inregistrat (index_curent) al lunii
-  -- urmatoare, nu index_anterior-ul ei inghetat — acela se recalculeaza mai
+  -- urmatoare, nu index_anterior-ul ei inghetat, acela se recalculeaza mai
   -- jos, cu cascada, in loc sa blocheze corectura.
   select index_curent into v_index_urmator from contorizare.citiri
     where contor_id = v_contor.id and luna = (p_luna + interval '1 month')::date and stare <> 'respinsa'

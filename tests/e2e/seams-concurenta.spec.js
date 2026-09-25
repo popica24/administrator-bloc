@@ -317,7 +317,7 @@ test.describe("webhook-ul si cron-ul se bat pe acelasi eveniment", () => {
   /* Coada `evenimente` nu este expusa prin API, deci evenimentul se face pe
      drumul lui adevarat: o sesizare rezolvata din ecranul administratorului.
      Peste el se cheama de mai multe ori, deodata, comanda pe care o ruleaza
-     cron-ul la fiecare minut — exact cursa dintre webhook-ul pg_net si cron,
+     cron-ul la fiecare minut, exact cursa dintre webhook-ul pg_net si cron,
      care in productie se intampla la fiecare eveniment intarziat. */
   test("sesizarea rezolvata ajunge la locatar o singura data, oricat de des ruleaza cron-ul", async ({ page }) => {
     test.setTimeout(150000);

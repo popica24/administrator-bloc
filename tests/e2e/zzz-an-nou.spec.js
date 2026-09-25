@@ -261,7 +261,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     }
 
     /* Granita: pe o datorie taxata si in 2026 si in 2027, zilele taxate se
-       leaga cap la cap peste 31 decembrie — nici o zi in plus, nici una
+       leaga cap la cap peste 31 decembrie, nici o zi in plus, nici una
        sarita. */
     const peDatorie = {};
     for (const p of pen) (peDatorie[p.datorie_sursa_id] ||= []).push(p);
