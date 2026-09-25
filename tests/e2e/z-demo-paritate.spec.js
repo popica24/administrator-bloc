@@ -20,16 +20,32 @@ import { spawn } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import { PAROLA, CONTURI, buton, mergiLaTab } from "./ajutor.js";
 
-const PORT_DEMO = 5174;
-const DEMO = `http://localhost:${PORT_DEMO}`;
+const PORTURI_DEMO = [5174, 5175, 5176, 5177];
 const REAL = "http://localhost:5173";
+const adresa = (port) => `http://localhost:${port}`;
 
 let server = null;
+/* Portul se alege la pornire: pe o masina de dezvoltare, 5174 poate fi deja
+   luat de alt proiect. */
+let DEMO = adresa(PORTURI_DEMO[0]);
 
-async function raspunde(url) {
+/* Nu e destul sa raspunda cineva pe port: pe o masina de dezvoltare poate
+   rula alt proiect pe 5174, iar atunci comparatia s-ar face cu pagina lui.
+   Cerem sa fie chiar AdminBloc. */
+async function esteAdminBloc(url) {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(2000) });
-    return r.ok;
+    if (!r.ok) return false;
+    return (await r.text()).includes("<title>AdminBloc</title>");
+  } catch {
+    return false;
+  }
+}
+
+async function ocupat(url) {
+  try {
+    await fetch(url, { signal: AbortSignal.timeout(2000) });
+    return true;
   } catch {
     return false;
   }
@@ -38,14 +54,28 @@ async function raspunde(url) {
 test.beforeAll(async ({ browserName }, testInfo) => {
   void browserName;
   test.skip(testInfo.project.name !== "telefon", "se parcurge o singura data, pe date demo proaspete");
-  if (await raspunde(DEMO)) return;
-  server = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "--port", String(PORT_DEMO), "--strictPort"], {
+  /* daca modul demonstrativ ruleaza deja pe unul dintre porturi, il folosim */
+  for (const port of PORTURI_DEMO) {
+    if (await esteAdminBloc(adresa(port))) {
+      DEMO = adresa(port);
+      return;
+    }
+  }
+  let port = null;
+  for (const candidat of PORTURI_DEMO) {
+    if (!(await ocupat(adresa(candidat)))) { port = candidat; break; }
+  }
+  if (port === null) {
+    throw new Error(`Porturile ${PORTURI_DEMO.join(", ")} sunt toate ocupate: modul demonstrativ nu are unde sa porneasca.`);
+  }
+  DEMO = adresa(port);
+  server = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "--port", String(port), "--strictPort"], {
     cwd: process.cwd(),
     env: { ...process.env, VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "" },
     stdio: "ignore",
   });
   const pornire = Date.now();
-  while (!(await raspunde(DEMO))) {
+  while (!(await esteAdminBloc(DEMO))) {
     if (Date.now() - pornire > 60000) throw new Error("Serverul modului demonstrativ nu porneste");
     await new Promise((r) => setTimeout(r, 400));
   }
