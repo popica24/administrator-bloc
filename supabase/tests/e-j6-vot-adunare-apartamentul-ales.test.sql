@@ -1,7 +1,7 @@
 -- J6: guvernanta.situatie_voturi() si situatie_adunari() calculau
 -- "votulMeu"/"prezentaMea" cu
 -- `... apartament_id in (select private.apartamentele_mele()) limit 1`,
--- adica orice apartament al meu, in ordinea arbitrara a scanarii — nu
+-- adica orice apartament al meu, in ordinea arbitrara a scanarii, nu
 -- apartamentul pe care omul l-a ales ca activ (vezi [P5] in
 -- src/sursa-supabase.js). Un locatar cu doua apartamente in acelasi bloc,
 -- unul care a votat/participat si altul care n-a facut-o, vedea mereu

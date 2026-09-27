@@ -8,26 +8,26 @@ import {
 
 const lei = (n) => Number(n).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
 
-test.describe("Acasa", () => {
+test.describe("Acasă", () => {
   test("cardul De plata acum arata exact soldul din registru", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
     const sold = await soldApartament(ap.id);
     await intraCa(page, "elena");
-    await expect(page.getByText("De plata acum")).toBeVisible();
+    await expect(page.getByText("De plată acum")).toBeVisible();
     await expect(page.locator(".ab-shell")).toContainText(lei(sold));
-    await expect(buton(page, "Cum platesc")).toBeVisible();
+    await expect(buton(page, "Cum plătesc")).toBeVisible();
     await expect(buton(page, "De unde vine suma")).toBeVisible();
   });
 
   test("Acasa arata fraza de comparatie, De facut, avizierul si contactele", async ({ page }) => {
     await intraCa(page, "elena");
     const text = await textEcran(page);
-    expect(text).toContain("Intretinerea pe");
-    expect(text).toContain("De facut");
+    expect(text).toContain("Întreținerea pe");
+    expect(text).toContain("De făcut");
     expect(text).toContain("De la avizier");
     expect(text).toContain("Pe cine suni");
-    expect(text).toContain("Consumul tau fata de bloc");
-    await expect(buton(page, /^Suna /).first()).toBeVisible();
+    expect(text).toContain("Consumul tău față de bloc");
+    await expect(buton(page, /^Sună /).first()).toBeVisible();
   });
 
   test("restantierul vede soldul intreg pe Acasa", async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe("Acasa", () => {
     const sold = await soldApartament(ap.id);
     await intraCa(page, "ilie");
     await expect(page.locator(".ab-shell")).toContainText(lei(sold));
-    await expect(page.getByText("De plata acum")).toBeVisible();
+    await expect(page.getByText("De plată acum")).toBeVisible();
   });
 
   test("[E2] restantierul nu este anuntat ca mai are zile pana la scadenta", async ({ page }) => {
@@ -49,7 +49,7 @@ test.describe("Acasa", () => {
     expect(scadente.data.some((d) => d.scadenta < azi)).toBe(true);
 
     await intraCa(page, "ilie");
-    await expect(page.getByText("Termen depasit")).toBeVisible();
+    await expect(page.getByText("Termen depășit")).toBeVisible();
     await expect(page.getByText(/Mai ai \d+ (de )?zile/)).toHaveCount(0);
   });
 
@@ -77,9 +77,9 @@ test.describe("Acasa", () => {
 
   test("Cum platesc duce in Plata, la instructiunile de plata", async ({ page }) => {
     await intraCa(page, "elena");
-    await buton(page, "Cum platesc").click();
-    await expect(page.getByText("Cum platesti")).toBeVisible();
-    await expect(page.getByText("In numerar, la administrator")).toBeVisible();
+    await buton(page, "Cum plătesc").click();
+    await expect(page.getByText("Cum plătești")).toBeVisible();
+    await expect(page.getByText("În numerar, la administrator")).toBeVisible();
     /* Datele pentru transfer sunt cele ale asociatiei din baza */
     const { data: a } = await serviciu().schema("organizare").from("asociatii")
       .select("iban, denumire").eq("id", await asociatieD14()).single();
@@ -88,13 +88,13 @@ test.describe("Acasa", () => {
   });
 });
 
-test.describe("Plata: lista de plata", () => {
+test.describe("Plata: lista de plată", () => {
   test("totalul listei curente este soldul apartamentului, in trei trepte", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
     const sold = await soldApartament(ap.id);
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await expect(page.getByText("Total de plata acum")).toBeVisible();
+    await expect(page.getByText("Total de plată acum")).toBeVisible();
     const text = await textEcran(page);
     expect(text).toContain("1. Cheltuielile lunii");
     expect(text).toContain("2. Fonduri");
@@ -105,8 +105,8 @@ test.describe("Plata: lista de plata", () => {
   test("verificarea repartitiei da diferenta zero", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    const card = page.locator(".ab-shell").getByText("Verificarea repartitiei").locator("xpath=ancestor::div[1]");
-    await expect(card).toContainText("Diferenta");
+    const card = page.locator(".ab-shell").getByText("Verificarea repartiției").locator("xpath=ancestor::div[1]");
+    await expect(card).toContainText("Diferența");
     await expect(card).toContainText("0,00");
   });
 
@@ -119,12 +119,12 @@ test.describe("Plata: lista de plata", () => {
     const ecran = await textEcran(page);
     expect(ecran).toContain("Contor general al blocului");
     expect(ecran).toContain("Suma contoarelor din apartamente");
-    expect(ecran).toContain("Diferenta pe coloana");
-    expect(ecran).toContain("Pret pe metru cub");
+    expect(ecran).toContain("Diferența pe coloană");
+    expect(ecran).toContain("Preț pe metru cub");
     expect(ecran).toContain("Consumul apartamentului");
     /* Eticheta mica este scrisa cu majuscule prin CSS, deci innerText o da asa */
     expect(ecran).toContain("DOCUMENTUL JUSTIFICATIV");
-    expect(ecran).toMatch(/Apartamentul suporta \d/);
+    expect(ecran).toMatch(/Apartamentul suportă \d/);
     await expect(buton(page, "Vezi documentul").first()).toBeVisible();
   });
 
@@ -154,16 +154,16 @@ test.describe("Plata: lista de plata", () => {
     const lift = page.getByRole("button", { name: /^Intretinere ascensor,/ }).first();
     await expect(lift).toBeVisible();
     await lift.click();
-    await expect(page.getByText("Apartamentul este scutit de lift, de aceea nu plateste nimic pe acest rand.")).toBeVisible();
+    await expect(page.getByText("Apartamentul este scutit de lift, de aceea nu plătește nimic pe acest rând.")).toBeVisible();
   });
 
   test("restantierul vede penalizarea cu formula ei", async ({ page }) => {
     await intraCa(page, "ilie");
     await mergiLaTab(page, "Plata");
     const t = await textEcran(page);
-    expect(t).toContain("Penalizare calculata pe");
+    expect(t).toContain("Penalizare calculată pe");
     expect(t).toMatch(/% × \d+ zile/);
-    expect(t).toContain("nu poate depasi suma datorata");
+    expect(t).toContain("nu poate depăși suma datorată");
   });
 
   test("alegerea lunii schimba lista afisata", async ({ page }) => {
@@ -181,20 +181,20 @@ test.describe("Plata: platile mele", () => {
   test("istoricul arata fiecare plata cu chitanta ei", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
-    await expect(page.getByText("Cat ai avut de plata")).toBeVisible();
-    await expect(page.getByText("Platile tale")).toBeVisible();
+    await page.getByRole("button", { name: "Plățile mele" }).click();
+    await expect(page.getByText("Cât ai avut de plată")).toBeVisible();
+    await expect(page.getByText("Plățile tale")).toBeVisible();
     const t = await textEcran(page);
-    expect(t).toMatch(/Chitanta [A-Z0-9]+ nr\. \d{6}/);
-    expect(t).toContain("Intretinere");
+    expect(t).toMatch(/Chitanța [A-Z0-9]+ nr\. \d{6}/);
+    expect(t).toContain("Întreținere");
   });
 
   test("chitanta se descarca in PDF", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
+    await page.getByRole("button", { name: "Plățile mele" }).click();
     const descarcare = page.waitForEvent("download");
-    await buton(page, "Descarca chitanta").first().click();
+    await buton(page, "Descarcă chitanța").first().click();
     const fisier = await descarcare;
     expect(fisier.suggestedFilename()).toMatch(/^chitanta-\d+\.pdf$/);
     const flux = await fisier.createReadStream();
@@ -211,7 +211,7 @@ test.describe("Plata: platile mele", () => {
       .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).eq("stare", "confirmata");
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
-    await expect(buton(page, "Descarca chitanta")).toHaveCount(count);
+    await page.getByRole("button", { name: "Plățile mele" }).click();
+    await expect(buton(page, "Descarcă chitanța")).toHaveCount(count);
   });
 });

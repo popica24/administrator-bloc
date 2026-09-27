@@ -500,7 +500,7 @@ describe("comunicare si guvernanta", () => {
     const v = await ok(db("guvernanta").from("voturi").select("*").eq("id", st.vot).single());
     expect(v).toMatchObject({ asociatie_id: f.asociatieId, numarare: "cota", descriere: null, creat_de: f.adminId });
     /* [J9] Ora 20:00 e a Romaniei, nu a masinii care ruleaza testul (aici
-       Bucuresti oricum) — verificarea foloseste acelasi calcul independent
+       Bucuresti oricum), verificarea foloseste acelasi calcul independent
        de fus ca sursa-mock.js, nu new Date(`${zi}T20:00:00`), care ar
        depinde de fusul local. */
     expect(Date.parse(v.inchide_la)).toBe(new Date(oraSeriiRomania(zi)).getTime());
@@ -512,7 +512,7 @@ describe("comunicare si guvernanta", () => {
 
   it("[J9] deschideVot(): ora de inchidere e a Romaniei, indiferent de fusul dispozitivului", async () => {
     /* Un dispozitiv intr-un fus mult inaintea Romaniei (Tokyo, +9) ar calcula
-       "20:00 local" ca un instant UTC mai devreme decat 20:00 Bucuresti — pe
+       "20:00 local" ca un instant UTC mai devreme decat 20:00 Bucuresti, pe
        zile apropiate, chiar unul deja trecut, refuzat de deschide_vot cu
        "Data de inchidere trebuie sa fie in viitor." */
     const ziOriginal = process.env.TZ;

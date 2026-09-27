@@ -1,7 +1,7 @@
 /* Paritatea sursei demonstrative cu baza de date, pentru comenzile adaugate
    dupa auditul 2 (X06/D1, X05/D5).
-   Fisierul sta langa testele de integrare pentru ca perechea lui — aceleasi
-   comenzi prin sursa Supabase — este in acelasi director; mock-ul insa nu are
+   Fisierul sta langa testele de integrare pentru ca perechea lui, aceleasi
+   comenzi prin sursa Supabase, este in acelasi director; mock-ul insa nu are
    nevoie de server, asa ca testele de aici ruleaza si cu stack-ul oprit. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { creeazaSursaMock } from "../../src/sursa-mock.js";
@@ -189,7 +189,7 @@ describe("inregistreazaIesireFond() in sursa demonstrativa", () => {
     await expect(s.inregistreazaIesireFond({ ...baza, data: null, fisier: fisier() })).rejects.toThrow("Data iesirii din fond nu poate fi in viitor.");
     await expect(s.inregistreazaIesireFond({ ...baza, fondId: "fon-inexistent", fisier: fisier() })).rejects.toThrow("Fondul nu exista sau nu este al unui bloc administrat de tine.");
     /* Divergenta fata de sursa Supabase (C6): acolo, existenta fondului se
-       verifica doar in RPC (dupa upload) — nu se poate verifica ieftin, fara
+       verifica doar in RPC (dupa upload), nu se poate verifica ieftin, fara
        o cerere in plus catre server. Soldul (G3, cel mai frecvent refuz) se
        verifica ieftin si acolo, din datele stiute de la ultimul incarca().
        Mock-ul nu are cost de retea, deci poate verifica totul, inclusiv

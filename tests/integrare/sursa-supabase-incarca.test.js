@@ -29,7 +29,7 @@ const modifica = (fragment, transforma) => async (url, init, original) => {
    randul ramas pe ultima pozitie DUPA transformare. O transformare care doar
    filtreaza pastreaza ordinea (deci id-ul cel mai mare ramane ultimul), dar
    una care reordoneaza (ca inOrdine mai jos, pentru NOU-2) poate lasa pe
-   ultima pozitie un rand cu id mai mic decat altele deja intoarse — a doua
+   ultima pozitie un rand cu id mai mic decat altele deja intoarse, a doua
    pagina ar cere din nou randuri cu id mai mare, deja intoarse (reordonate)
    la prima pagina, si le-ar duplica. Paginile de continuare raman goale:
    setul real e mic, deci tot ce conteaza a fost deja intors la prima

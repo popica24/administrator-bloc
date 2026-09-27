@@ -6,9 +6,9 @@ import { test, expect } from "@playwright/test";
 test.describe("pagina publica, cum functioneaza", () => {
   test("se deschide fara cont, iar o suma atinsa isi arata socoteala", async ({ page }) => {
     await page.goto("/cum-functioneaza/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Lista de intretinere, cu socoteala la vedere");
-    await expect(page.getByRole("table", { name: /Lista de intretinere pe august 2026/ })).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText("Intra in cont")).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Lista de întreținere, cu socoteala la vedere");
+    await expect(page.getByRole("table", { name: /Lista de întreținere pe august 2026/ })).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText("Intră în cont")).toHaveCount(0);
 
     const apaRece = page.getByRole("button", { name: "Ap. 17, Apa rece si canalizare: 203,45 lei" });
     await expect(apaRece).toHaveAttribute("aria-pressed", "true");
@@ -29,7 +29,7 @@ test.describe("pagina publica, cum functioneaza", () => {
 
   test("Deschide aplicatia duce la ecranul de intrare", async ({ page }) => {
     await page.goto("/cum-functioneaza/");
-    await page.getByRole("link", { name: "Deschide aplicatia" }).click();
-    await expect(page.getByText("Intra in cont").first()).toBeVisible({ timeout: 20000 });
+    await page.getByRole("link", { name: "Deschide aplicația" }).click();
+    await expect(page.getByText("Intră în cont").first()).toBeVisible({ timeout: 20000 });
   });
 });

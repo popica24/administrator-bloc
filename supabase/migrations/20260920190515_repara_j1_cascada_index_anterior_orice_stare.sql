@@ -2,12 +2,12 @@
 -- citirile "trimisa" ale lunilor de dupa cea tocmai validata. Doua cai
 -- readuc dublarea de consum pe care H1 trebuia sa o rezolve:
 --
--- 1) Validare in afara ordinii cronologice — exact ce invita ecranul
+-- 1) Validare in afara ordinii cronologice, exact ce invita ecranul
 --    AdminCitiri, care se deschide pe luna curenta. Daca administratorul
 --    valideaza intai luna B (mai noua) si abia apoi luna A (mai veche), luna
 --    B e deja "validata" cand A se valideaza; cascada veche o sarea (cauta
 --    doar stare = 'trimisa'), asa ca index_anterior si consumul lunii B
---    raman inghetate la valoarea gresita pentru totdeauna — luna B nu se mai
+--    raman inghetate la valoarea gresita pentru totdeauna, luna B nu se mai
 --    poate revalida (valideaza_citire refuza o citire care nu mai e
 --    "trimisa").
 -- 2) Estimare fara nicio greseala: contorizare.estimeaza_citiri() insereaza
@@ -23,7 +23,7 @@
 -- valideaza_citiri_apartament) si dupa estimare (estimeaza_citiri). Ea
 -- recalculeaza index_anterior (si, prin coloana generata, consum) al
 -- tuturor citirilor de dupa luna data, ale aceluiasi contor, indiferent de
--- starea lor — trimisa sau validata — cu doua exceptii: o citire respinsa nu
+-- starea lor (trimisa sau validata) cu doua exceptii: o citire respinsa nu
 -- conteaza niciodata (index_anterior() o ignora deja), iar o luna a carei
 -- lista e deja publicata nu se mai atinge (banii ei sunt inghetati de
 -- motor, invariantul central al aplicatiei).
@@ -83,7 +83,7 @@ begin
    where id = p_citire_id;
 
   -- J1: cascada acopera acum orice stare de dupa (mai putin respinsa), nu
-  -- doar "trimisa" — vezi contorizare.recalculeaza_viitorul.
+  -- doar "trimisa", vezi contorizare.recalculeaza_viitorul.
   if p_accepta then
     perform contorizare.recalculeaza_viitorul(v_citire.contor_id, v_citire.bloc_id, v_citire.luna);
   end if;
@@ -206,7 +206,7 @@ begin
     v_n := v_n + 1;
 
     -- J1: o citire estimata devine "validata" direct, fara sa treaca prin
-    -- valideaza_citire — nimeni nu cascada pana acum daca luna urmatoare
+    -- valideaza_citire, nimeni nu cascada pana acum daca luna urmatoare
     -- fusese deja transmisa/validata sarind peste aceasta luna, lipsa.
     perform contorizare.recalculeaza_viitorul(v_contor.id, v_contor.bloc_id, p_luna);
   end loop;

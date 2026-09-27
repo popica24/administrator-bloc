@@ -88,10 +88,10 @@ test.afterAll(() => {
 
 async function intraPe(page, baza, telefon) {
   await page.goto(`${baza}/`);
-  await page.getByLabel("Numarul tau de telefon").fill(telefon);
+  await page.getByLabel("Numărul tău de telefon").fill(telefon);
   await page.getByLabel("Parola").fill(PAROLA);
-  await page.getByRole("button", { name: "Intra", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Iesi", exact: true })).toBeVisible({ timeout: 25000 });
+  await page.getByRole("button", { name: "Intră", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Ieși", exact: true })).toBeVisible({ timeout: 25000 });
 }
 
 /* Cine a deschis ce nu este o cifra a asociatiei: modul demonstrativ porneste
@@ -140,7 +140,7 @@ test.describe("aceleasi cifre in ambele surse", () => {
     await comparaPlimbarea(browser, CONTURI.elena, {
       acasa: async () => {},
       plata: (p) => mergiLaTab(p, "Plata"),
-      platileMele: async (p) => { await p.getByRole("button", { name: "Platile mele" }).click(); },
+      platileMele: async (p) => { await p.getByRole("button", { name: "Plățile mele" }).click(); },
       contoare: (p) => mergiLaTab(p, "Contoare"),
       bloc: (p) => mergiLaTab(p, "Bloc"),
     });
@@ -156,7 +156,7 @@ test.describe("aceleasi cifre in ambele surse", () => {
     await comparaPlimbarea(browser, CONTURI.ilie, {
       acasa: async () => {},
       plata: (p) => mergiLaTab(p, "Plata"),
-      platileMele: async (p) => { await p.getByRole("button", { name: "Platile mele" }).click(); },
+      platileMele: async (p) => { await p.getByRole("button", { name: "Plățile mele" }).click(); },
     });
   });
 
@@ -230,8 +230,8 @@ test.describe("aceleasi refuzuri in ambele surse", () => {
 
   test("sesizarea fara titlu nu se poate trimite, pe nicio sursa", async ({ browser }) => {
     const stare = await amandoua(browser, CONTURI.elena, async (page) => {
-      await mergiLaTab(page, "Sesizari");
-      await page.getByRole("button", { name: "Sesizare noua" }).click();
+      await mergiLaTab(page, "Sesizări");
+      await page.getByRole("button", { name: "Sesizare nouă" }).click();
       const trimite = page.getByRole("button", { name: /^Trimite sesizarea/ });
       return await trimite.first().getAttribute("aria-disabled");
     });
@@ -242,7 +242,7 @@ test.describe("aceleasi refuzuri in ambele surse", () => {
     await comparaPlimbarea(browser, CONTURI.admin, {
       previzualizare: async (p) => {
         await mergiLaTab(p, "Facturi");
-        const calculeaza = buton(p, "Calculeaza lista pe apartamente");
+        const calculeaza = buton(p, "Calculează lista pe apartamente");
         if (await calculeaza.count()) await calculeaza.click();
         await p.waitForTimeout(2500);
       },

@@ -4,7 +4,7 @@
 -- citire ("Sesizarile proprii si cele din blocurile conduse": sesizarea
 -- trebuie creata dupa activ_din al legaturii curente). Un proprietar nou
 -- putea deci scrie in conversatia deschisa de predecesorul lui, desi nu o
--- putea citi — exact contradictia pe care K4 a vrut sa o elimine pentru
+-- putea citi, exact contradictia pe care K4 a vrut sa o elimine pentru
 -- citire, ramasa la scriere.
 --
 -- Reparatie: acelasi test ca in politica RLS de citire, in loc de

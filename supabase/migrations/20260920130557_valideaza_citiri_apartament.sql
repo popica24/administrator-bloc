@@ -9,14 +9,14 @@
 -- data pe contor. Un apartament cu doua contoare (rece si calda) putea
 -- ramane pe jumatate validat daca al doilea apel esua (retea, sesiune
 -- expirata): exact bug-ul pe care il repara faptul ca totul se intampla
--- intr-o singura functie, deci intr-o singura tranzactie — daca o citire nu
+-- intr-o singura functie, deci intr-o singura tranzactie, daca o citire nu
 -- se poate schimba, niciuna nu se schimba.
 --
 -- Regulile sunt cele din contorizare.valideaza_citire(): doar administratorul
 -- blocului, motiv obligatoriu la respingere, refuza o luna a carei lista e
 -- deja publicata. In plus, "nimic de validat" (nicio citire "trimisa" pentru
 -- acel apartament si acea luna) este el insusi un refuz, cu mesajul din
--- sursa-mock.js — valideaza_citire nu are un echivalent, pentru ca acolo
+-- sursa-mock.js, valideaza_citire nu are un echivalent, pentru ca acolo
 -- citirea fie exista, fie nu.
 
 create function contorizare.valideaza_citiri_apartament(

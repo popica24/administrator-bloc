@@ -2,11 +2,11 @@
    cerere), nu cu paginarea pe cheie (toate()) pe care restul tabelelor mari o
    folosesc deja. PostgREST intoarce cel mult max_rows randuri (1000,
    supabase/config.toml) pe o singura cerere: un bloc cu mai mult de 1000
-   apartamente sau contoare pierde tacut restul — ecranul Apartamente arata
+   apartamente sau contoare pierde tacut restul, ecranul Apartamente arata
    mai putine decat exista, fara nicio eroare.
 
    Randurile in plus se insereaza direct (service role, ca seed-ul), fara
-   sa treaca prin fluxul de inrolare — irelevant aici, testul verifica doar
+   sa treaca prin fluxul de inrolare, irelevant aici, testul verifica doar
    cate randuri intoarce incarca(). */
 import { beforeAll, describe, expect, it } from "vitest";
 import { creeazaBloc, db, intraCa } from "./fixture.js";
@@ -30,7 +30,7 @@ describe("[J11] apartamente si contoare: peste max_rows pe bloc", () => {
   beforeAll(async () => {
     /* activeaza_bloc cere macar un apartament, cu cote insumand 100 si cu
        persoane declarate; blocul, o data activat, nu mai controleaza cota
-       la fiecare apartament nou (doar la activare) — restul de 1001
+       la fiecare apartament nou (doar la activare), restul de 1001
        apartamente, inserate direct dupa, pot avea orice cota valida. */
     f = await creeazaBloc({
       apartamente: [{ numar: "0", etaj: 0, persoane: 1, cota: 100, index_rece: 0 }],

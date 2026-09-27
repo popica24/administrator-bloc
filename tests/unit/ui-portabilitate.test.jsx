@@ -51,11 +51,11 @@ describe("[F8] confirmarea este asteptata, nu presupusa", () => {
     const sterge = vi.spyOn(sursa, "stergeCheltuiala");
     vi.spyOn(window, "confirm").mockImplementation(() => Promise.resolve(false));
     await tab("Facturi");
-    await apasa("Sterge");
+    await apasa("Șterge");
     expect(sterge).not.toHaveBeenCalled();
 
     window.confirm.mockImplementation(() => Promise.resolve(true));
-    await apasa("Sterge");
+    await apasa("Șterge");
     expect(sterge).toHaveBeenCalledTimes(1);
   });
 
@@ -65,11 +65,11 @@ describe("[F8] confirmarea este asteptata, nu presupusa", () => {
     vi.spyOn(window, "confirm").mockImplementation(() => Promise.resolve(false));
     await tab("Apartamente");
     await apasa("Citiri contoare");
-    await apasa("Estimeaza citirile lipsa");
+    await apasa("Estimează citirile lipsă");
     expect(estimeaza).not.toHaveBeenCalled();
 
     window.confirm.mockImplementation(() => Promise.resolve(true));
-    await apasa("Estimeaza citirile lipsa");
+    await apasa("Estimează citirile lipsă");
     expect(estimeaza).toHaveBeenCalledTimes(1);
   });
 });
@@ -81,7 +81,7 @@ describe("primitivele pastreaza ce vede tehnologia de asistare", () => {
     expect(taburi.map((t) => t.getAttribute("aria-selected"))).toContain("true");
 
     await tab("Plata");
-    const segment = screen.getByRole("button", { name: "Lista de plata" });
+    const segment = screen.getByRole("button", { name: "Lista de plată" });
     expect(segment.getAttribute("aria-pressed")).toBe("true");
 
     const rand = screen.getByRole("button", { name: /^Salubritate, / });

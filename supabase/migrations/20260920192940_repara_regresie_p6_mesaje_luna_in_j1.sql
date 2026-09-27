@@ -6,7 +6,7 @@
 -- mesajul de refuz cu comunicare.luna_text() ("iunie 2026"), nu cu formatul
 -- implicit al Postgres pentru date ("2026-06-01"). "Create or replace"
 -- inlocuieste intreaga functie, deci corpul mai vechi a sters fara sa vrea
--- imbunatatirea P6 — exact bug-ul "lista locatarului si raportul
+-- imbunatatirea P6, exact bug-ul "lista locatarului si raportul
 -- administratorului nu se potrivesc", dar la nivel de mesaj de eroare:
 -- testele care asteptau "Lista lunii iunie 2026 este deja publicata..."
 -- primeau in schimb "Lista lunii 2026-06-01 este deja publicata...".

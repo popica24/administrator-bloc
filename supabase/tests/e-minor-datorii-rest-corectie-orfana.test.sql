@@ -9,7 +9,7 @@
 -- Sigma(rest).
 --
 -- J12: dar o corectie negativa orfana, o data creata, nu mai poate fi
--- niciodata inchisa — financiar.aloca_plata sare peste orice rand cu rest
+-- niciodata inchisa, financiar.aloca_plata sare peste orice rand cu rest
 -- negativ (nu exista nimic de "platit"), asa ca ramane deschisa pentru
 -- totdeauna, cu un rest fantoma pe care nimeni nu-l poate reduce. Azi
 -- singura cale de a crea una e directa, prin service role (nicio comanda
@@ -83,7 +83,7 @@ select is(
 
 -- [minor] Aparare in adancime: daca un asemenea rand ar ajunge totusi in
 -- tabela (trigger-ul dezactivat temporar, nu un flux normal), Sigma(rest)
--- ramane egala cu soldul real — corectia orfana ramane vizibila cu
+-- ramane egala cu soldul real, corectia orfana ramane vizibila cu
 -- propriul ei rest (negativ), nu dispare tacut din Sigma(rest).
 do $$
 begin

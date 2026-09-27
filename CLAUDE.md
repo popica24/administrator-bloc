@@ -50,22 +50,22 @@ apartment gets a waiting screen.
 ## Architecture
 
 ### Frontend
-- `src/AdminBloc.jsx` — the whole UI in one file (do not split it without being asked), in
+- `src/AdminBloc.jsx`: the whole UI in one file (do not split it without being asked), in
   numbered sections: 1 TOKENS, 2 HELPERS, 3 CONSTANTE (labels), 4 DERIVARI (pure functions that
   read the loaded data), 5 PRIMITIVE (the only place touching the DOM), 6 STARE (`AppCtx`),
   7 `RandLista`, 8 locatar screens, 9 admin screens, 10 shell + auth screens, 11 the app.
-- `src/sursa-supabase.js` / `src/sursa-mock.js` — `incarca()` returns one `date` object for the
+- `src/sursa-supabase.js` / `src/sursa-mock.js`: `incarca()` returns one `date` object for the
   signed-in user; every command (`platesteCard`, `publicaLista`, …) is a method. The app wraps
   each command in `cmd()` (call, reload, toast) and screens get `{ ok, rezultat }` back.
-- `src/pdf.js` — tiny PDF writer (receipts, the list for the notice board). No libraries.
-- `supabase/functions/_shared/motor.js` — **the allocation engine**, pure JS, imported unchanged
+- `src/pdf.js`: tiny PDF writer (receipts, the list for the notice board). No libraries.
+- `supabase/functions/_shared/motor.js`: **the allocation engine**, pure JS, imported unchanged
   by the app (invoice preview) and by the `publica-lista` Edge Function (Deno).
 
 ### The engine is the invariant
 Amounts are computed **once**, when a list is published: `publica-lista` runs `motor.js` and
 `intretinere.salveaza_lista_publicata()` stores the result in `intretinere.repartizari` in one
 transaction. Screens only read stored rows and the financial ledger; they never compute a charge.
-Never reimplement allocation in SQL or in a screen — that is the "tenant list and admin report
+Never reimplement allocation in SQL or in a screen, that is the "tenant list and admin report
 contradict each other" bug the app exists to prevent. Methods: `consum`, `persoane`,
 `persoane_fara_lift` (uses `scutit_lift`), `apartamente`, `cota` (divides by the sum of shares;
 the DB refuses to activate a block whose shares do not sum to 100).
@@ -93,7 +93,7 @@ One Postgres schema per bounded context: `organizare`, `identitate`, `intretiner
   `atestate`.
 - Edge Function secret, required in production (see README, "Punerea in productie"):
   `SITE_URL` (the only origin the functions answer with CORS headers; without it they fall
-  back to `http://localhost:5173`). Also in production: `[auth] enable_signup = false` — nobody
+  back to `http://localhost:5173`). Also in production: `[auth] enable_signup = false`, nobody
   creates their own account, the administrator does it.
 
 ## Conventions
@@ -102,7 +102,12 @@ One Postgres schema per bounded context: `organizare`, `identitate`, `intretiner
 pseudo-selectors, px only; screens use only section-5 primitives; web-only CSS lives in
 `BASE_CSS`. Only `react`, `react-dom` and `@supabase/supabase-js` (which also runs on RN).
 
-**Language:** identifiers, comments, UI strings and SQL are Romanian without diacritics.
+**Language:** everything is Romanian. **UI strings are written with diacritics** (`src/AdminBloc.jsx`,
+`src/ghid.js`, `src/pagina-publica.jsx`); identifiers, comments, test names, demo data
+(`src/date-demo.js`), source-layer messages (`src/sursa-*.js`) and SQL stay without diacritics for
+now, and the PDF transliterates anyway (`src/pdf.js`, WinAnsi). A screen string that is compared
+against a message from the source layer (e.g. `MESAJ_SESIUNE_EXPIRATA`) stays ASCII until those
+messages move too. No em dashes or en dashes in text.
 
 **Users are 50+ and non-technical:** large touch targets, plain wording, one primary action per
 screen, derivations behind the expandable row.

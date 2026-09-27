@@ -5,8 +5,8 @@
    forma: un camp redenumit intr-o singura sursa lasa toata suita verde si
    strica productia.
 
-   Aici se incarca acelasi bloc demonstrativ (D14) din ambele surse — mock-ul il
-   rejoaca din src/date-demo.js, baza locala il are din `npm run seed` — si se
+   Aici se incarca acelasi bloc demonstrativ (D14) din ambele surse, mock-ul il
+   rejoaca din src/date-demo.js, baza locala il are din `npm run seed`, si se
    compara forma rezultatului: multimea cheilor si tipurile valorilor, la orice
    adancime, inclusiv pentru fiecare element de lista. Valorile nu se compara:
    ele depind de ziua in care ruleaza testul. */

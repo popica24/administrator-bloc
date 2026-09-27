@@ -39,11 +39,11 @@ function bazaApartament(ap, metoda, totaluri) {
    parte primeste partea intreaga (in sutimi), apoi sutimile ramase merg,
    cate una, apartamentelor cu cel mai mare rest. Spre deosebire de
    rotunjirea fiecarei parti in parte, suma partilor intoarse este mereu
-   exact egala cu suma de impartit — altfel metrii cubi repartizati pe
+   exact egala cu suma de impartit, altfel metrii cubi repartizati pe
    apartamente nu s-ar aduna la contorul general, desi fiecare rand, luat
    separat, pare corect rotunjit.
-   [R2] La egalitate de rest — nu accidentala: apartamente cu aceeasi pondere
-   (acelasi numar de persoane, de exemplu) au mereu rest identic — sutimea
+   [R2] La egalitate de rest, nu accidentala: apartamente cu aceeasi pondere
+   (acelasi numar de persoane, de exemplu) au mereu rest identic, sutimea
    trebuie sa mearga la acelasi apartament oricare ar fi ordinea in care au
    fost primite ponderile. Ordinea din lista nu e o cheie stabila: motorul
    e chemat cu ordini diferite (intretinere.date_pentru_motor ordoneaza
@@ -53,11 +53,11 @@ function bazaApartament(ap, metoda, totaluri) {
    de ordine: id-ul nu inseamna acelasi lucru in cele doua surse (UUID in
    Supabase, "ap-1", "ap-2", ... in sursa demo), deci acelasi bloc, calculat
    de surse diferite, impartea sutimea la apartamente diferite. Egalitatea
-   se desparte dupa `chei` — numarul apartamentului ("numar", text ca "3"
+   se desparte dupa `chei`, numarul apartamentului ("numar", text ca "3"
    sau "2A"), comparat numeric ca in restul aplicatiei
    (localeCompare(..., "ro", { numeric: true })), pentru ca inseamna acelasi
    lucru oriunde vine lista. Id-ul ramane doar rezerva pentru un apelant
-   care nu trimite `numar` (teste vechi, cod neactualizat) — motorul nu
+   care nu trimite `numar` (teste vechi, cod neactualizat), motorul nu
    arunca niciodata pentru atat de putin. */
 function distribuieExact(suma, ponderi, chei) {
   const totalPonderi = ponderi.reduce((s, p) => s + p, 0);

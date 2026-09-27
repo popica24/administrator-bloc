@@ -48,7 +48,7 @@ begin
 
     perform 1 from financiar.conturi where apartament_id = v_d.apartament_id for update;
 
-    -- H1 pe bani: baza corectata, la fel ca in financiar.datorii_rest —
+    -- H1 pe bani: baza corectata, la fel ca in financiar.datorii_rest -
     -- o datorie de intretinere este redusa de corectiile negative de pe
     -- aceeasi lista si acelasi apartament.
     v_baza := v_d.suma + case when v_d.tip = 'intretinere' then

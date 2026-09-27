@@ -142,7 +142,7 @@ describe("fondul de reparatii: doua iesiri simultane nu il duc pe minus (G1)", (
          soldul vechi de 500 (fara sa astepte lock-ul lui A), ar trece gresit.
          Verificarea nu se uita la rezultatul lui B (ar trece si fara lock,
          daca ar rula complet inaintea sau dupa A), ci la faptul ca backend-ul
-         lui B chiar asteapta un lock cat timp A tine tranzactia deschisa —
+         lui B chiar asteapta un lock cat timp A tine tranzactia deschisa -
          proba directa ca cererile pentru acelasi fond se serializeaza. */
       /* .catch aici prinde rejectia imediat (poate sosi cat asteptam mai jos),
          ca sa nu ramana "unhandled" intre momentul in care se intampla si

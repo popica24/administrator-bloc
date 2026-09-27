@@ -97,7 +97,7 @@ begin
     values (v_c3, 'rece', v_bloc, v_ap3, pg_temp.luna(-3), 100, 130, 'locatar', 'validata');
     -- Luna B (luna -2): lipseste; va fi estimata mai tarziu, dupa ce C e deja validata.
     -- Luna C (luna -1): transmisa si validata cat B lipsea; index_anterior() sare
-    -- peste B (inexistenta) si ia luna A (130) drept anterior — corect doar daca B
+    -- peste B (inexistenta) si ia luna A (130) drept anterior, corect doar daca B
     -- va avea consum 0, ceea ce nu e cazul odata ce B se estimeaza cu medie > 0.
     insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
     values (v_c3, 'rece', v_bloc, v_ap3, pg_temp.luna(-1), 130, 190, 'locatar', 'validata');
@@ -120,7 +120,7 @@ begin
 
   -- Luna B (luna -1): transmisa cat luna A era inca "trimisa" (nevalidata).
   -- index_anterior() la momentul transmiterii sare peste luna A si ia tot
-  -- indexul 100 al pornirii — exact defectul H1. Consumul adevarat al lunii
+  -- indexul 100 al pornirii, exact defectul H1. Consumul adevarat al lunii
   -- B este 190 - 130 = 60; cel inghetat gresit ar fi 190 - 100 = 90 (30 din
   -- luna A, facturate a doua oara).
   insert into contorizare.citiri (contor_id, tip, bloc_id, apartament_id, luna, index_anterior, index_curent, sursa, stare)
@@ -173,7 +173,7 @@ select is(
 -- si estimeaza_citiri (J1).
 
 -- Scenariul 2: validare in afara ordinii cronologice. Administratorul valideaza
--- mai intai luna B (-1), apoi luna A (-2) — exact ce invita ecranul AdminCitiri,
+-- mai intai luna B (-1), apoi luna A (-2), exact ce invita ecranul AdminCitiri,
 -- care se deschide pe luna curenta. Cascada trebuie sa corecteze index_anterior
 -- al lunii B chiar daca B e deja "validata" (nu doar "trimisa") in acel moment.
 select lives_ok(
@@ -202,7 +202,7 @@ select is(
   'valideaza_citire: consumul lunii B ajunge la valoarea adevarata (60), nu ramane dublat la 90');
 
 -- Scenariul 3: estimarea unei luni lipsa dupa ce luna urmatoare e deja
--- validata — flux normal, fara nicio greseala a administratorului. Luna C
+-- validata, flux normal, fara nicio greseala a administratorului. Luna C
 -- (-1) e deja validata cu index_anterior inghetat la 130 (sarind peste luna
 -- B, inexistenta la acel moment). Estimarea lunii B trebuie sa recalculeze
 -- si index_anterior/consumul lunii C.

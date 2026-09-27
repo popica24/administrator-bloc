@@ -37,7 +37,7 @@ async function listaPdf(numarCheltuieli, proprietar) {
     },
   });
   const pdf = prindePdf();
-  await apasa("Exporta lista PDF");
+  await apasa("Exportă lista PDF");
   const { blob } = pdf.descarcate[pdf.descarcate.length - 1];
   return textePdf(await citesteBlob(blob));
 }
@@ -58,7 +58,7 @@ async function listaPdfAvizier(numarCheltuieli) {
   await tab("Facturi");
   await apasa(screen.getByText("aug 26"));
   const pdf = prindePdf();
-  await apasa("Exporta PDF pentru avizier");
+  await apasa("Exportă PDF pentru avizier");
   const { blob } = pdf.descarcate[pdf.descarcate.length - 1];
   return textePdf(await citesteBlob(blob));
 }
@@ -208,7 +208,7 @@ async function listaCuCorectie(factor) {
     },
   });
   const pdf = prindePdf();
-  await apasa("Exporta lista PDF");
+  await apasa("Exportă lista PDF");
   const { blob } = pdf.descarcate[pdf.descarcate.length - 1];
   const pagini = textePdf(await citesteBlob(blob));
   return { rand: randulApartamentului(pagini, apNumar), totalNou };

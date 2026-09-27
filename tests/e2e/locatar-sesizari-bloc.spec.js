@@ -22,7 +22,7 @@ async function stergeSesizarile(apartamentId, titluPrefix = "E2E") {
   }
 }
 
-test.describe("Sesizari", () => {
+test.describe("Sesizări", () => {
   test.afterEach(async () => {
     const ap = await apartamentulNumarul(17);
     await stergeSesizarile(ap.id);
@@ -30,9 +30,9 @@ test.describe("Sesizari", () => {
 
   test("sesizarea rapida completeaza titlul si categoria dintr-un apasat", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toBeVisible();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toBeVisible();
     await page.getByRole("button", { name: "Liftul nu merge" }).click();
     await expect(page.getByLabel("Sau scrie pe scurt problema")).toHaveValue("Liftul nu merge");
     await expect(page.getByLabel("Categorie")).toHaveValue("acces");
@@ -40,24 +40,24 @@ test.describe("Sesizari", () => {
 
   test("sesizarea noua cu text liber si poza ajunge la administrator", async ({ page }) => {
     const ap = await apartamentulNumarul(17);
-    const titlu = `E2E ${Date.now()} usa de la boxe`;
+    const titlu = `E2E ${Date.now()} ușa de la boxe`;
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.getByLabel("Sau scrie pe scurt problema").fill(titlu);
     await page.getByLabel("Categorie").selectOption("acces");
-    await page.getByLabel("Unde este si de cand (optional)").fill("La subsol, de doua zile");
+    await page.getByLabel("Unde este și de când (opțional)").fill("La subsol, de două zile");
     await page.setInputFiles('input[type="file"]', fisierPoza("sesizare.jpg"));
     await expect(page.locator('img[alt="Poza sesizare"]')).toBeVisible();
     await buton(page, "Trimite sesizarea").click();
     await asteaptaToast(page, "Sesizarea a ajuns la administrator");
 
     await expect(page.getByText(titlu).first()).toBeVisible();
-    await expect(page.getByText("Noua").first()).toBeVisible();
+    await expect(page.getByText("Nouă").first()).toBeVisible();
     const { data } = await serviciu().schema("sesizari").from("sesizari")
       .select("id, titlu, categorie, descriere, stare").eq("apartament_id", ap.id).eq("titlu", titlu).single();
     expect(data.categorie).toBe("acces");
-    expect(data.descriere).toBe("La subsol, de doua zile");
+    expect(data.descriere).toBe("La subsol, de două zile");
     expect(data.stare).toBe("noua");
     const { data: poze } = await serviciu().schema("sesizari").from("sesizari_poze").select("cale").eq("sesizare_id", data.id);
     expect(poze).toHaveLength(1);
@@ -66,18 +66,18 @@ test.describe("Sesizari", () => {
 
   test("o poza pusa din greseala se scoate inainte de trimitere", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.setInputFiles('input[type="file"]', fisierPoza());
     await expect(page.locator('img[alt="Poza sesizare"]')).toHaveCount(1);
-    await buton(page, "Sterge poza").click();
+    await buton(page, "Șterge poza").click();
     await expect(page.locator('img[alt="Poza sesizare"]')).toHaveCount(0);
   });
 
   test("fara titlu, trimiterea ramane blocata", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await expect(buton(page, "Trimite sesizarea")).toHaveAttribute("aria-disabled", "true");
     await page.getByLabel("Sau scrie pe scurt problema").fill("ceva");
     await expect(buton(page, "Trimite sesizarea")).not.toHaveAttribute("aria-disabled", "true");
@@ -87,25 +87,25 @@ test.describe("Sesizari", () => {
     const titlu = `E2E ${Date.now()} mesaj`;
 
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.getByLabel("Sau scrie pe scurt problema").fill(titlu);
     await buton(page, "Trimite sesizarea").click();
     await asteaptaToast(page, "Sesizarea a ajuns la administrator");
 
     /* Sesizarile sunt sortate cu cea mai noua prima */
     await expect(page.getByText(titlu).first()).toBeVisible();
-    await page.getByRole("textbox", { name: "Adauga un mesaj pentru administrator" }).first()
+    await page.getByRole("textbox", { name: "Adaugă un mesaj pentru administrator" }).first()
       .fill("Tot nu merge, a trecut o saptamana.");
     await buton(page, "Trimite").first().click();
     await asteaptaToast(page, "Mesajul a fost trimis");
     await expect(page.getByText("Tot nu merge, a trecut o saptamana.")).toBeVisible();
-    await expect(page.getByText(`MESAJUL TAU · ${dataScurtaRo()}`).first()).toBeVisible();
+    await expect(page.getByText(`MESAJUL TĂU · ${dataScurtaRo()}`).first()).toBeVisible();
   });
 
   test("sesizarile blocului sunt anonime", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await page.getByRole("button", { name: "Din tot blocul" }).click();
     await expect(page.getByText("Nu se vede cine a trimis sesizarea.")).toBeVisible();
     const t = await textEcran(page);
@@ -118,7 +118,7 @@ test.describe("Sesizari", () => {
     const { count } = await serviciu().schema("sesizari").from("sesizari")
       .select("id", { count: "exact", head: true }).eq("apartament_id", ap.id).neq("stare", "rezolvata");
     await intraCa(page, "elena");
-    if (count > 0) await expect(tab(page, "Sesizari")).toContainText(String(count));
+    if (count > 0) await expect(tab(page, "Sesizări")).toContainText(String(count));
   });
 });
 
@@ -168,19 +168,19 @@ test.describe("Bloc: vot si adunare", () => {
 
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare" }).click();
+    await page.getByRole("button", { name: "Vot și adunare" }).click();
     await expect(page.getByText("Inlocuirea usii de la intrare")).toBeVisible();
     const { data: optiuni } = await serviciu().schema("guvernanta").from("voturi_optiuni")
       .select("id, text").eq("vot_id", VOT).order("ordine");
 
     await page.getByRole("button", { name: optiuni[0].text }).first().click();
-    await expect(page.getByRole("dialog", { name: "Confirma votul" })).toBeVisible();
-    await expect(page.getByText("Votul nu se mai poate schimba dupa ce il trimiti.")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Confirmă votul" })).toBeVisible();
+    await expect(page.getByText("Votul nu se mai poate schimba după ce îl trimiți.")).toBeVisible();
     await buton(page, "Da, trimite votul").click();
-    await asteaptaToast(page, "Votul a fost inregistrat");
+    await asteaptaToast(page, "Votul a fost înregistrat");
 
-    await expect(page.getByText("Apartamentul tau a votat. Rezultatele se actualizeaza pe masura ce voteaza si ceilalti.")).toBeVisible();
-    await expect(page.getByText(`${optiuni[0].text} · votul tau`)).toBeVisible();
+    await expect(page.getByText("Apartamentul tău a votat. Rezultatele se actualizează pe măsură ce votează și ceilalți.")).toBeVisible();
+    await expect(page.getByText(`${optiuni[0].text} · votul tău`)).toBeVisible();
 
     const { data } = await serviciu().schema("guvernanta").from("voturi_exprimate")
       .select("optiune_id").eq("vot_id", VOT).eq("apartament_id", ap.id).single();
@@ -192,14 +192,14 @@ test.describe("Bloc: vot si adunare", () => {
     await serviciu().schema("guvernanta").from("adunari_prezente").delete().eq("apartament_id", ap.id);
 
     await intraCa(page, "elena");
-    await expect(page.getByText("Confirma prezenta la adunarea generala")).toBeVisible();
+    await expect(page.getByText("Confirmă prezența la adunarea generală")).toBeVisible();
     await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare" }).click();
-    await expect(page.getByText("Adunarea generala din 3 octombrie 2026")).toBeVisible();
+    await page.getByRole("button", { name: "Vot și adunare" }).click();
+    await expect(page.getByText("Adunarea generală din 3 octombrie 2026")).toBeVisible();
     await expect(page.getByText("La parter, langa boxe")).toBeVisible();
-    await buton(page, "Confirm ca particip").click();
-    await asteaptaToast(page, "Prezenta a fost confirmata");
-    await expect(page.getByText("Ai confirmat ca participi")).toBeVisible();
+    await buton(page, "Confirm că particip").click();
+    await asteaptaToast(page, "Prezența a fost confirmată");
+    await expect(page.getByText("Ai confirmat că participi")).toBeVisible();
 
     const { count } = await serviciu().schema("guvernanta").from("adunari_prezente")
       .select("apartament_id", { count: "exact", head: true }).eq("apartament_id", ap.id);
@@ -217,7 +217,7 @@ test.describe("Bloc: vot si adunare", () => {
 
     await intraCa(page, "elena");
     await mergiLaTab(page, "Bloc");
-    await page.getByRole("button", { name: "Vot si adunare" }).click();
+    await page.getByRole("button", { name: "Vot și adunare" }).click();
     await expect(page.getByText("Alege o varianta")).toHaveCount(0);
   });
 });
@@ -250,11 +250,11 @@ test.describe("Bloc: acte si fonduri", () => {
     await mergiLaTab(page, "Bloc");
     await page.getByRole("button", { name: "Fonduri" }).click();
     const t = await textEcran(page);
-    expect(t).toContain("FOND DE REPARATII");
+    expect(t).toContain("FOND DE REPARAȚII");
     expect(t).toContain("FOND DE RULMENT");
     expect(t).toContain("Unde s-au dus banii");
-    expect(t).toContain("Situatia incasarilor");
-    expect(t).toContain("Apartamente fara restanta");
+    expect(t).toContain("Situația încasărilor");
+    expect(t).toContain("Apartamente fără restanță");
     expect(t).toContain(Number(reparatii.sold).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, "."));
     expect(t).not.toMatch(/Elena Marinescu|Familia Ilie/);
   });

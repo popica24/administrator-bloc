@@ -66,8 +66,8 @@ async function ok(promisiune) {
    dupa ultimul id primit.
    Oprirea nu se uita la PAGINA (1000, cat e azi max_rows in
    supabase/config.toml): o pagina mai scurta decat cat s-a cerut nu inseamna
-   neaparat sfarsitul, doar ca serverul a intors mai putin decat am cerut noi
-   — daca max_rows ar scadea sub PAGINA, fiecare cerere ar veni "scurta" din
+   neaparat sfarsitul, doar ca serverul a intors mai putin decat am cerut noi:
+   daca max_rows ar scadea sub PAGINA, fiecare cerere ar veni "scurta" din
    prima, desi mai raman randuri, si toate() ar trunchia tacut (G13). Singurul
    semnal de sfarsit de incredere este o pagina goala. */
 const PAGINA = 1000;
@@ -585,7 +585,7 @@ export function creeazaSursaSupabase(url, cheie) {
           /* [P4] Verificarea de mai sus a gasit randul, cu tipul "factura",
              inainte de a urca vreun scan: daca update-ul tot nu-l gaseste,
              lista s-a publicat sau randul a disparut chiar intre verificare
-             si scriere (RLS filtreaza tacit) — o cursa rara, care nu mai are
+             si scriere (RLS filtreaza tacit), o cursa rara, care nu mai are
              cum sa fie randul fondului (deja exclus mai sus). */
           throw new Error("Randul nu mai poate fi modificat. Reincarca lista si incearca din nou.");
         }
@@ -667,7 +667,7 @@ export function creeazaSursaSupabase(url, cheie) {
     })),
 
     /* Iesire din fond: suma, descrierea si data se verifica aici, ieftin,
-       inainte sa se incarce documentul (C6) — altfel orice refuz din RPC (care
+       inainte sa se incarce documentul (C6), altfel orice refuz din RPC (care
        reverifica aceleasi campuri) lasa un document orfan, vizibil locatarilor
        prin comunicare.documente. La fel si soldul (G3): e cel mai frecvent
        refuz, iar soldul fondului este deja cunoscut de la ultimul incarca()

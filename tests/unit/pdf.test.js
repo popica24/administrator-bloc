@@ -49,7 +49,7 @@ describe("imparteText", () => {
 });
 
 describe("documentPdf: structura", () => {
-  const bytes = documentPdf({ titlu: "Chitanta (AP118) nr. 417", blocuri: [{ tip: "titlu", text: "Chitanta" }] });
+  const bytes = documentPdf({ titlu: "Chitanța (AP118) nr. 417", blocuri: [{ tip: "titlu", text: "Chitanta" }] });
   const s = text(bytes);
 
   it("intoarce octeti cu antet PDF 1.4 si sfarsit %%EOF", () => {

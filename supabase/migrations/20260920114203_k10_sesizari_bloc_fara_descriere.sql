@@ -3,7 +3,7 @@
 -- suficient ca autorul sa fie recunoscut chiar fara nume sau numar de
 -- apartament. Decizie de produs, varianta conservatoare: scoatem descrierea
 -- din vederea anonima si pastram doar titlul, categoria si starea. (Cealalta
--- varianta din audit — un avertisment in formular despre ce vad ceilalti —
+-- varianta din audit, un avertisment in formular despre ce vad ceilalti -
 -- ramane de facut in AdminBloc.jsx, in afara ariei acestei reparatii.)
 
 drop function sesizari.sesizari_bloc(uuid);

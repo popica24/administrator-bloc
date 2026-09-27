@@ -13,40 +13,40 @@ const COMENZI = [
   ["transmiteCitire", [{ apartamentId: "apa-3", luna: "2026-09" }], "transmiteCitire", undefined, "Indexul a fost trimis administratorului"],
   ["adaugaSesizare", [{ titlu: "Bec" }], "adaugaSesizare", undefined, "Sesizarea a ajuns la administrator"],
   ["scrieMesaj", ["ses-1", "Multumesc"], "scrieMesaj", undefined, "Mesajul a fost trimis"],
-  ["voteaza", ["vot-1", "opt-1", "apa-3"], "voteaza", undefined, "Votul a fost inregistrat"],
-  ["confirmaPrezenta", ["adu-1", "apa-3"], "confirmaPrezenta", undefined, "Prezenta a fost confirmata"],
+  ["voteaza", ["vot-1", "opt-1", "apa-3"], "voteaza", undefined, "Votul a fost înregistrat"],
+  ["confirmaPrezenta", ["adu-1", "apa-3"], "confirmaPrezenta", undefined, "Prezența a fost confirmată"],
   ["marcheazaAnuntCitit", ["anu-1"], "marcheazaAnuntCitit", undefined, null],
   ["marcheazaNotificareCitita", ["not-1"], "marcheazaNotificareCitita", undefined, null],
-  ["deschideLista", ["2026-12"], "deschideLista", "lis-nou", "Lista pe decembrie 2026 a fost inceputa"],
-  ["salveazaCheltuiala", [{ id: "che-1", suma: 5 }], "salveazaCheltuiala", undefined, "Factura a fost modificata"],
-  ["salveazaCheltuiala", [{ suma: 5 }], "salveazaCheltuiala", undefined, "Factura a fost adaugata in lista in lucru"],
-  ["stergeCheltuiala", ["che-1"], "stergeCheltuiala", undefined, "Cheltuiala a fost stearsa"],
-  ["publicaLista", ["lis-1"], "publicaLista", undefined, "Lista a fost publicata. Locatarii o vad acum."],
-  ["marcheazaFacturaPlatita", ["che-1", true], "marcheazaFacturaPlatita", undefined, "Factura marcata ca platita furnizorului"],
-  ["marcheazaFacturaPlatita", ["che-1", false], "marcheazaFacturaPlatita", undefined, "Plata catre furnizor a fost anulata"],
-  ["inregistreazaIncasare", ["apa-3", 100, "numerar", "cerere-1", null], "inregistreazaIncasare", { plataId: "p" }, "Incasare inregistrata, chitanta emisa"],
+  ["deschideLista", ["2026-12"], "deschideLista", "lis-nou", "Lista pe decembrie 2026 a fost începută"],
+  ["salveazaCheltuiala", [{ id: "che-1", suma: 5 }], "salveazaCheltuiala", undefined, "Factura a fost modificată"],
+  ["salveazaCheltuiala", [{ suma: 5 }], "salveazaCheltuiala", undefined, "Factura a fost adăugată în lista în lucru"],
+  ["stergeCheltuiala", ["che-1"], "stergeCheltuiala", undefined, "Cheltuiala a fost ștearsă"],
+  ["publicaLista", ["lis-1"], "publicaLista", undefined, "Lista a fost publicată. Locatarii o văd acum."],
+  ["marcheazaFacturaPlatita", ["che-1", true], "marcheazaFacturaPlatita", undefined, "Factura marcată ca plătită furnizorului"],
+  ["marcheazaFacturaPlatita", ["che-1", false], "marcheazaFacturaPlatita", undefined, "Plata către furnizor a fost anulată"],
+  ["inregistreazaIncasare", ["apa-3", 100, "numerar", "cerere-1", null], "inregistreazaIncasare", { plataId: "p" }, "Încasare înregistrată, chitanța emisă"],
   ["trimiteInstiintare", ["apa-3"], "trimiteInstiintare", { destinatari: 1 }, null],
-  ["schimbaPersoane", ["apa-3", 3, "2026-10", "nastere"], "schimbaPersoane", undefined, "Din octombrie 2026 se calculeaza 3 persoane"],
+  ["schimbaPersoane", ["apa-3", 3, "2026-10", "nastere"], "schimbaPersoane", undefined, "Din octombrie 2026 se calculează 3 persoane"],
   ["adaugaLocatar", ["apa-3", { nume: "Ana", telefon: "0722000051" }], "adaugaLocatar", { parola: "Bloc-Casa-1234" }, "Contul a fost creat"],
-  ["parolaNoua", ["apa-3", "loc-1"], "parolaNoua", { parola: "Bloc-Casa-1234" }, "Parola noua a fost generata"],
-  ["inchideAcces", ["loc-1"], "inchideAcces", undefined, "Accesul a fost inchis"],
-  ["schimbaFisaApartament", ["apa-3", { proprietar: "Ion Pop", cota: 5, mp: 40, scutitLift: false, etaj: 2 }], "schimbaFisaApartament", undefined, "Fisa apartamentului a fost actualizata"],
+  ["parolaNoua", ["apa-3", "loc-1"], "parolaNoua", { parola: "Bloc-Casa-1234" }, "Parola nouă a fost generată"],
+  ["inchideAcces", ["loc-1"], "inchideAcces", undefined, "Accesul a fost închis"],
+  ["schimbaFisaApartament", ["apa-3", { proprietar: "Ion Pop", cota: 5, mp: 40, scutitLift: false, etaj: 2 }], "schimbaFisaApartament", undefined, "Fișa apartamentului a fost actualizată"],
   ["schimbaCoteleBlocului", [[{ apartamentId: "apa-3", cota: 50 }, { apartamentId: "apa-4", cota: 50 }]], "schimbaCoteleBlocului", undefined, "Cotele blocului au fost actualizate"],
-  ["inregistreazaIesireFond", [{ fondId: "fond-1", suma: -100, descriere: "Reparatie", data: "2026-09-19", fisier: {} }], "inregistreazaIesireFond", undefined, "Iesirea din fond a fost inregistrata"],
-  ["valideazaCitire", ["cit-1", true, null], "valideazaCitire", undefined, "Citirea a fost validata"],
-  ["valideazaCitire", ["cit-1", false, "Poza neclara"], "valideazaCitire", undefined, "Citirea a fost respinsa, locatarul a fost anuntat"],
+  ["inregistreazaIesireFond", [{ fondId: "fond-1", suma: -100, descriere: "Reparatie", data: "2026-09-19", fisier: {} }], "inregistreazaIesireFond", undefined, "Ieșirea din fond a fost înregistrată"],
+  ["valideazaCitire", ["cit-1", true, null], "valideazaCitire", undefined, "Citirea a fost validată"],
+  ["valideazaCitire", ["cit-1", false, "Poza neclară"], "valideazaCitire", undefined, "Citirea a fost respinsă, locatarul a fost anunțat"],
   ["citesteContorGeneral", ["2026-09", "rece", 500], "citesteContorGeneral", undefined, "Indexul contorului general a fost salvat"],
   ["estimeazaCitiri", ["2026-09"], "estimeazaCitiri", { estimate: 2 }, null],
-  ["preiaSesizare", ["ses-1"], "preiaSesizare", undefined, "Sesizarea este in lucru"],
-  ["rezolvaSesizare", ["ses-1"], "rezolvaSesizare", undefined, "Sesizarea a fost marcata rezolvata"],
-  ["publicaAnunt", [{ titlu: "A", corp: "B", urgent: true }], "publicaAnunt", undefined, "Anunt publicat si notificare trimisa"],
-  ["publicaAnunt", [{ titlu: "A", corp: "B", urgent: false }], "publicaAnunt", undefined, "Anunt publicat la avizier"],
+  ["preiaSesizare", ["ses-1"], "preiaSesizare", undefined, "Sesizarea este în lucru"],
+  ["rezolvaSesizare", ["ses-1"], "rezolvaSesizare", undefined, "Sesizarea a fost marcată rezolvată"],
+  ["publicaAnunt", [{ titlu: "A", corp: "B", urgent: true }], "publicaAnunt", undefined, "Anunț publicat și notificare trimisă"],
+  ["publicaAnunt", [{ titlu: "A", corp: "B", urgent: false }], "publicaAnunt", undefined, "Anunț publicat la avizier"],
   ["seteazaReminder", ["plata", true, 3], "seteazaReminder", undefined, null],
   ["trimiteReminder", ["plata"], "trimiteReminder", { destinatari: 3, apartamente: 2 }, null],
   ["deschideVot", [{ titlu: "Usa" }], "deschideVot", undefined, "Votul a fost deschis"],
   ["reamintesteVot", ["vot-1"], "reamintesteVot", { destinatari: 1 }, null],
   ["convoacaAdunare", [{ loc: "Parter" }], "convoacaAdunare", { destinatari: 4 }, null],
-  ["incarcaDocument", [{ titlu: "PV" }], "incarcaDocument", undefined, "Documentul a fost incarcat"],
+  ["incarcaDocument", [{ titlu: "PV" }], "incarcaDocument", undefined, "Documentul a fost încărcat"],
 ];
 
 async function pornesteAdmin() {
@@ -57,7 +57,7 @@ async function pornesteAdmin() {
 }
 
 describe("cmd(): succes", () => {
-  it.each(COMENZI.map((c) => [c[0], c[4] || "fara mesaj", c]))("%s -> %s", async (_n, _m, [nume, args, metoda, intoarce, mesaj]) => {
+  it.each(COMENZI.map((c) => [c[0], c[4] || "fără mesaj", c]))("%s -> %s", async (_n, _m, [nume, args, metoda, intoarce, mesaj]) => {
     const { sursa, ctx, incarca } = await pornesteAdmin();
     const fn = vi.spyOn(sursa, metoda).mockResolvedValue(intoarce);
     await act(async () => { ctx().toastMsg("inainte"); });
@@ -89,7 +89,7 @@ describe("cmd(): succes", () => {
 });
 
 describe("cmd(): eroare", () => {
-  it.each(COMENZI.map((c) => [c[0], c]))("%s arata mesajul erorii", async (_n, [nume, args, metoda]) => {
+  it.each(COMENZI.map((c) => [c[0], c]))("%s arată mesajul erorii", async (_n, [nume, args, metoda]) => {
     const { sursa, ctx, incarca } = await pornesteAdmin();
     const e = new Error(`Refuzat: ${nume}`);
     vi.spyOn(sursa, metoda).mockRejectedValue(e);
@@ -106,7 +106,7 @@ describe("cmd(): eroare", () => {
     let r;
     await act(async () => { r = await ctx().publicaLista("lis-1"); });
     expect(r.ok).toBe(false);
-    expect(toast().textContent).toBe("A aparut o eroare. Incearca din nou.");
+    expect(toast().textContent).toBe("A apărut o eroare. Încearcă din nou.");
   });
 
   it("reincarcarea care esueaza dupa o comanda reusita arata eroarea, dar comanda ramane reusita", async () => {
@@ -117,13 +117,13 @@ describe("cmd(): eroare", () => {
     await act(async () => { r = await ctx().stergeCheltuiala("che-1"); });
     expect(r.ok).toBe(true);
     /* mesajul comenzii vine dupa reincarcare si il inlocuieste */
-    expect(toast().textContent).toBe("Cheltuiala a fost stearsa");
+    expect(toast().textContent).toBe("Cheltuiala a fost ștearsă");
 
     vi.spyOn(sursa, "incarca").mockRejectedValueOnce({});
     let d;
     await act(async () => { d = await ctx().reincarca(); });
     expect(d).toBeNull();
-    expect(toast().textContent).toBe("Datele nu au putut fi incarcate.");
+    expect(toast().textContent).toBe("Datele nu au putut fi încărcate.");
 
     vi.spyOn(sursa, "incarca").mockRejectedValueOnce(new Error("Sesiune expirata"));
     await act(async () => { d = await ctx().reincarca(); });
@@ -142,7 +142,7 @@ describe("cmd(): eroare", () => {
     await act(async () => { r = await ctx().scrieMesaj("ses-1", "x"); });
     expect(r).toEqual({ ok: false, eroare: expect.any(Error), mesaj: "Sesiunea a expirat. Intra din nou in cont." });
     expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
-    await screen.findByText("Intra in cont");
+    await screen.findByText("Intră în cont");
   });
 
   it("[P3] sesiune expirata la reincarcare (dupa o comanda reusita) scoate omul la autentificare", async () => {
@@ -153,7 +153,7 @@ describe("cmd(): eroare", () => {
     await act(async () => { r = await ctx().stergeCheltuiala("che-1"); });
     expect(r.ok).toBe(true);
     expect(toast().textContent).toBe("Sesiunea a expirat. Intra din nou in cont.");
-    await screen.findByText("Intra in cont");
+    await screen.findByText("Intră în cont");
   });
 
   it("[P3] o eroare de reincarcare care nu e sesiune moarta nu scoate omul din ecran", async () => {
@@ -163,7 +163,7 @@ describe("cmd(): eroare", () => {
     let r;
     await act(async () => { r = await ctx().stergeCheltuiala("che-1"); });
     expect(r.ok).toBe(true);
-    expect(screen.queryByText("Intra in cont")).toBeNull();
+    expect(screen.queryByText("Intră în cont")).toBeNull();
   });
 });
 
@@ -208,7 +208,7 @@ describe("deschideDocument: fereastra se deschide la apasare, URL-ul vine dupa",
     vi.spyOn(window, "open").mockReturnValue(w);
     vi.spyOn(sursa, "deschideDocument").mockResolvedValue(null);
     await act(async () => { ctx().deschideDocument("doc-1"); });
-    await waitFor(() => expect(toast().textContent).toBe("Documentul nu are fisier atasat."));
+    await waitFor(() => expect(toast().textContent).toBe("Documentul nu are fișier atașat."));
     expect(w.close).toHaveBeenCalled();
   });
 

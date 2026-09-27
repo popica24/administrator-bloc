@@ -17,7 +17,7 @@
 -- Reguli:
 --   - doar administratorul blocului (sau serviciul);
 --   - lista trebuie sa acopere exact apartamentele blocului: nici unul in
---     plus, nici unul lipsa, nici unul de doua ori — altfel suma verificata
+--     plus, nici unul lipsa, nici unul de doua ori, altfel suma verificata
 --     nu ar mai fi suma reala a blocului dupa scriere;
 --   - fiecare cota este un numar intre 0 (exclusiv) si 100 (inclusiv);
 --   - suma lor ramane 100, cu aceeasi toleranta de 0,01 ca la activare

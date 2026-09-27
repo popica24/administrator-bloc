@@ -124,7 +124,7 @@ describe("vot, adunare, anunturi si notificari", () => {
 
   it("[J6] votulMeu raspunde pentru apartamentul ales, nu pentru orice apartament al meu", async () => {
     /* loc mai are, pe langa apartamentul 1 (care a votat mai sus), si
-       apartamentul 2 al aceluiasi bloc — de exemplu chirias acolo. */
+       apartamentul 2 al aceluiasi bloc, de exemplu chirias acolo. */
     await ok(db("identitate").from("locatari").insert({
       apartament_id: f.ap["2"], bloc_id: f.blocId, profil_id: f.conturi.loc.id, calitate: "chirias", activ_din: "2020-01-01",
     }));

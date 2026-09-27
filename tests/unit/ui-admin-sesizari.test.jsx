@@ -5,9 +5,9 @@ import { pornesteAdmin, apasa, buton, butoane, toast, inDialog, dezactivat } fro
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 
-const deschideSesizari = (opt) => pornesteAdmin({ tab: "Sesizari", ...opt });
+const deschideSesizari = (opt) => pornesteAdmin({ tab: "Sesizări", ...opt });
 /* Cardurile de sesizare sunt butoane cu titlul drept eticheta */
-const titluri = () => butoane(/./).map((b) => b.getAttribute("aria-label")).filter((t) => t && !["Inchide", "Iesi"].includes(t));
+const titluri = () => butoane(/./).map((b) => b.getAttribute("aria-label")).filter((t) => t && !["Închide", "Ieși"].includes(t));
 const idSesizare = async (sursa, titlu) => (await sursa.incarca()).sesizari.find((s) => s.titlu === titlu).id;
 
 describe("AdminSesizari, lista", () => {
@@ -15,19 +15,19 @@ describe("AdminSesizari, lista", () => {
     await deschideSesizari();
     expect(screen.getByText("3 deschise")).toBeTruthy();
     expect(titluri()).toEqual(["Usa de la intrare nu se inchide singura", "Bec ars pe palier la etajul 4", "Scurgere la coloana de la subsol"]);
-    expect(screen.getByText("Asteapta de 15 zile")).toBeTruthy();
-    expect(screen.getByText("Asteapta de 10 zile")).toBeTruthy();
-    expect(screen.getByText("Asteapta de 4 zile")).toBeTruthy();
-    expect(screen.getByText("Ap. 11 · Instalatii, apa, canalizare · 15 sep 2026")).toBeTruthy();
-    expect(screen.getByText("Noua")).toBeTruthy();
-    expect(screen.getAllByText("In lucru")).toHaveLength(2);
+    expect(screen.getByText("Așteaptă de 15 zile")).toBeTruthy();
+    expect(screen.getByText("Așteaptă de 10 zile")).toBeTruthy();
+    expect(screen.getByText("Așteaptă de 4 zile")).toBeTruthy();
+    expect(screen.getByText("Ap. 11 · Instalații, apă, canalizare · 15 sep 2026")).toBeTruthy();
+    expect(screen.getByText("Nouă")).toBeTruthy();
+    expect(screen.getAllByText("În lucru")).toHaveLength(2);
   });
 
   it("rezolvate si toate, fara zile de asteptare la cele rezolvate", async () => {
     await deschideSesizari();
     await apasa(screen.getByText("Rezolvate"));
     expect(titluri()).toEqual(["Gunoi depozitat pe casa scarii", "Interfon defect"]);
-    expect(screen.queryByText(/Asteapta de/)).toBeNull();
+    expect(screen.queryByText(/Așteaptă de/)).toBeNull();
     await apasa(screen.getByText("Toate"));
     expect(titluri()).toHaveLength(5);
   });
@@ -50,11 +50,11 @@ describe("AdminSesizari, lista", () => {
         d.sesizari[1].creataLa = "2026-09-18T08:00:00+03:00";
       },
     });
-    expect(screen.getByText("Trimisa azi")).toBeTruthy();
-    expect(screen.getByText("Asteapta de o zi")).toBeTruthy();
+    expect(screen.getByText("Trimisă azi")).toBeTruthy();
+    expect(screen.getByText("Așteaptă de o zi")).toBeTruthy();
     /* peste trei zile, textul trece pe culoarea care cere atentie */
-    const vechea = screen.getByText(/^Asteapta de \d+ zile$/);
-    expect(vechea.style.color).not.toBe(screen.getByText("Asteapta de o zi").style.color);
+    const vechea = screen.getByText(/^Așteaptă de \d+ zile$/);
+    expect(vechea.style.color).not.toBe(screen.getByText("Așteaptă de o zi").style.color);
   });
 });
 
@@ -66,15 +66,15 @@ describe("AdminSesizari, detaliul", () => {
     await apasa(buton("Scurgere la coloana de la subsol"));
     const f = inDialog("Ap. 11");
     expect(f.getByText("Se aude apa curgand permanent langa boxa 11.")).toBeTruthy();
-    expect(f.getByText(/^Trimisa pe 15 septembrie 2026, ora \d\d:05$/)).toBeTruthy();
+    expect(f.getByText(/^Trimisă pe 15 septembrie 2026, ora \d\d:05$/)).toBeTruthy();
     expect(f.getAllByText("POZA")).toHaveLength(2);
-    expect(f.queryByText("Conversatia")).toBeNull();
+    expect(f.queryByText("Conversația")).toBeNull();
     await apasa(f.getByRole("button", { name: "Preiau sesizarea" }));
     expect(spion).toHaveBeenCalledWith(id);
-    expect(toast().textContent).toBe("Sesizarea este in lucru");
+    expect(toast().textContent).toBe("Sesizarea este în lucru");
     const g = inDialog("Ap. 11");
     expect(g.queryByRole("button", { name: "Preiau sesizarea" })).toBeNull();
-    expect(g.getByText(/\. Preluata pe 19 sep 2026$/)).toBeTruthy();
+    expect(g.getByText(/\. Preluată pe 19 sep 2026$/)).toBeTruthy();
   });
 
   it("raspunsul se trimite doar cu text si goleste campul", async () => {
@@ -83,30 +83,30 @@ describe("AdminSesizari, detaliul", () => {
     const id = await idSesizare(sursa, "Bec ars pe palier la etajul 4");
     await apasa(buton("Bec ars pe palier la etajul 4"));
     const f = inDialog("Ap. 17");
-    expect(f.getByText("Conversatia")).toBeTruthy();
-    expect(f.getByText(/^Administratie · 9 sep 2026/)).toBeTruthy();
+    expect(f.getByText("Conversația")).toBeTruthy();
+    expect(f.getByText(/^Administrație · 9 sep 2026/)).toBeTruthy();
     expect(f.getByText("Am cumparat becul, se monteaza joi.")).toBeTruthy();
-    expect(dezactivat(f.getByRole("button", { name: "Trimite raspunsul" }))).toBe(true);
-    const camp = f.getByLabelText("Raspuns pentru proprietar");
+    expect(dezactivat(f.getByRole("button", { name: "Trimite răspunsul" }))).toBe(true);
+    const camp = f.getByLabelText("Răspuns pentru proprietar");
     await act(async () => { fireEvent.change(camp, { target: { value: "   " } }); });
-    expect(dezactivat(f.getByRole("button", { name: "Trimite raspunsul" }))).toBe(true);
+    expect(dezactivat(f.getByRole("button", { name: "Trimite răspunsul" }))).toBe(true);
     await act(async () => { fireEvent.change(camp, { target: { value: "Becul a fost montat." } }); });
-    await apasa(f.getByRole("button", { name: "Trimite raspunsul" }));
+    await apasa(f.getByRole("button", { name: "Trimite răspunsul" }));
     expect(spion).toHaveBeenCalledWith(id, "Becul a fost montat.");
     expect(toast().textContent).toBe("Mesajul a fost trimis");
-    expect(inDialog("Ap. 17").getByLabelText("Raspuns pentru proprietar").value).toBe("");
+    expect(inDialog("Ap. 17").getByLabelText("Răspuns pentru proprietar").value).toBe("");
     expect(inDialog("Ap. 17").getByText("Becul a fost montat.")).toBeTruthy();
   });
 
   it("un raspuns esuat ramane in camp", async () => {
     const { sursa } = await deschideSesizari();
-    vi.spyOn(sursa, "scrieMesaj").mockRejectedValue(new Error("Fara retea"));
+    vi.spyOn(sursa, "scrieMesaj").mockRejectedValue(new Error("Fără retea"));
     await apasa(buton("Bec ars pe palier la etajul 4"));
-    const camp = inDialog("Ap. 17").getByLabelText("Raspuns pentru proprietar");
+    const camp = inDialog("Ap. 17").getByLabelText("Răspuns pentru proprietar");
     await act(async () => { fireEvent.change(camp, { target: { value: "Revin" } }); });
-    await apasa(inDialog("Ap. 17").getByRole("button", { name: "Trimite raspunsul" }));
-    expect(toast().textContent).toBe("Fara retea");
-    expect(inDialog("Ap. 17").getByLabelText("Raspuns pentru proprietar").value).toBe("Revin");
+    await apasa(inDialog("Ap. 17").getByRole("button", { name: "Trimite răspunsul" }));
+    expect(toast().textContent).toBe("Fără retea");
+    expect(inDialog("Ap. 17").getByLabelText("Răspuns pentru proprietar").value).toBe("Revin");
   });
 
   it("mesajul locatarului apare cu numele lui", async () => {
@@ -127,9 +127,9 @@ describe("AdminSesizari, detaliul", () => {
     const id = await idSesizare(sursa, "Usa de la intrare nu se inchide singura");
     await apasa(buton("Usa de la intrare nu se inchide singura"));
     expect(inDialog("Ap. 6").queryAllByText("POZA")).toHaveLength(0);
-    await apasa(inDialog("Ap. 6").getByRole("button", { name: "Marcheaza rezolvata" }));
+    await apasa(inDialog("Ap. 6").getByRole("button", { name: "Marchează rezolvată" }));
     expect(spion).toHaveBeenCalledWith(id);
-    expect(toast().textContent).toBe("Sesizarea a fost marcata rezolvata");
+    expect(toast().textContent).toBe("Sesizarea a fost marcată rezolvată");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("2 deschise")).toBeTruthy();
     await apasa(screen.getByText("Rezolvate"));
@@ -140,7 +140,7 @@ describe("AdminSesizari, detaliul", () => {
     const { sursa } = await deschideSesizari();
     vi.spyOn(sursa, "rezolvaSesizare").mockRejectedValue(new Error("Sesizarea nu exista."));
     await apasa(buton("Usa de la intrare nu se inchide singura"));
-    await apasa(inDialog("Ap. 6").getByRole("button", { name: "Marcheaza rezolvata" }));
+    await apasa(inDialog("Ap. 6").getByRole("button", { name: "Marchează rezolvată" }));
     expect(toast().textContent).toBe("Sesizarea nu exista.");
     expect(inDialog("Ap. 6")).toBeTruthy();
   });
@@ -150,19 +150,19 @@ describe("AdminSesizari, detaliul", () => {
     await apasa(screen.getByText("Rezolvate"));
     await apasa(buton("Interfon defect"));
     const f = inDialog("Ap. 17");
-    expect(f.getByText(/\. Preluata pe 21 aug 2026\. Rezolvata pe 24 aug 2026$/)).toBeTruthy();
-    expect(f.queryByLabelText("Raspuns pentru proprietar")).toBeNull();
-    expect(f.queryByRole("button", { name: "Marcheaza rezolvata" })).toBeNull();
-    await apasa(f.getByRole("button", { name: "Inchide" }));
+    expect(f.getByText(/\. Preluată pe 21 aug 2026\. Rezolvată pe 24 aug 2026$/)).toBeTruthy();
+    expect(f.queryByLabelText("Răspuns pentru proprietar")).toBeNull();
+    expect(f.queryByRole("button", { name: "Marchează rezolvată" })).toBeNull();
+    await apasa(f.getByRole("button", { name: "Închide" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("textul inceput se sterge cand se deschide alta sesizare", async () => {
     await deschideSesizari();
     await apasa(buton("Bec ars pe palier la etajul 4"));
-    await act(async () => { fireEvent.change(inDialog("Ap. 17").getByLabelText("Raspuns pentru proprietar"), { target: { value: "Ciorna" } }); });
-    await apasa(inDialog("Ap. 17").getByRole("button", { name: "Inchide" }));
+    await act(async () => { fireEvent.change(inDialog("Ap. 17").getByLabelText("Răspuns pentru proprietar"), { target: { value: "Ciorna" } }); });
+    await apasa(inDialog("Ap. 17").getByRole("button", { name: "Închide" }));
     await apasa(buton("Usa de la intrare nu se inchide singura"));
-    expect(inDialog("Ap. 6").getByLabelText("Raspuns pentru proprietar").value).toBe("");
+    expect(inDialog("Ap. 6").getByLabelText("Răspuns pentru proprietar").value).toBe("");
   });
 });

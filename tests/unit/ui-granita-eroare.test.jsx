@@ -17,7 +17,7 @@ describe("[F2] granita de eroare", () => {
   it("arata mesajul si pastreaza aplicatia in picioare", async () => {
     const { container } = await pornesteApp({ email: LOCATAR, modifica: strica });
     expect(screen.getByText("Ceva n-a mers")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Incearca din nou" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Încearcă din nou" })).toBeTruthy();
     expect(container.querySelector(".ab-root")).toBeTruthy();
   });
 
@@ -26,16 +26,16 @@ describe("[F2] granita de eroare", () => {
     await pornesteApp({ email: LOCATAR, modifica: (d) => { if (stricat) d.plati = null; } });
     expect(screen.getByText("Ceva n-a mers")).toBeTruthy();
     stricat = false;
-    await apasa("Incearca din nou");
+    await apasa("Încearcă din nou");
     expect(screen.queryByText("Ceva n-a mers")).toBeNull();
-    expect(screen.getByText("De facut")).toBeTruthy();
+    expect(screen.getByText("De făcut")).toBeTruthy();
   });
 
   it("Iesi scoate din cont si duce inapoi la autentificare", async () => {
     const { sursa } = await pornesteApp({ email: LOCATAR, modifica: strica });
     const iesire = vi.spyOn(sursa, "iesi");
-    await apasa("Iesi", 1);
+    await apasa("Ieși", 1);
     expect(iesire).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("Intra in cont")).toBeTruthy();
+    expect(await screen.findByText("Intră în cont")).toBeTruthy();
   });
 });

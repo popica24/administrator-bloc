@@ -15,7 +15,7 @@ import {
   asteaptaToast, textEcran, CUVINTE_TEHNICE, fisierPoza,
 } from "./ajutor.js";
 
-const MARCAJ = "E2E iesire";
+const MARCAJ = "E2E ieșire";
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const numRo = (n, d = 2) => Number(n).toFixed(d).replace(".", ",");
 
@@ -74,27 +74,27 @@ test.describe("refuzul cotei are o iesire: editorul intregului bloc", () => {
 
     try {
       const fisa = await deschideFisa(page, 18);
-      await buton(page, "Corecteaza datele apartamentului").click();
-      await page.getByLabel("Cota indiviza").fill(numRo(nouaCota));
-      await buton(page, "Salveaza corectia").click();
+      await buton(page, "Corectează datele apartamentului").click();
+      await page.getByLabel("Cotă indiviză").fill(numRo(nouaCota));
+      await buton(page, "Salvează corecția").click();
 
       /* 1. Refuzul, pe ecran, cu suma la care ar ajunge blocul */
       const refuz = fisa.getByText(/Cotele blocului ar ajunge la/);
       await expect(refuz).toBeVisible();
 
       /* 2. Ecranul ofera, chiar acolo, singura cale corecta mai departe */
-      await expect(buton(page, "Redistribuie cotele intregului bloc")).toBeVisible();
-      await buton(page, "Redistribuie cotele intregului bloc").click();
+      await expect(buton(page, "Redistribuie cotele întregului bloc")).toBeVisible();
+      await buton(page, "Redistribuie cotele întregului bloc").click();
 
       /* 3. In editor se muta procentele intre doua apartamente si totalul
             se intoarce la 100 sub ochii administratorului */
       await fisa.getByLabel(`Ap. ${ap.numar}, ${ap.proprietar_nume}`).fill(numRo(nouaCota));
       await expect(fisa.getByText(/% din 100%/)).not.toContainText("100,00% din 100%");
-      await expect(buton(page, "Salveaza cotele blocului")).toBeDisabled();
+      await expect(buton(page, "Salvează cotele blocului")).toBeDisabled();
       await fisa.getByLabel(`Ap. ${vecin.numar}, ${vecin.proprietar_nume}`).fill(numRo(cotaVecin));
       await expect(fisa.getByText("100,00% din 100%")).toBeVisible();
 
-      await buton(page, "Salveaza cotele blocului").click();
+      await buton(page, "Salvează cotele blocului").click();
       await asteaptaToast(page, "Cotele blocului au fost actualizate");
 
       /* 4. Rezolvare adevarata: in baza, cota ceruta initial este acolo */
@@ -104,7 +104,7 @@ test.describe("refuzul cotei are o iesire: editorul intregului bloc", () => {
       expect(round2(dupa.reduce((s, a) => s + Number(a.cota_indiviza), 0))).toBe(100);
 
       const t = await textEcran(page);
-      for (const cuvant of CUVINTE_TEHNICE) expect(t, `mesajul contine "${cuvant}"`).not.toContain(cuvant);
+      for (const cuvant of CUVINTE_TEHNICE) expect(t, `mesajul conține "${cuvant}"`).not.toContain(cuvant);
     } finally {
       await repuneCotele(toate);
       await repuneFisa(ap);
@@ -124,14 +124,14 @@ test.describe("refuzul fondului are o iesire: o suma care incape", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Fonduri", exact: true }).click();
-    await buton(page, "Inregistreaza o iesire").first().click();
+    await buton(page, "Înregistrează o ieșire").first().click();
 
     /* 1. Refuz: mai mult decat are fondul */
-    await page.getByLabel("Suma iesita").fill(numRo(soldul + 1000));
+    await page.getByLabel("Suma ieșită").fill(numRo(soldul + 1000));
     await page.getByLabel("Pentru ce").fill(`${MARCAJ} prea mare`);
     await page.setInputFiles("input[type=file]", fisierPoza("deviz.jpg"));
-    await buton(page, "Inregistreaza iesirea").click();
-    const panou = page.getByRole("dialog", { name: "Iesire din fond" });
+    await buton(page, "Înregistrează ieșirea").click();
+    const panou = page.getByRole("dialog", { name: "Ieșire din fond" });
     await expect(panou.getByText(/l-ar duce pe minus/)).toBeVisible();
 
     /* 2. Calea de iesire: ecranul arata soldul, deci administratorul stie
@@ -139,10 +139,10 @@ test.describe("refuzul fondului are o iesire: o suma care incape", () => {
     await expect(panou.getByLabel("Pentru ce")).toHaveValue(`${MARCAJ} prea mare`);
 
     /* 3. Rezolvare: suma care incape se inregistreaza imediat, fara alt drum */
-    await page.getByLabel("Suma iesita").fill("120");
-    await page.getByLabel("Pentru ce").fill(`${MARCAJ} reparatie usa`);
-    await buton(page, "Inregistreaza iesirea").click();
-    await asteaptaToast(page, "Iesirea din fond a fost inregistrata");
+    await page.getByLabel("Suma ieșită").fill("120");
+    await page.getByLabel("Pentru ce").fill(`${MARCAJ} reparație ușa`);
+    await buton(page, "Înregistrează ieșirea").click();
+    await asteaptaToast(page, "Ieșirea din fond a fost înregistrată");
 
     const { data: dupa } = await serviciu().schema("financiar").from("fonduri_solduri")
       .select("sold").eq("id", fond.id).single();

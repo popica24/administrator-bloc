@@ -5,7 +5,7 @@
 -- putea estima citirile lipsa ale unei luni a carei lista fusese deja
 -- publicata (banii calculati si inghetati): ecranul Contoare ar arata o
 -- citire noua "Estimat" pentru luna aceea, iar indexul anterior al lunii
--- urmatoare s-ar recalcula pe baza ei — in contradictie cu lista deja
+-- urmatoare s-ar recalcula pe baza ei, in contradictie cu lista deja
 -- publicata si platita.
 --
 -- Reparatie: aceeasi verificare ca la surori, cu acelasi mesaj (stilul

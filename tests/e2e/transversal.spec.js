@@ -12,8 +12,8 @@ import {
 let ASOC;
 test.beforeAll(async () => { ASOC = await asociatieD14(); });
 
-const TABURI_LOCATAR = ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"];
-const TABURI_ADMIN = ["Sumar", "Apartamente", "Facturi", "Sesizari", "Comunicare"];
+const TABURI_LOCATAR = ["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"];
+const TABURI_ADMIN = ["Sumar", "Apartamente", "Facturi", "Sesizări", "Comunicare"];
 
 test.describe("bara de taburi si badge-uri", () => {
   test("locatarul are cele cinci taburi, cu badge-urile din date", async ({ page }) => {
@@ -28,8 +28,8 @@ test.describe("bara de taburi si badge-uri", () => {
     await intraCa(page, "elena");
     for (const t of TABURI_LOCATAR) await expect(tab(page, t)).toBeVisible();
     await expect(page.getByRole("tab")).toHaveCount(5);
-    if (sesizari > 0) await expect(tab(page, "Sesizari")).toContainText(String(sesizari));
-    if (notificari > 0) await expect(tab(page, "Acasa")).toContainText(String(Math.min(notificari, 50)));
+    if (sesizari > 0) await expect(tab(page, "Sesizări")).toContainText(String(sesizari));
+    if (notificari > 0) await expect(tab(page, "Acasă")).toContainText(String(Math.min(notificari, 50)));
   });
 
   test("administratorul are cele cinci taburi ale lui", async ({ page }) => {
@@ -42,20 +42,20 @@ test.describe("bara de taburi si badge-uri", () => {
   test("fiecare tab deschide ecranul lui, pentru ambele roluri", async ({ page }) => {
     await intraCa(page, "elena");
     const asteptate = {
-      Acasa: "Buna, Elena", Plata: "Intretinere", Contoare: "Contoare",
-      Sesizari: "Sesizari", Bloc: "Bloc D14, scara A",
+      Acasă: "Bună, Elena", Plata: "Întreținere", Contoare: "Contoare",
+      Sesizări: "Sesizări", Bloc: "Bloc D14, scara A",
     };
     for (const [t, text] of Object.entries(asteptate)) {
       await mergiLaTab(page, t);
       await expect(tab(page, t)).toHaveAttribute("aria-selected", "true");
       await expect(page.getByText(text).first()).toBeVisible();
     }
-    await buton(page, "Iesi").click();
+    await buton(page, "Ieși").click();
 
     await intraCa(page, "admin");
     const asteptateAdmin = {
-      Sumar: "Panou administrator", Apartamente: "Apartamente", Facturi: "Facturi si liste",
-      Sesizari: "Sesizari", Comunicare: "Comunicare",
+      Sumar: "Panou administrator", Apartamente: "Apartamente", Facturi: "Facturi și liste",
+      Sesizări: "Sesizări", Comunicare: "Comunicare",
     };
     for (const [t, text] of Object.entries(asteptateAdmin)) {
       await mergiLaTab(page, t);
@@ -70,23 +70,23 @@ test.describe("navigare si reincarcare", () => {
     await intraCa(page, "elena");
     await buton(page, "De unde vine suma").click();
     await expect(tab(page, "Plata")).toHaveAttribute("aria-selected", "true");
-    await mergiLaTab(page, "Acasa");
-    await page.getByRole("button", { name: "Transmite indexul la apa" }).click();
+    await mergiLaTab(page, "Acasă");
+    await page.getByRole("button", { name: "Transmite indexul la apă" }).click();
     await expect(tab(page, "Contoare")).toHaveAttribute("aria-selected", "true");
-    await mergiLaTab(page, "Acasa");
-    await page.getByRole("button", { name: "Confirma prezenta la adunarea generala" }).click();
+    await mergiLaTab(page, "Acasă");
+    await page.getByRole("button", { name: "Confirmă prezența la adunarea generală" }).click();
     await expect(tab(page, "Bloc")).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText(/Adunarea generala din/)).toBeVisible();
+    await expect(page.getByText(/Adunarea generală din/)).toBeVisible();
   });
 
   test("reincarcarea in mijlocul unui flux nu pierde datele si nu crapa", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.getByLabel("Sau scrie pe scurt problema").fill("ceva ce nu se trimite");
     await page.reload();
     /* Sesiunea tine, formularul nedepus se pierde, aplicatia porneste de la Acasa */
-    await expect(page.getByText("Buna, Elena")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Bună, Elena")).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole("dialog")).toHaveCount(0);
     const { count } = await serviciu().schema("sesizari").from("sesizari")
       .select("id", { count: "exact", head: true }).eq("titlu", "ceva ce nu se trimite");
@@ -107,8 +107,8 @@ test.describe("navigare si reincarcare", () => {
 
   test("iesirea si intrarea cu alt cont schimba complet ecranele", async ({ page }) => {
     await intraCa(page, "elena");
-    await buton(page, "Iesi").click();
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await buton(page, "Ieși").click();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
     await intraCa(page, "admin");
     await expect(page.getByText("Panou administrator")).toBeVisible();
     const t = await textTot(page);
@@ -118,14 +118,14 @@ test.describe("navigare si reincarcare", () => {
 
 test.describe("dublul apasat pe butoanele principale", () => {
   test("un anunt publicat de doua ori ramane unul singur", async ({ page }) => {
-    const titlu = `E2E dublu anunt ${Date.now()}`;
+    const titlu = `E2E dublu anunț ${Date.now()}`;
     await intraCa(page, "admin");
     await mergiLaTab(page, "Comunicare");
-    await buton(page, "Scrie un anunt").click();
+    await buton(page, "Scrie un anunț").click();
     await page.getByLabel("Titlu").fill(titlu);
     await page.getByLabel("Continut").fill("Text de test.");
-    await buton(page, "Publica anuntul").dblclick();
-    await asteaptaToast(page, "Anunt publicat");
+    await buton(page, "Publică anunțul").dblclick();
+    await asteaptaToast(page, "Anunț publicat");
 
     const { data } = await serviciu().schema("comunicare").from("anunturi")
       .select("id").eq("asociatie_id", ASOC).eq("titlu", titlu);
@@ -141,10 +141,10 @@ test.describe("dublul apasat pe butoanele principale", () => {
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Apartament 18" }).click();
-      await buton(page, "Adauga un locatar in aplicatie").click();
+      await buton(page, "Adaugă un locatar în aplicație").click();
       await page.getByLabel("Numele locatarului").fill("Dublu Apasat");
-      await page.getByLabel("Numarul lui de telefon").fill(telefon);
-      await buton(page, "Fa contul").dblclick();
+      await page.getByLabel("Numărul lui de telefon").fill(telefon);
+      await buton(page, "Fă contul").dblclick();
       await asteaptaToast(page, "Contul a fost creat");
 
       const { data } = await serviciu().schema("identitate").from("locatari")
@@ -160,13 +160,13 @@ test.describe("dublul apasat pe butoanele principale", () => {
     const titlu = `E2E dublu vot ${Date.now()}`;
     await intraCa(page, "admin");
     await mergiLaTab(page, "Comunicare");
-    await page.getByRole("button", { name: "Vot si AG" }).click();
+    await page.getByRole("button", { name: "Vot și AG" }).click();
     await buton(page, "Deschide un vot nou").click();
     const dialog = page.getByRole("dialog", { name: "Vot nou" });
-    await dialog.getByLabel("Ce se voteaza").fill(titlu);
+    await dialog.getByLabel("Ce se votează").fill(titlu);
     await dialog.getByLabel("Varianta 1").fill("Da");
     await dialog.getByLabel("Varianta 2").fill("Nu");
-    await dialog.getByLabel("Votul se inchide pe").fill("2026-10-31");
+    await dialog.getByLabel("Votul se închide pe").fill("2026-10-31");
     await buton(page, "Deschide votul").dblclick();
     await asteaptaToast(page, "Votul a fost deschis");
 
@@ -192,10 +192,10 @@ test.describe("dublul apasat pe butoanele principale", () => {
     }).select("id").single();
 
     await intraCa(page, "admin");
-    await mergiLaTab(page, "Sesizari");
+    await mergiLaTab(page, "Sesizări");
     await page.getByRole("button", { name: titlu }).click();
-    await page.getByLabel("Raspuns pentru proprietar").fill("Am notat, revin.");
-    await buton(page, "Trimite raspunsul").dblclick();
+    await page.getByLabel("Răspuns pentru proprietar").fill("Am notat, revin.");
+    await buton(page, "Trimite răspunsul").dblclick();
     await asteaptaToast(page, "Mesajul a fost trimis");
 
     const { data: mesaje } = await serviciu().schema("sesizari").from("sesizari_mesaje")
@@ -216,13 +216,13 @@ test.describe("ecran ingust de 320 px", () => {
       doc: document.documentElement.scrollWidth, win: window.innerWidth,
     }));
     expect(lat.doc).toBeLessThanOrEqual(lat.win);
-    await expect(page.getByText("De plata acum")).toBeVisible();
+    await expect(page.getByText("De plată acum")).toBeVisible();
     for (const t of TABURI_LOCATAR) await expect(tab(page, t)).toBeVisible();
   });
 
   test("ecranele administratorului incap si ele", async ({ page }) => {
     await intraCa(page, "admin");
-    for (const t of ["Sumar", "Apartamente", "Facturi", "Sesizari", "Comunicare"]) {
+    for (const t of ["Sumar", "Apartamente", "Facturi", "Sesizări", "Comunicare"]) {
       await mergiLaTab(page, t);
       const lat = await page.evaluate(() => ({
         doc: document.documentElement.scrollWidth, win: window.innerWidth,
@@ -235,20 +235,20 @@ test.describe("ecran ingust de 320 px", () => {
 test.describe("operare de la tastatura", () => {
   test("intrarea in cont se face fara mouse", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
     for (let i = 0; i < 12; i += 1) {
       const etichetaCurenta = await page.evaluate(() => document.activeElement && document.activeElement.getAttribute("aria-label"));
-      if (etichetaCurenta === "Numarul tau de telefon") break;
+      if (etichetaCurenta === "Numărul tău de telefon") break;
       await page.keyboard.press("Tab");
     }
-    expect(await page.evaluate(() => document.activeElement.getAttribute("aria-label"))).toBe("Numarul tau de telefon");
+    expect(await page.evaluate(() => document.activeElement.getAttribute("aria-label"))).toBe("Numărul tău de telefon");
     await page.keyboard.type(CONTURI.elena);
     await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement.getAttribute("aria-label"))).toBe("Parola");
     await page.keyboard.type(PAROLA);
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
-    await expect(page.getByText("Buna, Elena")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Bună, Elena")).toBeVisible({ timeout: 20000 });
   });
 
   test("taburile si randurile se activeaza cu Enter si cu Space", async ({ page }) => {
@@ -267,11 +267,11 @@ test.describe("operare de la tastatura", () => {
 
   test("panoul se inchide cu Escape", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toBeVisible();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toHaveCount(0);
   });
 });
 
@@ -283,14 +283,14 @@ test.describe("niciun mesaj tehnic pe ecran", () => {
 
   test("toate ecranele locatarului sunt pe romaneste", async ({ page }) => {
     await intraCa(page, "elena");
-    const subtaburi = { Bloc: ["Avizier", "Vot si adunare", "Acte", "Fonduri"], Plata: ["Lista de plata", "Platile mele"], Sesizari: ["Ale mele", "Din tot blocul"] };
+    const subtaburi = { Bloc: ["Avizier", "Vot și adunare", "Acte", "Fonduri"], Plata: ["Lista de plată", "Plățile mele"], Sesizări: ["Ale mele", "Din tot blocul"] };
     for (const t of TABURI_LOCATAR) {
       await mergiLaTab(page, t);
       for (const sub of subtaburi[t] || [null]) {
         if (sub) await page.getByRole("button", { name: sub, exact: true }).click();
         const text = await textEcran(page);
         for (const cuvant of [...CUVINTE_TEHNICE, ...CUVINTE_ENGLEZE]) {
-          expect(text, `tabul ${t}${sub ? `/${sub}` : ""} contine "${cuvant}"`).not.toContain(cuvant);
+          expect(text, `tabul ${t}${sub ? `/${sub}` : ""} conține "${cuvant}"`).not.toContain(cuvant);
         }
       }
     }
@@ -300,8 +300,8 @@ test.describe("niciun mesaj tehnic pe ecran", () => {
     await intraCa(page, "admin");
     const subtaburi = {
       Apartamente: ["Apartamente", "Citiri contoare", "Fonduri"],
-      Comunicare: ["Anunturi", "Remindere", "Vot si AG", "Acte"],
-      Sesizari: ["Deschise", "Rezolvate", "Toate"],
+      Comunicare: ["Anunțuri", "Remindere", "Vot și AG", "Acte"],
+      Sesizări: ["Deschise", "Rezolvate", "Toate"],
     };
     for (const t of TABURI_ADMIN) {
       await mergiLaTab(page, t);
@@ -309,7 +309,7 @@ test.describe("niciun mesaj tehnic pe ecran", () => {
         if (sub) await page.getByRole("button", { name: sub, exact: true }).first().click();
         const text = await textEcran(page);
         for (const cuvant of [...CUVINTE_TEHNICE, ...CUVINTE_ENGLEZE]) {
-          expect(text, `tabul ${t}${sub ? `/${sub}` : ""} contine "${cuvant}"`).not.toContain(cuvant);
+          expect(text, `tabul ${t}${sub ? `/${sub}` : ""} conține "${cuvant}"`).not.toContain(cuvant);
         }
       }
     }
@@ -331,7 +331,7 @@ test.describe("doua actiuni diferite, una dupa alta", () => {
     const asociatie = await asociatieD14();
     const { data: noi, error } = await sb.schema("comunicare").from("notificari").insert([
       { profil_id: profil.id, asociatie_id: asociatie, tip: "reminder", titlu: "E2E E6 prima", trimisa_la: new Date(acum).toISOString() },
-      { profil_id: profil.id, asociatie_id: asociatie, tip: "reminder", titlu: "E2E E6 a doua", trimisa_la: new Date(acum - 1000).toISOString() },
+      { profil_id: profil.id, asociatie_id: asociatie, tip: "reminder", titlu: "E2E E6 a două", trimisa_la: new Date(acum - 1000).toISOString() },
     ]).select("id");
     if (error) throw new Error(`notificarile testului: ${error.message}`);
     const iduri = noi.map((n) => n.id);
@@ -367,19 +367,19 @@ async function apasaFundalul(page) {
 test.describe("panoul care tine minte ce s-a scris", () => {
   test("atingerea fundalului nu arunca textul dintr-un formular inceput", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await page.getByLabel("Sau scrie pe scurt problema").fill("text care nu trebuie pierdut");
     await apasaFundalul(page);
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toBeVisible();
     await expect(page.getByLabel("Sau scrie pe scurt problema")).toHaveValue("text care nu trebuie pierdut");
   });
 
   test("panoul gol se inchide la atingerea fundalului", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
     await apasaFundalul(page);
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toHaveCount(0);
   });
 });

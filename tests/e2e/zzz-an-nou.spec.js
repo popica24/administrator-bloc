@@ -93,10 +93,10 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     await mergiLaTab(page, "Facturi");
 
     /* Lista lunii decembrie se incepe din ecran */
-    await expect(page.getByText("Lista pe decembrie 2026 nu este inceputa")).toBeVisible({ timeout: 20000 });
-    await buton(page, "Incepe lista pe decembrie 2026").click();
+    await expect(page.getByText("Lista pe decembrie 2026 nu este începută")).toBeVisible({ timeout: 20000 });
+    await buton(page, "Începe lista pe decembrie 2026").click();
     await asteaptaToast(page, "Lista");
-    await expect(page.getByText("DECEMBRIE 2026 · IN LUCRU")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("DECEMBRIE 2026 · ÎN LUCRU")).toBeVisible({ timeout: 20000 });
 
     LISTE["2026-12-01"] = (await listaLunara({ stare: "ciorna" })).id;
     expect((await listaLunara({ stare: "ciorna" })).luna).toBe("2026-12-01");
@@ -112,16 +112,16 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
 
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Calculeaza lista pe apartamente").click();
+    await buton(page, "Calculează lista pe apartamente").click();
     await expect(page.getByText("Total repartizat")).toBeVisible({ timeout: 20000 });
 
-    await buton(page, "Publica lista").click();
-    const panou = page.getByRole("dialog", { name: "Publica lista" });
+    await buton(page, "Publică lista").click();
+    const panou = page.getByRole("dialog", { name: "Publică lista" });
     await expect(panou).toContainText("Publici lista pe decembrie 2026");
     /* Granita: scadenta cade in ianuarie 2027, nu in ianuarie 2026 */
-    await expect(panou).toContainText("Termenul de plata va fi 25 ianuarie 2027");
-    await buton(page, "Da, publica lista").click();
-    await asteaptaToast(page, "Lista a fost publicata");
+    await expect(panou).toContainText("Termenul de plată va fi 25 ianuarie 2027");
+    await buton(page, "Da, publică lista").click();
+    await asteaptaToast(page, "Lista a fost publicată");
 
     const lista = await listaLunara({ luna: "2026-12-01" });
     expect(lista.stare).toBe("publicata");
@@ -144,9 +144,9 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
   test("3. lista pe ianuarie 2027 se deschide, se publica si isi scrie anul", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await expect(page.getByText("Lista pe ianuarie 2027 nu este inceputa")).toBeVisible({ timeout: 20000 });
-    await buton(page, "Incepe lista pe ianuarie 2027").click();
-    await expect(page.getByText("IANUARIE 2027 · IN LUCRU")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Lista pe ianuarie 2027 nu este începută")).toBeVisible({ timeout: 20000 });
+    await buton(page, "Începe lista pe ianuarie 2027").click();
+    await expect(page.getByText("IANUARIE 2027 · ÎN LUCRU")).toBeVisible({ timeout: 20000 });
 
     const ciorna = await listaLunara({ stare: "ciorna" });
     expect(ciorna.luna).toBe("2027-01-01");
@@ -155,12 +155,12 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
 
     await page.reload();
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Publica lista").click();
-    const panou = page.getByRole("dialog", { name: "Publica lista" });
+    await buton(page, "Publică lista").click();
+    const panou = page.getByRole("dialog", { name: "Publică lista" });
     await expect(panou).toContainText("Publici lista pe ianuarie 2027");
-    await expect(panou).toContainText("Termenul de plata va fi 25 februarie 2027");
-    await buton(page, "Da, publica lista").click();
-    await asteaptaToast(page, "Lista a fost publicata");
+    await expect(panou).toContainText("Termenul de plată va fi 25 februarie 2027");
+    await buton(page, "Da, publică lista").click();
+    await asteaptaToast(page, "Lista a fost publicată");
 
     const lista = await listaLunara({ luna: "2027-01-01" });
     expect(lista.stare).toBe("publicata");
@@ -176,7 +176,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     const ap = await apartamentulNumarul(17);
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await expect(page.getByText("TOTAL DE PLATA ACUM")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("TOTAL DE PLATĂ ACUM")).toBeVisible({ timeout: 20000 });
 
     /* Alegerea lunii: peste 4 liste publicate inseamna lista derulanta, si
        acolo fiecare luna se scrie cu anul ei. */
@@ -190,14 +190,14 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
 
     /* Graficul si istoricul: lunile scurte poarta si ele anul ("dec 26", "ian 27") */
-    await page.getByRole("button", { name: "Platile mele" }).click();
+    await page.getByRole("button", { name: "Plățile mele" }).click();
     const istoric = await textEcran(page);
     expect(istoric).toContain("ian 27");
     expect(istoric).toContain("dec 26");
     expect(istoric).toContain("ianuarie 2027");
     expect(istoric).toContain("decembrie 2026");
     /* Fraza de comparatie leaga cele doua luni de peste granita */
-    expect(istoric).toMatch(/Intretinerea pe ianuarie este .*Pe decembrie a fost/s);
+    expect(istoric).toMatch(/Întreținerea pe ianuarie este .*Pe decembrie a fost/s);
     for (const cuvant of CUVINTE_TEHNICE) expect(istoric).not.toContain(cuvant);
 
     expect(await soldApartament(ap.id)).toBeGreaterThan(0);
@@ -213,10 +213,10 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await page.getByLabel("Suma primita").fill("40");
-    await buton(page, "Emite chitanta").click();
-    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
+    await buton(page, "Înregistrează încasare cash").click();
+    await page.getByLabel("Suma primită").fill("40");
+    await buton(page, "Emite chitanța").click();
+    await asteaptaToast(page, "Încasare înregistrată, chitanța emisă");
 
     const { data: dupa } = await sb.schema("financiar").from("chitante")
       .select("serie, numar, emisa_la").eq("asociatie_id", BLOC.asociatie_id)
@@ -225,7 +225,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     expect(dupa.numar).toBe(inainte.numar + 1);
 
     /* Chitanta se vede pe ecran cu seria si numarul ei, nu cu un numar nou de an */
-    await expect(page.getByText(new RegExp(`Chitanta ${dupa.serie} nr\\. 0*${dupa.numar}`))).toBeVisible();
+    await expect(page.getByText(new RegExp(`Chitanța ${dupa.serie} nr\\. 0*${dupa.numar}`))).toBeVisible();
   });
 
   test("6. penalizarile trecute peste 31 decembrie numara zilele corect", async ({ page }) => {
@@ -261,7 +261,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     }
 
     /* Granita: pe o datorie taxata si in 2026 si in 2027, zilele taxate se
-       leaga cap la cap peste 31 decembrie — nici o zi in plus, nici una
+       leaga cap la cap peste 31 decembrie, nici o zi in plus, nici una
        sarita. */
     const peDatorie = {};
     for (const p of pen) (peDatorie[p.datorie_sursa_id] ||= []).push(p);
@@ -269,7 +269,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
       const start = new Date(`${g[0].d.scadenta}T00:00:00Z`).getTime() + Number(g[0].zile_gratie) * 86400000;
       return g.some((p) => String(p.luna_calcul) >= "2027-01-01") && start <= Date.parse("2026-12-31T00:00:00Z");
     });
-    expect(pesteAn.length, "nicio datorie nu este taxata si in 2026 si in 2027").toBeGreaterThan(0);
+    expect(pesteAn.length, "nicio datorie nu este taxata și în 2026 și în 2027").toBeGreaterThan(0);
     for (const g of pesteAn) {
       const start = new Date(`${g[0].d.scadenta}T00:00:00Z`).getTime() + Number(g[0].zile_gratie) * 86400000;
       const ultim = g.map((p) => String(p.luna_calcul)).sort().at(-1);
@@ -320,7 +320,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     expect(t).not.toMatch(/ianuarie 2026|decembrie 2027/);
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
 
-    const verificare = page.locator(".ab-shell").getByText("Verificarea repartitiei").locator("xpath=ancestor::div[1]");
+    const verificare = page.locator(".ab-shell").getByText("Verificarea repartiției").locator("xpath=ancestor::div[1]");
     await expect(verificare).toContainText("0,00");
   });
 
@@ -328,9 +328,9 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
     await page.getByLabel("Luna").selectOption({ label: "ianuarie 2027" });
-    await expect(page.getByText("IANUARIE 2027 · PUBLICATA")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("IANUARIE 2027 · PUBLICATĂ")).toBeVisible({ timeout: 20000 });
 
-    const avizier = await descarca(page, () => buton(page, "Exporta PDF pentru avizier").click());
+    const avizier = await descarca(page, () => buton(page, "Exportă PDF pentru avizier").click());
     expect(avizier.nume).toContain("2027-01");
     const textAvizier = textPdf(avizier.octeti);
     expect(textAvizier).toContain("Lista de plata pe ianuarie 2027");
@@ -338,7 +338,7 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     /* Termenul de plata din antet este tot din 2027 */
     expect(textAvizier).toMatch(/25 februarie 2027/);
 
-    const intern = await descarca(page, () => buton(page, "Exporta lista interna (uz administrativ)").click());
+    const intern = await descarca(page, () => buton(page, "Exportă lista internă (uz administrativ)").click());
     const textIntern = textPdf(intern.octeti);
     expect(textIntern).toContain("Lista de plata pe ianuarie 2027");
     expect(textIntern).not.toMatch(/NaN|Invalid|undefined/);
@@ -347,11 +347,11 @@ test.describe("granita dintre ani: decembrie 2026 → ianuarie 2027", () => {
     await mergiLaTab(page, "Apartamente");
     const ap = await apartamentulNumarul(5);
     await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await page.getByLabel("Suma primita").fill("25");
-    await buton(page, "Emite chitanta").click();
-    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
-    const chitanta = await descarca(page, () => buton(page, "Descarca chitanta").first().click());
+    await buton(page, "Înregistrează încasare cash").click();
+    await page.getByLabel("Suma primită").fill("25");
+    await buton(page, "Emite chitanța").click();
+    await asteaptaToast(page, "Încasare înregistrată, chitanța emisă");
+    const chitanta = await descarca(page, () => buton(page, "Descarcă chitanța").first().click());
     const textChitanta = textPdf(chitanta.octeti);
     expect(textChitanta).toMatch(/Data: \d{1,2} [a-z]+ 20\d\d, ora \d\d:\d\d/);
     expect(textChitanta).not.toMatch(/NaN|Invalid|undefined/);

@@ -46,18 +46,18 @@ describe("RandLista pe consum masurat", () => {
 
     const { zona } = await deschide("Apa rece si canalizare");
     expect(rand.textContent).toContain("−");
-    expect(zona.textContent).toContain("Pe consum masurat");
-    expect(zona.textContent).toContain("Fiecare apartament plateste apa citita la contorul lui.");
+    expect(zona.textContent).toContain("Pe consum măsurat");
+    expect(zona.textContent).toContain("Fiecare apartament plătește apa citită la contorul lui.");
     expect(calcul(zona, "Contor general al blocului")).toBe("Contor general al blocului428,00 mc");
     expect(calcul(zona, "Suma contoarelor din apartamente")).toBe("Suma contoarelor din apartamente234,76 mc");
-    expect(calcul(zona, "Diferenta pe coloana")).toBe("Diferenta pe coloana193,24 mc");
-    expect(calcul(zona, "Pret pe metru cub, 3.284,60 ÷ 428,00")).toContain("7,6743 lei");
+    expect(calcul(zona, "Diferența pe coloană")).toBe("Diferența pe coloană193,24 mc");
+    expect(calcul(zona, "Preț pe metru cub, 3.284,60 ÷ 428,00")).toContain("7,6743 lei");
     expect(calcul(zona, "Consumul apartamentului")).toContain("14,68 mc");
-    expect(calcul(zona, "Cota din diferenta, 3 din 49 pers.")).toContain("11,83 mc");
+    expect(calcul(zona, "Cotă din diferență, 3 din 49 pers.")).toContain("11,83 mc");
     expect(calcul(zona, "(14,68 + 11,83) × 7,6743")).toContain("203,45 lei");
     expect(zona.textContent).toContain("Apa Canal 2000 Arges");
     expect(zona.textContent).toContain("Factura ACA-448120, 3.284,60 lei");
-    expect(zona.textContent).toContain("Apartamentul suporta 6,19% din aceasta cheltuiala.");
+    expect(zona.textContent).toContain("Apartamentul suportă 6,19% din această cheltuială.");
     expect(zona.textContent).not.toContain("estimat pe media");
     expect(zona.textContent).not.toContain("rotunjirea la ban");
   });
@@ -92,7 +92,7 @@ describe("RandLista pe consum masurat", () => {
     });
     const { zona } = await deschide("Apa rece si canalizare");
     expect(calcul(zona, "(14,68 + 11,83) × 7,6743")).toContain("203,45 lei");
-    expect(zona.textContent).toContain("La suma de mai sus se adauga 0,01 lei din rotunjirea la ban a intregii facturi");
+    expect(zona.textContent).toContain("La suma de mai sus se adaugă 0,01 lei din rotunjirea la ban a întregii facturi");
   });
 });
 
@@ -100,16 +100,16 @@ describe("RandLista pe baza de calcul", () => {
   it("cota indiviza la fondul de reparatii, cu hotararea in loc de factura", async () => {
     await plata();
     const rand = screen.getByRole("button", { name: "Fond de reparatii, 74,08 lei" });
-    expect(rand.textContent).toContain("cota 4,63% din 1.600,00 lei");
+    expect(rand.textContent).toContain("cotă 4,63% din 1.600,00 lei");
     const { zona } = await deschide("Fond de reparatii");
-    expect(zona.textContent).toContain("Pe cota indiviza");
+    expect(zona.textContent).toContain("Pe cotă indiviză");
     expect(calcul(zona, "Suma de repartizat")).toBe("Suma de repartizat1.600,00 lei");
     expect(calcul(zona, "Baza de calcul, tot blocul")).toBe("Baza de calcul, tot blocul100,00%");
     expect(calcul(zona, "Baza apartamentului")).toBe("Baza apartamentului4,63%");
     expect(calcul(zona, "1.600,00 × 4,63 ÷ 100,00")).toContain("74,08 lei");
     expect(zona.textContent).toContain("Hotarare AG din 12.03.2026");
     expect(zona.textContent).not.toContain("Factura Hotarare");
-    expect(zona.textContent).toContain("Apartamentul suporta 4,63% din aceasta cheltuiala.");
+    expect(zona.textContent).toContain("Apartamentul suportă 4,63% din această cheltuială.");
   });
 
   it("egal pe apartament: 1 din 20 apartamente", async () => {
@@ -128,7 +128,7 @@ describe("RandLista pe baza de calcul", () => {
     const rand = screen.getByRole("button", { name: "Salubritate, 68,57 lei" });
     expect(rand.textContent).toContain("3 din 49 persoane");
     const { zona } = await deschide("Salubritate");
-    expect(zona.textContent).toContain("Pe numar de persoane");
+    expect(zona.textContent).toContain("Pe număr de persoane");
     expect(calcul(zona, "Baza de calcul, tot blocul")).toContain("49 persoane");
     expect(calcul(zona, "Baza apartamentului")).toContain("3 persoane");
     expect(calcul(zona, "1.120,00 × 3 ÷ 49")).toContain("68,57 lei");
@@ -139,7 +139,7 @@ describe("RandLista pe baza de calcul", () => {
     await plata();
     const { rand, zona } = await deschide("Intretinere ascensor");
     expect(rand.textContent).toContain("3 din 40 persoane");
-    expect(zona.textContent).toContain("Pe persoane, fara parter");
+    expect(zona.textContent).toContain("Pe persoane, fără parter");
     expect(zona.textContent).not.toContain("scutit de lift");
   });
 
@@ -152,9 +152,9 @@ describe("RandLista pe baza de calcul", () => {
     const rand = screen.getByRole("button", { name: "Intretinere ascensor, 0,00 lei" });
     expect(rand.textContent).toContain("scutit de lift");
     const { zona } = await deschide("Intretinere ascensor");
-    expect(zona.textContent).toContain("Apartamentul este scutit de lift, de aceea nu plateste nimic pe acest rand.");
+    expect(zona.textContent).toContain("Apartamentul este scutit de lift, de aceea nu plătește nimic pe acest rând.");
     expect(calcul(zona, "Baza apartamentului")).toContain("0 persoane");
-    expect(zona.textContent).toContain("Apartamentul suporta 0,00% din aceasta cheltuiala.");
+    expect(zona.textContent).toContain("Apartamentul suportă 0,00% din această cheltuială.");
   });
 
   it("o singura persoana, alta unitate, factura fara numar si fara document", async () => {
@@ -168,7 +168,7 @@ describe("RandLista pe baza de calcul", () => {
       u.c.documentId = null;
     });
     const { zona } = await deschide("Salubritate");
-    expect(calcul(zona, "Baza apartamentului")).toContain("1 persoana");
+    expect(calcul(zona, "Baza apartamentului")).toContain("1 persoană");
 
     const rand = screen.getByRole("button", { name: "Curatenie casa scarii, 55,10 lei" });
     expect(rand.textContent).toContain("13 din 980 mp");
@@ -176,8 +176,8 @@ describe("RandLista pe baza de calcul", () => {
     expect(calcul(z2, "Baza de calcul, tot blocul")).toContain("980,00 mp");
     expect(calcul(z2, "Baza apartamentului")).toContain("12,50 mp");
     expect(calcul(z2, "900,00 × 13 ÷ 980")).toContain("55,10 lei");
-    expect(z2.textContent).toContain("Factura fara numar, 900,00 lei");
-    expect(z2.textContent).toContain("Documentul nu a fost inca incarcat de administrator.");
+    expect(z2.textContent).toContain("Factura fără număr, 900,00 lei");
+    expect(z2.textContent).toContain("Documentul nu a fost încă încărcat de administrator.");
     expect(within(z2).queryByText("Vezi documentul")).toBeNull();
   });
 
@@ -188,7 +188,7 @@ describe("RandLista pe baza de calcul", () => {
       r.suma = 0;
     });
     const { zona } = await deschide("Deratizare si dezinsectie");
-    expect(zona.textContent).toContain("Apartamentul suporta 0,00% din aceasta cheltuiala.");
+    expect(zona.textContent).toContain("Apartamentul suportă 0,00% din această cheltuială.");
   });
 
   /* Audit L14: cota cu 4 zecimale afisata cu 2, inmultirea nu mai reproduce suma */

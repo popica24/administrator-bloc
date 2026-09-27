@@ -43,15 +43,15 @@ test.describe("cineva se muta la mijlocul lunii", () => {
     if (error) throw new Error(error.message);
 
     await intra(page, TELEFON);
-    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(`Apartament ${ap.numar}, Bloc D14, scara A`)).toBeVisible();
 
-    /* Intretinerea nu se imparte pe zile: cine se muta pe 15 primeste
+    /* Întreținerea nu se imparte pe zile: cine se muta pe 15 primeste
        lista intreaga a lunii. Ecranul trebuie macar sa fie intreg si pe
        romaneste, nu un ecran gol sau o eroare. */
     await mergiLaTab(page, "Plata");
     const t = await textEcran(page);
-    expect(t).toContain("TOTAL DE PLATA ACUM");
+    expect(t).toContain("TOTAL DE PLATĂ ACUM");
     expect(t).toContain(String(await soldApartament(ap.id)).replace(".", ","));
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
@@ -70,12 +70,12 @@ test.describe("cineva se muta la mijlocul lunii", () => {
     });
 
     await intra(page, TELEFON);
-    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
+    await page.getByRole("button", { name: "Plățile mele" }).click();
     const t = await textEcran(page);
-    expect(t).not.toMatch(/Chitanta [A-Z0-9]+ nr\./);
-    await expect(buton(page, "Descarca chitanta")).toHaveCount(0);
+    expect(t).not.toMatch(/Chitanța [A-Z0-9]+ nr\./);
+    await expect(buton(page, "Descarcă chitanța")).toHaveCount(0);
   });
 });
 
@@ -95,18 +95,18 @@ test.describe("cineva pleaca la mijlocul lunii", () => {
       const ctx = await browser.newContext();
       const alPlecatului = await ctx.newPage();
       await intra(alPlecatului, TELEFON);
-      await expect(alPlecatului.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+      await expect(alPlecatului.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
 
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
       page.once("dialog", (d) => d.accept());
-      await buton(page, "Inchide accesul").first().click();
-      await asteaptaToast(page, "Accesul a fost inchis");
+      await buton(page, "Închide accesul").first().click();
+      await asteaptaToast(page, "Accesul a fost închis");
 
       /* Fisa il tine minte ca acces inchis, nu il sterge */
       const fisa = page.getByRole("dialog", { name: `Apartament ${ap.numar}` });
-      await expect(fisa.getByText(/Olga Plecata, acces inchis pe/)).toBeVisible();
+      await expect(fisa.getByText(/Olga Plecata, acces închis pe/)).toBeVisible();
 
       /* Datoria lui ramane a apartamentului, nu pleaca odata cu el */
       expect(await soldApartament(ap.id)).toBeGreaterThanOrEqual(155.5);
@@ -115,7 +115,7 @@ test.describe("cineva pleaca la mijlocul lunii", () => {
 
       /* Iar omul, la urmatoarea incarcare, nu mai vede nimic din bloc */
       await alPlecatului.reload();
-      await expect(alPlecatului.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
+      await expect(alPlecatului.getByText("leagă contul de apartamentul tău")).toBeVisible({ timeout: 20000 });
       const t = await textEcran(alPlecatului);
       expect(t).not.toContain("155,50");
       for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
@@ -142,10 +142,10 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
-      await buton(page, "Corecteaza datele apartamentului").click();
+      await buton(page, "Corectează datele apartamentului").click();
       await page.getByLabel("Proprietar").fill("Vasile Cumparatorul");
-      await buton(page, "Salveaza corectia").click();
-      await asteaptaToast(page, "Fisa apartamentului a fost actualizata");
+      await buton(page, "Salvează corecția").click();
+      await asteaptaToast(page, "Fișa apartamentului a fost actualizată");
 
       /* 2. Soldul nu se muta nicaieri: ramane pe apartament, sub numele nou */
       const fisa = page.getByRole("dialog", { name: `Apartament ${ap.numar}` });
@@ -155,14 +155,14 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
       /* 3. Cumparatorul primeste cont si vede datoria ca fiind a lui */
       const pid = await creeazaCont(TELEFON, "Vasile Cumparatorul");
       await legaDeApartament(pid, ap.id, "proprietar");
-      await buton(page, "Inchide").click();
-      await buton(page, "Iesi").click();
+      await buton(page, "Închide").click();
+      await buton(page, "Ieși").click();
       await intra(page, TELEFON);
-      await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+      await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
       const t = await textEcran(page);
       /* Datoria vanzatorului este acum de plata cumparatorului: aplicatia nu
          cunoaste adeverinta de achitare la zi ceruta la vanzare. */
-      expect(t).toMatch(/Termen depasit|De plata acum/i);
+      expect(t).toMatch(/Termen depășit|De plată acum/i);
       for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
     } finally {
       await repuneFisa(vechi);
@@ -180,8 +180,8 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
 
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
-    const inainte = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
+    await page.getByRole("button", { name: "Plățile mele" }).click();
+    const inainte = textPdf((await descarca(page, () => buton(page, "Descarcă chitanța").first().click())).octeti);
     expect(inainte).toContain(`Proprietar la data emiterii: ${vechi.proprietar_nume}`);
 
     try {
@@ -193,8 +193,8 @@ test.describe("apartamentul se vinde cu datorii cu tot", () => {
 
       await page.reload();
       await mergiLaTab(page, "Plata");
-      await page.getByRole("button", { name: "Platile mele" }).click();
-      const dupa = textPdf((await descarca(page, () => buton(page, "Descarca chitanta").first().click())).octeti);
+      await page.getByRole("button", { name: "Plățile mele" }).click();
+      const dupa = textPdf((await descarca(page, () => buton(page, "Descarcă chitanța").first().click())).octeti);
       expect(dupa).toContain(`Proprietar la data emiterii: ${vechi.proprietar_nume}`);
       expect(dupa).not.toContain("Vasile Cumparatorul");
     } finally {
@@ -220,7 +220,7 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
       });
       if (error) throw new Error(error.message);
     }
-    DATORIE_A = await datorieDeTest(primul.id, 31.11, "E2E datoria apartamentului intai");
+    DATORIE_A = await datorieDeTest(primul.id, 31.11, "E2E datoria apartamentului întâi");
     DATORIE_B = await datorieDeTest(alDoilea.id, 42.22, "E2E datoria apartamentului doi");
   });
 
@@ -237,15 +237,15 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
     const soldB = await soldApartament(alDoilea.id);
 
     await intra(page, TELEFON);
-    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
 
     /* Alege explicit al doilea apartament: instructiunile de plata sunt ale lui */
-    await page.getByRole("button", { name: "Schimba apartamentul" }).click();
+    await page.getByRole("button", { name: "Schimbă apartamentul" }).click();
     await page.getByRole("button", { name: `Apartament ${alDoilea.numar}` }).click();
     await expect(page.getByText(`Apartament ${alDoilea.numar}, Bloc D14, scara A`)).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Plata");
     const suma = Number(soldB).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d),)/g, ".");
-    await expect(page.getByText(`Ai de plata ${suma} lei`)).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(`Ai de plată ${suma} lei`)).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(`Scrie la detalii: apartament ${alDoilea.numar}, Bloc D14, scara A`)).toBeVisible();
 
     /* Iar banii dusi administratorului se inregistreaza pe apartamentul acela.
@@ -256,9 +256,9 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
       await intraCa(adminPage, "admin");
       await mergiLaTab(adminPage, "Apartamente");
       await adminPage.getByRole("button", { name: `Apartament ${alDoilea.numar}`, exact: true }).click();
-      await buton(adminPage, "Inregistreaza incasare cash").click();
-      await buton(adminPage, "Emite chitanta").click();
-      await expect(adminPage.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible({ timeout: 30000 });
+      await buton(adminPage, "Înregistrează încasare cash").click();
+      await buton(adminPage, "Emite chitanța").click();
+      await expect(adminPage.getByText(/Chitanța [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible({ timeout: 30000 });
     } finally {
       await ctxAdmin.close();
     }
@@ -269,7 +269,7 @@ test.describe("acelasi om cu doua apartamente plateste pentru unul singur", () =
 
     /* Iar in aplicatie, dupa schimbare, ecranul arata apartamentul celalalt
        cu soldul lui neschimbat */
-    await page.getByRole("button", { name: "Schimba apartamentul" }).click();
+    await page.getByRole("button", { name: "Schimbă apartamentul" }).click();
     await page.getByRole("button", { name: `Apartament ${primul.numar}` }).click();
     await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`).first()).toBeVisible({ timeout: 20000 });
     await mergiLaTab(page, "Plata");

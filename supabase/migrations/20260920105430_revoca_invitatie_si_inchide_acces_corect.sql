@@ -4,7 +4,7 @@
 -- 1) identitate.foloseste_invitatie() insera legatura cu
 --    `on conflict do nothing`: cand profilul avea deja o legatura activa cu
 --    acelasi apartament, insert-ul nu facea nimic, dar codul era marcat
---    folosit oricum — parea reusit, fara niciun efect real.
+--    folosit oricum, parea reusit, fara niciun efect real.
 -- 2) identitate.inchide_acces_locatar() fixa activ_pana la
 --    greatest(p_data, activ_din + 1): o legatura facuta si inchisa in
 --    aceeasi zi ramanea, din aceasta formula, activa pana a doua zi.

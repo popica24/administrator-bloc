@@ -34,19 +34,19 @@ const plataReala = (id, suma, alocari) => ({
 describe("defalcare pe lista curenta", () => {
   it("totalul listei curente este exact soldul, fara datorii vechi", async () => {
     await plata();
-    expect(screen.getByText("Total de plata acum")).toBeTruthy();
+    expect(screen.getByText("Total de plată acum")).toBeTruthy();
     expect(calcul("1. Cheltuielile lunii august")).toBe("1. Cheltuielile lunii august644,01 lei");
     expect(calcul("2. Fonduri")).toBe("2. Fonduri74,08 lei");
     expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
-    expect(calcul("Total de plata")).toBe("Total de plata718,09 lei");
-    expect(screen.queryByText("Platit deja din lista lunii")).toBeNull();
+    expect(calcul("Total de plată")).toBe("Total de plată718,09 lei");
+    expect(screen.queryByText("Plătit deja din lista lunii")).toBeNull();
     expect(screen.getByText("Nu ai datorii din lunile trecute.")).toBeTruthy();
     /* grupele: apa, bloc, administrare; fara "Alte cheltuieli" */
     expect(screen.getByText("Apa")).toBeTruthy();
-    expect(screen.getByText("Curent, lift si curatenie")).toBeTruthy();
+    expect(screen.getByText("Curent, lift și curățenie")).toBeTruthy();
     expect(screen.getByText("Administrarea blocului")).toBeTruthy();
     expect(screen.queryByText("Alte cheltuieli")).toBeNull();
-    expect(screen.getByText("Ai de plata 718,09 lei")).toBeTruthy();
+    expect(screen.getByText("Ai de plată 718,09 lei")).toBeTruthy();
   });
 
   it("scade ce s-a platit deja din lista, dupa alocarile reale, si pune codurile necunoscute la Alte cheltuieli", async () => {
@@ -58,7 +58,7 @@ describe("defalcare pe lista curenta", () => {
     });
     expect(screen.getByText("Alte cheltuieli")).toBeTruthy();
     expect(calcul("1. Cheltuielile lunii august")).toContain("654,01 lei");
-    expect(calcul("Platit deja din lista lunii")).toContain("-400,00 lei");
+    expect(calcul("Plătit deja din lista lunii")).toContain("-400,00 lei");
   });
 
   /* Audit K5 (si L4): platitDinLista = suma - rest presupune ca orice scadere
@@ -74,8 +74,8 @@ describe("defalcare pe lista curenta", () => {
       expect(calcul("1. Cheltuielile lunii august")).toBe("1. Cheltuielile lunii august644,01 lei");
       expect(calcul("2. Fonduri")).toBe("2. Fonduri74,08 lei");
       expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
-      expect(calcul("Total de plata")).toBe("Total de plata718,09 lei");
-      expect(screen.queryByText(/Corectie dupa recalculare/)).toBeNull();
+      expect(calcul("Total de plată")).toBe("Total de plată718,09 lei");
+      expect(screen.queryByText(/Corecție după recalculare/)).toBeNull();
     });
 
     it("recalculare in minus: corectia scade direct restul, fara nicio plata fantoma", async () => {
@@ -87,15 +87,15 @@ describe("defalcare pe lista curenta", () => {
         d.datorii.find((x) => x.id === "dat-1021").rest = 600;
         d.datorii.push(datorie({
           id: "dat-corectie-minus", listaId: AUG, luna: "2026-08", tip: "corectie", suma: -118.09, rest: 0,
-          scadenta: "2026-09-25", creatLa: "2026-08-21T10:00:00+03:00", descriere: "Corectie dupa recalcularea listei",
+          scadenta: "2026-09-25", creatLa: "2026-08-21T10:00:00+03:00", descriere: "Corecție după recalcularea listei",
         }));
       });
-      expect(screen.queryByText("Platit deja din lista lunii")).toBeNull();
-      expect(screen.getByText(/Corectie dupa recalculare/)).toBeTruthy();
-      expect(calcul(/Corectie dupa recalculare/)).toContain("-118,09 lei");
+      expect(screen.queryByText("Plătit deja din lista lunii")).toBeNull();
+      expect(screen.getByText(/Corecție după recalculare/)).toBeTruthy();
+      expect(calcul(/Corecție după recalculare/)).toContain("-118,09 lei");
       expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
-      expect(calcul("Total de plata")).toBe("Total de plata600,00 lei");
-      expect(screen.getByText("Ai de plata 600,00 lei")).toBeTruthy();
+      expect(calcul("Total de plată")).toBe("Total de plată600,00 lei");
+      expect(screen.getByText("Ai de plată 600,00 lei")).toBeTruthy();
     });
 
     it("recalculare in plus: corectia nu se mai numara de doua ori", async () => {
@@ -105,14 +105,14 @@ describe("defalcare pe lista curenta", () => {
         d.repartizari.filter((r) => r.apartamentId === AP && r.listaId === AUG).forEach((r, i) => { r.suma = i === 0 ? 900 : 0; });
         d.datorii.push(datorie({
           id: "dat-corectie-plus", listaId: AUG, luna: "2026-08", tip: "corectie", suma: 181.91, rest: 181.91,
-          scadenta: "2026-09-25", creatLa: "2026-08-21T10:00:00+03:00", descriere: "Corectie dupa recalcularea listei",
+          scadenta: "2026-09-25", creatLa: "2026-08-21T10:00:00+03:00", descriere: "Corecție după recalcularea listei",
         }));
       });
-      expect(screen.queryByText("Platit deja din lista lunii")).toBeNull();
-      expect(calcul(/Corectie dupa recalculare/)).toContain("181,91 lei");
+      expect(screen.queryByText("Plătit deja din lista lunii")).toBeNull();
+      expect(calcul(/Corecție după recalculare/)).toContain("181,91 lei");
       expect(calcul("3. Datorii din lunile trecute")).toBe("3. Datorii din lunile trecute0,00 lei");
-      expect(calcul("Total de plata")).toBe("Total de plata900,00 lei");
-      expect(screen.getByText("Ai de plata 900,00 lei")).toBeTruthy();
+      expect(calcul("Total de plată")).toBe("Total de plată900,00 lei");
+      expect(screen.getByText("Ai de plată 900,00 lei")).toBeTruthy();
     });
   });
 
@@ -122,57 +122,57 @@ describe("defalcare pe lista curenta", () => {
   it("[K7] o penalizare redusa dupa recalculare spune cat s-a anulat si de ce", async () => {
     await plata((d) => {
       d.datorii.find((x) => x.id === "dat-704").rest = 131.39;
-      d.datorii.push(datorie({ id: "dat-p1", tip: "penalizare", luna: "2026-09", suma: 1.5, rest: 1, scadenta: "2026-09-01", descriere: "Penalizare pentru intretinere iulie 2026" }));
+      d.datorii.push(datorie({ id: "dat-p1", tip: "penalizare", luna: "2026-09", suma: 1.5, rest: 1, scadenta: "2026-09-01", descriere: "Penalizare pentru întreținere iulie 2026" }));
       d.datorii.push(datorie({
         id: "dat-anulare", tip: "anulare_penalizare", luna: "2026-09", suma: -0.5, rest: 0, scadenta: "2026-09-10",
-        descriere: "Penalizare anulata dupa recalcularea listei", anuleazaDatorieId: "dat-p1",
+        descriere: "Penalizare anulată după recalcularea listei", anuleazaDatorieId: "dat-p1",
       }));
       d.penalizari.push({ id: "pen-1", datorieId: "dat-p1", restNeachitat: 131.39, zileIntarziere: 38, zileGratie: 30, zileTaxate: 8, procentZi: 0.02, suma: 1.5 });
     });
-    expect(screen.getByText("Din ea s-au anulat 0,50 lei dupa recalcularea listei, fiindca datoria pe care fusese calculata s-a micsorat.")).toBeTruthy();
+    expect(screen.getByText("Din ea s-au anulat 0,50 lei după recalcularea listei, fiindcă datoria pe care fusese calculată s-a micșorat.")).toBeTruthy();
     expect(calcul("3. Datorii din lunile trecute")).toContain("132,39 lei");
   });
 
   it("aduna restantele si penalizarile, cu zilele de intarziere si calculul penalizarii", async () => {
     await plata((d) => {
       d.datorii.find((x) => x.id === "dat-704").rest = 131.39;
-      d.datorii.push(datorie({ id: "dat-p1", tip: "penalizare", luna: "2026-09", suma: 1.5, rest: 1.5, scadenta: "2026-09-01", descriere: "Penalizare pentru intretinere iulie 2026" }));
-      d.datorii.push(datorie({ id: "dat-p2", tip: "penalizare", luna: "2026-09", suma: 0.5, rest: 0.5, scadenta: "2026-09-01", descriere: "Penalizare veche, fara calcul" }));
-      d.datorii.push(datorie({ id: "dat-v", tip: "sold_initial", suma: 50, rest: 50, scadenta: "2026-09-19", descriere: "Restanta preluata azi" }));
+      d.datorii.push(datorie({ id: "dat-p1", tip: "penalizare", luna: "2026-09", suma: 1.5, rest: 1.5, scadenta: "2026-09-01", descriere: "Penalizare pentru întreținere iulie 2026" }));
+      d.datorii.push(datorie({ id: "dat-p2", tip: "penalizare", luna: "2026-09", suma: 0.5, rest: 0.5, scadenta: "2026-09-01", descriere: "Penalizare veche, fără calcul" }));
+      d.datorii.push(datorie({ id: "dat-v", tip: "sold_initial", suma: 50, rest: 50, scadenta: "2026-09-19", descriere: "Restanță preluată azi" }));
       d.penalizari.push({ id: "pen-1", datorieId: "dat-p1", restNeachitat: 131.39, zileIntarziere: 38, zileGratie: 30, zileTaxate: 8, procentZi: 0.02, suma: 1.5 });
     });
     expect(calcul("3. Datorii din lunile trecute")).toContain("183,39 lei");
-    expect(calcul("Total de plata")).toContain("901,48 lei");
-    expect(screen.getByText("Intretinere iulie 2026, neplatita")).toBeTruthy();
-    expect(screen.getByText("rest din 631,39 lei, scadenta 25 aug 2026, 25 de zile intarziere")).toBeTruthy();
+    expect(calcul("Total de plată")).toContain("901,48 lei");
+    expect(screen.getByText("Întreținere iulie 2026, neplătită")).toBeTruthy();
+    expect(screen.getByText("rest din 631,39 lei, scadență 25 aug 2026, 25 de zile întârziere")).toBeTruthy();
     /* scadenta azi: 0 zile, fara "intarziere" */
-    expect(screen.getByText("Restanta preluata azi")).toBeTruthy();
-    expect(screen.getByText("scadenta 19 sep 2026")).toBeTruthy();
+    expect(screen.getByText("Restanță preluată azi")).toBeTruthy();
+    expect(screen.getByText("scadență 19 sep 2026")).toBeTruthy();
     expect(screen.queryByText(/s-au anulat/)).toBeNull();
-    const pen = screen.getAllByText("Penalizare calculata pe 1 septembrie 2026");
+    const pen = screen.getAllByText("Penalizare calculată pe 1 septembrie 2026");
     expect(pen).toHaveLength(2);
     expect(screen.getByText("131,39 × 0,02% × 8 zile")).toBeTruthy();
-    expect(screen.getByText(/Suma neplatita era 131,39 lei, cu 38 de zile de la scadenta; primele 30 de zile nu se penalizeaza/)).toBeTruthy();
-    expect(screen.getByText("Penalizare veche, fara calcul")).toBeTruthy();
-    expect(screen.getByText(/Penalizarea este de 0,02% pe zi din suma neplatita/)).toBeTruthy();
+    expect(screen.getByText(/Suma neplătită era 131,39 lei, cu 38 de zile de la scadență; primele 30 de zile nu se penalizează/)).toBeTruthy();
+    expect(screen.getByText("Penalizare veche, fără calcul")).toBeTruthy();
+    expect(screen.getByText(/Penalizarea este de 0,02% pe zi din suma neplătită/)).toBeTruthy();
   });
 
   it("[H8] o corectie negativa (credit) scade soldul, nu doar datoriile pozitive", async () => {
     await plata((d) => {
-      d.datorii.push(datorie({ id: "dat-credit", tip: "corectie", suma: -40, rest: -40, scadenta: "2026-08-25", descriere: "Corectie credit" }));
+      d.datorii.push(datorie({ id: "dat-credit", tip: "corectie", suma: -40, rest: -40, scadenta: "2026-08-25", descriere: "Corecție credit" }));
     });
-    expect(calcul("Total de plata")).toBe("Total de plata678,09 lei");
-    expect(screen.getByText("Ai de plata 678,09 lei")).toBeTruthy();
+    expect(calcul("Total de plată")).toBe("Total de plată678,09 lei");
+    expect(screen.getByText("Ai de plată 678,09 lei")).toBeTruthy();
   });
 
   it("datoriile cu aceeasi scadenta apar in ordinea in care s-au creat", async () => {
     await plata((d) => {
-      d.datorii.push(datorie({ id: "dat-b", tip: "corectie", suma: 20, rest: 20, scadenta: "2026-06-25", descriere: "Corectie a doua", creatLa: "2026-06-20T10:00:00+03:00" }));
-      d.datorii.push(datorie({ id: "dat-a", tip: "corectie", suma: 10, rest: 10, scadenta: "2026-06-25", descriere: "Corectie prima", creatLa: "2026-06-10T10:00:00+03:00" }));
-      d.datorii.push(datorie({ id: "dat-c", tip: "corectie", suma: 5, rest: 5, scadenta: "2026-06-25", descriere: "Corectie a treia", creatLa: "2026-06-30T10:00:00+03:00" }));
+      d.datorii.push(datorie({ id: "dat-b", tip: "corectie", suma: 20, rest: 20, scadenta: "2026-06-25", descriere: "Corecție a doua", creatLa: "2026-06-20T10:00:00+03:00" }));
+      d.datorii.push(datorie({ id: "dat-a", tip: "corectie", suma: 10, rest: 10, scadenta: "2026-06-25", descriere: "Corecție prima", creatLa: "2026-06-10T10:00:00+03:00" }));
+      d.datorii.push(datorie({ id: "dat-c", tip: "corectie", suma: 5, rest: 5, scadenta: "2026-06-25", descriere: "Corecție a treia", creatLa: "2026-06-30T10:00:00+03:00" }));
     });
-    const texte = screen.getAllByText(/^Corectie (prima|a doua|a treia)$/).map((x) => x.textContent);
-    expect(texte).toEqual(["Corectie prima", "Corectie a doua", "Corectie a treia"]);
+    const texte = screen.getAllByText(/^Corecție (prima|a doua|a treia)$/).map((x) => x.textContent);
+    expect(texte).toEqual(["Corecție prima", "Corecție a doua", "Corecție a treia"]);
   });
 });
 
@@ -184,9 +184,9 @@ describe("defalcare pe o lista trecuta", () => {
     expect(screen.getByText("Achitata")).toBeTruthy();
     expect(calcul("Total lista")).toContain("631,39 lei");
     expect(screen.queryByText("3. Datorii din lunile trecute")).toBeNull();
-    expect(screen.queryByText("Cum platesti")).toBeNull();
+    expect(screen.queryByText("Cum plătești")).toBeNull();
     expect(calcul(`Total repartizat pe cele 20 apartamente`)).toContain("11.219,10 lei");
-    expect(calcul("Diferenta")).toContain("0,00 lei");
+    expect(calcul("Diferența")).toContain("0,00 lei");
   });
 
   it("lista neplatita si lista fara datorie inregistrata", async () => {
@@ -205,9 +205,9 @@ describe("defalcare pe o lista trecuta", () => {
 describe("istoricul si fraza de comparatie", () => {
   it("august fata de iulie: mai mult", async () => {
     await plata();
-    await apasa("Platile mele");
-    expect(screen.getByText("Intretinerea pe august este 718,09 lei. Pe iulie a fost 631,39 lei, deci luna aceasta platesti cu 86,70 lei mai mult.")).toBeTruthy();
-    const card = zonaCu(["Cat ai avut de plata", "iunie 2026"]);
+    await apasa("Plățile mele");
+    expect(screen.getByText("Întreținerea pe august este 718,09 lei. Pe iulie a fost 631,39 lei, deci luna aceasta plătești cu 86,70 lei mai mult.")).toBeTruthy();
+    const card = zonaCu(["Cât ai avut de plată", "iunie 2026"]);
     expect(card.textContent).toContain("august 2026718,09LEINeachitat");
     expect(card.textContent).toContain("iulie 2026631,39LEIAchitat");
     expect(card.textContent).toContain("iunie 2026655,45LEIAchitat");
@@ -217,8 +217,8 @@ describe("istoricul si fraza de comparatie", () => {
     await plata((d) => {
       d.repartizari.filter((r) => r.apartamentId === AP && r.listaId === IUL).forEach((r) => { r.suma = 100; });
     });
-    await apasa("Platile mele");
-    expect(screen.getByText(/platesti cu 81,91 lei mai putin\.$/)).toBeTruthy();
+    await apasa("Plățile mele");
+    expect(screen.getByText(/plătești cu 81,91 lei mai puțin\.$/)).toBeTruthy();
   });
 
   it("exact la fel, iar o lista fara datorie apare achitata", async () => {
@@ -227,21 +227,21 @@ describe("istoricul si fraza de comparatie", () => {
       d.repartizari.filter((r) => r.apartamentId === AP && r.listaId === IUL).forEach((r) => { r.suma = 10; });
       d.datorii = d.datorii.filter((x) => x.listaId !== AUG);
     });
-    await apasa("Platile mele");
-    expect(screen.getByText(/platesti exact la fel\.$/)).toBeTruthy();
+    await apasa("Plățile mele");
+    expect(screen.getByText(/plătești exact la fel\.$/)).toBeTruthy();
     expect(screen.queryByText("Neachitat")).toBeNull();
   });
 
   it("cu o singura lista publicata nu exista comparatie", async () => {
     await plata((d) => { d.liste = d.liste.filter((l) => l.id === AUG); });
-    await apasa("Platile mele");
-    expect(screen.queryByText(/Intretinerea pe/)).toBeNull();
-    expect(screen.getByText("Cat ai avut de plata")).toBeTruthy();
+    await apasa("Plățile mele");
+    expect(screen.queryByText(/Întreținerea pe/)).toBeNull();
+    expect(screen.getByText("Cât ai avut de plată")).toBeTruthy();
   });
 
   it("fara nicio lista publicata", async () => {
     await plata((d) => { d.liste = []; });
-    expect(screen.getByText("Nicio lista publicata")).toBeTruthy();
+    expect(screen.getByText("Nicio listă publicată")).toBeTruthy();
   });
 });
 
@@ -257,27 +257,27 @@ describe("descriereAlocari si chitanta", () => {
   it("descrie fiecare tip de datorie acoperit, avansul si datoriile necunoscute", async () => {
     await plata((d) => {
       d.datorii.push(datorie({ id: "dat-pen", tip: "penalizare", luna: "2026-07", suma: 3, rest: 0, scadenta: "2026-07-01", descriere: "Penalizare" }));
-      d.datorii.push(datorie({ id: "dat-si", tip: "sold_initial", luna: "2026-05", suma: 40, rest: 0, scadenta: "2026-05-25", descriere: "Restanta preluata de pe hartie" }));
+      d.datorii.push(datorie({ id: "dat-si", tip: "sold_initial", luna: "2026-05", suma: 40, rest: 0, scadenta: "2026-05-25", descriere: "Restanță preluată de pe hârtie" }));
       d.plati.push(plataNoua({
         id: "pla-a", suma: 100,
         alocari: [{ datorieId: "dat-pen", suma: 3 }, { datorieId: "dat-si", suma: 40 }, { datorieId: "dat-lipsa", suma: 7 }],
         chitanta: chitantaCu([
           { tip: "penalizare", luna: "2026-07", descriere: "Penalizare", suma: 3 },
-          { tip: "sold_initial", luna: "2026-05", descriere: "Restanta preluata de pe hartie", suma: 40 },
+          { tip: "sold_initial", luna: "2026-05", descriere: "Restanță preluată de pe hârtie", suma: 40 },
           { tip: "corectie", luna: "2026-08", descriere: null, suma: 7 },
           { tip: "avans", luna: null, descriere: null, suma: 50 },
         ]),
       }));
       d.plati.push(plataNoua({ id: "pla-b", suma: 25, alocari: [], confirmataLa: "2026-09-11T12:00:00+03:00", chitanta: null, metoda: "transfer" }));
     });
-    await apasa("Platile mele");
-    expect(screen.getByText("Penalizare iulie 2026: 3,00 lei, Restanta preluata de pe hartie: 40,00 lei, Datorie: 7,00 lei, Avans: 50,00 lei")).toBeTruthy();
-    expect(screen.getByText("Avans pentru listele urmatoare")).toBeTruthy();
+    await apasa("Plățile mele");
+    expect(screen.getByText("Penalizare iulie 2026: 3,00 lei, Restanță preluată de pe hârtie: 40,00 lei, Datorie: 7,00 lei, Avans: 50,00 lei")).toBeTruthy();
+    expect(screen.getByText("Avans pentru listele următoare")).toBeTruthy();
     expect(screen.getByText("11 septembrie 2026, transfer")).toBeTruthy();
-    expect(screen.getByText("Intretinere iulie 2026: 631,39 lei")).toBeTruthy();
-    expect(screen.getByText("Chitanta AP118 nr. 000440")).toBeTruthy();
+    expect(screen.getByText("Întreținere iulie 2026: 631,39 lei")).toBeTruthy();
+    expect(screen.getByText("Chitanța AP118 nr. 000440")).toBeTruthy();
     /* plata fara chitanta nu are buton de descarcare: 3 chitante, nu 4 */
-    expect(screen.getAllByRole("button", { name: "Descarca chitanta" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Descarcă chitanța" })).toHaveLength(3);
   });
 
   /* [K24] Chitanta poarta ora Romaniei, oricare ar fi fusul telefonului */
@@ -286,9 +286,9 @@ describe("descriereAlocari si chitanta", () => {
     process.env.TZ = "America/New_York";
     try {
       await plata();
-      await apasa("Platile mele");
+      await apasa("Plățile mele");
       const pdf = prindePdf();
-      await apasa("Descarca chitanta", 0);
+      await apasa("Descarcă chitanța", 0);
       expect((await pdf.ultimul()).text).toContain("Data: 12 august 2026, ora 21:03");
     } finally {
       process.env.TZ = fus;
@@ -297,9 +297,9 @@ describe("descriereAlocari si chitanta", () => {
 
   it("chitanta prin transfer are antetul asociatiei, platitorul si alocarile", async () => {
     await plata();
-    await apasa("Platile mele");
+    await apasa("Plățile mele");
     const pdf = prindePdf();
-    await apasa("Descarca chitanta", 0);
+    await apasa("Descarcă chitanța", 0);
     const { nume, text } = await pdf.ultimul();
     expect(nume).toBe("chitanta-440.pdf");
     expect(text).toContain("Asociatia de proprietari nr. 118");
@@ -324,11 +324,11 @@ describe("descriereAlocari si chitanta", () => {
       d.plati.push(plataNoua({ id: "p3", suma: 30, metoda: "transfer", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 30 }], 3), confirmataLa: "2026-09-12T12:00:00+03:00" }));
       d.plati.push(plataNoua({ id: "p4", suma: 40, metoda: "transfer", inregistrataDe: "Mihai Dobre", chitanta: chitantaCu([{ tip: "avans", luna: null, descriere: null, suma: 40 }], 4), confirmataLa: "2026-09-11T12:00:00+03:00" }));
     });
-    await apasa("Platile mele");
+    await apasa("Plățile mele");
     const pdf = prindePdf();
     const texte = [];
     for (let i = 0; i < 4; i++) {
-      await apasa("Descarca chitanta", i);
+      await apasa("Descarcă chitanța", i);
       texte.push((await pdf.ultimul()).text);
     }
     expect(pdf.descarcate.map((x) => x.nume)).toEqual(["chitanta-1.pdf", "chitanta-2.pdf", "chitanta-3.pdf", "chitanta-4.pdf"]);
@@ -347,9 +347,9 @@ describe("descriereAlocari si chitanta", () => {
       d.apartamente[0].proprietar = "Ștefan Țăranu";
       d.plati.forEach((p) => { if (p.chitanta) p.chitanta.emisPentru = { ...p.chitanta.emisPentru, proprietar: "Ștefan Țăranu" }; });
     });
-    await apasa("Platile mele");
+    await apasa("Plățile mele");
     const pdf = prindePdf();
-    await apasa("Descarca chitanta", 0);
+    await apasa("Descarcă chitanța", 0);
     const { text } = await pdf.ultimul();
     expect(text).toMatch(/Proprietar la data emiterii: (Ștefan Țăranu|Stefan Taranu)/);
   });

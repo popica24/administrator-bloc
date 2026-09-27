@@ -12,21 +12,21 @@ import {
   textEcran, CUVINTE_TEHNICE,
 } from "./ajutor.js";
 
-const TABURI_LOCATAR = ["Acasa", "Plata", "Contoare", "Sesizari", "Bloc"];
+const TABURI_LOCATAR = ["Acasă", "Plata", "Contoare", "Sesizări", "Bloc"];
 
 test.describe("istoricul browserului", () => {
   test("Inapoi urca prin toate taburile vizitate, in ordine inversa", async ({ page }) => {
     await intraCa(page, "elena");
-    for (const t of ["Plata", "Contoare", "Sesizari", "Bloc"]) await mergiLaTab(page, t);
+    for (const t of ["Plata", "Contoare", "Sesizări", "Bloc"]) await mergiLaTab(page, t);
 
-    for (const t of ["Sesizari", "Contoare", "Plata"]) {
+    for (const t of ["Sesizări", "Contoare", "Plata"]) {
       await page.goBack();
       await expect(tab(page, t)).toHaveAttribute("aria-selected", "true");
     }
     await page.goBack();
-    await expect(tab(page, "Acasa")).toHaveAttribute("aria-selected", "true");
+    await expect(tab(page, "Acasă")).toHaveAttribute("aria-selected", "true");
     /* Aplicatia este inca deschisa: nu am iesit din ea */
-    await expect(page.getByText("Buna, Elena")).toBeVisible();
+    await expect(page.getByText("Bună, Elena")).toBeVisible();
   });
 
   test("Inainte reface drumul, tab cu tab", async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe("istoricul browserului", () => {
     await mergiLaTab(page, "Contoare");
     await page.goBack();
     await page.goBack();
-    await expect(tab(page, "Acasa")).toHaveAttribute("aria-selected", "true");
+    await expect(tab(page, "Acasă")).toHaveAttribute("aria-selected", "true");
     await page.goForward();
     await expect(tab(page, "Plata")).toHaveAttribute("aria-selected", "true");
     await page.goForward();
@@ -47,7 +47,7 @@ test.describe("istoricul browserului", () => {
     await buton(page, "De unde vine suma").click();
     await expect(tab(page, "Plata")).toHaveAttribute("aria-selected", "true");
     await page.goBack();
-    await expect(tab(page, "Acasa")).toHaveAttribute("aria-selected", "true");
+    await expect(tab(page, "Acasă")).toHaveAttribute("aria-selected", "true");
   });
 
   test("istoricul administratorului merge la fel, cu subtabul cerut", async ({ page }) => {
@@ -63,10 +63,10 @@ test.describe("istoricul browserului", () => {
   test("dupa iesirea din cont, Inapoi nu scoate date la iveala", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await buton(page, "Iesi").click();
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await buton(page, "Ieși").click();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
     await page.goBack();
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
     await expect(page.getByRole("tab")).toHaveCount(0);
     const text = await textEcran(page);
     expect(text).not.toContain("Elena Marinescu");
@@ -92,11 +92,11 @@ test.describe("sesiunea si prima incarcare", () => {
     await stricaSesiunea(page);
     await page.reload();
     await expect(
-      page.getByText("Intra in cont").or(page.getByText("Nu am putut deschide contul"))
+      page.getByText("Intră în cont").or(page.getByText("Nu am putut deschide contul"))
     ).toBeVisible({ timeout: 25000 });
-    await expect(page.getByText("Se incarca...")).toHaveCount(0);
+    await expect(page.getByText("Se încarcă...")).toHaveCount(0);
     const text = await textEcran(page);
-    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul contine "${cuvant}"`).not.toContain(cuvant);
+    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul conține "${cuvant}"`).not.toContain(cuvant);
   });
 
   test("prima incarcare cazuta arata ecranul de reincercare, apoi se reface", async ({ page }) => {
@@ -106,16 +106,16 @@ test.describe("sesiunea si prima incarcare", () => {
     await page.reload();
 
     await expect(page.getByText("Nu am putut deschide contul")).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText("Se incarca...")).toHaveCount(0);
-    await expect(buton(page, "Incearca din nou")).toBeVisible();
-    await expect(buton(page, "Iesi din cont")).toBeVisible();
-    await expect(page.getByText(/sesiunea s-a inchis singura/)).toBeVisible();
+    await expect(page.getByText("Se încarcă...")).toHaveCount(0);
+    await expect(buton(page, "Încearcă din nou")).toBeVisible();
+    await expect(buton(page, "Ieși din cont")).toBeVisible();
+    await expect(page.getByText(/sesiunea s-a închis singură/)).toBeVisible();
     const text = await textEcran(page);
-    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul contine "${cuvant}"`).not.toContain(cuvant);
+    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul conține "${cuvant}"`).not.toContain(cuvant);
 
     await page.unroute("**/rest/v1/**");
-    await buton(page, "Incearca din nou").click();
-    await expect(page.getByText("Buna, Elena")).toBeVisible({ timeout: 25000 });
+    await buton(page, "Încearcă din nou").click();
+    await expect(page.getByText("Bună, Elena")).toBeVisible({ timeout: 25000 });
   });
 
   test("ecranul de reincercare are si o cale de iesire care duce la autentificare", async ({ page }) => {
@@ -124,8 +124,8 @@ test.describe("sesiunea si prima incarcare", () => {
     await page.reload();
     await expect(page.getByText("Nu am putut deschide contul")).toBeVisible({ timeout: 30000 });
     await page.unroute("**/rest/v1/**");
-    await buton(page, "Iesi din cont").click();
-    await expect(page.getByText("Intra in cont")).toBeVisible({ timeout: 20000 });
+    await buton(page, "Ieși din cont").click();
+    await expect(page.getByText("Intră în cont")).toBeVisible({ timeout: 20000 });
   });
 });
 
@@ -145,12 +145,12 @@ test.describe("erori care raman pe ecran", () => {
   test("ciorna spune limpede ce se intampla la publicare, fara sa publice nimic", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await expect(buton(page, "Publica lista")).toBeVisible();
+    await expect(buton(page, "Publică lista")).toBeVisible();
     const text = await textEcran(page);
-    expect(text).toContain("SEPTEMBRIE 2026 \u00b7 IN LUCRU");
-    expect(text).toContain("Lista in lucru, locatarii nu o vad inca");
-    expect(text).toContain("Motorul calculeaza pe loc, fara sa salveze nimic");
-    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul contine "${cuvant}"`).not.toContain(cuvant);
+    expect(text).toContain("SEPTEMBRIE 2026 \u00b7 ÎN LUCRU");
+    expect(text).toContain("Lista în lucru, locatarii nu o văd încă");
+    expect(text).toContain("Motorul calculează pe loc, fără să salveze nimic");
+    for (const cuvant of CUVINTE_TEHNICE) expect(text, `ecranul conține "${cuvant}"`).not.toContain(cuvant);
   });
 
   test("[F6] refuzul unei iesiri din fond lasa si el motivul pe ecran", async ({ page }) => {
@@ -163,14 +163,14 @@ test.describe("erori care raman pe ecran", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Fonduri", exact: true }).click();
-    await buton(page, "Inregistreaza o iesire").first().click();
-    await page.getByLabel("Suma iesita").fill("999999");
-    await page.getByLabel("Pentru ce").fill("E2E fond mesaj care ramane");
+    await buton(page, "Înregistrează o ieșire").first().click();
+    await page.getByLabel("Suma ieșită").fill("999999");
+    await page.getByLabel("Pentru ce").fill("E2E fond mesaj care rămâne");
     await page.setInputFiles("input[type=file]", {
       name: "doc.jpg", mimeType: "image/jpeg", buffer: Buffer.from("jpeg"),
     });
-    await buton(page, "Inregistreaza iesirea").click();
-    const panou = page.getByRole("dialog", { name: "Iesire din fond" });
+    await buton(page, "Înregistrează ieșirea").click();
+    const panou = page.getByRole("dialog", { name: "Ieșire din fond" });
     /* mesajul sursei: "Fondul are X lei; o iesire de Y lei l-ar duce pe minus." */
     const motiv = panou.getByText(/l-ar duce pe minus/i).first();
     await expect(motiv).toBeVisible({ timeout: 20000 });
@@ -184,10 +184,10 @@ test.describe("erori care raman pe ecran", () => {
 test.describe("panoul: paza si focusul", () => {
   test("Tab-ul nu iese din panou si focusul se intoarce de unde a plecat", async ({ page }) => {
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    const deschizator = buton(page, "Sesizare noua");
+    await mergiLaTab(page, "Sesizări");
+    const deschizator = buton(page, "Sesizare nouă");
     await deschizator.click();
-    const panou = page.getByRole("dialog", { name: "Sesizare noua" });
+    const panou = page.getByRole("dialog", { name: "Sesizare nouă" });
     await expect(panou).toBeVisible();
 
     /* Oricat s-ar apasa Tab, focusul ramane intre peretii panoului */
@@ -204,7 +204,7 @@ test.describe("panoul: paza si focusul", () => {
     await expect(panou).toHaveCount(0);
     /* Butoanele desenate cu Btn isi iau numele din text, nu din aria-label */
     await expect.poll(async () => page.evaluate(() => (document.activeElement || {}).innerText || ""), { timeout: 5000 })
-      .toContain("Sesizare noua");
+      .toContain("Sesizare nouă");
   });
 
   test("[F5] Shift+Tab imediat dupa deschidere nu scoate focusul din panou", async ({ page }) => {
@@ -215,9 +215,9 @@ test.describe("panoul: paza si focusul", () => {
        dedesubt, ascuns sub scrim. Cine navigheaza de la tastatura ajunge sa
        "apese" butoane pe care nu le vede. */
     await intraCa(page, "elena");
-    await mergiLaTab(page, "Sesizari");
-    await buton(page, "Sesizare noua").click();
-    await expect(page.getByRole("dialog", { name: "Sesizare noua" })).toBeVisible();
+    await mergiLaTab(page, "Sesizări");
+    await buton(page, "Sesizare nouă").click();
+    await expect(page.getByRole("dialog", { name: "Sesizare nouă" })).toBeVisible();
     await page.keyboard.press("Shift+Tab");
     const inauntru = await page.evaluate(() => {
       const d = document.querySelector('[role="dialog"]');
@@ -230,11 +230,11 @@ test.describe("panoul: paza si focusul", () => {
     const cutie = async () => (await page.locator(".ab-shell").boundingBox());
     await intraCa(page, "admin");
     await mergiLaTab(page, "Comunicare");
-    await buton(page, "Scrie un anunt").click();
+    await buton(page, "Scrie un anunț").click();
     await page.getByLabel("Titlu").fill("E2E paza panou");
     const c = await cutie();
     await page.mouse.click(c.x + c.width / 2, c.y + 20);
-    await expect(page.getByRole("dialog", { name: "Anunt nou" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Anunț nou" })).toBeVisible();
     await expect(page.getByLabel("Titlu")).toHaveValue("E2E paza panou");
   });
 });
@@ -255,7 +255,7 @@ test.describe("tinte de atingere si culori", () => {
         }
         return rezultat;
       });
-      expect(mici, `tinte sub 44 px in tabul ${t}`).toEqual([]);
+      expect(mici, `tinte sub 44 px în tabul ${t}`).toEqual([]);
     }
   });
 

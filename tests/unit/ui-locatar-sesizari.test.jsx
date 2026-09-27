@@ -9,39 +9,39 @@ import {
 
 vi.mock("../../src/sursa.js", () => ({ creeazaSursa: () => globalThis.sursaTest }));
 
-const MESAJ = "Adauga un mesaj pentru administrator";
+const MESAJ = "Adaugă un mesaj pentru administrator";
 /* Cardul unei sesizari, dupa titlu (primul text cu acel continut; descrierea poate fi identica) */
 const card = (titlu) => {
   /* cardul sesizarii: urca de la titlu pana la blocul care are si starea, si
      descrierea de sub ea (doua randuri distincte, nu doar antetul) */
-  let el = zonaCu([titlu, /Noua|In lucru|Rezolvata|suspendata/], 4);
+  let el = zonaCu([titlu, /Nouă|În lucru|Rezolvată|suspendata/], 4);
   while (el.parentElement && el.childElementCount < 2) el = el.parentElement;
   return el.parentElement;
 };
-const foaie = () => screen.getByRole("dialog", { name: "Sesizare noua" });
+const foaie = () => screen.getByRole("dialog", { name: "Sesizare nouă" });
 
 async function laSesizari(optiuni) {
   urlFalse();
   const r = await pornesteApp(optiuni);
-  await deschideTab("Sesizari");
+  await deschideTab("Sesizări");
   return r;
 }
 
-describe("Sesizari: listele", () => {
+describe("Sesizări: listele", () => {
   it("Ale mele: starea, categoria, pozele si conversatia", async () => {
     await laSesizari({ email: ELENA });
     expect(screen.getByText("Bloc D14, scara A")).toBeTruthy();
     const deschisa = card("Bec ars pe palier la etajul 4");
-    expect(within(deschisa).getByText("In lucru")).toBeTruthy();
-    expect(text(deschisa)).toContain("Iluminat si electrice · 9 sep 2026");
+    expect(within(deschisa).getByText("În lucru")).toBeTruthy();
+    expect(text(deschisa)).toContain("Iluminat și electrice · 9 sep 2026");
     expect(text(deschisa)).not.toContain("a ta");
     expect(text(deschisa)).toContain("Becul de langa ap. 17 nu mai porneste de doua zile.");
     expect(within(deschisa).getByText("POZA")).toBeTruthy();
-    expect(text(deschisa)).toContain("Raspuns administrator · 9 sep 2026Am cumparat becul, se monteaza joi.");
+    expect(text(deschisa)).toContain("Răspuns administrator · 9 sep 2026Am cumparat becul, se monteaza joi.");
     expect(within(deschisa).getByLabelText(MESAJ)).toBeTruthy();
 
     const rezolvata = card("Interfon defect");
-    expect(within(rezolvata).getByText("Rezolvata")).toBeTruthy();
+    expect(within(rezolvata).getByText("Rezolvată")).toBeTruthy();
     expect(within(rezolvata).queryByLabelText(MESAJ)).toBeNull();
     /* sesizarile altora nu apar la Ale mele */
     expect(screen.queryByText("Scurgere la coloana de la subsol")).toBeNull();
@@ -56,10 +56,10 @@ describe("Sesizari: listele", () => {
       },
     });
     await alegeSegment("Din tot blocul");
-    expect(screen.getByText("Vezi ce s-a semnalat deja, ca sa nu scrii de doua ori despre acelasi lucru. Nu se vede cine a trimis sesizarea.")).toBeTruthy();
+    expect(screen.getByText("Vezi ce s-a semnalat deja, ca să nu scrii de două ori despre același lucru. Nu se vede cine a trimis sesizarea.")).toBeTruthy();
     const noua = card("Scurgere la coloana de la subsol");
-    expect(within(noua).getByText("Noua")).toBeTruthy();
-    expect(text(noua)).toContain("Instalatii, apa, canalizare · 15 sep 2026");
+    expect(within(noua).getByText("Nouă")).toBeTruthy();
+    expect(text(noua)).toContain("Instalații, apă, canalizare · 15 sep 2026");
     expect(within(noua).queryByLabelText(MESAJ)).toBeNull();
     expect(text(card("Bec ars pe palier la etajul 4"))).toContain(" · a ta");
     expect(screen.getByText("Interfon defect")).toBeTruthy();
@@ -88,7 +88,7 @@ describe("Sesizari: listele", () => {
       },
     });
     await alegeSegment("Din tot blocul");
-    expect(screen.getByText("Nicio sesizare deschisa in bloc")).toBeTruthy();
+    expect(screen.getByText("Nicio sesizare deschisă în bloc")).toBeTruthy();
   });
 
   it("un mesaj al locatarului apare ca Mesajul tau", async () => {
@@ -98,7 +98,7 @@ describe("Sesizari: listele", () => {
         d.sesizari.find((s) => s.titlu === "Bec ars pe palier la etajul 4").mesaje.push({ id: "m-loc", text: "Tot nu merge", la: "2026-09-12T10:00:00+03:00", dinAdministratie: false });
       },
     });
-    expect(text(card("Bec ars pe palier la etajul 4"))).toContain("Mesajul tau · 12 sep 2026Tot nu merge");
+    expect(text(card("Bec ars pe palier la etajul 4"))).toContain("Mesajul tău · 12 sep 2026Tot nu merge");
   });
 });
 
@@ -118,7 +118,7 @@ describe("Sesizari: mesaj catre administrator", () => {
     expect(spion).toHaveBeenCalledWith(ses.id, "Multumesc, astept");
     expect(screen.getByRole("status").textContent).toBe("Mesajul a fost trimis");
     expect(screen.getByLabelText(MESAJ).value).toBe("");
-    expect(text(card("Bec ars pe palier la etajul 4"))).toContain("Mesajul tau · 19 sep 2026Multumesc, astept");
+    expect(text(card("Bec ars pe palier la etajul 4"))).toContain("Mesajul tău · 19 sep 2026Multumesc, astept");
   });
 
   /* Acelasi defect ca la contorul general: la finalul trimiterii se punea
@@ -129,29 +129,29 @@ describe("Sesizari: mesaj catre administrator", () => {
       email: ELENA,
       modifica: (d) => {
         const s = d.sesizari.find((x) => x.titlu === "Bec ars pe palier la etajul 4");
-        d.sesizari.push({ ...s, id: "ses-a-doua", titlu: "Usa de la intrare nu se inchide", mesaje: [] });
+        d.sesizari.push({ ...s, id: "ses-a-doua", titlu: "Ușa de la intrare nu se închide", mesaje: [] });
       },
     });
     const real = sursa.scrieMesaj.bind(sursa);
     let elibereaza;
     vi.spyOn(sursa, "scrieMesaj").mockImplementation((...a) => new Promise((r) => { elibereaza = () => r(real(...a)); }));
     const unu = card("Bec ars pe palier la etajul 4");
-    const doi = card("Usa de la intrare nu se inchide");
+    const doi = card("Ușa de la intrare nu se închide");
     await act(async () => { fireEvent.change(within(unu).getByLabelText(MESAJ), { target: { value: "Multumesc" } }); });
     await apasa(within(unu).getByRole("button", { name: "Trimite" }));
     /* Trimiterea inca merge; omul scrie la cealalta sesizare */
-    await act(async () => { fireEvent.change(within(doi).getByLabelText(MESAJ), { target: { value: "Si usa scartaie" } }); });
+    await act(async () => { fireEvent.change(within(doi).getByLabelText(MESAJ), { target: { value: "Și ușa scartaie" } }); });
     await act(async () => { elibereaza(); });
     expect(screen.getByRole("status").textContent).toBe("Mesajul a fost trimis");
-    expect(within(card("Usa de la intrare nu se inchide")).getByLabelText(MESAJ).value).toBe("Si usa scartaie");
+    expect(within(card("Ușa de la intrare nu se închide")).getByLabelText(MESAJ).value).toBe("Și ușa scartaie");
   });
 
   it("un mesaj refuzat ramane in camp", async () => {
     const { sursa } = await laSesizari({ email: ELENA });
-    vi.spyOn(sursa, "scrieMesaj").mockRejectedValue(new Error("Fara retea"));
+    vi.spyOn(sursa, "scrieMesaj").mockRejectedValue(new Error("Fără retea"));
     scrie(MESAJ, "Revin");
     await apasaButon("Trimite");
-    expect(screen.getByRole("status").textContent).toBe("Fara retea");
+    expect(screen.getByRole("status").textContent).toBe("Fără retea");
     expect(screen.getByLabelText(MESAJ).value).toBe("Revin");
   });
 });
@@ -161,7 +161,7 @@ describe("Sesizari: sesizare noua", () => {
     const { sursa } = await laSesizari({ email: ELENA });
     const spion = vi.spyOn(sursa, "adaugaSesizare");
     await alegeSegment("Din tot blocul");
-    await apasaButon("Sesizare noua");
+    await apasaButon("Sesizare nouă");
     const f = foaie();
     expect(within(f).getByRole("button", { name: "Trimite sesizarea" }).getAttribute("aria-disabled")).toBe("true");
     await apasa(within(f).getByRole("button", { name: "Liftul nu merge" }));
@@ -171,11 +171,11 @@ describe("Sesizari: sesizare noua", () => {
     expect(butonul("Liftul nu merge", f).getAttribute("aria-pressed")).toBe("true");
     expect(butonul("Geam spart", f).getAttribute("aria-pressed")).toBe("false");
 
-    await alegeFisier("Adauga o poza", fisierPoza("p1.jpg"));
-    await alegeFisier("Inca o poza", fisierPoza("p2.jpg"));
-    await alegeFisier("Inca o poza", fisierPoza("p3.jpg"));
+    await alegeFisier("Adaugă o poză", fisierPoza("p1.jpg"));
+    await alegeFisier("Încă o poză", fisierPoza("p2.jpg"));
+    await alegeFisier("Încă o poză", fisierPoza("p3.jpg"));
     expect(within(f).getAllByAltText("Poza sesizare")).toHaveLength(3);
-    expect(within(f).queryByRole("button", { name: "Inca o poza" })).toBeNull();
+    expect(within(f).queryByRole("button", { name: "Încă o poză" })).toBeNull();
 
     await apasa(within(f).getByRole("button", { name: "Trimite sesizarea" }));
     const d = await sursa.incarca();
@@ -188,10 +188,10 @@ describe("Sesizari: sesizare noua", () => {
     /* revine la Ale mele, unde apare sesizarea noua */
     expect(screen.queryByText(/Vezi ce s-a semnalat deja/)).toBeNull();
     const noua = card("Liftul nu merge");
-    expect(within(noua).getByText("Noua")).toBeTruthy();
-    expect(within(noua).getAllByAltText("Poza atasata")).toHaveLength(3);
+    expect(within(noua).getByText("Nouă")).toBeTruthy();
+    expect(within(noua).getAllByAltText("Poza atașată")).toHaveLength(3);
 
-    await apasaButon("Sesizare noua");
+    await apasaButon("Sesizare nouă");
     expect(screen.getByLabelText("Sau scrie pe scurt problema").value).toBe("");
   });
 
@@ -200,34 +200,34 @@ describe("Sesizari: sesizare noua", () => {
      Formularul trebuie sa spuna exact asta, nu ca descrierea se vede si ea. */
   it("[P2] formularul spune adevarul: doar titlul se vede, fara nume si fara descriere", async () => {
     await laSesizari({ email: ELENA });
-    await apasaButon("Sesizare noua");
-    expect(within(foaie()).getByText(/Alti locatari vad titlul la Din tot blocul, dar nu vad descrierea si nici numele tau\./)).toBeTruthy();
+    await apasaButon("Sesizare nouă");
+    expect(within(foaie()).getByText(/Alți locatari văd titlul la Din tot blocul, dar nu văd descrierea și nici numele tău\./)).toBeTruthy();
     expect(within(foaie()).queryByText(/vad titlul si descrierea/)).toBeNull();
   });
 
   it("text liber, categoria aleasa si descrierea", async () => {
     const { sursa } = await laSesizari({ email: ELENA });
     const spion = vi.spyOn(sursa, "adaugaSesizare");
-    await apasaButon("Sesizare noua");
+    await apasaButon("Sesizare nouă");
     scrie("Sau scrie pe scurt problema", "  Nu merge becul la etajul 2  ");
     await act(async () => { fireEvent.change(screen.getByLabelText("Categorie"), { target: { value: "iluminat" } }); });
-    scrie("Unde este si de cand (optional)", "  Langa lift, de ieri  ");
+    scrie("Unde este și de când (opțional)", "  Lângă lift, de ieri  ");
     await apasaButon("Trimite sesizarea");
-    expect(spion.mock.calls[0][0]).toMatchObject({ titlu: "Nu merge becul la etajul 2", categorie: "iluminat", descriere: "Langa lift, de ieri", poze: [] });
+    expect(spion.mock.calls[0][0]).toMatchObject({ titlu: "Nu merge becul la etajul 2", categorie: "iluminat", descriere: "Lângă lift, de ieri", poze: [] });
   });
 
   it("o sesizare refuzata lasa formularul deschis; X il inchide", async () => {
     const { sursa } = await laSesizari({ email: ELENA });
     const a = amanat();
-    vi.spyOn(sursa, "adaugaSesizare").mockImplementation(() => a.promisiune.then(() => { throw new Error("Fara retea"); }));
-    await apasaButon("Sesizare noua");
+    vi.spyOn(sursa, "adaugaSesizare").mockImplementation(() => a.promisiune.then(() => { throw new Error("Fără retea"); }));
+    await apasaButon("Sesizare nouă");
     scrie("Sau scrie pe scurt problema", "Geam spart la subsol");
     await apasaButon("Trimite sesizarea");
     expect(screen.getByRole("button", { name: "Se trimite..." }).getAttribute("aria-disabled")).toBe("true");
     await act(async () => { a.rezolva(); });
-    expect(screen.getByRole("status").textContent).toBe("Fara retea");
+    expect(screen.getByRole("status").textContent).toBe("Fără retea");
     expect(screen.getByLabelText("Sau scrie pe scurt problema").value).toBe("Geam spart la subsol");
-    await apasa(within(foaie()).getByRole("button", { name: "Inchide" }));
+    await apasa(within(foaie()).getByRole("button", { name: "Închide" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

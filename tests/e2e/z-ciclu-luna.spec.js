@@ -63,18 +63,18 @@ test.describe("ciclul unei luni, cap-coada", () => {
   test("1. facturile lunii, cate una pe fiecare metoda de repartizare", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await expect(page.getByText("SEPTEMBRIE 2026 · IN LUCRU")).toBeVisible();
+    await expect(page.getByText("SEPTEMBRIE 2026 · ÎN LUCRU")).toBeVisible();
 
     for (const [i, f] of FACTURI.entries()) {
-      await buton(page, "Adauga factura").click();
-      const panou = page.getByRole("dialog", { name: "Factura noua" });
+      await buton(page, "Adaugă factură").click();
+      const panou = page.getByRole("dialog", { name: "Factură nouă" });
       await panou.getByLabel("Sau scrie un furnizor nou").fill(`E2E Furnizorul ${i + 1}`);
-      await panou.getByLabel("Ce cheltuiala este").fill(f.categorie);
+      await panou.getByLabel("Ce cheltuială este").fill(f.categorie);
       await panou.getByLabel("Suma facturii").fill(f.suma);
-      await panou.getByLabel("Cum se imparte").selectOption(f.metoda);
+      await panou.getByLabel("Cum se împarte").selectOption(f.metoda);
       if (f.tipApa) await panou.getByRole("button", { name: "Apa rece" }).click();
-      await panou.getByLabel("Serie si numar factura").fill(`E2E-${f.metoda}`);
-      await buton(page, "Salveaza factura").click();
+      await panou.getByLabel("Serie și număr factură").fill(`E2E-${f.metoda}`);
+      await buton(page, "Salvează factura").click();
       /* Panoul se inchide si randul apare in lista: abia atunci urmatoarea
          factura poate fi inceputa (un toast inca vizibil de la factura
          dinainte nu este dovada ca aceasta s-a salvat). */
@@ -132,7 +132,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     await expect(page.getByText("TERMEN DE CITIRE 15 SEPTEMBRIE 2026")).toBeVisible();
 
     page.once("dialog", (d) => d.accept());
-    await buton(page, "Estimeaza citirile lipsa").click();
+    await buton(page, "Estimează citirile lipsă").click();
     await asteaptaToast(page, "Au fost estimate");
 
     /* Fiecare contor activ are acum o citire validata pe luna */
@@ -142,7 +142,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
       .select("contor_id, stare, sursa").eq("bloc_id", BLOC.id).eq("luna", LUNA);
     for (const c of contoare) {
       const ale = citiri.filter((x) => x.contor_id === c.id && x.stare === "validata");
-      expect(ale.length, `contorul ${c.id} are o citire validata`).toBeGreaterThan(0);
+      expect(ale.length, `contorul ${c.id} are o citire validată`).toBeGreaterThan(0);
     }
     expect(citiri.some((c) => c.sursa === "estimat")).toBe(true);
   });
@@ -161,18 +161,18 @@ test.describe("ciclul unei luni, cap-coada", () => {
     await page.getByRole("button", { name: "Citiri contoare" }).click();
 
     /* Ordinea celor doua contoare generale pe ecran vine din date, nu din test */
-    const randuri = page.getByText(/^Apa (rece|calda), index anterior /);
+    const randuri = page.getByText(/^Apa (rece|caldă), index anterior /);
     await expect(randuri).toHaveCount(2);
     const texte = await randuri.allInnerTexts();
 
     for (const tip of ["rece", "calda"]) {
-      const eticheta = tip === "rece" ? "Apa rece" : "Apa calda";
+      const eticheta = tip === "rece" ? "Apa rece" : "Apa caldă";
       const i = texte.findIndex((x) => x.startsWith(eticheta));
-      expect(i, `randul contorului general de apa ${tip}`).toBeGreaterThanOrEqual(0);
+      expect(i, `rândul contorului general de apă ${tip}`).toBeGreaterThanOrEqual(0);
       const anterior = Number(texte[i].match(/([\d.]+,\d+)/)[1].replace(/\./g, "").replace(",", "."));
       const consumBloc = round2(sumaPe(tip) + 18);
-      await page.getByPlaceholder(/Index nou|Corecteaza indexul/).nth(i).fill(String(round2(anterior + consumBloc)));
-      await buton(page, "Salveaza").nth(i).click();
+      await page.getByPlaceholder(/Index nou|Corectează indexul/).nth(i).fill(String(round2(anterior + consumBloc)));
+      await buton(page, "Salvează").nth(i).click();
       await expect.poll(async () => {
         const { data } = await sb.schema("contorizare").from("citiri")
           .select("consum").eq("bloc_id", BLOC.id).eq("luna", LUNA).is("apartament_id", null).eq("tip", tip);
@@ -192,11 +192,11 @@ test.describe("ciclul unei luni, cap-coada", () => {
   test("5. previzualizarea imparte exact totalul facturilor", async ({ page }) => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Calculeaza lista pe apartamente").click();
+    await buton(page, "Calculează lista pe apartamente").click();
     await expect(page.getByText("Total repartizat")).toBeVisible({ timeout: 20000 });
 
     const t = await textEcran(page);
-    expect(t).not.toContain("Lista nu se poate calcula inca");
+    expect(t).not.toContain("Lista nu se poate calcula încă");
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
 
     const { data: cheltuieli } = await serviciu().schema("intretinere").from("cheltuieli")
@@ -214,11 +214,11 @@ test.describe("ciclul unei luni, cap-coada", () => {
 
     await intraCa(page, "admin");
     await mergiLaTab(page, "Facturi");
-    await buton(page, "Publica lista").click();
-    const panou = page.getByRole("dialog", { name: "Publica lista" });
-    await expect(panou).toContainText("Termenul de plata va fi 25 octombrie 2026");
-    await buton(page, "Da, publica lista").click();
-    await asteaptaToast(page, "Lista a fost publicata");
+    await buton(page, "Publică lista").click();
+    const panou = page.getByRole("dialog", { name: "Publică lista" });
+    await expect(panou).toContainText("Termenul de plată va fi 25 octombrie 2026");
+    await buton(page, "Da, publică lista").click();
+    await asteaptaToast(page, "Lista a fost publicată");
 
     const { data: lista } = await sb.schema("intretinere").from("liste_lunare")
       .select("stare, scadenta, versiune, apartamente_repartizate").eq("id", LISTA.id).single();
@@ -280,7 +280,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
 
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await expect(page.getByText("TOTAL DE PLATA ACUM")).toBeVisible();
+    await expect(page.getByText("TOTAL DE PLATĂ ACUM")).toBeVisible();
 
     /* Totalul listei curente este exact soldul apartamentului, iar fiecare
        rand de pe ecran are suma din repartizarea salvata */
@@ -299,14 +299,14 @@ test.describe("ciclul unei luni, cap-coada", () => {
     const desfacut = await textEcran(page);
     expect(desfacut).toContain("Contor general al blocului");
     expect(desfacut).toContain("Suma contoarelor din apartamente");
-    expect(desfacut).toContain("Diferenta pe coloana");
-    expect(desfacut).toContain("Pret pe metru cub");
+    expect(desfacut).toContain("Diferența pe coloană");
+    expect(desfacut).toContain("Preț pe metru cub");
     expect(desfacut).toContain("Consumul apartamentului");
     for (const cuvant of CUVINTE_TEHNICE) expect(desfacut).not.toContain(cuvant);
 
     /* Verificarea repartitiei: nimic nealocat, nimic platit de doua ori */
-    const verificare = page.locator(".ab-shell").getByText("Verificarea repartitiei").locator("xpath=ancestor::div[1]");
-    await expect(verificare).toContainText("Diferenta");
+    const verificare = page.locator(".ab-shell").getByText("Verificarea repartiției").locator("xpath=ancestor::div[1]");
+    await expect(verificare).toContainText("Diferența");
     await expect(verificare).toContainText("0,00");
   });
 
@@ -321,18 +321,18 @@ test.describe("ciclul unei luni, cap-coada", () => {
     /* Locatarul: ecranul ii spune unde duce banii */
     await intraCa(page, "elena");
     await mergiLaTab(page, "Plata");
-    await expect(page.getByText("Cum platesti")).toBeVisible();
-    await expect(page.getByText("In numerar, la administrator")).toBeVisible();
-    await buton(page, "Iesi").click();
+    await expect(page.getByText("Cum plătești")).toBeVisible();
+    await expect(page.getByText("În numerar, la administrator")).toBeVisible();
+    await buton(page, "Ieși").click();
 
     /* Administratorul incaseaza si emite chitanta */
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 17" }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await expect(page.getByLabel("Suma primita")).toHaveValue(lei(sold));
-    await buton(page, "Emite chitanta").click();
-    await expect(page.getByText(/Chitanta [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible({ timeout: 30000 });
+    await buton(page, "Înregistrează încasare cash").click();
+    await expect(page.getByLabel("Suma primită")).toHaveValue(lei(sold));
+    await buton(page, "Emite chitanța").click();
+    await expect(page.getByText(/Chitanța [A-Z0-9]+ nr\. \d{6}\./)).toBeVisible({ timeout: 30000 });
 
     await expect.poll(async () => soldApartament(ap.id), { timeout: 30000 }).toBe(0);
     const { count: dupa } = await sb.schema("financiar").from("chitante")
@@ -358,10 +358,10 @@ test.describe("ciclul unei luni, cap-coada", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: `Apartament ${ap.numar}`, exact: true }).click();
-    await buton(page, "Inregistreaza incasare cash").click();
-    await page.getByLabel("Suma primita").fill(lei(suma));
-    await buton(page, "Emite chitanta").click();
-    await asteaptaToast(page, "Incasare inregistrata, chitanta emisa");
+    await buton(page, "Înregistrează încasare cash").click();
+    await page.getByLabel("Suma primită").fill(lei(suma));
+    await buton(page, "Emite chitanța").click();
+    await asteaptaToast(page, "Încasare înregistrată, chitanța emisă");
 
     const { data: plata } = await sb.schema("financiar").from("plati")
       .select("id, suma").eq("apartament_id", ap.id).eq("metoda", "numerar")
@@ -415,7 +415,7 @@ test.describe("ciclul unei luni, cap-coada", () => {
     /* Locatarul vede penalizarea cu formula ei, in cifrele lui */
     expect(t).toMatch(/Penalizare pentru intretinere/);
     expect(t).toMatch(/[\d.]+,\d\d × 0,02% × \d+ zile/);
-    expect(t).toContain("primele 30 de zile nu se penalizeaza");
+    expect(t).toContain("primele 30 de zile nu se penalizează");
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
 
@@ -468,8 +468,8 @@ test.describe("ciclul unei luni, cap-coada", () => {
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
 
     /* Si dupa recalculare, nimic nu ramane nealocat */
-    const verificare = page.locator(".ab-shell").getByText("Verificarea repartitiei").locator("xpath=ancestor::div[1]");
-    await expect(verificare).toContainText("Diferenta");
+    const verificare = page.locator(".ab-shell").getByText("Verificarea repartiției").locator("xpath=ancestor::div[1]");
+    await expect(verificare).toContainText("Diferența");
     await expect(verificare).toContainText("0,00");
   });
 });

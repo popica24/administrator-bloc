@@ -12,24 +12,24 @@ describe("statisticiAdmin pe Sumar", () => {
   it("incasarile listei curente, restantele, penalizarile si facturile neplatite", async () => {
     const { container } = await pornesteApp({ email: ADMIN });
     const t = text(container);
-    expect(t).toContain("Lista de plata august 202612.154,95LEIde incasat, termen 25 sep 2026");
-    expect(t).toContain("Publicata 8 sep 2026");
-    expect(t).toContain("Incasat pana acum 7.467,42 lei61%");
-    expect(t).toContain("Au platit integral 14 din 20 apartamente.");
-    expect(t).toContain("Restante7.013,655 apartamente in urma");
-    expect(t).toContain("Penalizari17,11neachitate");
+    expect(t).toContain("Lista de plată august 202612.154,95LEIde încasat, termen 25 sep 2026");
+    expect(t).toContain("Publicată 8 sep 2026");
+    expect(t).toContain("Încasat până acum 7.467,42 lei61%");
+    expect(t).toContain("Au plătit integral 14 din 20 apartamente.");
+    expect(t).toContain("Restanțe7.013,655 apartamente în urmă");
+    expect(t).toContain("Penalizări17,11neachitate");
     expect(t).toContain("Citiri de verificat8");
-    expect(t).toContain("Sesizari3deschise");
-    expect(t).toContain("3 facturi de platit catre furnizori");
+    expect(t).toContain("Sesizări3deschise");
+    expect(t).toContain("3 facturi de plătit către furnizori");
     expect(t).toContain("Salubritate 2000, scadent 30 sep 20261.120,00LEI");
   });
 
   it("restantierii, cel mai vechi datornic primul, cu penalizarile lor", async () => {
     const { container } = await pornesteApp({ email: ADMIN });
     const t = text(container);
-    const i11 = t.indexOf("Familia Georgescu117 zile intarziere, penalizari 14,89 lei2.917,41LEI");
-    const i3 = t.indexOf("Familia Ilie56 de zile intarziere, penalizari 1,20 lei1.497,45LEI");
-    const i6 = t.indexOf("Vasile Munteanu25 de zile intarziere536,77LEI");
+    const i11 = t.indexOf("Familia Georgescu117 zile întârziere, penalizări 14,89 lei2.917,41LEI");
+    const i3 = t.indexOf("Familia Ilie56 de zile întârziere, penalizări 1,20 lei1.497,45LEI");
+    const i6 = t.indexOf("Vasile Munteanu25 de zile întârziere536,77LEI");
     expect(i11).toBeGreaterThan(0);
     /* Georgescu (117 zile) inainte de Ilie (56 de zile): datornicul cu mai
        multe zile de intarziere vine primul, indiferent cat datoreaza. */
@@ -50,10 +50,10 @@ describe("statisticiAdmin pe Sumar", () => {
       },
     });
     const t = text(container);
-    expect(t).toContain("Gheorghe Voicuo zi intarziere12,00LEI");
-    expect(t).toContain("O factura de platit catre furnizori");
-    expect(t).toContain("Restante12,001 apartamente in urma");
-    expect(t).toContain("Penalizari0,00neachitate");
+    expect(t).toContain("Gheorghe Voicuo zi întârziere12,00LEI");
+    expect(t).toContain("O factură de plătit către furnizori");
+    expect(t).toContain("Restanțe12,001 apartamente în urmă");
+    expect(t).toContain("Penalizări0,00neachitate");
   });
 
   it("fara lista publicata si fara restante", async () => {
@@ -67,16 +67,16 @@ describe("statisticiAdmin pe Sumar", () => {
       },
     });
     const t = text(container);
-    expect(t).toContain("Nicio lista publicata");
-    expect(t).toContain("Nicio restanta");
-    expect(t).toContain("Restante0,000 apartamente in urma");
+    expect(t).toContain("Nicio listă publicată");
+    expect(t).toContain("Nicio restanță");
+    expect(t).toContain("Restanțe0,000 apartamente în urmă");
     expect(t).toContain("Citiri de verificat0");
-    expect(t).not.toContain("facturi de platit");
+    expect(t).not.toContain("facturi de plătit");
   });
 
   it("lista publicata fara nicio datorie: 0% incasat", async () => {
     const { container } = await pornesteApp({ email: ADMIN, modifica: (d) => { d.datorii = []; } });
-    expect(text(container)).toContain("Incasat pana acum 0,00 lei0%");
+    expect(text(container)).toContain("Încasat până acum 0,00 lei0%");
   });
 });
 
@@ -84,7 +84,7 @@ describe("listaPdf pentru avizier", () => {
   it("lista curenta: coloanele de restante, penalizari si total de plata", async () => {
     await pornesteApp({ email: ADMIN });
     const pdf = prindePdf();
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     const { nume, text: t } = await pdf.ultimul();
     expect(nume).toBe("lista-plata-2026-08-uz-intern.pdf");
     expect(t).toContain("Asociatia de proprietari nr. 118 | Bloc D14, scara A, Str. Nicolae Balcescu nr. 22, Pitesti");
@@ -123,7 +123,7 @@ describe("listaPdf pentru avizier", () => {
     await tab("Facturi");
     await apasa("iul 26");
     const pdf = prindePdf();
-    await apasa("Exporta PDF pentru avizier");
+    await apasa("Exportă PDF pentru avizier");
     const { nume, text: t } = await pdf.ultimul();
     expect(nume).toBe("lista-plata-2026-07.pdf");
     expect(t).toContain("Lista de plata pe iulie 2026");
@@ -154,7 +154,7 @@ describe("listaPdf pentru avizier", () => {
     await tab("Facturi");
     await apasa("iul 26");
     const pdf = prindePdf();
-    await apasa("Exporta lista interna (uz administrativ)");
+    await apasa("Exportă lista internă (uz administrativ)");
     const { nume, text: t } = await pdf.ultimul();
     expect(nume).toBe("lista-plata-2026-07-uz-intern.pdf");
     expect(t).toContain("Document intern, uz administrativ: contine numele proprietarilor si restantele. Nu se afiseaza la avizier.");
@@ -172,7 +172,7 @@ describe("listaPdf pentru avizier", () => {
       modifica: (d) => { d.repartizari = d.repartizari.filter((r) => !(r.apartamentId === "apa-3" && r.listaId === "lis-807")); },
     });
     const pdf = prindePdf();
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     const { text: t } = await pdf.ultimul();
     /* [L13] coloana Pers. arata persoanele apartamentului (2), chiar daca
        apartamentul nu are nicio repartizare pe lista */
@@ -186,7 +186,7 @@ describe("listaPdf pentru avizier", () => {
       modifica: (d) => { d.apartamente.find((a) => a.numar === "20").numar = "3A"; },
     });
     const pdf = prindePdf();
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     const { text: t } = await pdf.ultimul();
     const i3 = t.indexOf("\n3\nFamilia Ilie");
     const i3a = t.indexOf("\n3A\nLavinia Costea");
@@ -202,7 +202,7 @@ describe("listaPdf pentru avizier", () => {
       modifica: (d) => { d.cheltuieli.filter((c) => c.metoda === "persoane").forEach((c) => { c.metoda = "apartamente"; }); },
     });
     const pdf = prindePdf();
-    await apasa("Exporta lista PDF");
+    await apasa("Exportă lista PDF");
     const { text: t } = await pdf.ultimul();
     expect(t).toContain("\n3\nFamilia Ilie\n4\n");
   });

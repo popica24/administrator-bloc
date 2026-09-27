@@ -47,7 +47,7 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
     const plati = await platiConfirmate(ap.id);
 
     await intra(page, PRESEDINTE);
-    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
     /* [C2] Presedintele care locuieste in bloc porneste in apartamentul lui:
        cinci taburi de locatar, nu panoul. Verificarea blocului se deschide
        dintr-un buton, in tabul Bloc. */
@@ -56,9 +56,9 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
     await expect(page.getByText("Apartament 12, Bloc D14, scara A")).toBeVisible();
 
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
+    await page.getByRole("button", { name: "Plățile mele" }).click();
     /* Desi RLS ii da tot blocul, ecranul arata doar platile apartamentului lui */
-    await expect(buton(page, "Descarca chitanta")).toHaveCount(plati);
+    await expect(buton(page, "Descarcă chitanța")).toHaveCount(plati);
     const t = await textEcran(page);
     expect(t).not.toContain("Familia Ilie");
     expect(t).not.toContain("Elena Marinescu");
@@ -75,8 +75,8 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
     const plati = await platiConfirmate(ap.id);
 
     await intra(page, CENZOR);
-    await expect(page.getByRole("tab", { name: /^Sesizari/ })).toBeVisible({ timeout: 20000 });
-    await mergiLaTab(page, "Sesizari");
+    await expect(page.getByRole("tab", { name: /^Sesizări/ })).toBeVisible({ timeout: 20000 });
+    await mergiLaTab(page, "Sesizări");
     await expect(page.getByText("Nu ai trimis nicio sesizare")).toBeVisible();
     await page.getByRole("button", { name: "Din tot blocul" }).click();
     const t = await textEcran(page);
@@ -86,8 +86,8 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
     /* Cenzorul are drept de citire pe tot blocul, dar ecranul de locatar
        ramane al apartamentului lui (auditul 1, S2) */
     await mergiLaTab(page, "Plata");
-    await page.getByRole("button", { name: "Platile mele" }).click();
-    await expect(buton(page, "Descarca chitanta")).toHaveCount(plati);
+    await page.getByRole("button", { name: "Plățile mele" }).click();
+    await expect(buton(page, "Descarcă chitanța")).toHaveCount(plati);
   });
 
   /* [C2] Verificarea blocului se deschide din tabul Bloc si se inchide de
@@ -100,21 +100,21 @@ test.describe("presedinte si cenzor care locuiesc in bloc", () => {
 
     await intra(page, PRESEDINTE);
     await mergiLaTab(page, "Bloc");
-    await expect(page.getByText("Esti presedinte al asociatiei")).toBeVisible({ timeout: 20000 });
-    await buton(page, "Verifica blocul").click();
+    await expect(page.getByText("Ești președinte al asociației")).toBeVisible({ timeout: 20000 });
+    await buton(page, "Verifică blocul").click();
     await expect(page.getByText("Panou administrator")).toBeVisible();
-    await expect(page.getByText("Presedinte, Bloc D14, scara A")).toBeVisible();
-    await buton(page, "Inapoi la apartamentul meu").click();
+    await expect(page.getByText("Președinte, Bloc D14, scara A")).toBeVisible();
+    await buton(page, "Înapoi la apartamentul meu").click();
     await expect(page.getByText("Apartament 12, Bloc D14, scara A")).toBeVisible();
   });
 
   test("contactele blocului arata presedintele si cenzorul", async ({ page }) => {
     await intraCa(page, "elena");
     const t = await textEcran(page);
-    expect(t).toContain("PRESEDINTE");
+    expect(t).toContain("PREȘEDINTE");
     expect(t).toContain("CENZOR");
     expect(t).toContain("ADMINISTRATOR");
-    expect(t).toContain("URGENTE LIFT");
+    expect(t).toContain("URGENȚE LIFT");
   });
 });
 
@@ -126,19 +126,19 @@ test.describe("presedinte fara apartament", () => {
      sa-si fi vandut apartamentul: contul lor nu e legat de niciun apartament,
      dar mandatul le da panoul de verificare, doar de citit. */
   test("vede panoul de verificare, fara niciun buton care schimba ceva", async ({ page }) => {
-    const pid = await creeazaCont(TELEFON, "Petre Presedinte");
+    const pid = await creeazaCont(TELEFON, "Petre Președinte");
     await faceMembru(pid, "presedinte");
 
     await intra(page, TELEFON);
     await expect(page.getByText("Panou administrator")).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText("Presedinte, Bloc D14, scara A")).toBeVisible();
+    await expect(page.getByText("Președinte, Bloc D14, scara A")).toBeVisible();
     await expect(page.getByRole("tab")).toHaveCount(5);
     /* nu are apartament, deci nici intoarcere la ecranele de locatar */
-    await expect(buton(page, "Inapoi la apartamentul meu")).toHaveCount(0);
-    await expect(buton(page, "Trimite reminder de plata")).toHaveCount(0);
+    await expect(buton(page, "Înapoi la apartamentul meu")).toHaveCount(0);
+    await expect(buton(page, "Trimite reminder de plată")).toHaveCount(0);
     await mergiLaTab(page, "Facturi");
-    await expect(buton(page, "Publica lista")).toHaveCount(0);
-    await expect(buton(page, "Adauga factura")).toHaveCount(0);
+    await expect(buton(page, "Publică lista")).toHaveCount(0);
+    await expect(buton(page, "Adaugă factură")).toHaveCount(0);
     const t = await textEcran(page);
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
@@ -156,7 +156,7 @@ test.describe("locatar cu doua apartamente", () => {
     const b = await blocD14();
     const primul = await apartamentulNumarul(5);
     const alDoilea = await apartamentulNumarul(7);
-    const pid = await creeazaCont(TELEFON, "Doua Apartamente");
+    const pid = await creeazaCont(TELEFON, "Două Apartamente");
     const sb = serviciu();
     for (const [ap, din] of [[primul, "2026-06-01"], [alDoilea, "2026-07-01"]]) {
       const { error } = await sb.schema("identitate").from("locatari").insert({
@@ -177,7 +177,7 @@ test.describe("locatar cu doua apartamente", () => {
     const alDoilea = await apartamentulNumarul(7);
 
     await intra(page, TELEFON);
-    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(`Apartament ${primul.numar}, Bloc D14, scara A`)).toBeVisible();
 
     /* Datele celui de-al doilea apartament nu se amesteca in ecranele primului */
@@ -194,11 +194,11 @@ test.describe("locatar cu doua apartamente", () => {
   test("[P5] stie ca mai are un apartament in aplicatie", async ({ page }) => {
     const alDoilea = await apartamentulNumarul(7);
     await intra(page, TELEFON);
-    await expect(page.getByRole("tab", { name: /^Acasa/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /^Acasă/ })).toBeVisible({ timeout: 20000 });
 
     /* [P5] Bara de sus spune ca apartamentul se poate schimba, iar panoul le
        arata pe amandoua; dupa alegere, ecranele urmeaza apartamentul ales. */
-    await page.getByRole("button", { name: "Schimba apartamentul" }).click();
+    await page.getByRole("button", { name: "Schimbă apartamentul" }).click();
     await expect(page.getByRole("button", { name: `Apartament ${alDoilea.numar}` })).toBeVisible();
     await page.getByRole("button", { name: `Apartament ${alDoilea.numar}` }).click();
     await expect(page.getByText(new RegExp(`[Aa]partament(ul)? ${alDoilea.numar}\\b`))).toBeVisible();
@@ -221,7 +221,7 @@ test.describe("fost locatar", () => {
     if (error) throw new Error(error.message);
 
     await intra(page, TELEFON);
-    await expect(page.getByText("Leaga contul de apartamentul tau")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("leagă contul de apartamentul tău")).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole("tab")).toHaveCount(0);
     const t = await textEcran(page);
     expect(t).not.toContain("Familia Dumitrescu");

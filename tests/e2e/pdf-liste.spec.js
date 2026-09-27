@@ -15,14 +15,14 @@ async function listaAugust(page) {
   await intraCa(page, "admin");
   await mergiLaTab(page, "Facturi");
   await page.getByRole("button", { name: "aug 26" }).click();
-  await expect(page.getByText("AUGUST 2026 · PUBLICATA")).toBeVisible();
+  await expect(page.getByText("AUGUST 2026 · PUBLICATĂ")).toBeVisible();
 }
 
 test.describe("PDF-ul pentru avizier", () => {
   test("nu contine niciun nume de proprietar, nici restante, nici penalizari", async ({ page }) => {
     const toate = await apartamente();
     await listaAugust(page);
-    const fisier = await descarca(page, () => buton(page, "Exporta PDF pentru avizier").click());
+    const fisier = await descarca(page, () => buton(page, "Exportă PDF pentru avizier").click());
     expect(fisier.nume).toBe("lista-plata-2026-08.pdf");
 
     const text = textPdf(fisier.octeti);
@@ -31,8 +31,8 @@ test.describe("PDF-ul pentru avizier", () => {
       const numeScurt = ap.proprietar_nume.split(" ").slice(0, 2).join(" ");
       expect(text, `numele proprietarului ap. ${ap.numar} ajunge pe avizier`).not.toContain(numeScurt);
     }
-    for (const coloana of ["Proprietar", "Restante", "Penaliz.", "De plata", "Pers."]) {
-      expect(text, `coloana "${coloana}" nu are ce cauta pe avizier`).not.toContain(coloana);
+    for (const coloana of ["Proprietar", "Restanțe", "Penaliz.", "De plată", "Pers."]) {
+      expect(text, `coloană "${coloana}" nu are ce cauta pe avizier`).not.toContain(coloana);
     }
     expect(text).not.toContain("uz intern");
     expect(text).not.toContain("Document intern");
@@ -41,7 +41,7 @@ test.describe("PDF-ul pentru avizier", () => {
   test("arata tot ce trebuie sa arate: apartamentele, codurile si totalul", async ({ page }) => {
     const toate = await apartamente();
     await listaAugust(page);
-    const fisier = await descarca(page, () => buton(page, "Exporta PDF pentru avizier").click());
+    const fisier = await descarca(page, () => buton(page, "Exportă PDF pentru avizier").click());
     const text = textPdf(fisier.octeti);
 
     expect(text).toContain("Lista de plata pe august 2026");
@@ -62,7 +62,7 @@ test.describe("exportul intern al administratorului", () => {
   test("contine numele, persoanele si avertismentul ca nu e pentru avizier", async ({ page }) => {
     const toate = await apartamente();
     await listaAugust(page);
-    const fisier = await descarca(page, () => buton(page, "Exporta lista interna (uz administrativ)").click());
+    const fisier = await descarca(page, () => buton(page, "Exportă lista internă (uz administrativ)").click());
     expect(fisier.nume).toBe("lista-plata-2026-08-uz-intern.pdf");
 
     const text = textPdf(fisier.octeti);
@@ -78,7 +78,7 @@ test.describe("exportul intern al administratorului", () => {
 
   test("pe lista curenta, exportul intern arata si Restante, Penalizari si De plata", async ({ page }) => {
     await intraCa(page, "admin");
-    const fisier = await descarca(page, () => buton(page, "Exporta lista PDF").click());
+    const fisier = await descarca(page, () => buton(page, "Exportă lista PDF").click());
     const text = textPdf(fisier.octeti);
     expect(text).toContain("Restante");
     expect(text).toContain("Penaliz.");
@@ -89,13 +89,13 @@ test.describe("exportul intern al administratorului", () => {
   test("[F4] exportul intern de pe Sumar nu se cheama la fel ca cel de avizier", async ({ page }) => {
     /* [F4] Butonul "Exporta lista PDF" de pe Sumar descarca varianta interna
        (AdminBloc.jsx:2652 foloseste listaPdfIntern), dar sub numele
-       `lista-plata-2026-08.pdf` — exact numele fisierului de avizier de la
+       `lista-plata-2026-08.pdf`, exact numele fisierului de avizier de la
        Facturi. In folderul Descarcari cele doua ajung "lista-plata-2026-08.pdf"
        si "lista-plata-2026-08 (1).pdf", iar la avizier se lipeste cel care
        vine primul la mana. Reparatia X01 a separat continutul, dar nu si
        numele sub care pleaca din aplicatie. */
     await intraCa(page, "admin");
-    const fisier = await descarca(page, () => buton(page, "Exporta lista PDF").click());
+    const fisier = await descarca(page, () => buton(page, "Exportă lista PDF").click());
     expect(fisier.nume).toContain("uz-intern");
   });
 
@@ -103,8 +103,8 @@ test.describe("exportul intern al administratorului", () => {
     /* [D13] Lista de pe perete si cea din birou trebuie sa spuna acelasi
        lucru: fiecare suma de pe avizier se regaseste in exportul intern. */
     await listaAugust(page);
-    const avizier = await descarca(page, () => buton(page, "Exporta PDF pentru avizier").click());
-    const intern = await descarca(page, () => buton(page, "Exporta lista interna (uz administrativ)").click());
+    const avizier = await descarca(page, () => buton(page, "Exportă PDF pentru avizier").click());
+    const intern = await descarca(page, () => buton(page, "Exportă lista internă (uz administrativ)").click());
 
     const sume = (t) => (t.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g) || []);
     const peAvizier = new Set(sume(textPdf(avizier.octeti)));
@@ -118,11 +118,11 @@ test.describe("exportul intern al administratorului", () => {
 test.describe("cine poate descarca listele", () => {
   test("locatarul nu are niciun buton de export al listei intregului bloc", async ({ page }) => {
     await intraCa(page, "elena");
-    for (const t of ["Acasa", "Plata", "Bloc"]) {
+    for (const t of ["Acasă", "Plata", "Bloc"]) {
       await mergiLaTab(page, t);
-      await expect(buton(page, "Exporta PDF pentru avizier")).toHaveCount(0);
-      await expect(buton(page, "Exporta lista interna (uz administrativ)")).toHaveCount(0);
-      await expect(buton(page, "Exporta lista PDF")).toHaveCount(0);
+      await expect(buton(page, "Exportă PDF pentru avizier")).toHaveCount(0);
+      await expect(buton(page, "Exportă lista internă (uz administrativ)")).toHaveCount(0);
+      await expect(buton(page, "Exportă lista PDF")).toHaveCount(0);
     }
   });
 });

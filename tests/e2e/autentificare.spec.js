@@ -22,31 +22,31 @@ test.describe("intrare in cont", () => {
 
   test("locatarul intra si vede ecranul Acasa", async ({ page }) => {
     await intraCa(page, "elena");
-    await expect(page.getByText("Buna, Elena")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Acasa" })).toBeVisible();
+    await expect(page.getByText("Bună, Elena")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Acasă" })).toBeVisible();
     await expect(page.getByText("Bloc D14, scara A, ap. 17")).toBeVisible();
   });
 
   test("numarul scris cu spatii sau cu prefixul tarii este acelasi om", async ({ page }) => {
     await intra(page, "+40733410217");
-    await expect(page.getByText("Buna, Elena")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Bună, Elena")).toBeVisible({ timeout: 20000 });
   });
 
   test("parola gresita nu intra si spune de ce, pe romaneste", async ({ page }) => {
     await intra(page, CONTURI.elena, "parola-gresita-1234");
     await asteaptaToast(page, "Numarul de telefon sau parola nu sunt corecte");
-    await expect(page.getByText("Intra in cont")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Iesi", exact: true })).toHaveCount(0);
+    await expect(page.getByText("Intră în cont")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ieși", exact: true })).toHaveCount(0);
   });
 
   test("butonul Intra este blocat pana la un numar intreg si o parola", async ({ page }) => {
     await page.goto("/");
-    await expect(buton(page, "Intra")).toHaveAttribute("aria-disabled", "true");
-    await page.getByLabel("Numarul tau de telefon").fill("0733");
+    await expect(buton(page, "Intră")).toHaveAttribute("aria-disabled", "true");
+    await page.getByLabel("Numărul tău de telefon").fill("0733");
     await page.getByLabel("Parola").fill(PAROLA);
-    await expect(buton(page, "Intra")).toHaveAttribute("aria-disabled", "true");
-    await page.getByLabel("Numarul tau de telefon").fill(CONTURI.elena);
-    await expect(buton(page, "Intra")).not.toHaveAttribute("aria-disabled", "true");
+    await expect(buton(page, "Intră")).toHaveAttribute("aria-disabled", "true");
+    await page.getByLabel("Numărul tău de telefon").fill(CONTURI.elena);
+    await expect(buton(page, "Intră")).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("ecranul spune de unde se ia contul, ca omul sa nu il caute singur", async ({ page }) => {
@@ -58,10 +58,10 @@ test.describe("intrare in cont", () => {
 
   test("iesirea din cont duce inapoi la ecranul de intrare", async ({ page }) => {
     await intraCa(page, "elena");
-    await buton(page, "Iesi").click();
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await buton(page, "Ieși").click();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
     await page.reload();
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
   });
 });
 
@@ -71,10 +71,10 @@ test.describe("conturi fara apartament", () => {
     await expect(page.getByText("Contul nu este legat de un apartament")).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole("tab")).toHaveCount(0);
     const t = await textEcran(page);
-    expect(t).toContain("Administratorul blocului leaga contul de apartamentul tau");
+    expect(t).toContain("Administratorul blocului leagă contul de apartamentul tău");
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
-    await buton(page, "Iesi din cont").click();
-    await expect(page.getByText("Intra in cont")).toBeVisible();
+    await buton(page, "Ieși din cont").click();
+    await expect(page.getByText("Intră în cont")).toBeVisible();
   });
 });
 
@@ -88,13 +88,13 @@ test.describe("contul il face administratorul", () => {
     await intraCa(page, "admin");
     await mergiLaTab(page, "Apartamente");
     await page.getByRole("button", { name: "Apartament 12", exact: true }).click();
-    await buton(page, "Adauga un locatar in aplicatie").click();
+    await buton(page, "Adaugă un locatar în aplicație").click();
     await page.getByLabel("Numele locatarului").fill("Petre Ionescu");
-    await page.getByLabel("Numarul lui de telefon").fill(TELEFON);
-    await buton(page, "Fa contul").click();
+    await page.getByLabel("Numărul lui de telefon").fill(TELEFON);
+    await buton(page, "Fă contul").click();
 
     const fisa = page.getByRole("dialog", { name: "Apartament 12" });
-    await expect(fisa.getByText(/^Intra cu numarul/)).toBeVisible({ timeout: 20000 });
+    await expect(fisa.getByText(/^Intră cu numărul/)).toBeVisible({ timeout: 20000 });
     const parola = (await fisa.locator("text=/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\\d{4}$/").first().innerText()).trim();
     await buton(page, "Gata").click();
     await expect(fisa.getByText("Petre Ionescu")).toBeVisible();
@@ -102,10 +102,10 @@ test.describe("contul il face administratorul", () => {
     await expect(page.getByText(parola)).toHaveCount(0);
 
     /* Omul intra imediat cu numarul si parola primite */
-    await fisa.getByRole("button", { name: "Inchide" }).first().click();
-    await buton(page, "Iesi").click();
+    await fisa.getByRole("button", { name: "Închide" }).first().click();
+    await buton(page, "Ieși").click();
     await intra(page, TELEFON, parola);
-    await expect(page.getByText("Buna, Petre")).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText("Bună, Petre")).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(`Bloc D14, scara A, ap. ${ap.numar}`)).toBeVisible();
   });
 
@@ -119,18 +119,18 @@ test.describe("contul il face administratorul", () => {
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Apartament 14", exact: true }).click();
       const fisa = page.getByRole("dialog", { name: "Apartament 14" });
-      await fisa.getByRole("button", { name: "Parola noua" }).first().click();
-      await expect(fisa.getByText(/^Intra cu numarul/)).toBeVisible({ timeout: 20000 });
+      await fisa.getByRole("button", { name: "Parola nouă" }).first().click();
+      await expect(fisa.getByText(/^Intră cu numărul/)).toBeVisible({ timeout: 20000 });
       const parola = (await fisa.locator("text=/^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\\d{4}$/").first().innerText()).trim();
       await buton(page, "Gata").click();
-      await fisa.getByRole("button", { name: "Inchide" }).first().click();
-      await buton(page, "Iesi").click();
+      await fisa.getByRole("button", { name: "Închide" }).first().click();
+      await buton(page, "Ieși").click();
 
       /* parola veche nu mai merge, cea noua da */
       await intra(page, telefon, PAROLA);
       await asteaptaToast(page, "Numarul de telefon sau parola nu sunt corecte");
       await intra(page, telefon, parola);
-      await expect(page.getByText("Buna, Uituca")).toBeVisible({ timeout: 20000 });
+      await expect(page.getByText("Bună, Uituca")).toBeVisible({ timeout: 20000 });
     } finally {
       await stergeCont(telefon);
     }
@@ -139,29 +139,29 @@ test.describe("contul il face administratorul", () => {
   test("un numar gresit nu ajunge la server, iar unul cunoscut leaga contul existent", async ({ page }) => {
     const telefon = telefonTemporar();
     const altul = await apartamentulNumarul(18);
-    const pid = await creeazaCont(telefon, "Doua Apartamente");
+    const pid = await creeazaCont(telefon, "Două Apartamente");
     await legaDeApartament(pid, altul.id);
     try {
       await intraCa(page, "admin");
       await mergiLaTab(page, "Apartamente");
       await page.getByRole("button", { name: "Apartament 16", exact: true }).click();
-      await buton(page, "Adauga un locatar in aplicatie").click();
+      await buton(page, "Adaugă un locatar în aplicație").click();
       await page.getByLabel("Numele locatarului").fill("Cineva");
-      await page.getByLabel("Numarul lui de telefon").fill("0722 12");
-      await expect(buton(page, "Fa contul")).toHaveAttribute("aria-disabled", "true");
+      await page.getByLabel("Numărul lui de telefon").fill("0722 12");
+      await expect(buton(page, "Fă contul")).toHaveAttribute("aria-disabled", "true");
 
       /* numarul are deja cont: se leaga de apartamentul acesta, fara parola noua */
-      await page.getByLabel("Numarul lui de telefon").fill(telefon);
-      await buton(page, "Fa contul").click();
+      await page.getByLabel("Numărul lui de telefon").fill(telefon);
+      await buton(page, "Fă contul").click();
       const fisa = page.getByRole("dialog", { name: "Apartament 16" });
-      await expect(fisa.getByText(/Omul avea deja cont pe acest numar/)).toBeVisible({ timeout: 20000 });
+      await expect(fisa.getByText(/Omul avea deja cont pe acest număr/)).toBeVisible({ timeout: 20000 });
       await buton(page, "Gata").click();
 
       /* a doua oara, pe acelasi apartament, spune limpede ca exista deja */
-      await buton(page, "Adauga un locatar in aplicatie").click();
+      await buton(page, "Adaugă un locatar în aplicație").click();
       await page.getByLabel("Numele locatarului").fill("Cineva");
-      await page.getByLabel("Numarul lui de telefon").fill(telefon);
-      await buton(page, "Fa contul").click();
+      await page.getByLabel("Numărul lui de telefon").fill(telefon);
+      await buton(page, "Fă contul").click();
       await expect(fisa.getByText("Contul este deja legat de acest apartament.")).toBeVisible({ timeout: 20000 });
       const t = await textEcran(page);
       for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);

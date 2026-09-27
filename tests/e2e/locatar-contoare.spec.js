@@ -38,16 +38,16 @@ test.describe("transmiterea indexului", () => {
     await expect(page.getByText("Citirea pentru septembrie")).toBeVisible();
     await expect(page.getByText("Termen 25 sep 2026")).toBeVisible();
     await expect(page.getByLabel(/^Apa rece, index anterior /)).toBeVisible();
-    await expect(page.getByLabel(/^Apa calda, index anterior /)).toBeVisible();
+    await expect(page.getByLabel(/^Apa caldă, index anterior /)).toBeVisible();
     await expect(buton(page, "Trimite indexul")).toHaveAttribute("aria-disabled", "true");
-    await expect(buton(page, "Fotografiaza contoarele")).toBeVisible();
+    await expect(buton(page, "Fotografiază contoarele")).toBeVisible();
   });
 
   test("indexul mai mic decat cel anterior este refuzat in formular", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Contoare");
     await page.getByLabel(/^Apa rece, index anterior /).fill("1");
-    await expect(page.getByText("Indexul nou nu poate fi mai mic decat cel anterior. Verifica cifrele.")).toBeVisible();
+    await expect(page.getByText("Indexul nou nu poate fi mai mic decât cel anterior. Verifică cifrele.")).toBeVisible();
     await expect(buton(page, "Trimite indexul")).toHaveAttribute("aria-disabled", "true");
   });
 
@@ -64,18 +64,18 @@ test.describe("transmiterea indexului", () => {
     const camp = page.getByLabel(/^Apa rece, index anterior /);
     const anterior = Number((await camp.getAttribute("placeholder")).replace(",", "."));
     await camp.fill(String(anterior + 100));
-    await expect(page.getByText("Consumul pare foarte mare. Verifica inca o data cifrele.")).toBeVisible();
+    await expect(page.getByText("Consumul pare foarte mare. Verifică încă o dată cifrele.")).toBeVisible();
   });
 
   test("fara poza butonul ramane blocat si se spune de ce", async ({ page }) => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Contoare");
-    for (const eticheta of [/^Apa rece, index anterior /, /^Apa calda, index anterior /]) {
+    for (const eticheta of [/^Apa rece, index anterior /, /^Apa caldă, index anterior /]) {
       const camp = page.getByLabel(eticheta);
       const anterior = Number((await camp.getAttribute("placeholder")).replace(",", "."));
       await camp.fill(String(anterior + 4));
     }
-    await expect(page.getByText("Mai adauga poza contoarelor, apoi poti trimite.")).toBeVisible();
+    await expect(page.getByText("Mai adaugă poza contoarelor, apoi poți trimite.")).toBeVisible();
     await expect(buton(page, "Trimite indexul")).toHaveAttribute("aria-disabled", "true");
   });
 
@@ -85,7 +85,7 @@ test.describe("transmiterea indexului", () => {
     await mergiLaTab(page, "Contoare");
 
     const valori = {};
-    for (const [tip, eticheta] of [["rece", /^Apa rece, index anterior /], ["calda", /^Apa calda, index anterior /]]) {
+    for (const [tip, eticheta] of [["rece", /^Apa rece, index anterior /], ["calda", /^Apa caldă, index anterior /]]) {
       const camp = page.getByLabel(eticheta);
       const anterior = Number((await camp.getAttribute("placeholder")).replace(",", "."));
       valori[tip] = anterior + 5;
@@ -105,7 +105,7 @@ test.describe("transmiterea indexului", () => {
       expect(c.poza_cale).toMatch(new RegExp(`^${(await blocD14()).id}/${ap.id}/`));
       expect(Number(c.index_curent)).toBeCloseTo(valori[c.tip], 2);
     }
-    await expect(buton(page, "Corecteaza indexul")).toBeVisible();
+    await expect(buton(page, "Corectează indexul")).toBeVisible();
   });
 
   test("corectarea inlocuieste citirea trimisa", async ({ page }) => {
@@ -113,7 +113,7 @@ test.describe("transmiterea indexului", () => {
     await intraCa(page, "elena");
     await mergiLaTab(page, "Contoare");
     const valori = {};
-    for (const [tip, eticheta] of [["rece", /^Apa rece, index anterior /], ["calda", /^Apa calda, index anterior /]]) {
+    for (const [tip, eticheta] of [["rece", /^Apa rece, index anterior /], ["calda", /^Apa caldă, index anterior /]]) {
       const camp = page.getByLabel(eticheta);
       const anterior = Number((await camp.getAttribute("placeholder")).replace(",", "."));
       valori[tip] = anterior + 3;
@@ -123,8 +123,8 @@ test.describe("transmiterea indexului", () => {
     await buton(page, "Trimite indexul").click();
     await asteaptaToast(page, "Indexul a fost trimis");
 
-    await buton(page, "Corecteaza indexul").click();
-    for (const [tip, eticheta] of [["rece", /^Apa rece, index anterior /], ["calda", /^Apa calda, index anterior /]]) {
+    await buton(page, "Corectează indexul").click();
+    for (const [tip, eticheta] of [["rece", /^Apa rece, index anterior /], ["calda", /^Apa caldă, index anterior /]]) {
       valori[tip] += 2;
       const camp = page.getByLabel(eticheta);
       await camp.fill(String(valori[tip]));
@@ -144,8 +144,8 @@ test.describe("transmiterea indexului", () => {
 
   test("Acasa arata sarcina de transmitere a indexului", async ({ page }) => {
     await intraCa(page, "elena");
-    await expect(page.getByText("Transmite indexul la apa")).toBeVisible();
-    await page.getByText("Transmite indexul la apa").click();
+    await expect(page.getByText("Transmite indexul la apă")).toBeVisible();
+    await page.getByText("Transmite indexul la apă").click();
     await expect(page.getByText("Citirea pentru septembrie")).toBeVisible();
   });
 });
@@ -164,7 +164,7 @@ test.describe("stari ale citirii", () => {
     await expect(page.getByRole("tab", { name: "Contoare" })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText("Trimite din nou indexul")).toBeVisible();
     await mergiLaTab(page, "Contoare");
-    await expect(page.getByText("Citirea trimisa a fost respinsa")).toBeVisible();
+    await expect(page.getByText("Citirea trimisă a fost respinsă")).toBeVisible();
     await expect(page.locator(".ab-shell")).toContainText(citiri[0].motiv_respingere);
     await expect(page.getByLabel(/^Apa rece, index anterior /)).toBeVisible();
   });
@@ -182,13 +182,13 @@ test.describe("istoric si explicatii", () => {
     await intraCa(page, "voicu");
     await mergiLaTab(page, "Contoare");
     await expect(page.getByText("Cum a evoluat consumul")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Apa calda" })).toBeVisible();
-    await page.getByRole("button", { name: "Apa calda" }).click();
+    await expect(page.getByRole("button", { name: "Apa caldă" })).toBeVisible();
+    await page.getByRole("button", { name: "Apa caldă" }).click();
     await expect(page.getByText("Istoric")).toBeVisible();
     const t = await textEcran(page);
-    expect(t).toContain("De ce plateste blocul mai multa apa decat arata contoarele");
-    expect(t).toMatch(/contorul general de la subsol a inregistrat [\d,.]+ mc/);
-    expect(t).toContain("Diferenta de");
+    expect(t).toContain("De ce plătește blocul mai multă apă decât arată contoarele");
+    expect(t).toMatch(/contorul general de la subsol a înregistrat [\d,.]+ mc/);
+    expect(t).toContain("Diferența de");
     for (const cuvant of CUVINTE_TEHNICE) expect(t).not.toContain(cuvant);
   });
 
